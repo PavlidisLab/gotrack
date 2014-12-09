@@ -1,47 +1,51 @@
 <?xml version='1.0' encoding='UTF-8' ?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="http://java.sun.com/jsf/html"
-      xmlns:f="http://java.sun.com/jsf/core"
-      xmlns:p="http://primefaces.org/ui"
-
-      >
-  <h:head >
-    <title>UBC-CHiBi|GOtrack</title>    
-    <h:outputStylesheet library="css" name="style.css"  />
-    <h:outputStylesheet library="css" name="styles3.css"  />  
-    <h:outputStylesheet library="css" name="custom.css"  />
-<!--     <script src='https://rawgithub.com/Polychart/polychart2/develop/polychart2.standalone.js' type='text/javascript'></script>
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:p="http://primefaces.org/ui">
+<f:metadata>
+	<f:viewParam name="currentSpecies" value="#{trackView.currentSpecies}" />
+	<f:viewParam name="query" value="#{trackView.query}" />
+</f:metadata>
+<h:head>
+	<title>UBC-CHiBi|GOtrack</title>
+	<h:outputStylesheet library="css" name="style.css" />
+	<h:outputStylesheet library="css" name="styles3.css" />
+	<h:outputStylesheet library="css" name="custom.css" />
+	<!--     <script src='https://rawgithub.com/Polychart/polychart2/develop/polychart2.standalone.js' type='text/javascript'></script>
  -->
 
-    <style>
-      .rChart {
-        display: block;
-        margin-left: auto; 
-        margin-right: auto;
-        width: 1000px;
-        height: 140px;
-      }  
-    </style>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-    <!-- Prevents caching at the Proxy Server -->
+	<style>
+.rChart {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	width: 1000px;
+	height: 140px;
+}
+</style>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<!-- Prevents caching at the Proxy Server -->
 
-    <meta http-equiv="Expires" content="0" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <meta name="description" content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
+	<meta http-equiv="Expires" content="0" />
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="description"
+		content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
 
-    <meta name="keywords" content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
-    <meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
-<!-- 
+	<meta name="keywords"
+		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
+	<meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
+	<!-- 
     <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization',
     'version':'1','packages':['timeline']}]}"></script>   
     <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization',
     'version':'1','packages':['motionchart']}]}"></script>  -->
 
-    <!--Load the AJAX API-->
-<!--     <script type="text/javascript" src="https://www.google.com/jsapi"></script> -->
+	<!--Load the AJAX API-->
+	<!--     <script type="text/javascript" src="https://www.google.com/jsapi"></script> -->
 
-<!--     <script>
+	<!--     <script>
       (function(i, s, o, g, r, a, m) {
         i['GoogleAnalyticsObject'] = r;
         i[r] = i[r] || function() {
@@ -58,167 +62,171 @@
       ga('send', 'pageview');
 
     </script> -->
-  </h:head>
+</h:head>
 
-  <h:body>
-    <div id="site-wrapper">
-      <div id ="header">
-        <div id="top">
-          <div class="left" id="logo">
-            <h:graphicImage library="img"  width="130" height="110" name="logo1.png"/>
-          </div>
-          <div class="left navigation" id="main-nav">
-            <ul class="tabbed">
-              <li class="current-tab">
-                <h:link value="Home" outcome="index.xhtml" /></li>
-              <li><h:link value="Browse Global trends" outcome="trends.xhtml" /></li>
-              <li> <h:link value="Tutorial" outcome="about.xhtml" /></li>
-              <li> <h:link value="Documentation" outcome="documentation.xhtml" /></li>                                          
-              <li><h:link value="Resources" outcome="resources.xhtml" /></li>              
-            </ul>
-            <div class="clearer">&nbsp;</div>
-          </div>
-          <div class="clearer">&nbsp;</div>
-        </div>
-      </div>
+<h:body>
+	<div id="site-wrapper">
+		<div id="header">
+			<div id="top">
+				<div class="left" id="logo">
+					<h:graphicImage library="img" width="130" height="110"
+						name="logo1.png" />
+				</div>
+				<div class="left navigation" id="main-nav">
+					<ul class="tabbed">
+						<li class="current-tab"><h:link value="Home"
+								outcome="index.xhtml" /></li>
+						<li><h:link value="Browse Global trends"
+								outcome="trends.xhtml" /></li>
+						<li><h:link value="Tutorial" outcome="about.xhtml" /></li>
+						<li><h:link value="Documentation"
+								outcome="documentation.xhtml" /></li>
+						<li><h:link value="Resources" outcome="resources.xhtml" /></li>
+					</ul>
+					<div class="clearer">&nbsp;</div>
+				</div>
+				<div class="clearer">&nbsp;</div>
+			</div>
+		</div>
 
-      <!-- Middle splash -->
-      <div id="splash">
-        <div class="col3 left">
-          <h2 class="label label-green">Description</h2>
-          <p class="quiet large"></p>
-          <p>GOtrack is a simple, user-friendly web interface built to browse changes in gene product 
-            annotations over time.</p>
-          <p> GOtrack currently supports annotation data for 14 different organisms.</p>
-        </div>
+		<!-- Middle splash -->
+		<div id="splash">
+			<div class="col3 left">
+				<h2 class="label label-green">Description</h2>
+				<p class="quiet large"></p>
+				<p>GOtrack is a simple, user-friendly web interface built to
+					browse changes in gene product annotations over time.</p>
+				<p>GOtrack currently supports annotation data for 14 different
+					organisms.</p>
+			</div>
 
-        <div class="col3-mid left">
-          <h2 class="label label-orange">Explore </h2>
-          <p class="quiet large"></p>
-          <ul><li>Changes in the number of Gene Ontology (GO) terms associated to a gene product or the number of gene products associated to a GO term</li>
-            <li>Changes in the evidence codes used and measures of semantic similarity and multifunctionality</li>
-            <li> Identify general changes occurring in an organism or compare them against other species </li></ul> 
-          <!-- <p><h:graphicImage library="images"  width="260" height="150" name="example.png" /></p> --> 
-        </div>
+			<div class="col3-mid left">
+				<h2 class="label label-orange">Explore</h2>
+				<p class="quiet large"></p>
+				<ul>
+					<li>Changes in the number of Gene Ontology (GO) terms
+						associated to a gene product or the number of gene products
+						associated to a GO term</li>
+					<li>Changes in the evidence codes used and measures of
+						semantic similarity and multifunctionality</li>
+					<li>Identify general changes occurring in an organism or
+						compare them against other species</li>
+				</ul>
+				<!-- <p><h:graphicImage library="images"  width="260" height="150" name="example.png" /></p> -->
+			</div>
 
-        <div class="col3 right">
-          <h2 class="label label-blue">Contact Us</h2>
-          <p>Please give us some feedback! In case you have any questions, you can contact us at:</p>
-          <p>asedeno@chibi.ubc.ca</p>
-        </div>
-        <div class="clearer">&nbsp;</div>
-      </div>
+			<div class="col3 right">
+				<h2 class="label label-blue">Contact Us</h2>
+				<p>Please give us some feedback! In case you have any questions,
+					you can contact us at:</p>
+				<p>asedeno@chibi.ubc.ca</p>
+			</div>
+			<div class="clearer">&nbsp;</div>
+		</div>
 
-      <!-- This is the delimiter for the menu nav bar, not implementing the sub-nav -->
+		<!-- This is the delimiter for the menu nav bar, not implementing the sub-nav -->
 
-      <!-- Beginning of the two main columns -->
+		<!-- Beginning of the two main columns -->
 
-      <div class="main" id="main-two-columns">
-        <div class="right" id="sidebar">
+		<div class="main" id="main-two-columns">
+			<div class="right" id="sidebar">
 
-          <!-- VOLATILES -->
-          <div class="section">
+				<!-- VOLATILES -->
+				<div class="section">
 
-            <div class="section-title">Top popular genes (based on user queries)</div>
+					<div class="section-title">Top popular genes (based on user
+						queries)</div>
 
-            <div class="nice-list">
+					<div class="nice-list">
 
-              <p:dataList value="#{userRequestBean.popularGenes}" var="gene" type="ordered">  
+						<p:dataList value="#{stats.popularGenes}" var="gene"
+							type="ordered">  
                 #{gene}  
-              </p:dataList>  
+              </p:dataList>
 
-            </div>
+					</div>
 
-          </div>
+				</div>
 
-          <!-- MULTIFUNCTIONAL -->
-          <div class="section">
+				<!-- MULTIFUNCTIONAL -->
+				<div class="section">
 
-            <div class="section-title">Top multifunctional genes (in the latest edition)</div>
+					<div class="section-title">Top multifunctional genes (in the
+						latest edition)</div>
 
-            <div class="nice-list">
-              <h:form>                 
-                <p:dataGrid value="#{userRequestBean.topMultifunc}" var="gene" columns="1">
+					<div class="nice-list">
+						<h:form>
+							<p:dataGrid value="#{stats.topMultifunc}" var="gene"
+								columns="1">
                   #{gene}
                 </p:dataGrid>
-              </h:form>
-            </div>
+						</h:form>
+					</div>
 
-          </div>
-        </div>
+				</div>
+			</div>
 
-        <!-- MAIN -->
-        <div class="left" id="main-content">
-          <div class="section">
-            <div class="section-title">Start browsing your gene product or GOterm of interest!</div>
+			<!-- MAIN -->
+			<div class="left" id="main-content">
+				<div class="section">
+					<div class="section-title">Start browsing your gene product
+						or GOterm of interest!</div>
 
-            <div class="post">
-              <div class="post-body">
+					<div class="post">
+						<div class="post-body">
 
-                <!-- PUT THE ACTUAL CONTENT -->
-                <hgroup>
-                  <!-- <p>Don't forget to read the documentation!</p> -->
-                  <h:form id="initial">
+							<!-- PUT THE ACTUAL CONTENT -->
+							<hgroup> <!-- <p>Don't forget to read the documentation!</p> -->
+							<h:form id="initial">
 
-                    <h:panelGrid id="usrinp" columns="3" style="border:none;margin:0 auto;width:700px;">
+								<h:panelGrid id="usrinp" columns="3"
+									style="border:none;margin:0 auto;width:700px;">
 
-                      <h:outputLabel for="userinp" value="Write the gene product ID or GO term to visualize:" />
-                      <p:inputText id ="userinp" value="#{userRequestBean.userInput}" 
-                                   required="true" label="ID">
-                      </p:inputText>
-                      <p:tooltip id="toolTip1" for="userinp" value="Write the gene product ID or GO term to visualize" />
+									<h:outputLabel for="userinp"
+										value="Write the gene product ID or GO term to visualize:" />
+									<p:autoComplete id="userinp" value="#{trackView.query}" completeMethod="#{trackView.complete}" queryDelay="1000" minQueryLength="2" forceSelection="true" maxResults="10" required="true" label="ID" />
 
-                      <h:outputText value="Select the species of interest (required): " />
-                      <p:selectOneMenu id="selectspecies" value="#{userRequestBean.userSpecies}">
-                        <f:selectItem itemLabel="Arabidopsis" itemValue="arabidopsis" />
-                        <f:selectItem itemLabel="Chicken" itemValue="chicken" />
-                        <f:selectItem itemLabel="Cow" itemValue="cow" />
-                        <f:selectItem itemLabel="Dictyoselium" itemValue="dicty" />
-                        <f:selectItem itemLabel="Dog" itemValue="dog" />
-                        <f:selectItem itemLabel="Ecoli" itemValue="ecoli" />
-                        <f:selectItem itemLabel="Fly" itemValue="fly" />
-                        <f:selectItem itemLabel="Human" itemValue="human" />
-                        <f:selectItem itemLabel="Mouse" itemValue="mouse" />
-                        <f:selectItem itemLabel="Pig" itemValue="pig" />
-                        <f:selectItem itemLabel="Rat" itemValue="rat" />
-                        <f:selectItem itemLabel="Yeast" itemValue="yeast" />
-                        <f:selectItem itemLabel="Worm" itemValue="worm" />
-                        <f:selectItem itemLabel="Zebrafish" itemValue="zebrafish" />
-                      </p:selectOneMenu>
-                      <p:tooltip id="toolTip2" for="selectspecies" value="Select the species of interest (required)" />
-                    </h:panelGrid>
-                    <p></p>
+									<p:tooltip id="toolTip1" for="userinp"
+										value="Write the gene product ID or GO term to visualize" />
 
-                    <p:messages id="messages" showDetail="true" autoUpdate="true" closable="true" />
-                    <p:commandButton widgetVar="butt1" value="Continue" id="butt1"   onstart="butt1.disable();poll.start();"                                    
-                                     actionListener="#{userRequestBean.computeAllUserRequest}" 
-                                     action="#{userRequestBean.getNextPage}"
-                                     oncomplete="butt1.enable();poll.stop();" />  
+									<h:outputText
+										value="Select the species of interest (required): " />
+									<p:selectOneMenu id="selectspecies" value="#{trackView.currentSpecies}">
+										<p:ajax event="change" update="selectspecies" />
+										<f:selectItems value="#{cache.speciesList}" var="spec"
+											itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
+									</p:selectOneMenu>
+									<p:tooltip id="toolTip2" for="selectspecies"
+										value="Select the species of interest (required)" />
+								</h:panelGrid>
+								<p></p>
 
-                  </h:form>
-                  <h:form id="updatestatusform">                                          
-                    <p:poll interval="3" async="true" listener="#{userRequestBean.getCurrentStatus}" 
-                            widgetVar="poll"  autoStart="false" />  
-                  </h:form>
-                </hgroup>
-                <!-- End of the FUNCTIONALITY CONTENT -->
-              </div>
-            </div>
-          </div>
-          <div class="content-separator"></div>
-        </div>
+								<p:messages id="messages" showDetail="false" autoUpdate="true"
+									closable="true" />
+								<p:commandButton value="Continue" action="#{trackView.go}" />
 
-        <div class="clearer">&nbsp;</div>
-      </div>
-    </div>
 
-    <!-- This is the end of the two main columns -->
+							</h:form></hgroup>
+							<!-- End of the FUNCTIONALITY CONTENT -->
+						</div>
+					</div>
+				</div>
+				<div class="content-separator"></div>
+			</div>
 
-    <div id="footer">
-      <div class="center" id="footer-left">
-        <p>&copy; UBC, Centre of High-throughput Biology, 2014 <h:link value="Terms and Conditions" outcome="terms.xhtml" />
-        </p>
-      </div>
-    </div>
-  </h:body>
+			<div class="clearer">&nbsp;</div>
+		</div>
+	</div>
+
+	<!-- This is the end of the two main columns -->
+
+	<div id="footer">
+		<div class="center" id="footer-left">
+			<p>
+				&copy; UBC, Centre of High-throughput Biology, 2014
+				<h:link value="Terms and Conditions" outcome="terms.xhtml" />
+			</p>
+		</div>
+	</div>
+</h:body>
 </html>
