@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.dao;
 
+import java.util.Collection;
 import java.util.Map;
 
 import ubc.pavlab.gotrack.model.GeneSymbol;
@@ -33,6 +34,8 @@ public interface CacheDAO {
 
     public Map<Integer, Integer> getCurrentEditions() throws DAOException;
 
-    public Map<GeneSymbol, String> getUniqueSymbols( Integer species, Integer edition ) throws DAOException;
+    public Map<String, GeneSymbol> getAccessionToGeneSymbol( Integer species, Integer edition ) throws DAOException;
+
+    public Collection<String> getUniqueGeneSymbols( Integer species, Integer edition ) throws DAOException;
 
 }

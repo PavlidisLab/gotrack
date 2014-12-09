@@ -9,6 +9,7 @@
 <f:metadata>
 	<f:viewParam name="currentSpecies" value="#{trackView.currentSpecies}" />
 	<f:viewParam name="query" value="#{trackView.query}" />
+	<f:event type="preRenderView" listener="#{trackView.init}" />
 </f:metadata>
     <h:head >
         <title>UBC-CHiBi|GOtrack</title>        
@@ -79,7 +80,7 @@
                 <!-- MAIN -->
                 <div class="left" id="main-content">
                     <div class="section">
-                        <div class="section-title">Displaying results for: #{userRequestBean.userInput}</div>
+                        <div class="section-title">Displaying results for: #{trackView.query}</div>
 
 
                         <h:form id="nsearch">

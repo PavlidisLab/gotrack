@@ -20,11 +20,14 @@
 package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.List;
 
+import javax.faces.application.NavigationHandler;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
+import javax.faces.context.FacesContext;
 
 /**
  * TODO Document Me
@@ -51,6 +54,18 @@ public class TrackView implements Serializable {
      */
     public TrackView() {
         System.out.println( "TrackView created" );
+    }
+
+    public void init() {
+        System.out.println( "TrackView init" );
+        System.out.println( "TrackView " + query );
+        Collection<String> gs = cache.getSymbols().get( currentSpecies );
+        if ( gs != null && !gs.contains( query ) ) {
+            FacesContext facesContext = FacesContext.getCurrentInstance();
+            NavigationHandler navigationHandler = facesContext.getApplication().getNavigationHandler();
+            navigationHandler.handleNavigation( facesContext, null, "error400?faces-redirect=true" );
+        }
+
     }
 
     public Integer getCurrentSpecies() {

@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	xmlns:p="http://primefaces.org/ui">
+<h:head>
+	<title>Error 400: BAD REQUEST</title>
+	<h:outputStylesheet library="css" name="style.css" />
+	<h:outputStylesheet library="css" name="styles3.css" />
+	<h:outputStylesheet library="css" name="custom.css" />
+
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<!-- Prevents caching at the Proxy Server -->
+
+	<meta http-equiv="Expires" content="0" />
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="description"
+		content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
+
+	<meta name="keywords"
+		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
+	<meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
+
+</h:head>
+
+<h:body>
+	<div id="site-wrapper">
+		<div id="header">
+			<div id="top">
+				<div class="left" id="logo">
+					<h:graphicImage library="img" width="130" height="110"
+						name="logo1.png" />
+				</div>
+				<div class="left navigation" id="main-nav">
+					<ul class="tabbed">
+						<li class="current-tab"><h:link value="Home"
+								outcome="index.xhtml" /></li>
+						<li><h:link value="Browse Global trends"
+								outcome="trends.xhtml" /></li>
+						<li><h:link value="Tutorial" outcome="about.xhtml" /></li>
+						<li><h:link value="Documentation"
+								outcome="documentation.xhtml" /></li>
+
+						<li><h:link value="Resources" outcome="resources.xhtml" /></li>
+					</ul>
+					<div class="clearer">&nbsp;</div>
+				</div>
+				<div class="clearer">&nbsp;</div>
+			</div>
+		</div>
+
+
+		<!-- This is the delimiter for the menu nav bar, not implementing the sub-nav -->
+
+		<!-- Beginning of the two main columns -->
+
+		<div class="main" id="main-two-columns">
+
+
+			<!-- MAIN -->
+					<div class="left" id="logo">
+						<h:graphicImage library="img" width="250"
+							name="error-400-bad-request.png" />
+					</div>
+					<strong>Error 400: BAD REQUEST: The selected gene symbol
+						could not be found.</strong>
+
+				<div class="clearer">&nbsp;</div>
+		</div>
+
+		<!-- This is the end of the two main columns -->
+
+		<div id="footer">
+			<div class="center" id="footer-left">
+				<p>
+					&copy; UBC, Centre of High-throughput Biology, 2014 <a
+						href="terms.xhtml">Terms and Conditions</a>
+				</p>
+			</div>
+		</div>
+	</div>
+</h:body>
+</html>
+

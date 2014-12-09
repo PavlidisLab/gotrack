@@ -184,7 +184,9 @@
 
 									<h:outputLabel for="userinp"
 										value="Write the gene product ID or GO term to visualize:" />
-									<p:autoComplete id="userinp" value="#{trackView.query}" completeMethod="#{trackView.complete}" queryDelay="1000" minQueryLength="2" forceSelection="true" maxResults="10" required="true" label="ID" />
+									<p:autoComplete id="userinp" value="#{trackView.query}" completeMethod="#{trackView.complete}" 
+									queryDelay="1000" minQueryLength="2" forceSelection="true" maxResults="10" required="true" 
+									label="ID" emptyMessage="No gene suggestions available,  please try again."/>
 
 									<p:tooltip id="toolTip1" for="userinp"
 										value="Write the gene product ID or GO term to visualize" />

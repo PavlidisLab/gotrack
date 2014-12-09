@@ -21,9 +21,11 @@ package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -59,7 +61,8 @@ public class Cache implements Serializable {
 
     private static List<Species> speciesList;
     private static Map<Integer, Integer> currentEditions;
-    private static Map<Integer, Map<GeneSymbol, String>> currentGeneSymbolsToAccession = new HashMap<Integer, Map<GeneSymbol, String>>();
+    private static Map<Integer, Map<String, GeneSymbol>> accessionToGeneSymbol = new HashMap<Integer, Map<String, GeneSymbol>>();
+    private static Map<Integer, Collection<String>> symbols = new HashMap<Integer, Collection<String>>();
 
     /**
      * 
@@ -85,15 +88,17 @@ public class Cache implements Serializable {
 
         currentEditions = cacheDAO.getCurrentEditions();
 
-        System.out.println( "Loading gene symbol cache..." );
+        System.out.println( "Loading accession to geneSymbol cache..." );
         for ( Species species : speciesList ) {
             Integer speciesId = species.getId();
-            currentGeneSymbolsToAccession.put( speciesId,
-                    cacheDAO.getUniqueSymbols( speciesId, currentEditions.get( speciesId ) ) );
-            System.out.println( "Done loading gene symbols for species (" + speciesId + "), size: "
-                    + currentGeneSymbolsToAccession.get( speciesId ).size() );
+            accessionToGeneSymbol.put( speciesId,
+                    cacheDAO.getAccessionToGeneSymbol( speciesId, currentEditions.get( speciesId ) ) );
+            symbols.put( speciesId, cacheDAO.getUniqueGeneSymbols( speciesId, currentEditions.get( speciesId ) ) );
+
+            System.out.println( "Done loading accession to geneSymbol for species (" + speciesId + "), size: "
+                    + accessionToGeneSymbol.get( speciesId ).size() + " unique: " + symbols.get( speciesId ).size() );
         }
-        System.out.println( "Done loading gene symbol cache..." );
+        System.out.println( "Done loading accession to geneSymbol cache..." );
 
     }
 
@@ -101,14 +106,14 @@ public class Cache implements Serializable {
 
         if ( query == null ) return new ArrayList<String>();
         String queryUpper = query.toUpperCase();
-        ArrayList<String> exact = new ArrayList<String>();
-        ArrayList<String> exactSynonym = new ArrayList<String>();
-        ArrayList<String> possible = new ArrayList<String>();
+        Collection<String> exact = new HashSet<String>();
+        Collection<String> exactSynonym = new HashSet<String>();
+        Collection<String> possible = new HashSet<String>();
         // Map<GOTerm, Long> results = new HashMap<GOTerm, Long>();
         // log.info( "search: " + queryString );
-        Map<GeneSymbol, String> geneSymbols = currentGeneSymbolsToAccession.get( species );
-        if ( geneSymbols != null ) {
-            for ( GeneSymbol gene : geneSymbols.keySet() ) {
+        Map<String, GeneSymbol> gs = accessionToGeneSymbol.get( species );
+        if ( gs != null ) {
+            for ( GeneSymbol gene : gs.values() ) {
                 if ( queryUpper.toUpperCase().equals( gene.getSymbol().toUpperCase() ) ) {
                     exact.add( gene.getSymbol() );
                     continue;
@@ -134,12 +139,13 @@ public class Cache implements Serializable {
         }
 
         if ( exact.size() > 0 ) {
-            return exact;
+            return new ArrayList<String>( exact );
         } else if ( exactSynonym.size() > 0 ) {
-            return exactSynonym;
+            return new ArrayList<String>( exactSynonym );
         } else if ( possible.size() > 0 ) {
-            Collections.sort( possible, new LevenshteinComparator( query ) );
-            return possible;
+            ArrayList<String> p = new ArrayList<String>( possible );
+            Collections.sort( p, new LevenshteinComparator( query ) );
+            return p;
         } else {
             return new ArrayList<String>();
         }
@@ -150,12 +156,16 @@ public class Cache implements Serializable {
         return speciesList;
     }
 
-    public static Map<Integer, Integer> getCurrentEditions() {
+    public Map<Integer, Integer> getCurrentEditions() {
         return currentEditions;
     }
 
-    public static Map<Integer, Map<GeneSymbol, String>> getCurrentGeneSymbolsToAccession() {
-        return currentGeneSymbolsToAccession;
+    public Map<Integer, Map<String, GeneSymbol>> getAccessionToGeneSymbol() {
+        return accessionToGeneSymbol;
+    }
+
+    public Map<Integer, Collection<String>> getSymbols() {
+        return symbols;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

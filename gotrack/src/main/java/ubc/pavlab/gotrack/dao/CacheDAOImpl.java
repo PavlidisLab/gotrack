@@ -27,7 +27,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -44,7 +46,8 @@ public class CacheDAOImpl implements CacheDAO {
     // Constants ----------------------------------------------------------------------------------
 
     private static final String SQL_CURRENT_EDITIONS = "select species_id, edition from (select distinct species_id, edition from gene_annotation order by edition DESC) as temp group by species_id";
-    private static final String SQL_SYMBOL_TO_ACCESSION = "select distinct symbol, accession, synonyms from gene_annotation where species_id = ? AND edition=?";
+    private static final String SQL_ACCESSION_TO_SYMBOL = "select distinct symbol, accession, synonyms from gene_annotation where species_id = ? AND edition=?";
+    private static final String SQL_UNIQUE_SYMBOL = "select symbol from gene_annotation where species_id = ? AND edition=?";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -89,20 +92,43 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Map<GeneSymbol, String> getUniqueSymbols( Integer species, Integer edition ) throws DAOException {
+    public Map<String, GeneSymbol> getAccessionToGeneSymbol( Integer species, Integer edition ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<GeneSymbol, String> results = new HashMap<GeneSymbol, String>();
+        Map<String, GeneSymbol> results = new HashMap<String, GeneSymbol>();
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = prepareStatement( connection, SQL_SYMBOL_TO_ACCESSION, false, species, edition );
+            preparedStatement = prepareStatement( connection, SQL_ACCESSION_TO_SYMBOL, false, species, edition );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 List<String> synonyms = Arrays.asList( resultSet.getString( "synonyms" ).split( "\\|" ) );
-                results.put( new GeneSymbol( resultSet.getString( "symbol" ), synonyms ),
-                        resultSet.getString( "accession" ) );
+                results.put( resultSet.getString( "accession" ), new GeneSymbol( resultSet.getString( "symbol" ),
+                        synonyms ) );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
+    public Collection<String> getUniqueGeneSymbols( Integer species, Integer edition ) throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Collection<String> results = new HashSet<String>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = prepareStatement( connection, SQL_UNIQUE_SYMBOL, false, species, edition );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                results.add( resultSet.getString( "symbol" ) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
