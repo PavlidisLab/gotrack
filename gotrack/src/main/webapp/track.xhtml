@@ -7,8 +7,8 @@
       xmlns:p="http://primefaces.org/ui"
       >
 <f:metadata>
-	<f:viewParam name="currentSpecies" value="#{trackView.currentSpecies}" />
-	<f:viewParam name="query" value="#{trackView.query}" />
+	<f:viewParam id="currentSpecies" name="currentSpecies" value="#{trackView.currentSpecies}" />
+	<f:viewParam id="query" name="query" value="#{trackView.query}" />
 	<f:event type="preRenderView" listener="#{trackView.init}" />
 </f:metadata>
     <h:head >
@@ -26,8 +26,37 @@
 
         <meta name="keywords" content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
         <meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
-
-    </h:head>
+        <h:outputScript library="js" name="lineHighlighter.js" />
+	<script>
+      function chartExtender() {
+         // this = chart widget instance        
+         // this.cfg = options 
+         this.cfg.legend = {
+                renderer: $.jqplot.EnhancedLegendRenderer,
+                show: true,
+                location: 'ne',
+                placement: 'outsideGrid',
+                rendererOptions: {
+                    numberRows: 0
+                }
+            }
+         this.cfg.highlighter = {
+                                 show: true,
+                                 tooltipLocation: 'sw',
+                                 useAxesFormatters: true,
+                                 tooltipAxes: 'xy',
+                                 yvalues: 1,
+                                 formatString: 'Date: %s ~ Count: %s',
+                                     tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
+                                        return plot.series[seriesIndex].label + ": " + str;
+                                     },
+                                 bringSeriesToFront: true
+                                     
+                             }
+      }
+      
+   </script>
+</h:head>
 
     <h:body>
         <div id="site-wrapper">
@@ -114,7 +143,8 @@
                             <div class="post-body">
 
                                 <!-- PUT THE ACTUAL CONTENT -->
-                         
+  									<p:chart id='chart1' type="line" model="#{trackView.dateModel}" style="height:500px;" widgetVar="chart"/>
+  									<p:commandButton type="button" value="Reset" icon="ui-icon-cancel" onclick="PF('chart').resetZoom()"/>
                                 <!-- End of the FUNCTIONALITY CONTENT -->
                             </div>
                         </div>

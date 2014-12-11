@@ -33,7 +33,7 @@ import ubc.pavlab.gotrack.dao.DAOFactory;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean(name = "daoFactoryBean", eager = true)
+@ManagedBean(name = "daoFactoryBean")
 @ApplicationScoped
 public class DAOFactoryBean implements Serializable {
 

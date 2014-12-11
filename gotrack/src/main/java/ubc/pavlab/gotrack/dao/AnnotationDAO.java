@@ -19,9 +19,12 @@
 
 package ubc.pavlab.gotrack.dao;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.TrackValue;
 
 /**
  * This interface represents a contract for a DAO for the {@link Annotation} model. Note that all methods are read-only.
@@ -69,5 +72,8 @@ public interface AnnotationDAO {
      * @throws DAOException If something fails at database level.
      */
     public boolean existSymbol( String symbol ) throws DAOException;
+
+    public Map<Integer, List<TrackValue>> trackCounts( Integer species,
+            Map<String, Collection<String>> primaryToSecondary ) throws DAOException;
 
 }

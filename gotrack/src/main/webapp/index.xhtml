@@ -4,10 +4,6 @@
 	xmlns:h="http://java.sun.com/jsf/html"
 	xmlns:f="http://java.sun.com/jsf/core"
 	xmlns:p="http://primefaces.org/ui">
-<f:metadata>
-	<f:viewParam name="currentSpecies" value="#{trackView.currentSpecies}" />
-	<f:viewParam name="query" value="#{trackView.query}" />
-</f:metadata>
 <h:head>
 	<title>UBC-CHiBi|GOtrack</title>
 	<h:outputStylesheet library="css" name="style.css" />
@@ -182,30 +178,33 @@
 								<h:panelGrid id="usrinp" columns="3"
 									style="border:none;margin:0 auto;width:700px;">
 
-									<h:outputLabel for="userinp"
-										value="Write the gene product ID or GO term to visualize:" />
-									<p:autoComplete id="userinp" value="#{trackView.query}" completeMethod="#{trackView.complete}" 
-									queryDelay="1000" minQueryLength="2" forceSelection="true" maxResults="10" required="true" 
-									label="ID" emptyMessage="No gene suggestions available,  please try again."/>
-
-									<p:tooltip id="toolTip1" for="userinp"
-										value="Write the gene product ID or GO term to visualize" />
-
-									<h:outputText
+								<h:outputText
 										value="Select the species of interest (required): " />
-									<p:selectOneMenu id="selectspecies" value="#{trackView.currentSpecies}">
+									<p:selectOneMenu id="selectspecies" value="#{indexView.currentSpecies}">
 										<p:ajax event="change" update="selectspecies" />
 										<f:selectItems value="#{cache.speciesList}" var="spec"
 											itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
 									</p:selectOneMenu>
 									<p:tooltip id="toolTip2" for="selectspecies"
-										value="Select the species of interest (required)" />
+										value="Select the species of interest" />
+
+									<h:outputLabel for="userinp"
+										value="Write the gene product ID or GO term to visualize:" />
+									<p:autoComplete id="userinp" value="#{indexView.query}" completeMethod="#{indexView.complete}" 
+									queryDelay="1000" minQueryLength="2" forceSelection="true" maxResults="10"  
+									label="ID" emptyMessage="No gene suggestions available,  please try again.">
+									<p:ajax event="focus" update="selectspecies" />
+									</p:autoComplete>
+
+									<p:tooltip id="toolTip1" for="userinp"
+										value="Write the gene symbol to visualize" />
+
 								</h:panelGrid>
 								<p></p>
 
 								<p:messages id="messages" showDetail="false" autoUpdate="true"
 									closable="true" />
-								<p:commandButton value="Continue" action="#{trackView.go}" />
+								<p:commandButton value="Continue" action="#{indexView.go}" />
 
 
 							</h:form></hgroup>

@@ -163,6 +163,10 @@ public abstract class DAOFactory {
         return new CacheDAOImpl( this );
     }
 
+    public AnnotationDAO getAnnotationDAO() {
+        return new AnnotationDAOImpl( this );
+    }
+
     // You can add more DAO implementation getters here.
 
 }

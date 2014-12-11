@@ -139,7 +139,7 @@ ul.nice-list li .right {color: #999;}
 
 /* Tables */
 
-table {margin-bottom: 1.1em; width: 100%;}
+table {margin-bottom: 1.1em; /* width: 100%; */}
 th {font-weight: bold;}
 thead th {background: #C3D9FF;}
 th,td,caption {padding: 4px 4px 4px 4px;}

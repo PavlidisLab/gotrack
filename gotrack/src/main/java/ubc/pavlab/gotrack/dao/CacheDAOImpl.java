@@ -33,7 +33,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import ubc.pavlab.gotrack.model.GeneSymbol;
+import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Edition;
 
 /**
  * Holds methods for retrieving data that is meant to be cached
@@ -45,9 +46,9 @@ public class CacheDAOImpl implements CacheDAO {
 
     // Constants ----------------------------------------------------------------------------------
 
-    private static final String SQL_CURRENT_EDITIONS = "select species_id, edition from (select distinct species_id, edition from gene_annotation order by edition DESC) as temp group by species_id";
-    private static final String SQL_ACCESSION_TO_SYMBOL = "select distinct symbol, accession, synonyms from gene_annotation where species_id = ? AND edition=?";
-    private static final String SQL_UNIQUE_SYMBOL = "select symbol from gene_annotation where species_id = ? AND edition=?";
+    private static final String SQL_CURRENT_EDITIONS = "select species_id, edition, date from (select * from edition order by edition DESC) as temp group by species_id";
+    private static final String SQL_CURRENT_ACCESSIONS = "select distinct symbol, accession, synonyms, sec from gene_annotation LEFT JOIN sec_ac on accession=ac where species_id = ? AND edition=?";
+    private static final String SQL_UNIQUE_SYMBOL = "select distinct symbol from gene_annotation where species_id = ? AND edition=?";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -68,18 +69,19 @@ public class CacheDAOImpl implements CacheDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public Map<Integer, Integer> getCurrentEditions() throws DAOException {
+    public Map<Integer, Edition> getCurrentEditions() throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<Integer, Integer> editions = new HashMap<Integer, Integer>();
+        Map<Integer, Edition> editions = new HashMap<Integer, Edition>();
 
         try {
             connection = daoFactory.getConnection();
             preparedStatement = connection.prepareStatement( SQL_CURRENT_EDITIONS );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                editions.put( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ) );
+                editions.put( resultSet.getInt( "species_id" ),
+                        new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ) ) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -92,20 +94,37 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Map<String, GeneSymbol> getAccessionToGeneSymbol( Integer species, Integer edition ) throws DAOException {
+    public Map<String, Accession> getCurrentAccessions( Integer species, Integer edition ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<String, GeneSymbol> results = new HashMap<String, GeneSymbol>();
+        Map<String, Accession> accessions = new HashMap<String, Accession>();
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = prepareStatement( connection, SQL_ACCESSION_TO_SYMBOL, false, species, edition );
+            preparedStatement = prepareStatement( connection, SQL_CURRENT_ACCESSIONS, false, species, edition );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                List<String> synonyms = Arrays.asList( resultSet.getString( "synonyms" ).split( "\\|" ) );
-                results.put( resultSet.getString( "accession" ), new GeneSymbol( resultSet.getString( "symbol" ),
-                        synonyms ) );
+                String accession = resultSet.getString( "accession" );
+                Accession acc = accessions.get( accession );
+                if ( acc == null ) {
+                    acc = new Accession( accession );
+                    List<String> synonyms = Arrays.asList( resultSet.getString( "synonyms" ).split( "\\|" ) );
+                    acc.setSymbol( resultSet.getString( "symbol" ) );
+                    acc.setSynonyms( synonyms );
+
+                    String sec = resultSet.getString( "sec" );
+                    if ( !resultSet.wasNull() ) {
+                        // Null secondary values means that it was not found in sec_ac primary column and therefore has
+                        // no secondary accessions
+                        acc.addSecondary( sec );
+                    }
+
+                    accessions.put( acc.getAccession(), acc );
+                } else {
+                    acc.addSecondary( resultSet.getString( "sec" ) );
+                }
+
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -113,7 +132,7 @@ public class CacheDAOImpl implements CacheDAO {
             close( connection, preparedStatement, resultSet );
         }
 
-        return results;
+        return accessions;
     }
 
     @Override

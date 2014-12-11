@@ -19,7 +19,7 @@
 
 package ubc.pavlab.gotrack.model;
 
-import java.util.List;
+import java.sql.Date;
 
 /**
  * TODO Document Me
@@ -27,50 +27,50 @@ import java.util.List;
  * @author mjacobson
  * @version $Id$
  */
-public class GeneSymbol {
+public class Edition {
 
-    private String symbol;
-    private List<String> synonyms;
+    private Integer edition;
+    private Date date;
 
     /**
      * 
      */
-    public GeneSymbol() {
+    public Edition() {
         // TODO Auto-generated constructor stub
     }
 
-    public GeneSymbol( String symbol, List<String> synonyms ) {
+    public Edition( Integer edition, Date date ) {
         super();
-        this.symbol = symbol;
-        this.synonyms = synonyms;
+        this.edition = edition;
+        this.date = date;
     }
 
-    public String getSymbol() {
-        return symbol;
+    public Integer getEdition() {
+        return edition;
     }
 
-    public void setSymbol( String symbol ) {
-        this.symbol = symbol;
+    public void setEdition( Integer edition ) {
+        this.edition = edition;
     }
 
-    public List<String> getSynonyms() {
-        return synonyms;
+    public Date getDate() {
+        return date;
     }
 
-    public void setSynonyms( List<String> synonyms ) {
-        this.synonyms = synonyms;
+    public void setDate( Date date ) {
+        this.date = date;
     }
 
     @Override
     public String toString() {
-        return "Gene [symbol=" + symbol + "]";
+        return "Edition [edition=" + edition + ", date=" + date + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( symbol == null ) ? 0 : symbol.hashCode() );
+        result = prime * result + ( ( edition == null ) ? 0 : edition.hashCode() );
         return result;
     }
 
@@ -79,10 +79,10 @@ public class GeneSymbol {
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        GeneSymbol other = ( GeneSymbol ) obj;
-        if ( symbol == null ) {
-            if ( other.symbol != null ) return false;
-        } else if ( !symbol.equals( other.symbol ) ) return false;
+        Edition other = ( Edition ) obj;
+        if ( edition == null ) {
+            if ( other.edition != null ) return false;
+        } else if ( !edition.equals( other.edition ) ) return false;
         return true;
     }
 

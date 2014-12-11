@@ -28,9 +28,14 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.TrackValue;
 
 /**
  * TODO Document Me
@@ -46,6 +51,9 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_FIND = "SELECT edition, species_id, accession, symbol, go_id, reference, evidence, db_object_name, synonyms, db_object_type, taxon FROM gene_annotation WHERE accession = ? AND edition = ? AND species_id = ?";
     private static final String SQL_FIND_LIST = "SELECT edition, species_id, accession, symbol, go_id, reference, evidence, db_object_name, synonyms, db_object_type, taxon FROM gene_annotation WHERE accession IN (%s) AND edition = ? AND species_id = ?";
     private static final String SQL_EXIST_SYMBOL = "SELECT COUNT(*) FROM gene_annotation WHERE symbol = ?";
+    private static final String SQL_TRACK2 = "select date, gene_annotation.edition, accession, COUNT(distinct gene_annotation.go_id) as direct from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? where gene_annotation.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, accession";
+    private static final String SQL_TRACK = "select date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, COUNT(distinct gene_annotation.go_id) as direct from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? where edition.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`";
+    private static final String SQL_TRACK_WHEN_THEN = "WHEN accession IN (%s) THEN ? ";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -78,6 +86,70 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         for ( int i = 0; i < values.length; i++ ) {
             preparedStatement.setObject( i + 1, values[i] );
         }
+    }
+
+    @Override
+    public Map<Integer, List<TrackValue>> trackCounts( Integer species,
+            Map<String, Collection<String>> primaryToSecondary ) throws DAOException {
+
+        List<Object> params = new ArrayList<Object>();
+        List<String> allAccessions = new ArrayList<String>();
+
+        // create WHEN THEN strings for CASE END for those primaries with secondary accessions
+        String sql_when = "";
+        for ( Entry<String, Collection<String>> e : primaryToSecondary.entrySet() ) {
+            String primary = e.getKey();
+            Collection<String> secs = e.getValue();
+            allAccessions.add( primary );
+            if ( secs.size() > 0 ) {
+                sql_when += String.format( SQL_TRACK_WHEN_THEN, preparePlaceHolders( secs.size() + 1 ) );
+                params.add( primary );
+                params.addAll( secs );
+                params.add( primary );
+                allAccessions.addAll( secs );
+            }
+
+        }
+        System.out.println( sql_when );
+
+        params.add( species );
+        params.add( species );
+        for ( String a : allAccessions ) {
+            params.add( a );
+        }
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+        // List<TrackValue> tvs = new ArrayList<TrackValue>();
+        Map<Integer, List<TrackValue>> tvsMap = new HashMap<Integer, List<TrackValue>>();
+        String sql = String.format( SQL_TRACK, sql_when, preparePlaceHolders( allAccessions.size() ) );
+
+        System.out.println( sql );
+
+        try {
+            connection = daoFactory.getConnection();
+            statement = connection.prepareStatement( sql );
+            setValues( statement, params.toArray() );
+            System.out.println( statement );
+            resultSet = statement.executeQuery();
+            while ( resultSet.next() ) {
+                Integer edition = resultSet.getInt( "edition" );
+                List<TrackValue> tvs = tvsMap.get( edition );
+                if ( tvs == null ) {
+                    tvs = new ArrayList<TrackValue>();
+                    tvsMap.put( edition, tvs );
+                }
+                tvs.add( new TrackValue( resultSet.getString( "primary" ), resultSet.getDate( "date" ), edition,
+                        resultSet.getInt( "direct" ) ) );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return tvsMap;
     }
 
     /*

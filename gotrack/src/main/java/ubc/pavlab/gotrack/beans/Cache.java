@@ -38,7 +38,8 @@ import org.apache.commons.lang.StringUtils;
 
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
-import ubc.pavlab.gotrack.model.GeneSymbol;
+import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Species;
 
 /**
@@ -60,9 +61,10 @@ public class Cache implements Serializable {
     private DAOFactoryBean daoFactoryBean;
 
     private static List<Species> speciesList;
-    private static Map<Integer, Integer> currentEditions;
-    private static Map<Integer, Map<String, GeneSymbol>> accessionToGeneSymbol = new HashMap<Integer, Map<String, GeneSymbol>>();
-    private static Map<Integer, Collection<String>> symbols = new HashMap<Integer, Collection<String>>();
+    private static Map<Integer, Edition> currentEditions;
+    private static Map<Integer, Map<String, Accession>> currrentAccessions = new HashMap<Integer, Map<String, Accession>>();
+    // private static Map<Integer, Collection<String>> symbols = new HashMap<Integer, Collection<String>>();
+    private static Map<Integer, Map<String, Collection<Accession>>> symbolToCurrentAccessions = new HashMap<Integer, Map<String, Collection<Accession>>>();
 
     /**
      * 
@@ -91,12 +93,33 @@ public class Cache implements Serializable {
         System.out.println( "Loading accession to geneSymbol cache..." );
         for ( Species species : speciesList ) {
             Integer speciesId = species.getId();
-            accessionToGeneSymbol.put( speciesId,
-                    cacheDAO.getAccessionToGeneSymbol( speciesId, currentEditions.get( speciesId ) ) );
-            symbols.put( speciesId, cacheDAO.getUniqueGeneSymbols( speciesId, currentEditions.get( speciesId ) ) );
+            Edition currEd = currentEditions.get( speciesId );
+            if ( currEd == null ) continue;
+
+            // Create Map of current accessions
+            Map<String, Accession> currAccMap = cacheDAO.getCurrentAccessions( speciesId, currEd.getEdition() );
+            currrentAccessions.put( speciesId, currAccMap );
+
+            // Create symbols to collection of associated current accessions map
+            Map<String, Collection<Accession>> currSymMap = new HashMap<String, Collection<Accession>>();
+            for ( Accession acc : currAccMap.values() ) {
+                Collection<Accession> symbolAccessions = currSymMap.get( acc.getSymbol() );
+                if ( symbolAccessions == null ) {
+                    symbolAccessions = new HashSet<Accession>();
+                    symbolAccessions.add( acc );
+                    currSymMap.put( acc.getSymbol(), symbolAccessions );
+                } else {
+                    symbolAccessions.add( acc );
+                }
+
+            }
+            symbolToCurrentAccessions.put( speciesId, currSymMap );
+
+            // symbols.put( speciesId, cacheDAO.getUniqueGeneSymbols( speciesId, currEd.getEdition() ) );
 
             System.out.println( "Done loading accession to geneSymbol for species (" + speciesId + "), size: "
-                    + accessionToGeneSymbol.get( speciesId ).size() + " unique: " + symbols.get( speciesId ).size() );
+                    + currrentAccessions.get( speciesId ).size() + " unique symbols: "
+                    + symbolToCurrentAccessions.get( speciesId ).size() );
         }
         System.out.println( "Done loading accession to geneSymbol cache..." );
 
@@ -111,9 +134,9 @@ public class Cache implements Serializable {
         Collection<String> possible = new HashSet<String>();
         // Map<GOTerm, Long> results = new HashMap<GOTerm, Long>();
         // log.info( "search: " + queryString );
-        Map<String, GeneSymbol> gs = accessionToGeneSymbol.get( species );
+        Map<String, Accession> gs = currrentAccessions.get( species );
         if ( gs != null ) {
-            for ( GeneSymbol gene : gs.values() ) {
+            for ( Accession gene : gs.values() ) {
                 if ( queryUpper.toUpperCase().equals( gene.getSymbol().toUpperCase() ) ) {
                     exact.add( gene.getSymbol() );
                     continue;
@@ -156,16 +179,16 @@ public class Cache implements Serializable {
         return speciesList;
     }
 
-    public Map<Integer, Integer> getCurrentEditions() {
+    public Map<Integer, Edition> getCurrentEditions() {
         return currentEditions;
     }
 
-    public Map<Integer, Map<String, GeneSymbol>> getAccessionToGeneSymbol() {
-        return accessionToGeneSymbol;
+    public Map<Integer, Map<String, Accession>> getCurrrentAccessions() {
+        return currrentAccessions;
     }
 
-    public Map<Integer, Collection<String>> getSymbols() {
-        return symbols;
+    public Map<Integer, Map<String, Collection<Accession>>> getSymbolToCurrentAccessions() {
+        return symbolToCurrentAccessions;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
