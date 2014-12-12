@@ -30,11 +30,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.TrackValue;
 
 /**
@@ -54,6 +56,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_TRACK2 = "select date, gene_annotation.edition, accession, COUNT(distinct gene_annotation.go_id) as direct from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? where gene_annotation.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, accession";
     private static final String SQL_TRACK = "select date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, COUNT(distinct gene_annotation.go_id) as direct from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? where edition.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`";
     private static final String SQL_TRACK_WHEN_THEN = "WHEN accession IN (%s) THEN ? ";
+    private static final String SQL_FIND_UNIQUE_GO = "SELECT distinct go_id, evidence, reference from gene_annotation where accession in (%s) and edition = ? and species_id = ?";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -89,7 +92,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public Map<Integer, List<TrackValue>> trackCounts( Integer species,
+    public Map<String, List<TrackValue>> trackCounts( Integer species,
             Map<String, Collection<String>> primaryToSecondary ) throws DAOException {
 
         List<Object> params = new ArrayList<Object>();
@@ -122,7 +125,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         PreparedStatement statement = null;
         ResultSet resultSet = null;
         // List<TrackValue> tvs = new ArrayList<TrackValue>();
-        Map<Integer, List<TrackValue>> tvsMap = new HashMap<Integer, List<TrackValue>>();
+        Map<String, List<TrackValue>> tvsMap = new HashMap<String, List<TrackValue>>();
         String sql = String.format( SQL_TRACK, sql_when, preparePlaceHolders( allAccessions.size() ) );
 
         System.out.println( sql );
@@ -134,14 +137,15 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             System.out.println( statement );
             resultSet = statement.executeQuery();
             while ( resultSet.next() ) {
-                Integer edition = resultSet.getInt( "edition" );
-                List<TrackValue> tvs = tvsMap.get( edition );
+                // Integer edition = resultSet.getInt( "edition" );
+                String primary = resultSet.getString( "primary" );
+                List<TrackValue> tvs = tvsMap.get( primary );
                 if ( tvs == null ) {
                     tvs = new ArrayList<TrackValue>();
-                    tvsMap.put( edition, tvs );
+                    tvsMap.put( primary, tvs );
                 }
-                tvs.add( new TrackValue( resultSet.getString( "primary" ), resultSet.getDate( "date" ), edition,
-                        resultSet.getInt( "direct" ) ) );
+                tvs.add( new TrackValue( resultSet.getString( "primary" ), resultSet.getDate( "date" ), resultSet
+                        .getInt( "edition" ), resultSet.getInt( "direct" ) ) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -168,7 +172,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
      * @see ubc.pavlab.gotrack.dao.AnnotationDAO#find(java.lang.String, java.lang.String, java.lang.Integer)
      */
     @Override
-    public List<Annotation> find( String accession, String edition, Integer species ) throws DAOException {
+    public List<Annotation> find( String accession, Integer edition, Integer species ) throws DAOException {
         List<String> accessions = new ArrayList<String>();
         accessions.add( accession );
         return find( accessions, edition, species );
@@ -180,17 +184,26 @@ public class AnnotationDAOImpl implements AnnotationDAO {
      * @see ubc.pavlab.gotrack.dao.AnnotationDAO#find(java.util.List, java.lang.String, java.lang.Integer)
      */
     @Override
-    public List<Annotation> find( List<String> accessions, String edition, Integer species ) throws DAOException {
+    public List<Annotation> find( List<String> accessions, Integer edition, Integer species ) throws DAOException {
         Connection connection = null;
         PreparedStatement statement = null;
         ResultSet resultSet = null;
         List<Annotation> annotations = new ArrayList<Annotation>();
-        String sql = String.format( SQL_FIND, preparePlaceHolders( accessions.size() ) );
+        String sql = String.format( SQL_FIND_LIST, preparePlaceHolders( accessions.size() ) );
+        System.out.println( sql );
+        List<Object> params = new ArrayList<Object>();
+
+        for ( String acc : accessions ) {
+            params.add( acc );
+        }
+        params.add( edition );
+        params.add( species );
 
         try {
             connection = daoFactory.getConnection();
             statement = connection.prepareStatement( sql );
-            setValues( statement, accessions.toArray(), edition, species );
+            setValues( statement, params.toArray() );
+            System.out.println( statement );
             resultSet = statement.executeQuery();
             while ( resultSet.next() ) {
                 annotations.add( map( resultSet ) );
@@ -202,6 +215,43 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         }
 
         return annotations;
+
+    }
+
+    @Override
+    public Collection<GeneOntologyTerm> findUniqueGO( List<String> accessions, Integer edition, Integer species )
+            throws DAOException {
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+        Collection<GeneOntologyTerm> goTerms = new HashSet<GeneOntologyTerm>();
+        String sql = String.format( SQL_FIND_UNIQUE_GO, preparePlaceHolders( accessions.size() ) );
+        System.out.println( sql );
+        List<Object> params = new ArrayList<Object>();
+
+        for ( String acc : accessions ) {
+            params.add( acc );
+        }
+        params.add( edition );
+        params.add( species );
+
+        try {
+            connection = daoFactory.getConnection();
+            statement = connection.prepareStatement( sql );
+            setValues( statement, params.toArray() );
+            System.out.println( statement );
+            resultSet = statement.executeQuery();
+            while ( resultSet.next() ) {
+                goTerms.add( new GeneOntologyTerm( resultSet.getString( "go_id" ), resultSet.getString( "evidence" ),
+                        resultSet.getString( "reference" ) ) );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return goTerms;
 
     }
 

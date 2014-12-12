@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.TrackValue;
 
 /**
@@ -51,7 +52,7 @@ public interface AnnotationDAO {
      * @return The annotations from the database matching the given email and password, otherwise null.
      * @throws DAOException If something fails at database level.
      */
-    public List<Annotation> find( String accession, String edition, Integer species ) throws DAOException;
+    public List<Annotation> find( String accession, Integer edition, Integer species ) throws DAOException;
 
     /**
      * Returns the annotations from the database matching the given accessions, edition and species, otherwise null.
@@ -62,7 +63,7 @@ public interface AnnotationDAO {
      * @return The annotations from the database matching the given email and password, otherwise null.
      * @throws DAOException If something fails at database level.
      */
-    public List<Annotation> find( List<String> accession, String edition, Integer species ) throws DAOException;
+    public List<Annotation> find( List<String> accession, Integer edition, Integer species ) throws DAOException;
 
     /**
      * Returns true if the given symbol exists in the database.
@@ -73,7 +74,10 @@ public interface AnnotationDAO {
      */
     public boolean existSymbol( String symbol ) throws DAOException;
 
-    public Map<Integer, List<TrackValue>> trackCounts( Integer species,
+    public Map<String, List<TrackValue>> trackCounts( Integer species,
             Map<String, Collection<String>> primaryToSecondary ) throws DAOException;
+
+    public Collection<GeneOntologyTerm> findUniqueGO( List<String> accessions, Integer edition, Integer species )
+            throws DAOException;
 
 }

@@ -1,170 +1,175 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-	  xmlns:f="http://java.sun.com/jsf/core"
-      xmlns:h="http://java.sun.com/jsf/html"
-      xmlns:fn="http://java.sun.com/jsp/jstl/functions"     
-      xmlns:p="http://primefaces.org/ui"
-      >
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	xmlns:p="http://primefaces.org/ui">
 <f:metadata>
-	<f:viewParam id="currentSpecies" name="currentSpecies" value="#{trackView.currentSpecies}" />
+	<f:viewParam id="currentSpecies" name="currentSpecies"
+		value="#{trackView.currentSpecies}" />
 	<f:viewParam id="query" name="query" value="#{trackView.query}" />
 	<f:event type="preRenderView" listener="#{trackView.init}" />
 </f:metadata>
-    <h:head >
-        <title>UBC-CHiBi|GOtrack</title>        
-    <h:outputStylesheet library="css" name="style.css"  />
-    <h:outputStylesheet library="css" name="styles3.css"  />  
-    <h:outputStylesheet library="css" name="custom.css"  />  
+<h:head>
+	<title>UBC-CHiBi|GOtrack</title>
+	<h:outputStylesheet library="css" name="style.css" />
+	<h:outputStylesheet library="css" name="styles3.css" />
+	<h:outputStylesheet library="css" name="custom.css" />
 
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-        <!-- Prevents caching at the Proxy Server -->
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<!-- Prevents caching at the Proxy Server -->
 
-        <meta http-equiv="Expires" content="0" />
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-        <meta name="description" content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
+	<meta http-equiv="Expires" content="0" />
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<meta name="description"
+		content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
 
-        <meta name="keywords" content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
-        <meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
-        <h:outputScript library="js" name="lineHighlighter.js" />
+	<meta name="keywords"
+		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
+	<meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
+	<h:outputScript library="js" name="lineHighlighter.js" />
 	<script>
       function chartExtender() {
          // this = chart widget instance        
          // this.cfg = options 
          this.cfg.legend = {
-                renderer: $.jqplot.EnhancedLegendRenderer,
-                show: true,
-                location: 'ne',
-                placement: 'outsideGrid',
-                rendererOptions: {
-                    numberRows: 0
-                }
+            renderer : $.jqplot.EnhancedLegendRenderer,
+            show : true,
+            location : 'ne',
+            placement : 'outsideGrid',
+            rendererOptions : {
+               numberRows : 0
             }
+         }
          this.cfg.highlighter = {
-                                 show: true,
-                                 tooltipLocation: 'sw',
-                                 useAxesFormatters: true,
-                                 tooltipAxes: 'xy',
-                                 yvalues: 1,
-                                 formatString: 'Date: %s ~ Count: %s',
-                                     tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
-                                        return plot.series[seriesIndex].label + ": " + str;
-                                     },
-                                 bringSeriesToFront: true
-                                     
-                             }
+            show : true,
+            tooltipLocation : 'sw',
+            useAxesFormatters : true,
+            tooltipAxes : 'xy',
+            yvalues : 1,
+            formatString : 'Date: %s ~ Count: %s',
+            tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
+               return plot.series[seriesIndex].label + ": " + str;
+            },
+            bringSeriesToFront : true
+
+         }
       }
-      
    </script>
 </h:head>
 
-    <h:body>
-        <div id="site-wrapper">
-            <div id ="header">
-                <div id="top">
-                    <div class="left" id="logo">
-                        <h:graphicImage library="img"  width="130" height="110" name="logo1.png"/>
-                    </div>
-                    <div class="left navigation" id="main-nav">
-                        <ul class="tabbed">
-                            <li class="current-tab">
-                                <h:link value="Home" outcome="index.xhtml" /></li>
-                            <li><h:link value="Browse Global trends" outcome="trends.xhtml" /></li>
-                            <li> <h:link value="Tutorial" outcome="about.xhtml" /></li>
-                            <li> <h:link value="Documentation" outcome="documentation.xhtml" /></li>                                          
+<h:body>
+	<div id="site-wrapper">
+		<div id="header">
+			<div id="top">
+				<div class="left" id="logo">
+					<h:graphicImage library="img" width="130" height="110"
+						name="logo1.png" />
+				</div>
+				<div class="left navigation" id="main-nav">
+					<ul class="tabbed">
+						<li class="current-tab"><h:link value="Home"
+								outcome="index.xhtml" /></li>
+						<li><h:link value="Browse Global trends"
+								outcome="trends.xhtml" /></li>
+						<li><h:link value="Tutorial" outcome="about.xhtml" /></li>
+						<li><h:link value="Documentation"
+								outcome="documentation.xhtml" /></li>
 
-                            <li><h:link value="Resources" outcome="resources.xhtml" /></li>             
-                        </ul>
-                        <div class="clearer">&nbsp;</div>
-                    </div>
-                    <div class="clearer">&nbsp;</div>
-                </div>
-            </div>
-
-
-            <!-- This is the delimiter for the menu nav bar, not implementing the sub-nav -->
-
-            <!-- Beginning of the two main columns -->
-
-            <div class="main" id="main-two-columns">
-                <div class="right" id="sidebar">
-                    
-                    <!-- MULTIFUNCTIONAL -->
-                    <div class="section">
-
-                        <div class="section-title">Top multifunctional genes in latest edition for selected species</div>
-
-                        <div class="nice-list">
-
-                            <h:form>                 
-                                <p:dataList value="#{stats.topMultifunc}" var="gene" type="ordered">
-                                    #{gene}
-                                </p:dataList>
-                            </h:form>  
-                        </div>
-
-                    </div>
-                </div>
-
-                <!-- MAIN -->
-                <div class="left" id="main-content">
-                    <div class="section">
-                        <div class="section-title">Displaying results for: #{trackView.query}</div>
+						<li><h:link value="Resources" outcome="resources.xhtml" /></li>
+					</ul>
+					<div class="clearer">&nbsp;</div>
+				</div>
+				<div class="clearer">&nbsp;</div>
+			</div>
+		</div>
 
 
-                        <h:form id="nsearch">
+		<!-- This is the delimiter for the menu nav bar, not implementing the sub-nav -->
 
-                            <p:commandButton value="New Gene Search" action="index?faces-redirect=true" />  
+		<!-- Beginning of the two main columns -->
+		<div class="main" id="main-two-columns">
+			<!-- MAIN -->
+			<div id="page-title">
+				<h1>Count History</h1>
+			</div>
 
-                            <p></p>
-                            <p> Uniprot IDs matching the requested gene product: </p>
+			<div class="section">
+				<div class="section-title">
 
-                            <p:commandButton style="font-size: 7px;" icon="ui-icon-info"  id="tooltipe" />
+					<h:form>
+					Displaying results for: #{trackView.query}
+					<p:commandButton style="font-size: 7px;" icon="ui-icon-info"
+							id="tooltipe" />
+						<p:tooltip id="uniprots" for="tooltipe">
+							<h:panelGroup>
+								<h:outputText
+									value="A gene symbol can be associated to multiple Uniprot IDs" />
+								<br />
+								<h:outputText
+									value="that are simultaneously annotated in the GOA files. One" />
+								<br />
+								<h:outputText
+									value="of those IDs corresponds to a manually reviewed SwissProt Id," />
+								<br />
+								<h:outputText
+									value="and the others correspond to unreviewed TrEMBL Ids. All the" />
+								<br />
+								<h:outputText
+									value="Uniprot Ids that matched the symbol will be displayed." />
+							</h:panelGroup>
+						</p:tooltip>
+					</h:form>
+				</div>
 
-                            <p:tooltip id="uniprots" for="tooltipe">
-                                <h:panelGroup>
-                                    <h:outputText value="A gene symbol can be associated to multiple Uniprot IDs"/> <br />
-                                    <h:outputText value="that are simultaneously annotated in the GOA files. One"/> <br />
-                                    <h:outputText value="of those IDs corresponds to a manually reviewed SwissProt Id,"/> <br />
-                                    <h:outputText value="and the others correspond to unreviewed TrEMBL Ids. All the"/> <br />
-                                    <h:outputText value="Uniprot Ids that matched the symbol will be displayed."/>
-                                </h:panelGroup>
-                            </p:tooltip>
+				<div class="post">
+					<div class="post-body">
+						<h:form>
+							<p:dialog id="dlg2" header="Modal Dialog" widgetVar="dlg2"
+								modal="false" width="600px">
+								<h:outputText id="dialogMsg"
+									value="Date: #{trackView.selectedItem.date}, Count: #{trackView.selectedItem.directAnnotations}" />
+								<p:dataList id="dialogAnnotations" paginator="true" rows="10" value="#{trackView.terms}" var="term"
+									type="unordered">
+        							#{term.goId}, #{term.reference}, #{term.evidence}
+    							</p:dataList>
+							</p:dialog>
+							<p:growl id="growl" showDetail="true" />
+							<p:chart id='chart1' type="line" model="#{trackView.dateModel}"
+								style="height:500px;" widgetVar="chart">
+								<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
+									onsuccess="PF('dlg2').show();" update="dialogMsg,dialogAnnotations" />
+							</p:chart>
+							<p:commandButton type="button" value="Reset"
+								icon="ui-icon-cancel" onclick="PF('chart').resetZoom()" />
 
- <!--                            <p:dataGrid  value="#{userRequestBean.allIdsToConsiderUser}" var="uniprot"
-                                         columns="10" style="width: 95%" >                                  
-                                <a href="http://www.uniprot.org/uniprot/#{uniprot}"  target="_blank"
-                                   title="Go to Uniprot web page">#{uniprot}</a>                
-                            </p:dataGrid >   -->            
+							<!-- PUT THE ACTUAL CONTENT -->
 
-                        </h:form>
+							<!-- End of the FUNCTIONALITY CONTENT -->
+						</h:form>
 
-                        <div class="post">
-                            <div class="post-body">
+					</div>
+				</div>
+			</div>
+			<div class="content-separator"></div>
 
-                                <!-- PUT THE ACTUAL CONTENT -->
-  									<p:chart id='chart1' type="line" model="#{trackView.dateModel}" style="height:500px;" widgetVar="chart"/>
-  									<p:commandButton type="button" value="Reset" icon="ui-icon-cancel" onclick="PF('chart').resetZoom()"/>
-                                <!-- End of the FUNCTIONALITY CONTENT -->
-                            </div>
-                        </div>
-                    </div>
-                    <div class="content-separator"></div>
-                </div>
 
-                <div class="clearer">&nbsp;</div>
-            </div>
-        </div>
+			<div class="clearer">&nbsp;</div>
+			<!-- MAIN -->
+		</div>
+	</div>
 
-        <!-- This is the end of the two main columns -->
+	<!-- This is the end of the two main columns -->
 
-        <div id="footer">
-            <div class="center" id="footer-left">
-                <p>&copy; UBC, Centre of High-throughput Biology, 2014
-                    <a href="terms.xhtml">Terms and Conditions</a>
-                </p>
-            </div>
-        </div>
-    </h:body>
+	<div id="footer">
+		<div class="center" id="footer-left">
+			<p>
+				&copy; UBC, Centre of High-throughput Biology, 2014 <a
+					href="terms.xhtml">Terms and Conditions</a>
+			</p>
+		</div>
+	</div>
+</h:body>
 </html>
 

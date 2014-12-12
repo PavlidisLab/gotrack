@@ -22,9 +22,12 @@ package ubc.pavlab.gotrack.beans;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.faces.application.NavigationHandler;
 import javax.faces.bean.ManagedBean;
@@ -32,6 +35,8 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
 
+import org.primefaces.context.RequestContext;
+import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.model.chart.AxisType;
 import org.primefaces.model.chart.DateAxis;
 import org.primefaces.model.chart.LineChartModel;
@@ -40,6 +45,7 @@ import org.primefaces.model.chart.LineChartSeries;
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.TrackValue;
 
 /**
@@ -68,7 +74,12 @@ public class TrackView implements Serializable {
     // private List<TrackValue> trackValues;
 
     private LineChartModel dateModel;
+    private Map<Integer, Map<String, TrackValue>> seriesData;
     private Edition currentEdition;
+    private Map<String, Accession> currentPrimaryAccessions = new HashMap<String, Accession>();
+
+    private TrackValue selectedItem;
+    private Collection<GeneOntologyTerm> terms = new ArrayList<GeneOntologyTerm>();
 
     /**
      * 
@@ -78,6 +89,9 @@ public class TrackView implements Serializable {
     }
 
     public void init() {
+        if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
+            return; // Skip ajax requests.
+        }
         System.out.println( "TrackView init: " + currentSpecies + ": " + query );
         Collection<Accession> primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpecies )
                 .get( query );
@@ -90,75 +104,60 @@ public class TrackView implements Serializable {
             Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
             for ( Accession accession : primaryAccessions ) {
                 primaryToSecondary.put( accession.getAccession(), accession.getSecondary() );
+                currentPrimaryAccessions.put( accession.getAccession(), accession );
             }
 
             // Obtain AnnotationDAO.
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
             currentEdition = cache.getCurrentEditions().get( currentSpecies );
-            Map<Integer, List<TrackValue>> tvsMap = annotationDAO.trackCounts( currentSpecies, primaryToSecondary );
-            List<TrackValue> filteredTrackValues = new ArrayList<TrackValue>();
+            Map<String, List<TrackValue>> tvsMap = annotationDAO.trackCounts( currentSpecies, primaryToSecondary );
 
-            for ( List<TrackValue> tvs : tvsMap.values() ) {
-                // for ( Iterator<TrackValue> iterator = tvs.iterator(); iterator.hasNext(); ) {
-                // TrackValue trackValue = iterator.next();
-                // String acc = trackValue.getAccession();
-                // for ( Accession primaryAcc : primaryAccessions ) {
-                // if ( primaryAcc.getAccession().equals( acc ) ) {
-                // // Is primary
-                // System.out.println( "primary: " + primaryAcc.getAccession() );
-                // break;
-                // } else if ( primaryAcc.getSecondary().contains( acc ) ) {
-                // // Is secondary
-                // // add values to primary and delete
-                // System.out.println( "secondary: " + acc + " primary: " + primaryAcc.getAccession() );
-                // Integer direct = trackValue.getDirectAnnotations();
-                //
-                // for ( TrackValue trackValue2 : tvs ) {
-                // if ( primaryAcc.getAccession().equals( trackValue2.getAccession() ) ) {
-                // // Found primary trackValue, add directs
-                // trackValue2.setDirectAnnotations( trackValue2.getDirectAnnotations() + direct );
-                // break;
-                // }
-                // }
-                //
-                // iterator.remove();
-                //
-                // break;
-                // }
-                // }
-                //
-                // }
-
-                filteredTrackValues.addAll( tvs );
-
-            }
-
-            dateModel = createDateModel( filteredTrackValues );
+            dateModel = createDateModel( tvsMap );
         }
 
     }
 
-    private LineChartModel createDateModel( Collection<TrackValue> trackValues ) {
+    private LineChartModel createDateModel( Map<String, List<TrackValue>> tvsMap ) {
         LineChartModel dateModel = new LineChartModel();
-        Map<String, LineChartSeries> allSeries = new HashMap<String, LineChartSeries>();
-        for ( TrackValue tv : trackValues ) {
-            String acc = tv.getAccession();
-            LineChartSeries s = allSeries.get( acc );
-            if ( s == null ) {
-                s = new LineChartSeries();
-                s.setLabel( acc );
-                s.setMarkerStyle( "filledDiamond" );
+        seriesData = new HashMap<Integer, Map<String, TrackValue>>();
+        Integer index = 0;
+        for ( Entry<String, List<TrackValue>> es : tvsMap.entrySet() ) {
+            String primary = es.getKey();
+            List<TrackValue> tvs = es.getValue();
+            Collections.sort( tvs, new CustomComparator() );
+            LineChartSeries s = new LineChartSeries();
+            s.setLabel( primary );
+            s.setMarkerStyle( "filledDiamond" );
+
+            Map<String, TrackValue> data = new HashMap<String, TrackValue>();
+            seriesData.put( index++, data );
+            for ( TrackValue tv : tvs ) {
                 s.set( tv.getDate().toString(), tv.getDirectAnnotations() );
-                allSeries.put( acc, s );
-            } else {
-                s.set( tv.getDate().toString(), tv.getDirectAnnotations() );
+                data.put( tv.getDate().toString(), tv );
+                // s.set( new Edition(tv.getEdition(), tv.getDate()), tv.getDirectAnnotations() );
             }
-
+            dateModel.addSeries( s );
         }
 
-        for ( LineChartSeries series : allSeries.values() ) {
-            dateModel.addSeries( series );
-        }
+        // Map<String, LineChartSeries> allSeries = new HashMap<String, LineChartSeries>();
+        // for ( TrackValue tv : trackValues ) {
+        // String acc = tv.getAccession();
+        // LineChartSeries s = allSeries.get( acc );
+        // if ( s == null ) {
+        // s = new LineChartSeries();
+        // s.setLabel( acc );
+        // s.setMarkerStyle( "filledDiamond" );
+        // s.set( tv.getDate().toString(), tv.getDirectAnnotations() );
+        // allSeries.put( acc, s );
+        // } else {
+        // s.set( tv.getDate().toString(), tv.getDirectAnnotations() );
+        // }
+        //
+        // }
+        //
+        // for ( LineChartSeries series : allSeries.values() ) {
+        // dateModel.addSeries( series );
+        // }
 
         dateModel.setTitle( "Changes in the number of annotation properties over time" );
         dateModel.setZoom( true );
@@ -172,12 +171,35 @@ public class TrackView implements Serializable {
         dateModel.getAxis( AxisType.Y ).setLabel( "Direct Annotations" );
         dateModel.getAxis( AxisType.Y ).setMin( 0 );
         DateAxis axis = new DateAxis( "Dates" );
+        // CategoryAxis axis = new CategoryAxis( "Editions" );
         axis.setTickAngle( -50 );
         axis.setMax( currentEdition.getDate().toString() );
         axis.setTickFormat( "%b %#d, %y" );
 
         dateModel.getAxes().put( AxisType.X, axis );
         return dateModel;
+    }
+
+    public void itemSelect( ItemSelectEvent event ) {
+
+        // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
+        List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( dateModel.getSeries()
+                .get( event.getSeriesIndex() ).getData().entrySet() );
+        String date = ( String ) es.get( event.getItemIndex() ).getKey();
+        selectedItem = seriesData.get( event.getSeriesIndex() ).get( date );
+
+        List<String> accessions = new ArrayList<String>();
+        accessions.add( selectedItem.getAccession() );
+        accessions.addAll( currentPrimaryAccessions.get( selectedItem.getAccession() ).getSecondary() );
+        terms = annotationDAO.findUniqueGO( accessions, selectedItem.getEdition(), currentSpecies );
+        // RequestContext.getCurrentInstance().update( "dialogMsg" );
+
+        // System.out.println( selectedItem.getEdition() );
+
+    }
+
+    public void showDialog() {
+        RequestContext.getCurrentInstance().openDialog( "dlg2" );
     }
 
     public LineChartModel getDateModel() {
@@ -208,8 +230,27 @@ public class TrackView implements Serializable {
         this.cache = cache;
     }
 
+    public TrackValue getSelectedItem() {
+        return selectedItem;
+    }
+
+    public void setSelectedItem( TrackValue selectedItem ) {
+        this.selectedItem = selectedItem;
+    }
+
+    public Collection<GeneOntologyTerm> getTerms() {
+        return terms;
+    }
+
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
         this.daoFactoryBean = daoFactoryBean;
     }
 
+}
+
+class CustomComparator implements Comparator<TrackValue> {
+    @Override
+    public int compare( TrackValue o1, TrackValue o2 ) {
+        return o1.getEdition().compareTo( o2.getEdition() );
+    }
 }
