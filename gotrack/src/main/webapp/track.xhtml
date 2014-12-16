@@ -126,14 +126,26 @@
 				<div class="post">
 					<div class="post-body">
 						<h:form>
-							<p:dialog id="dlg2" header="Modal Dialog" widgetVar="dlg2"
+							<p:dialog id="dlg2" header="Annotations" widgetVar="dlg2"
 								modal="false" width="600px">
 								<h:outputText id="dialogMsg"
 									value="Date: #{trackView.selectedItem.date}, Count: #{trackView.selectedItem.directAnnotations}" />
-								<p:dataList id="dialogAnnotations" paginator="true" rows="10" value="#{trackView.terms}" var="term"
-									type="unordered">
-        							#{term.goId}, #{term.reference}, #{term.evidence}
-    							</p:dataList>
+								    <p:dataTable id="dialogAnnotations" widgetVar="annotationsTable" var="term" value="#{trackView.terms}" scrollable="true" scrollHeight="250" resizableColumns="true" liveResize="true" sortMode="multiple" style="margin-bottom:0" emptyMessage="No annotations found with given criteria" filteredValue="#{trackView.filteredTerms}">
+								        <p:column filterBy="#{term.goId}" filterMatchMode="contains" headerText="Id">
+								            <h:outputText value="#{term.goId}" />
+								        </p:column>
+								        <p:column filterBy="#{term.reference}" filterMatchMode="contains" headerText="Reference">
+								            <h:outputText value="#{term.reference}" />
+								        </p:column>
+								        <p:column filterBy="#{term.evidence}" filterMatchMode="in" headerText="Evidence">
+								            <f:facet name="filter">
+								                <p:selectCheckboxMenu label="Code" onchange="PF('annotationsTable').filter()" panelStyle="width:125px" scrollHeight="150" panelStyleClass="without-selectall">
+								                    <f:selectItems value="#{trackView.codes}" />
+								                </p:selectCheckboxMenu>
+								            </f:facet>
+								            <h:outputText value="#{term.evidence}" />
+								        </p:column>
+								    </p:dataTable>
 							</p:dialog>
 							<p:growl id="growl" showDetail="true" />
 							<p:chart id='chart1' type="line" model="#{trackView.dateModel}"

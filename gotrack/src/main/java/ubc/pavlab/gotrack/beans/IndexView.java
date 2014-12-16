@@ -20,11 +20,20 @@
 package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
+import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
+import javax.faces.component.UIComponent;
+import javax.faces.component.UIInput;
+import javax.faces.context.FacesContext;
+import javax.faces.event.ComponentSystemEvent;
+
+import ubc.pavlab.gotrack.model.Accession;
 
 /**
  * TODO Document Me
@@ -51,6 +60,49 @@ public class IndexView implements Serializable {
      */
     public IndexView() {
         System.out.println( "IndexView created" );
+    }
+
+    public void validateQuery( ComponentSystemEvent event ) {
+
+        FacesContext fc = FacesContext.getCurrentInstance();
+
+        UIComponent components = event.getComponent();
+
+        // get password
+        UIInput uiInputSpecies = ( UIInput ) components.findComponent( "selectspecies" );
+        Integer selectspecies = ( Integer ) uiInputSpecies.getLocalValue();
+        String speciesId = uiInputSpecies.getClientId();
+
+        // get confirm password
+        UIInput uiInputQuery = ( UIInput ) components.findComponent( "userinp" );
+        String currentQuery = uiInputQuery.getLocalValue() == null ? "" : uiInputQuery.getLocalValue().toString();
+        String queryId = uiInputQuery.getClientId();
+
+        // Let required="true" do its job.
+        if ( selectspecies == null ) {
+            FacesMessage msg = new FacesMessage( "Please select a species." );
+            msg.setSeverity( FacesMessage.SEVERITY_ERROR );
+            fc.addMessage( speciesId, msg );
+            fc.renderResponse();
+            return;
+        } else if ( currentQuery.isEmpty() ) {
+            FacesMessage msg = new FacesMessage( "please select a gene symbol." );
+            msg.setSeverity( FacesMessage.SEVERITY_ERROR );
+            fc.addMessage( queryId, msg );
+            fc.renderResponse();
+            return;
+        }
+
+        Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( selectspecies );
+        if ( currentQuery == null || selectspecies == null || c == null || c.get( currentQuery ) == null ) {
+
+            FacesMessage msg = new FacesMessage( "The selected gene symbol could not be found." );
+            msg.setSeverity( FacesMessage.SEVERITY_ERROR );
+            fc.addMessage( queryId, msg );
+            fc.renderResponse();
+
+        }
+
     }
 
     public Integer getCurrentSpecies() {

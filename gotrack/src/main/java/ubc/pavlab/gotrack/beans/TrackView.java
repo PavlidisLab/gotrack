@@ -25,9 +25,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 
 import javax.faces.application.NavigationHandler;
 import javax.faces.bean.ManagedBean;
@@ -80,6 +82,8 @@ public class TrackView implements Serializable {
 
     private TrackValue selectedItem;
     private Collection<GeneOntologyTerm> terms = new ArrayList<GeneOntologyTerm>();
+    private Collection<GeneOntologyTerm> filteredTerms;
+    private Set<String> codes = new HashSet<String>();
 
     /**
      * 
@@ -93,9 +97,12 @@ public class TrackView implements Serializable {
             return; // Skip ajax requests.
         }
         System.out.println( "TrackView init: " + currentSpecies + ": " + query );
-        Collection<Accession> primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpecies )
-                .get( query );
-        if ( primaryAccessions == null ) {
+        Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( currentSpecies );
+        Collection<Accession> primaryAccessions;
+        if ( query == null
+                || currentSpecies == null
+                || c == null
+                || ( primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpecies ).get( query ) ) == null ) {
             FacesContext facesContext = FacesContext.getCurrentInstance();
             NavigationHandler navigationHandler = facesContext.getApplication().getNavigationHandler();
             navigationHandler.handleNavigation( facesContext, null, "error400?faces-redirect=true" );
@@ -193,7 +200,10 @@ public class TrackView implements Serializable {
         accessions.addAll( currentPrimaryAccessions.get( selectedItem.getAccession() ).getSecondary() );
         terms = annotationDAO.findUniqueGO( accessions, selectedItem.getEdition(), currentSpecies );
         // RequestContext.getCurrentInstance().update( "dialogMsg" );
-
+        codes = new HashSet<String>();
+        for ( GeneOntologyTerm t : terms ) {
+            codes.add( t.getEvidence() );
+        }
         // System.out.println( selectedItem.getEdition() );
 
     }
@@ -240,6 +250,18 @@ public class TrackView implements Serializable {
 
     public Collection<GeneOntologyTerm> getTerms() {
         return terms;
+    }
+
+    public Collection<GeneOntologyTerm> getFilteredTerms() {
+        return filteredTerms;
+    }
+
+    public void setFilteredTerms( Collection<GeneOntologyTerm> filteredTerms ) {
+        this.filteredTerms = filteredTerms;
+    }
+
+    public Set<String> getCodes() {
+        return codes;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

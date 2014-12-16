@@ -139,10 +139,10 @@ ul.nice-list li .right {color: #999;}
 
 /* Tables */
 
-table {margin-bottom: 1.1em; /* width: 100%; */}
+ /*table {margin-bottom: 1.1em; width: 100%; }*/
 th {font-weight: bold;}
 thead th {background: #C3D9FF;}
-th,td,caption {padding: 4px 4px 4px 4px;}
+th,td,caption {padding: 2px 4px 2px 4px;}
 tr.even td {background: #F2F6FA;}
 tfoot {font-style: italic;}
 caption {background: #EEE;}
@@ -670,5 +670,9 @@ root {
 }
 #page-title h1 {
 	color:#888;
+}
+
+.without-selectall .ui-selectcheckboxmenu-header .ui-chkbox {
+    display: none; 
 }
 
