@@ -130,11 +130,11 @@
 								modal="false" width="600px">
 								<h:outputText id="dialogMsg"
 									value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.terms)}" />
-								    <p:dataTable id="dialogAnnotations" widgetVar="annotationsTable" var="term" value="#{trackView.terms}" scrollable="true" scrollHeight="250" resizableColumns="true" liveResize="true" sortMode="multiple" style="margin-bottom:0" emptyMessage="No annotations found with given criteria" filteredValue="#{trackView.filteredTerms}">
-								        <p:column filterBy="#{term.goId}" filterMatchMode="contains" headerText="Id">
+								    <p:dataTable id="dialogAnnotations" widgetVar="annotationsTable" var="term" value="#{trackView.terms}" scrollable="true" scrollHeight="250" sortMode="multiple" style="margin-bottom:0" emptyMessage="No annotations found with given criteria" filteredValue="#{trackView.filteredTerms}">
+								        <p:column filterBy="#{term.goId}" filterMatchMode="contains" headerText="Id" style="width:120px;">
 								            <h:outputText value="#{term.goId}" />
 								        </p:column>
-								        <p:column filterBy="#{term.aspect}" filterMatchMode="in" headerText="Aspect">
+								        <p:column filterBy="#{term.aspect}" filterMatchMode="in" headerText="Aspect" style="width:100px;">
 								            <f:facet name="filter">
 								                <p:selectCheckboxMenu label="Aspect" onchange="PF('annotationsTable').filter()" panelStyle="width:125px" scrollHeight="150" panelStyleClass="without-selectall">
 								                    <f:selectItems value="#{trackView.aspects}" />
