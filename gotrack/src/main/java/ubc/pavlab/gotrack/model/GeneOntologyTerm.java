@@ -28,6 +28,8 @@ package ubc.pavlab.gotrack.model;
 public class GeneOntologyTerm {
 
     private String goId;
+    private String name;
+    private String aspect;
     private String evidence;
     private String reference;
 
@@ -43,6 +45,15 @@ public class GeneOntologyTerm {
         this.goId = goId;
         this.evidence = evidence;
         this.reference = reference;
+    }
+
+    public GeneOntologyTerm( String goId, String evidence, String reference, String name, String aspect ) {
+        super();
+        this.goId = goId;
+        this.evidence = evidence;
+        this.reference = reference;
+        this.name = name;
+        this.aspect = aspect;
     }
 
     public String getGoId() {
@@ -69,9 +80,26 @@ public class GeneOntologyTerm {
         this.reference = reference;
     }
 
+    public String getName() {
+        return name;
+    }
+
+    public void setName( String name ) {
+        this.name = name;
+    }
+
+    public String getAspect() {
+        return aspect;
+    }
+
+    public void setAspect( String aspect ) {
+        this.aspect = aspect;
+    }
+
     @Override
     public String toString() {
-        return "GeneOntologyTerm [goId=" + goId + ", evidence=" + evidence + ", reference=" + reference + "]";
+        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", evidence=" + evidence + ", reference="
+                + reference + "]";
     }
 
     @Override

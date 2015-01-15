@@ -21,6 +21,7 @@ package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -48,7 +49,6 @@ import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.TrackValue;
 
 /**
  * TODO Document Me
@@ -70,20 +70,44 @@ public class TrackView implements Serializable {
      * 
      */
     private static final long serialVersionUID = 7413572739210227872L;
+
+    // DAO
+    private AnnotationDAO annotationDAO;
+
+    // Query params
     private Integer currentSpecies;
     private String query;
-    private AnnotationDAO annotationDAO;
+
     // private List<TrackValue> trackValues;
 
-    private LineChartModel dateModel;
-    private Map<Integer, Map<String, TrackValue>> seriesData;
+    // Static data
     private Edition currentEdition;
     private Map<String, Accession> currentPrimaryAccessions = new HashMap<String, Accession>();
 
-    private TrackValue selectedItem;
+    // Current chart
+    private LineChartModel currentChart;
+
+    // Current data in chart used for select
+    private Map<String, Map<String, Set<GeneOntologyTerm>>> seriesData;
+
+    // All Charts
+    private Map<String, LineChartModel> allCharts = new HashMap<String, LineChartModel>();
+
+    // All series data
+    private Map<String, Map<String, Map<String, Set<GeneOntologyTerm>>>> allSeriesData = new HashMap<String, Map<String, Map<String, Set<GeneOntologyTerm>>>>();
+
+    // Select functionality
+    // private TrackValueSimple selectedItem;
+    private String selectedDate;
     private Collection<GeneOntologyTerm> terms = new ArrayList<GeneOntologyTerm>();
     private Collection<GeneOntologyTerm> filteredTerms;
-    private Set<String> codes = new HashSet<String>();
+    // private Set<String> codes = new HashSet<String>();
+
+    // Static lists
+    private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
+    private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
+
+    private String graphType = "direct";
 
     /**
      * 
@@ -117,56 +141,88 @@ public class TrackView implements Serializable {
             // Obtain AnnotationDAO.
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
             currentEdition = cache.getCurrentEditions().get( currentSpecies );
-            Map<String, List<TrackValue>> tvsMap = annotationDAO.trackCounts( currentSpecies, primaryToSecondary );
 
-            dateModel = createDateModel( tvsMap );
+            Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpecies,
+                    primaryToSecondary, false );
+
+            currentChart = createChart( allSeries, "Direct Annotations vs Time", "Direct Annotations" );
+
+            Map<String, Map<String, Set<GeneOntologyTerm>>> sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
+            for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
+                sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
+            }
+            seriesData = sData;
+
+            allCharts.put( "direct", currentChart );
+            allSeriesData.put( "direct", seriesData );
+
+            Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesProp = annotationDAO.track( currentSpecies,
+                    primaryToSecondary, true );
+
+            // Add back direct parents if not there
+            for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> seriesEntry : allSeries.entrySet() ) {
+                String seriesAccession = seriesEntry.getKey();
+                for ( Entry<Edition, Set<GeneOntologyTerm>> editionInSeriesEntry : seriesEntry.getValue().entrySet() ) {
+                    Edition editionInSeries = editionInSeriesEntry.getKey();
+                    Set<GeneOntologyTerm> dataPoints = allSeriesProp.get( seriesAccession ).get( editionInSeries );
+                    if ( dataPoints == null ) {
+                        dataPoints = new HashSet<GeneOntologyTerm>();
+                        // Commented out to ignore those editions where I have no GO structure data
+                        // It is misleading to show only direct parents here
+                        // allSeriesProp.get( seriesAccession ).put( editionInSeries, dataPoints );
+                    }
+                    dataPoints.addAll( editionInSeriesEntry.getValue() );
+                }
+            }
+
+            sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
+            for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeriesProp.entrySet() ) {
+                sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
+            }
+
+            allCharts.put( "propagated",
+                    createChart( allSeriesProp, "Propagated Annotations vs Time", "Propagated Annotations" ) );
+            allSeriesData.put( "propagated", sData );
+
         }
 
     }
 
-    private LineChartModel createDateModel( Map<String, List<TrackValue>> tvsMap ) {
-        LineChartModel dateModel = new LineChartModel();
-        seriesData = new HashMap<Integer, Map<String, TrackValue>>();
-        Integer index = 0;
-        for ( Entry<String, List<TrackValue>> es : tvsMap.entrySet() ) {
-            String primary = es.getKey();
-            List<TrackValue> tvs = es.getValue();
-            Collections.sort( tvs, new CustomComparator() );
-            LineChartSeries s = new LineChartSeries();
-            s.setLabel( primary );
-            s.setMarkerStyle( "filledDiamond" );
+    private Map<String, Set<GeneOntologyTerm>> editionMapToDateMap( Map<Edition, Set<GeneOntologyTerm>> editionMap ) {
+        Map<String, Set<GeneOntologyTerm>> res = new HashMap<String, Set<GeneOntologyTerm>>();
+        for ( Entry<Edition, Set<GeneOntologyTerm>> es : editionMap.entrySet() ) {
+            res.put( es.getKey().getDate().toString(), es.getValue() );
+        }
+        return res;
+    }
 
-            Map<String, TrackValue> data = new HashMap<String, TrackValue>();
-            seriesData.put( index++, data );
-            for ( TrackValue tv : tvs ) {
-                s.set( tv.getDate().toString(), tv.getDirectAnnotations() );
-                data.put( tv.getDate().toString(), tv );
-                // s.set( new Edition(tv.getEdition(), tv.getDate()), tv.getDirectAnnotations() );
+    private LineChartModel createChart( Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries, String title,
+            String yAxis ) {
+
+        LineChartModel dateModel = new LineChartModel();
+
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
+            String primary = es.getKey();
+            Map<Edition, Set<GeneOntologyTerm>> sData = es.getValue();
+
+            List<Edition> editions = new ArrayList<Edition>( sData.keySet() );
+            // Sort so that display order or series matches ItemIndex order returned by ItemSelectEvent
+            Collections.sort( editions, new CustomComparator() );
+
+            LineChartSeries series = new LineChartSeries();
+            series.setLabel( primary );
+            series.setMarkerStyle( "filledDiamond" );
+
+            for ( Edition edition : editions ) {
+                String date = edition.getDate().toString();
+                Integer count = sData.get( edition ).size();
+                series.set( date, count );
             }
-            dateModel.addSeries( s );
+
+            dateModel.addSeries( series );
         }
 
-        // Map<String, LineChartSeries> allSeries = new HashMap<String, LineChartSeries>();
-        // for ( TrackValue tv : trackValues ) {
-        // String acc = tv.getAccession();
-        // LineChartSeries s = allSeries.get( acc );
-        // if ( s == null ) {
-        // s = new LineChartSeries();
-        // s.setLabel( acc );
-        // s.setMarkerStyle( "filledDiamond" );
-        // s.set( tv.getDate().toString(), tv.getDirectAnnotations() );
-        // allSeries.put( acc, s );
-        // } else {
-        // s.set( tv.getDate().toString(), tv.getDirectAnnotations() );
-        // }
-        //
-        // }
-        //
-        // for ( LineChartSeries series : allSeries.values() ) {
-        // dateModel.addSeries( series );
-        // }
-
-        dateModel.setTitle( "Changes in the number of annotation properties over time" );
+        dateModel.setTitle( title );
         dateModel.setZoom( true );
 
         dateModel.setLegendPosition( "nw" );
@@ -175,7 +231,7 @@ public class TrackView implements Serializable {
         dateModel.setMouseoverHighlight( true );
         dateModel.setExtender( "chartExtender" );
 
-        dateModel.getAxis( AxisType.Y ).setLabel( "Direct Annotations" );
+        dateModel.getAxis( AxisType.Y ).setLabel( yAxis );
         dateModel.getAxis( AxisType.Y ).setMin( 0 );
         DateAxis axis = new DateAxis( "Dates" );
         // CategoryAxis axis = new CategoryAxis( "Editions" );
@@ -185,35 +241,37 @@ public class TrackView implements Serializable {
 
         dateModel.getAxes().put( AxisType.X, axis );
         return dateModel;
+
     }
 
     public void itemSelect( ItemSelectEvent event ) {
 
         // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
-        List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( dateModel.getSeries()
+        List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( currentChart.getSeries()
                 .get( event.getSeriesIndex() ).getData().entrySet() );
+
+        // Keep in mind that the list of entry sets is in the order that the data was inserted, not the order it is
+        // displayed!
         String date = ( String ) es.get( event.getItemIndex() ).getKey();
-        selectedItem = seriesData.get( event.getSeriesIndex() ).get( date );
 
-        List<String> accessions = new ArrayList<String>();
-        accessions.add( selectedItem.getAccession() );
-        accessions.addAll( currentPrimaryAccessions.get( selectedItem.getAccession() ).getSecondary() );
-        terms = annotationDAO.findUniqueGO( accessions, selectedItem.getEdition(), currentSpecies );
-        // RequestContext.getCurrentInstance().update( "dialogMsg" );
-        codes = new HashSet<String>();
-        for ( GeneOntologyTerm t : terms ) {
-            codes.add( t.getEvidence() );
-        }
-        // System.out.println( selectedItem.getEdition() );
+        selectedDate = date;
 
+        terms = seriesData.get( currentChart.getSeries().get( event.getSeriesIndex() ).getLabel() ).get( date );
+
+    }
+
+    public void changeGraph() {
+        // System.out.println( "New value: " + graphType );
+        currentChart = allCharts.get( graphType );
+        seriesData = allSeriesData.get( graphType );
     }
 
     public void showDialog() {
         RequestContext.getCurrentInstance().openDialog( "dlg2" );
     }
 
-    public LineChartModel getDateModel() {
-        return dateModel;
+    public LineChartModel getCurrentChart() {
+        return currentChart;
     }
 
     // public List<TrackValue> getTrackValues() {
@@ -240,12 +298,12 @@ public class TrackView implements Serializable {
         this.cache = cache;
     }
 
-    public TrackValue getSelectedItem() {
-        return selectedItem;
+    public String getSelectedDate() {
+        return selectedDate;
     }
 
-    public void setSelectedItem( TrackValue selectedItem ) {
-        this.selectedItem = selectedItem;
+    public void setSelectedDate( String selectedDate ) {
+        this.selectedDate = selectedDate;
     }
 
     public Collection<GeneOntologyTerm> getTerms() {
@@ -260,19 +318,35 @@ public class TrackView implements Serializable {
         this.filteredTerms = filteredTerms;
     }
 
-    public Set<String> getCodes() {
-        return codes;
+    // public Set<String> getCodes() {
+    // return codes;
+    // }
+
+    public String getGraphType() {
+        return graphType;
+    }
+
+    public void setGraphType( String graphType ) {
+        this.graphType = graphType;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
         this.daoFactoryBean = daoFactoryBean;
     }
 
+    public List<String> getAspects() {
+        return aspects;
+    }
+
+    public List<String> getGraphs() {
+        return graphs;
+    }
+
 }
 
-class CustomComparator implements Comparator<TrackValue> {
+class CustomComparator implements Comparator<Edition> {
     @Override
-    public int compare( TrackValue o1, TrackValue o2 ) {
+    public int compare( Edition o1, Edition o2 ) {
         return o1.getEdition().compareTo( o2.getEdition() );
     }
 }

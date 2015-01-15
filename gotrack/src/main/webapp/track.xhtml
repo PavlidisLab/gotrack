@@ -129,32 +129,45 @@
 							<p:dialog id="dlg2" header="Annotations" widgetVar="dlg2"
 								modal="false" width="600px">
 								<h:outputText id="dialogMsg"
-									value="Date: #{trackView.selectedItem.date}, Count: #{trackView.selectedItem.directAnnotations}" />
+									value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.terms)}" />
 								    <p:dataTable id="dialogAnnotations" widgetVar="annotationsTable" var="term" value="#{trackView.terms}" scrollable="true" scrollHeight="250" resizableColumns="true" liveResize="true" sortMode="multiple" style="margin-bottom:0" emptyMessage="No annotations found with given criteria" filteredValue="#{trackView.filteredTerms}">
 								        <p:column filterBy="#{term.goId}" filterMatchMode="contains" headerText="Id">
 								            <h:outputText value="#{term.goId}" />
 								        </p:column>
-								        <p:column filterBy="#{term.reference}" filterMatchMode="contains" headerText="Reference">
-								            <h:outputText value="#{term.reference}" />
-								        </p:column>
-								        <p:column filterBy="#{term.evidence}" filterMatchMode="in" headerText="Evidence">
+								        <p:column filterBy="#{term.aspect}" filterMatchMode="in" headerText="Aspect">
 								            <f:facet name="filter">
-								                <p:selectCheckboxMenu label="Code" onchange="PF('annotationsTable').filter()" panelStyle="width:125px" scrollHeight="150" panelStyleClass="without-selectall">
-								                    <f:selectItems value="#{trackView.codes}" />
+								                <p:selectCheckboxMenu label="Aspect" onchange="PF('annotationsTable').filter()" panelStyle="width:125px" scrollHeight="150" panelStyleClass="without-selectall">
+								                    <f:selectItems value="#{trackView.aspects}" />
 								                </p:selectCheckboxMenu>
 								            </f:facet>
-								            <h:outputText value="#{term.evidence}" />
+								            <h:outputText value="#{term.aspect}" />
+								        </p:column>
+								        <p:column filterBy="#{term.name}" filterMatchMode="contains" headerText="Name">
+								            <h:outputText value="#{term.name}" />
 								        </p:column>
 								    </p:dataTable>
 							</p:dialog>
 							<p:growl id="growl" showDetail="true" />
-							<p:chart id='chart1' type="line" model="#{trackView.dateModel}"
+							<p:chart id='chart1' type="line" model="#{trackView.currentChart}"
 								style="height:500px;" widgetVar="chart">
 								<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
 									onsuccess="PF('dlg2').show();" update="dialogMsg,dialogAnnotations" />
 							</p:chart>
-							<p:commandButton type="button" value="Reset"
-								icon="ui-icon-cancel" onclick="PF('chart').resetZoom()" />
+							<div class="ui-grid ui-grid-responsive">
+								<div class="ui-grid-row">
+									<div class="ui-grid-col-2">
+										<p:commandButton type="button" value="Reset"
+											icon="ui-icon-cancel" onclick="PF('chart').resetZoom()" />
+									</div>
+									<div class="ui-grid-col-3">
+        <p:selectOneButton value="#{trackView.graphType}">
+        	<p:ajax listener="#{trackView.changeGraph}" update="chart1"/>
+			<f:selectItems value="#{trackView.graphs}" var="gr" itemLabel="#{gr}" itemValue="#{gr}" />
+        </p:selectOneButton>
+									</div>
+								</div>
+							</div>
+
 
 							<!-- PUT THE ACTUAL CONTENT -->
 

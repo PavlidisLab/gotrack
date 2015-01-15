@@ -22,10 +22,11 @@ package ubc.pavlab.gotrack.dao;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.TrackValue;
 
 /**
  * This interface represents a contract for a DAO for the {@link Annotation} model. Note that all methods are read-only.
@@ -74,10 +75,12 @@ public interface AnnotationDAO {
      */
     public boolean existSymbol( String symbol ) throws DAOException;
 
-    public Map<String, List<TrackValue>> trackCounts( Integer species,
-            Map<String, Collection<String>> primaryToSecondary ) throws DAOException;
-
-    public Collection<GeneOntologyTerm> findUniqueGO( List<String> accessions, Integer edition, Integer species )
+    public Collection<GeneOntologyTerm> findUniqueGOInEdition( List<String> accessions, Integer edition, Integer species )
             throws DAOException;
+
+    public Collection<String> findUniqueGO( List<String> accessions, Integer species ) throws DAOException;
+
+    public Map<String, Map<Edition, Set<GeneOntologyTerm>>> track( Integer species,
+            Map<String, Collection<String>> primaryToSecondary, boolean propagate ) throws DAOException;
 
 }
