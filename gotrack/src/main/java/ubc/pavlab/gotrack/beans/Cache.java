@@ -65,6 +65,7 @@ public class Cache implements Serializable {
     private static Map<Integer, Map<String, Accession>> currrentAccessions = new HashMap<Integer, Map<String, Accession>>();
     // private static Map<Integer, Collection<String>> symbols = new HashMap<Integer, Collection<String>>();
     private static Map<Integer, Map<String, Collection<Accession>>> symbolToCurrentAccessions = new HashMap<Integer, Map<String, Collection<Accession>>>();
+    private static Map<Integer, Map<Edition, Double>> speciesAverages = new HashMap<Integer, Map<Edition, Double>>();
 
     /**
      * 
@@ -122,6 +123,8 @@ public class Cache implements Serializable {
                     + symbolToCurrentAccessions.get( speciesId ).size() );
         }
         System.out.println( "Done loading accession to geneSymbol cache..." );
+
+        speciesAverages = cacheDAO.getSpeciesAverages();
 
     }
 
@@ -189,6 +192,10 @@ public class Cache implements Serializable {
 
     public Map<Integer, Map<String, Collection<Accession>>> getSymbolToCurrentAccessions() {
         return symbolToCurrentAccessions;
+    }
+
+    public Map<Integer, Map<Edition, Double>> getSpeciesAverages() {
+        return speciesAverages;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

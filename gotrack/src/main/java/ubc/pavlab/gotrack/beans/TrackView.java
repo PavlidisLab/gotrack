@@ -97,11 +97,9 @@ public class TrackView implements Serializable {
     private Map<String, Map<String, Map<String, Set<GeneOntologyTerm>>>> allSeriesData = new HashMap<String, Map<String, Map<String, Set<GeneOntologyTerm>>>>();
 
     // Select functionality
-    // private TrackValueSimple selectedItem;
     private String selectedDate;
     private Collection<GeneOntologyTerm> terms = new ArrayList<GeneOntologyTerm>();
     private Collection<GeneOntologyTerm> filteredTerms;
-    // private Set<String> codes = new HashSet<String>();
 
     // Static lists
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
@@ -145,7 +143,8 @@ public class TrackView implements Serializable {
             Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpecies,
                     primaryToSecondary, false );
 
-            currentChart = createChart( allSeries, "Direct Annotations vs Time", "Direct Annotations" );
+            currentChart = createChart( allSeries, "Direct Annotations vs Time", "Direct Annotations", cache
+                    .getSpeciesAverages().get( currentSpecies ) );
 
             Map<String, Map<String, Set<GeneOntologyTerm>>> sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
             for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
@@ -181,7 +180,7 @@ public class TrackView implements Serializable {
             }
 
             allCharts.put( "propagated",
-                    createChart( allSeriesProp, "Propagated Annotations vs Time", "Propagated Annotations" ) );
+                    createChart( allSeriesProp, "Propagated Annotations vs Time", "Propagated Annotations", null ) );
             allSeriesData.put( "propagated", sData );
 
         }
@@ -197,7 +196,7 @@ public class TrackView implements Serializable {
     }
 
     private LineChartModel createChart( Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries, String title,
-            String yAxis ) {
+            String yAxis, Map<Edition, Double> staticData ) {
 
         LineChartModel dateModel = new LineChartModel();
 
@@ -219,6 +218,20 @@ public class TrackView implements Serializable {
                 series.set( date, count );
             }
 
+            dateModel.addSeries( series );
+        }
+
+        if ( staticData != null ) {
+            List<Edition> editions = new ArrayList<Edition>( staticData.keySet() );
+            Collections.sort( editions, new CustomComparator() );
+            LineChartSeries series = new LineChartSeries();
+            series.setLabel( "Species Avg" );
+            series.setShowMarker( false );
+            for ( Edition edition : editions ) {
+                String date = edition.getDate().toString();
+                Double count = staticData.get( edition );
+                series.set( date, count );
+            }
             dateModel.addSeries( series );
         }
 
@@ -255,8 +268,13 @@ public class TrackView implements Serializable {
         String date = ( String ) es.get( event.getItemIndex() ).getKey();
 
         selectedDate = date;
-
-        terms = seriesData.get( currentChart.getSeries().get( event.getSeriesIndex() ).getLabel() ).get( date );
+        Map<String, Set<GeneOntologyTerm>> series = seriesData.get( currentChart.getSeries()
+                .get( event.getSeriesIndex() ).getLabel() );
+        if ( series == null ) {
+            terms = new HashSet<GeneOntologyTerm>();
+        } else {
+            terms = series.get( date );
+        }
 
     }
 

@@ -49,7 +49,7 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_CURRENT_EDITIONS = "select species_id, edition, date from (select * from edition order by edition DESC) as temp group by species_id";
     private static final String SQL_CURRENT_ACCESSIONS = "select distinct symbol, accession, synonyms, sec from gene_annotation LEFT JOIN sec_ac on accession=ac where species_id = ? AND edition=?";
     private static final String SQL_UNIQUE_SYMBOL = "select distinct symbol from gene_annotation where species_id = ? AND edition=?";
-
+    private static final String SQL_SPECIES_AVERAGES = "select agg2.species_id, agg2.edition, date, avg_direct from agg2 inner join edition on agg2.species_id=edition.species_id and agg2.edition = edition.edition";
     // Vars ---------------------------------------------------------------------------------------
 
     private DAOFactory daoFactory;
@@ -158,4 +158,37 @@ public class CacheDAOImpl implements CacheDAO {
         return results;
     }
 
+    @Override
+    public Map<Integer, Map<Edition, Double>> getSpeciesAverages() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<Integer, Map<Edition, Double>> results = new HashMap<Integer, Map<Edition, Double>>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = prepareStatement( connection, SQL_SPECIES_AVERAGES, false );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                int speciesId = resultSet.getInt( "species_id" );
+                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ) );
+                double avg = resultSet.getDouble( "avg_direct" );
+                Map<Edition, Double> speciesMap = results.get( speciesId );
+
+                if ( speciesMap == null ) {
+                    speciesMap = new HashMap<Edition, Double>();
+                    results.put( speciesId, speciesMap );
+                }
+
+                speciesMap.put( edition, avg );
+
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
+    }
 }

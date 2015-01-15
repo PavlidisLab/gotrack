@@ -39,4 +39,6 @@ public interface CacheDAO {
 
     public Collection<String> getUniqueGeneSymbols( Integer species, Integer edition ) throws DAOException;
 
+    public Map<Integer, Map<Edition, Double>> getSpeciesAverages() throws DAOException;
+
 }
