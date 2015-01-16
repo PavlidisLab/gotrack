@@ -83,6 +83,7 @@ public class TrackView implements Serializable {
     // Static data
     private Edition currentEdition;
     private Map<String, Accession> currentPrimaryAccessions = new HashMap<String, Accession>();
+    Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
 
     // Current chart
     private LineChartModel currentChart;
@@ -96,6 +97,8 @@ public class TrackView implements Serializable {
     // All series data
     private Map<String, Map<String, Map<String, Set<GeneOntologyTerm>>>> allSeriesData = new HashMap<String, Map<String, Map<String, Set<GeneOntologyTerm>>>>();
 
+    private boolean chartsReady = false;
+
     // Select functionality
     private String selectedDate;
     private Collection<GeneOntologyTerm> terms = new ArrayList<GeneOntologyTerm>();
@@ -105,7 +108,9 @@ public class TrackView implements Serializable {
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
     private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
 
+    // Settings
     private String graphType = "direct";
+    private boolean splitAccessions = true;
 
     /**
      * 
@@ -130,7 +135,7 @@ public class TrackView implements Serializable {
             navigationHandler.handleNavigation( facesContext, null, "error400?faces-redirect=true" );
         } else {
             // Get secondary accessions
-            Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
+            // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
             for ( Accession accession : primaryAccessions ) {
                 primaryToSecondary.put( accession.getAccession(), accession.getSecondary() );
                 currentPrimaryAccessions.put( accession.getAccession(), accession );
@@ -139,49 +144,6 @@ public class TrackView implements Serializable {
             // Obtain AnnotationDAO.
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
             currentEdition = cache.getCurrentEditions().get( currentSpecies );
-
-            Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpecies,
-                    primaryToSecondary, false );
-
-            currentChart = createChart( allSeries, "Direct Annotations vs Time", "Direct Annotations", cache
-                    .getSpeciesAverages().get( currentSpecies ) );
-
-            Map<String, Map<String, Set<GeneOntologyTerm>>> sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
-            for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
-                sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
-            }
-            seriesData = sData;
-
-            allCharts.put( "direct", currentChart );
-            allSeriesData.put( "direct", seriesData );
-
-            Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesProp = annotationDAO.track( currentSpecies,
-                    primaryToSecondary, true );
-
-            // Add back direct parents if not there
-            for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> seriesEntry : allSeries.entrySet() ) {
-                String seriesAccession = seriesEntry.getKey();
-                for ( Entry<Edition, Set<GeneOntologyTerm>> editionInSeriesEntry : seriesEntry.getValue().entrySet() ) {
-                    Edition editionInSeries = editionInSeriesEntry.getKey();
-                    Set<GeneOntologyTerm> dataPoints = allSeriesProp.get( seriesAccession ).get( editionInSeries );
-                    if ( dataPoints == null ) {
-                        dataPoints = new HashSet<GeneOntologyTerm>();
-                        // Commented out to ignore those editions where I have no GO structure data
-                        // It is misleading to show only direct parents here
-                        // allSeriesProp.get( seriesAccession ).put( editionInSeries, dataPoints );
-                    }
-                    dataPoints.addAll( editionInSeriesEntry.getValue() );
-                }
-            }
-
-            sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
-            for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeriesProp.entrySet() ) {
-                sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
-            }
-
-            allCharts.put( "propagated",
-                    createChart( allSeriesProp, "Propagated Annotations vs Time", "Propagated Annotations", null ) );
-            allSeriesData.put( "propagated", sData );
 
         }
 
@@ -199,6 +161,20 @@ public class TrackView implements Serializable {
             String yAxis, Map<Edition, Double> staticData ) {
 
         LineChartModel dateModel = new LineChartModel();
+
+        if ( staticData != null ) {
+            List<Edition> editions = new ArrayList<Edition>( staticData.keySet() );
+            Collections.sort( editions, new CustomComparator() );
+            LineChartSeries series = new LineChartSeries();
+            series.setLabel( "Species Avg" );
+            series.setShowMarker( false );
+            for ( Edition edition : editions ) {
+                String date = edition.getDate().toString();
+                Double count = staticData.get( edition );
+                series.set( date, count );
+            }
+            dateModel.addSeries( series );
+        }
 
         for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
             String primary = es.getKey();
@@ -218,20 +194,6 @@ public class TrackView implements Serializable {
                 series.set( date, count );
             }
 
-            dateModel.addSeries( series );
-        }
-
-        if ( staticData != null ) {
-            List<Edition> editions = new ArrayList<Edition>( staticData.keySet() );
-            Collections.sort( editions, new CustomComparator() );
-            LineChartSeries series = new LineChartSeries();
-            series.setLabel( "Species Avg" );
-            series.setShowMarker( false );
-            for ( Edition edition : editions ) {
-                String date = edition.getDate().toString();
-                Double count = staticData.get( edition );
-                series.set( date, count );
-            }
             dateModel.addSeries( series );
         }
 
@@ -280,8 +242,121 @@ public class TrackView implements Serializable {
 
     public void changeGraph() {
         // System.out.println( "New value: " + graphType );
-        currentChart = allCharts.get( graphType );
-        seriesData = allSeriesData.get( graphType );
+        if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
+        currentChart = allCharts.get( graphType + ( splitAccessions ? "-combined" : "" ) );
+        seriesData = allSeriesData.get( graphType + ( splitAccessions ? "-combined" : "" ) );
+    }
+
+    public void fetchCharts() {
+        // fetch from DB and set spreadList
+        System.out.println( "Charts fetched" );
+
+        // Direct Annotations Chart
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesDirect = annotationDAO.track( currentSpecies,
+                primaryToSecondary, false );
+
+        allCharts.put(
+                "direct",
+                createChart( allSeriesDirect, "Direct Annotations vs Time", "Direct Annotations", cache
+                        .getSpeciesAverages().get( currentSpecies ) ) );
+
+        Map<String, Map<String, Set<GeneOntologyTerm>>> sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeriesDirect.entrySet() ) {
+            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
+        }
+
+        // allCharts.put( "direct", currentChart );
+        allSeriesData.put( "direct", sData );
+
+        // Direct Annotations Chart Combined Series
+
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = combineSeries( allSeriesDirect );
+
+        allCharts.put( "direct-combined",
+                createChart( allSeries, "Direct Annotations vs Time", "Direct Annotations", null ) );
+
+        sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
+            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
+        }
+
+        allSeriesData.put( "direct-combined", sData );
+
+        // Propagated Annotations Chart
+
+        allSeries = annotationDAO.track( currentSpecies, primaryToSecondary, true );
+
+        // Add back direct parents if not there
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> seriesEntry : allSeriesDirect.entrySet() ) {
+            String seriesAccession = seriesEntry.getKey();
+            for ( Entry<Edition, Set<GeneOntologyTerm>> editionInSeriesEntry : seriesEntry.getValue().entrySet() ) {
+                Edition editionInSeries = editionInSeriesEntry.getKey();
+                Set<GeneOntologyTerm> dataPoints = allSeries.get( seriesAccession ).get( editionInSeries );
+                if ( dataPoints == null ) {
+                    dataPoints = new HashSet<GeneOntologyTerm>();
+                    // Commented out to ignore those editions where I have no GO structure data
+                    // It is misleading to show only direct parents here
+                    // allSeriesProp.get( seriesAccession ).put( editionInSeries, dataPoints );
+                }
+                dataPoints.addAll( editionInSeriesEntry.getValue() );
+            }
+        }
+
+        sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
+            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
+        }
+
+        allCharts.put( "propagated",
+                createChart( allSeries, "Propagated Annotations vs Time", "Propagated Annotations", null ) );
+        allSeriesData.put( "propagated", sData );
+
+        // Propagated Annotations Chart Combined Series
+
+        allSeries = combineSeries( allSeries );
+
+        allCharts.put( "propagated-combined",
+                createChart( allSeries, "Direct Annotations vs Time", "Direct Annotations", null ) );
+
+        sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
+            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
+        }
+
+        allSeriesData.put( "propagated-combined", sData );
+
+        seriesData = sData;
+        currentChart = allCharts.get( "direct" );
+
+        chartsReady = true;
+    }
+
+    private Map<String, Map<Edition, Set<GeneOntologyTerm>>> combineSeries(
+            Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries ) {
+        Map<Edition, Set<GeneOntologyTerm>> combinedSeries = new HashMap<Edition, Set<GeneOntologyTerm>>();
+        for ( Map<Edition, Set<GeneOntologyTerm>> series : allSeries.values() ) {
+            for ( Entry<Edition, Set<GeneOntologyTerm>> dataPoint : series.entrySet() ) {
+                // String date = dataPoint.getKey();
+                Edition edition = dataPoint.getKey();
+                Set<GeneOntologyTerm> details = dataPoint.getValue();
+
+                Set<GeneOntologyTerm> combinedDataPoint = combinedSeries.get( edition );
+
+                if ( combinedDataPoint == null ) {
+                    combinedDataPoint = new HashSet<GeneOntologyTerm>();
+                    combinedSeries.put( edition, combinedDataPoint );
+                }
+
+                combinedDataPoint.addAll( details );
+
+            }
+        }
+
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> result = new HashMap<String, Map<Edition, Set<GeneOntologyTerm>>>();
+        result.put( "All Accessions", combinedSeries );
+
+        return result;
+
     }
 
     public void showDialog() {
@@ -358,6 +433,18 @@ public class TrackView implements Serializable {
 
     public List<String> getGraphs() {
         return graphs;
+    }
+
+    public boolean isSplitAccessions() {
+        return splitAccessions;
+    }
+
+    public void setSplitAccessions( boolean splitAccessions ) {
+        this.splitAccessions = splitAccessions;
+    }
+
+    public boolean isChartsReady() {
+        return chartsReady;
     }
 
 }
