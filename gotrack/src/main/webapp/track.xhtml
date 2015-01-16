@@ -151,19 +151,9 @@
 							<p:growl id="growl" showDetail="true" />
 							<div id="">
 							<p:outputPanel id="allCharts" deferred="true">
-								<p:chart id='chart1' type="line"
-									model="#{trackView.currentChart}" style="height:500px;"
-									widgetVar="chart" rendered="#{trackView.chartsReady}">
-									<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
-										onsuccess="PF('dlg2').show();"
-										update="dialogMsg,dialogAnnotations" />
-								</p:chart>
 								<div class="ui-grid ui-grid-responsive">
 									<div class="ui-grid-row">
-										<div class="ui-grid-col-2">
-											<p:commandButton type="button" value="Reset"
-												icon="ui-icon-cancel" onclick="PF('chart').resetZoom()" rendered="#{trackView.chartsReady}"/>
-										</div>
+										<div class="ui-grid-col-1"></div>
 										<div class="ui-grid-col-3">
 											<p:selectOneButton value="#{trackView.graphType}" rendered="#{trackView.chartsReady}">
 												<p:ajax listener="#{trackView.changeGraph}" update="chart1" />
@@ -178,12 +168,28 @@
 										</div>
 									</div>
 								</div>
+								<p:chart id='chart1' type="line"
+									model="#{trackView.currentChart}" style="height:500px;"
+									widgetVar="chart" rendered="#{trackView.chartsReady}">
+									<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
+										onsuccess="PF('dlg2').show();"
+										update="dialogMsg,dialogAnnotations" />
+								</p:chart>
+								<div class="ui-grid ui-grid-responsive">
+									<div class="ui-grid-row">
+										<div class="ui-grid-col-1"></div>
+										<div class="ui-grid-col-2">
+											<p:commandButton type="button" value="Reset"
+												icon="ui-icon-cancel" onclick="PF('chart').resetZoom()" rendered="#{trackView.chartsReady}"/>
+										</div>
+									</div>
+								</div>
 							</p:outputPanel>
 							</div>
 							<p:remoteCommand name="fetchCharts"                          
-							                  actionListener="#{trackView.fetchCharts}" update="allCharts" oncomplete="updateCharts()">
+							                  actionListener="#{trackView.fetchDirectChart()}" update="allCharts" oncomplete="loadPropagated()">
 							 </p:remoteCommand>
-							<p:remoteCommand name="updateCharts"  update="allCharts">
+							<p:remoteCommand  actionListener="#{trackView.fetchPropagatedChart()}" name="loadPropagated" >
 							 </p:remoteCommand>
 
 
