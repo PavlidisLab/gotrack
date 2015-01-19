@@ -130,20 +130,24 @@
 					<div class="post-body">
 						<h:form>
 							<p:dialog id="dlg2" header="Annotations" widgetVar="dlg2"
-								modal="false" width="600px">
+								modal="false" width="700px">
 								<h:outputText id="dialogMsg"
 									value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.terms)}" />
 								    <p:dataTable id="dialogAnnotations" widgetVar="annotationsTable" var="term" value="#{trackView.terms}" scrollable="true" scrollHeight="250" sortMode="multiple" style="margin-bottom:0" emptyMessage="No annotations found with given criteria" filteredValue="#{trackView.filteredTerms}">
 								        <p:column filterBy="#{term.goId}" filterMatchMode="contains" headerText="Id" style="width:120px;">
-								            <h:outputText value="#{term.goId}" />
+								            <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}" target="_blank"><span class="ui-icon ui-icon-extlink" style="display:inline-block;"> </span> #{term.goId}</a>
 								        </p:column>
-								        <p:column filterBy="#{term.aspect}" filterMatchMode="in" headerText="Aspect" style="width:100px;">
-								            <f:facet name="filter">
-								                <p:selectCheckboxMenu label="Aspect" onchange="PF('annotationsTable').filter()" panelStyle="width:125px" scrollHeight="150" panelStyleClass="without-selectall">
-								                    <f:selectItems value="#{trackView.aspects}" />
-								                </p:selectCheckboxMenu>
+								        <p:column filterBy="#{term.aspect}" filterMatchMode="in" headerText="Aspect" style="width:200px;">
+							                 <f:facet name="filter">
+								                <p:selectManyButton onchange="PF('annotationsTable').filter()" panelStyle="width:200px">
+								                    <f:selectItem itemLabel="BP" itemValue="BP"/>
+								                    <f:selectItem itemLabel="MF" itemValue="MF" />
+								                    <f:selectItem itemLabel="CC" itemValue="CC" />
+								                </p:selectManyButton>
 								            </f:facet>
-								            <h:outputText value="#{term.aspect}" />
+								            <h:outputText value="Biological Process" rendered="#{term.aspect == 'BP'}"/>
+								            <h:outputText value="Molecular Function" rendered="#{term.aspect == 'MF'}"/>
+								            <h:outputText value="Cellular Component" rendered="#{term.aspect == 'CC'}"/>
 								        </p:column>
 								        <p:column filterBy="#{term.name}" filterMatchMode="contains" headerText="Name">
 								            <h:outputText value="#{term.name}" />
@@ -151,7 +155,7 @@
 								    </p:dataTable>
 							</p:dialog>
 							<p:growl id="growl" showDetail="true" />
-							<div id="">
+							<div>
 							<p:outputPanel id="allCharts" deferred="true">
 								<div class="ui-grid ui-grid-responsive">
 									<div class="ui-grid-row">
