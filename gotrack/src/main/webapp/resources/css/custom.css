@@ -1,3 +1,7 @@
 div.ui-selectonemenu {
 	overflow: visible;
 }
+
+.no-border {
+	border-style: none;
+}

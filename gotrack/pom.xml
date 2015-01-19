@@ -49,6 +49,8 @@
 		</dependency>
 
 		<!-- Other Web dependencies -->
+		
+		<!-- Servlets -->
 		<dependency>
 			<groupId>javax.servlet</groupId>
 			<artifactId>jstl</artifactId>
@@ -67,20 +69,33 @@
 			<scope>provided</scope>
 		</dependency>
 
+		<!-- Facelets -->
+
 		<dependency>
 			<groupId>com.sun.faces</groupId>
 			<artifactId>jsf-api</artifactId>
-			<version>2.1.7</version>
+			<version>2.1.9</version>
 		</dependency>
 		<dependency>
 			<groupId>com.sun.faces</groupId>
 			<artifactId>jsf-impl</artifactId>
-			<version>2.1.7</version>
+			<version>2.1.9</version>
 		</dependency>
+		
+		<!-- Primefaces -->
+		
 		<dependency>
 			<groupId>org.primefaces</groupId>
 			<artifactId>primefaces</artifactId>
 			<version>5.1</version>
+		</dependency>
+		
+		<!-- Omnifaces -->
+		
+		<dependency>
+			<groupId>org.omnifaces</groupId>
+			<artifactId>omnifaces</artifactId>
+			<version>1.10</version>
 		</dependency>
 
 		<dependency>

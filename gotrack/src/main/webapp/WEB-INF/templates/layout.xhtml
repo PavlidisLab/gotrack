@@ -1,12 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml"
+<html lang="en"
+	xmlns="http://www.w3.org/1999/xhtml"
 	xmlns:f="http://java.sun.com/jsf/core"
 	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
 	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
-	xmlns:p="http://primefaces.org/ui">
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:o="http://omnifaces.org/ui"
+	xmlns:of="http://omnifaces.org/functions"
+>
 <h:head>
-	<title>Error 400: BAD REQUEST</title>
+	<title><ui:insert name="pageTitle" /></title>
 	<h:outputStylesheet library="css" name="style.css" />
 	<h:outputStylesheet library="css" name="styles3.css" />
 	<h:outputStylesheet library="css" name="custom.css" />
@@ -36,14 +42,14 @@
 				<div class="left navigation" id="main-nav">
 					<ul class="tabbed">
 						<li class="current-tab"><h:link value="Home"
-								outcome="index.xhtml" /></li>
+								outcome="/index.xhtml" /></li>
 						<li><h:link value="Browse Global trends"
-								outcome="trends.xhtml" /></li>
-						<li><h:link value="Tutorial" outcome="about.xhtml" /></li>
+								outcome="/trends.xhtml" /></li>
+						<li><h:link value="Tutorial" outcome="/about.xhtml" /></li>
 						<li><h:link value="Documentation"
-								outcome="documentation.xhtml" /></li>
+								outcome="/documentation.xhtml" /></li>
 
-						<li><h:link value="Resources" outcome="resources.xhtml" /></li>
+						<li><h:link value="Resources" outcome="/resources.xhtml" /></li>
 					</ul>
 					<div class="clearer">&nbsp;</div>
 				</div>
@@ -62,10 +68,12 @@
 			<!-- MAIN -->
 					<div class="left" id="logo">
 						<h:graphicImage library="img" width="250"
-							name="error-400-bad-request.png" />
+							name="error.png" />
 					</div>
-					<strong>Error 400: BAD REQUEST: The selected gene symbol
-						could not be found.</strong>
+					<p:panel id="content" styleClass="no-border">
+						<h2 id="contentTitle"><ui:insert name="contentTitle">#{page.current.title}</ui:insert></h2>
+						<ui:insert name="content" />
+					</p:panel>
 
 				<div class="clearer">&nbsp;</div>
 		</div>

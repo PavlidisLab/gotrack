@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import javax.faces.application.NavigationHandler;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
@@ -46,6 +45,7 @@ import org.primefaces.model.chart.LineChartModel;
 import org.primefaces.model.chart.LineChartSeries;
 
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
+import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
@@ -114,7 +114,7 @@ public class TrackView implements Serializable {
         System.out.println( "TrackView created" );
     }
 
-    public void init() {
+    public void init() throws GeneNotFoundException {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
             return; // Skip ajax requests.
         }
@@ -125,9 +125,13 @@ public class TrackView implements Serializable {
                 || currentSpecies == null
                 || c == null
                 || ( primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpecies ).get( query ) ) == null ) {
-            FacesContext facesContext = FacesContext.getCurrentInstance();
-            NavigationHandler navigationHandler = facesContext.getApplication().getNavigationHandler();
-            navigationHandler.handleNavigation( facesContext, null, "error400?faces-redirect=true" );
+
+            throw new GeneNotFoundException();
+            /*
+             * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
+             * facesContext.getApplication().getNavigationHandler(); navigationHandler.handleNavigation( facesContext,
+             * null, "error400?faces-redirect=true" );
+             */
         } else {
             // Get secondary accessions
             // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
