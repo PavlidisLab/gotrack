@@ -69,6 +69,15 @@
 			<scope>provided</scope>
 		</dependency>
 
+		<!-- Font Awesome -->
+		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>font-awesome</artifactId>
+			<version>4.2.0</version>
+		</dependency>
+
+
+
 		<!-- Facelets -->
 
 		<dependency>

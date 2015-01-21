@@ -5,3 +5,44 @@ div.ui-selectonemenu {
 .no-border {
 	border-style: none;
 }
+
+#tieredMenu {
+	position: relative;
+	left: -250px;
+}
+
+#tieredMenu > form{
+	position: absolute;
+}
+
+.loading {
+    background-image: url(img/spinner.gif);
+    background-position: center center;
+    background-repeat: no-repeat;
+    height: 100px;
+}
+
+/* .toggleSplit {
+	cursor: pointer;
+	text-align: center;
+	padding-bottom:1px;
+	vertical-align: middle;
+}
+
+.toggleSplit:hover {
+	color:black;
+}
+
+.toggleSplit:hover span {
+	color:black;
+} */
+
+#menuBar {
+	padding: 5px;
+	margin-bottom: 10px;
+}
+
+.ui-icon.fa {
+     text-indent:0px;
+     background-image:none;
+}

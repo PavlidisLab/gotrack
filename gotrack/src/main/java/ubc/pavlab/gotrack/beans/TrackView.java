@@ -104,14 +104,18 @@ public class TrackView implements Serializable {
     private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
 
     // Settings
-    private String graphType = "direct";
     private boolean splitAccessions = true;
+    private String graphType = "direct";
 
     /**
      * 
      */
     public TrackView() {
         System.out.println( "TrackView created" );
+    }
+
+    public void keepAlive() {
+        System.out.println( "Kept alive" );
     }
 
     public void init() throws GeneNotFoundException {
@@ -239,11 +243,22 @@ public class TrackView implements Serializable {
 
     }
 
-    public void changeGraph() {
+    public void changeGraph( String graphType ) {
         // System.out.println( "New value: " + graphType );
+        this.graphType = graphType;
+        reloadGraph();
+    }
+
+    public void toggleSplit() {
+        splitAccessions = !splitAccessions;
+        reloadGraph();
+    }
+
+    public void reloadGraph() {
+        System.out.println( graphType + ( splitAccessions ? "" : "-combined" ) );
         if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
-        currentChart = allCharts.get( graphType + ( splitAccessions ? "-combined" : "" ) );
-        seriesData = allSeriesData.get( graphType + ( splitAccessions ? "-combined" : "" ) );
+        currentChart = allCharts.get( graphType + ( splitAccessions ? "" : "-combined" ) );
+        seriesData = allSeriesData.get( graphType + ( splitAccessions ? "" : "-combined" ) );
     }
 
     private void initChart( String identifier, Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries,
@@ -397,18 +412,6 @@ public class TrackView implements Serializable {
         this.filteredTerms = filteredTerms;
     }
 
-    // public Set<String> getCodes() {
-    // return codes;
-    // }
-
-    public String getGraphType() {
-        return graphType;
-    }
-
-    public void setGraphType( String graphType ) {
-        this.graphType = graphType;
-    }
-
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
         this.daoFactoryBean = daoFactoryBean;
     }
@@ -419,6 +422,14 @@ public class TrackView implements Serializable {
 
     public List<String> getGraphs() {
         return graphs;
+    }
+
+    public Map<String, Accession> getCurrentPrimaryAccessions() {
+        return currentPrimaryAccessions;
+    }
+
+    public ArrayList<Accession> getCurrentPrimaryAccessionsValues() {
+        return new ArrayList<Accession>( currentPrimaryAccessions.values() );
     }
 
     public boolean isSplitAccessions() {

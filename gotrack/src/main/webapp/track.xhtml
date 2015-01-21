@@ -4,7 +4,9 @@
 	xmlns:f="http://java.sun.com/jsf/core"
 	xmlns:h="http://java.sun.com/jsf/html"
 	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
-	xmlns:p="http://primefaces.org/ui">
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	>
 <f:metadata>
 	<f:viewParam id="currentSpecies" name="currentSpecies"
 		value="#{trackView.currentSpecies}" />
@@ -13,6 +15,7 @@
 </f:metadata>
 <h:head>
 	<title>UBC-CHiBi|GOtrack</title>
+	<h:outputStylesheet name="webjars/font-awesome/4.2.0/css/font-awesome.css" />
 	<h:outputStylesheet library="css" name="style.css" />
 	<h:outputStylesheet library="css" name="styles3.css" />
 	<h:outputStylesheet library="css" name="custom.css" />
@@ -28,7 +31,7 @@
 	<meta name="keywords"
 		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
 	<meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
-	<h:outputScript library="js" name="lineHighlighter.js" />
+	<!-- <h:outputScript library="js" name="lineHighlighter.js" /> -->
 	<h:outputScript library="js" name="gotrack.js" />
 	<script>
       function chartExtender() {
@@ -58,6 +61,11 @@
             bringSeriesToFront : true
 
          }
+         //console.log(this.cfg.axes);
+         //this.cfg.axes.yaxis.label = "Per Capita Expenditure (local currency)";
+         //this.cfg.axes.yaxis.renderer = $.jqplot.LogAxisRenderer;
+
+         //this.cfg.axes.yaxis.ticks = [1,100];
       }
    </script>
 </h:head>
@@ -95,47 +103,48 @@
 		<div class="main" id="main-two-columns">
 			<!-- MAIN -->
 			<div id="page-title">
-				<h1>Count History</h1>
+				<h1>#{trackView.query}</h1>
+				<h:form>
+				<p>
+				<ui:repeat value="#{trackView.getCurrentPrimaryAccessionsValues()}" var="acc" varStatus="loop">
+				    <a href="http://www.uniprot.org/uniprot/#{acc.accession}">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
+				</ui:repeat>
+				</p>
+				</h:form>
+			</div>
+
+			<div id="menuBar">
+				<h:form>
+					<p:menubar toggleEvent="click">
+						<p:submenu label="&nbsp; Count History" icon="fa fa-line-chart">
+							<p:menuitem value="Direct" actionListener="#{trackView.changeGraph('direct')}" update=":chartForm:chart1" icon="ui-icon-disk" >
+							</p:menuitem>
+							<p:menuitem value="Propagated"
+								actionListener="#{trackView.changeGraph('propagated')}"
+								icon="ui-icon-arrowrefresh-1-w" 
+								update=":chartForm:chart1"/>
+						</p:submenu>
+						<p:submenu label="&nbsp; Functionality" icon="fa fa-sitemap">
+							<p:menuitem value="Evidence Code History"
+								actionListener="#{trackView.keepAlive}" icon="ui-icon-close" />
+							<p:menuitem value="GO Term Membership"
+								actionListener="#{trackView.keepAlive}" icon="ui-icon-close" />
+						</p:submenu>
+					</p:menubar>
+				</h:form>
 			</div>
 
 			<div class="section">
-				<div class="section-title">
-
-					<h:form>
-					Displaying results for: #{trackView.query}
-					<p:commandButton style="font-size: 7px;" icon="ui-icon-info"
-							id="tooltipe" />
-						<p:tooltip id="uniprots" for="tooltipe">
-							<h:panelGroup>
-								<h:outputText
-									value="A gene symbol can be associated to multiple Uniprot IDs" />
-								<br />
-								<h:outputText
-									value="that are simultaneously annotated in the GOA files. One" />
-								<br />
-								<h:outputText
-									value="of those IDs corresponds to a manually reviewed SwissProt Id," />
-								<br />
-								<h:outputText
-									value="and the others correspond to unreviewed TrEMBL Ids. All the" />
-								<br />
-								<h:outputText
-									value="Uniprot Ids that matched the symbol will be displayed." />
-							</h:panelGroup>
-						</p:tooltip>
-					</h:form>
-				</div>
-
 				<div class="post">
 					<div class="post-body">
-						<h:form>
+						<h:form  id="chartForm">
 							<p:dialog id="dlg2" header="Annotations" widgetVar="dlg2"
 								modal="false" width="700px">
 								<h:outputText id="dialogMsg"
 									value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.terms)}" />
 								    <p:dataTable id="dialogAnnotations" widgetVar="annotationsTable" var="term" value="#{trackView.terms}" scrollable="true" scrollHeight="250" sortMode="multiple" style="margin-bottom:0" emptyMessage="No annotations found with given criteria" filteredValue="#{trackView.filteredTerms}">
 								        <p:column filterBy="#{term.goId}" filterMatchMode="contains" headerText="Id" style="width:120px;">
-								            <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}" target="_blank"><span class="ui-icon ui-icon-extlink" style="display:inline-block;"> </span> #{term.goId}</a>
+								            <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}" target="_blank"><i class="fa fa-external-link fa-sm" style="font-size:0.7em;"/> #{term.goId}</a>
 								        </p:column>
 								        <p:column filterBy="#{term.aspect}" filterMatchMode="in" headerText="Aspect" style="width:200px;">
 							                 <f:facet name="filter">
@@ -154,26 +163,9 @@
 								        </p:column>
 								    </p:dataTable>
 							</p:dialog>
-							<p:growl id="growl" showDetail="true" />
-							<div>
-							<p:outputPanel id="allCharts" deferred="true">
-								<div class="ui-grid ui-grid-responsive">
-									<div class="ui-grid-row">
-										<div class="ui-grid-col-1"></div>
-										<div class="ui-grid-col-3">
-											<p:selectOneButton value="#{trackView.graphType}" rendered="#{trackView.chartsReady}">
-												<p:ajax listener="#{trackView.changeGraph}" update="chart1" />
-												<f:selectItems value="#{trackView.graphs}" var="gr"
-													itemLabel="#{gr}" itemValue="#{gr}" />
-											</p:selectOneButton>
-										</div>
-										<div class="ui-grid-col-2">
-											<p:selectBooleanButton value="#{trackView.splitAccessions}" onLabel="Combined" offLabel="Split" rendered="#{trackView.chartsReady}">
-											<p:ajax listener="#{trackView.changeGraph}" update="chart1" />
-											</p:selectBooleanButton>
-										</div>
-									</div>
-								</div>
+							<div id = "allChartsDiv">
+							<p:outputPanel id="allCharts">
+								<div id="loading-spinner" class="loading"></div>
 								<p:chart id='chart1' type="line"
 									model="#{trackView.currentChart}" style="height:500px;"
 									widgetVar="chart" rendered="#{trackView.chartsReady}">
@@ -181,19 +173,15 @@
 										onsuccess="PF('dlg2').show();"
 										update="dialogMsg,dialogAnnotations" />
 								</p:chart>
-								<div class="ui-grid ui-grid-responsive">
-									<div class="ui-grid-row">
-										<div class="ui-grid-col-1"></div>
-										<div class="ui-grid-col-2">
-											<p:commandButton type="button" value="Reset"
-												icon="ui-icon-cancel" onclick="PF('chart').resetZoom()" rendered="#{trackView.chartsReady}"/>
-										</div>
-									</div>
-								</div>
+								<p:contextMenu for="chart1">
+									<p:menuitem value="&nbsp; Toggle Accessions" actionListener="#{trackView.toggleSplit}" update="chart1" icon="fa fa-bars" />
+							    	<p:separator />
+							    	<p:menuitem value="&nbsp; Reset" onclick="PF('chart').resetZoom()" icon="fa fa-refresh" />
+							    </p:contextMenu>
 							</p:outputPanel>
 							</div>
 							<p:remoteCommand name="fetchCharts"                          
-							                  actionListener="#{trackView.fetchDirectChart()}" update="allCharts" oncomplete="loadPropagated()">
+							                  actionListener="#{trackView.fetchDirectChart()}" update="allCharts" oncomplete="loadPropagated(), hideLoadingSpinner()">
 							 </p:remoteCommand>
 							<p:remoteCommand  actionListener="#{trackView.fetchPropagatedChart()}" name="loadPropagated" >
 							 </p:remoteCommand>
