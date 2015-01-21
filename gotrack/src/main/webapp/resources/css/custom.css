@@ -46,3 +46,11 @@ div.ui-selectonemenu {
      text-indent:0px;
      background-image:none;
 }
+
+p {
+	line-height:1.5;
+}
+
+.ui-menu-list > li > a, .ui-menu-list > li > div, .ui-menu-list > li > span {
+	vertical-align: middle;
+}

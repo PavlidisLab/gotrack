@@ -100,13 +100,13 @@
 				<h2 class="label label-orange">Explore</h2>
 				<p class="quiet large"></p>
 				<ul>
-					<li>Changes in the number of Gene Ontology (GO) terms
+					<li><p>Changes in the number of Gene Ontology (GO) terms
 						associated to a gene product or the number of gene products
-						associated to a GO term</li>
-					<li>Changes in the evidence codes used and measures of
-						semantic similarity and multifunctionality</li>
-					<li>Identify general changes occurring in an organism or
-						compare them against other species</li>
+						associated to a GO term</p></li>
+					<li><p>Changes in the evidence codes used and measures of
+						semantic similarity and multifunctionality</p></li>
+					<li><p>Identify general changes occurring in an organism or
+						compare them against other species</p></li>
 				</ul>
 				<!-- <p><h:graphicImage library="images"  width="260" height="150" name="example.png" /></p> -->
 			</div>
@@ -182,7 +182,7 @@
 								
 								<h:outputText
 										value="Select the species of interest (required): " />
-									<p:selectOneMenu id="selectspecies" value="#{indexView.currentSpecies}">
+									<p:selectOneMenu id="selectspecies" value="#{indexView.currentSpeciesId}">
 										<p:ajax event="change" update="selectspecies" />
 										<f:selectItems value="#{cache.speciesList}" var="spec"
 											itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />

@@ -49,14 +49,14 @@ public class IndexView implements Serializable {
      * 
      */
     private static final long serialVersionUID = -3038133837848883737L;
-    private Integer currentSpecies;
+    private Integer currentSpeciesId;
     private String query;
 
     @ManagedProperty("#{cache}")
     private Cache cache;
 
     /**
-     * private Integer currentSpecies; private String query; /**
+     * private Integer currentSpeciesId; private String query; /**
      */
     public IndexView() {
         System.out.println( "IndexView created" );
@@ -105,17 +105,17 @@ public class IndexView implements Serializable {
 
     }
 
-    public Integer getCurrentSpecies() {
-        return currentSpecies;
+    public Integer getCurrentSpeciesId() {
+        return currentSpeciesId;
     }
 
-    public void setCurrentSpecies( Integer currentSpecies ) {
-        this.currentSpecies = currentSpecies;
+    public void setCurrentSpeciesId( Integer currentSpeciesId ) {
+        this.currentSpeciesId = currentSpeciesId;
     }
 
     public String go() {
         // return "track?faces-redirect=true&includeViewParams=true";
-        return "track?faces-redirect=true&query=" + query + "&currentSpecies=" + currentSpecies;
+        return "track?faces-redirect=true&query=" + query + "&currentSpeciesId=" + currentSpeciesId;
     }
 
     public String getQuery() {
@@ -127,7 +127,7 @@ public class IndexView implements Serializable {
     }
 
     public List<String> complete( String query ) {
-        List<String> result = this.cache.complete( query, currentSpecies );
+        List<String> result = this.cache.complete( query, currentSpeciesId );
         System.out.println( "Found " + result.size() + " matches." );
         return result;
     }

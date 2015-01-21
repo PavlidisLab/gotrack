@@ -8,8 +8,8 @@
 	xmlns:ui="http://java.sun.com/jsf/facelets"
 	>
 <f:metadata>
-	<f:viewParam id="currentSpecies" name="currentSpecies"
-		value="#{trackView.currentSpecies}" />
+	<f:viewParam id="currentSpeciesId" name="currentSpeciesId"
+		value="#{trackView.currentSpeciesId}" />
 	<f:viewParam id="query" name="query" value="#{trackView.query}" />
 	<f:event type="preRenderView" listener="#{trackView.init}" />
 </f:metadata>
@@ -103,7 +103,7 @@
 		<div class="main" id="main-two-columns">
 			<!-- MAIN -->
 			<div id="page-title">
-				<h1>#{trackView.query}</h1>
+				<h1>#{trackView.query} - #{trackView.currentSpecies.scientificName}</h1>
 				<h:form>
 				<p>
 				<ui:repeat value="#{trackView.getCurrentPrimaryAccessionsValues()}" var="acc" varStatus="loop">
@@ -130,6 +130,19 @@
 							<p:menuitem value="GO Term Membership"
 								actionListener="#{trackView.keepAlive}" icon="ui-icon-close" />
 						</p:submenu>
+				        <f:facet name="options">
+				        	<p:selectOneMenu id="selectspecies" value="#{indexView.currentSpeciesId}" style="margin-right:5px;">
+	        					<p:ajax event="change" update="selectspecies" />
+								<f:selectItems value="#{cache.speciesList}" var="spec"
+									itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
+							</p:selectOneMenu>
+				            <p:autoComplete id="userinp" value="#{indexView.query}" completeMethod="#{indexView.complete}" 
+									queryDelay="600" minQueryLength="2" forceSelection="true" maxResults="10"  
+									label="ID" emptyMessage="No gene suggestions available,  please try again." style="margin-right:8px;">
+									<p:ajax event="focus" update="selectspecies" />
+							</p:autoComplete>
+				            <p:commandButton type="submit" value="Go" action="#{indexView.go}"/>
+				        </f:facet>
 					</p:menubar>
 				</h:form>
 			</div>

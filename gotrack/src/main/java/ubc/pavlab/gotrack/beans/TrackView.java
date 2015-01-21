@@ -49,10 +49,16 @@ import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.Species;
+
+class CustomComparator implements Comparator<Edition> {
+    @Override
+    public int compare( Edition o1, Edition o2 ) {
+        return o1.getEdition().compareTo( o2.getEdition() );
+    }
+}
 
 /**
- * TODO Document Me
- * 
  * @author mjacobson
  * @version $Id$
  */
@@ -75,7 +81,8 @@ public class TrackView implements Serializable {
     private AnnotationDAO annotationDAO;
 
     // Query params
-    private Integer currentSpecies;
+    private Integer currentSpeciesId;
+    private Species currentSpecies;
     private String query;
 
     // private List<TrackValue> trackValues;
@@ -114,50 +121,38 @@ public class TrackView implements Serializable {
         System.out.println( "TrackView created" );
     }
 
-    public void keepAlive() {
-        System.out.println( "Kept alive" );
+    public void changeGraph( String graphType ) {
+        // System.out.println( "New value: " + graphType );
+        this.graphType = graphType;
+        reloadGraph();
     }
 
-    public void init() throws GeneNotFoundException {
-        if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
-            return; // Skip ajax requests.
-        }
-        System.out.println( "TrackView init: " + currentSpecies + ": " + query );
-        Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( currentSpecies );
-        Collection<Accession> primaryAccessions;
-        if ( query == null
-                || currentSpecies == null
-                || c == null
-                || ( primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpecies ).get( query ) ) == null ) {
+    private Map<String, Map<Edition, Set<GeneOntologyTerm>>> combineSeries(
+            Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries ) {
+        Map<Edition, Set<GeneOntologyTerm>> combinedSeries = new HashMap<Edition, Set<GeneOntologyTerm>>();
+        for ( Map<Edition, Set<GeneOntologyTerm>> series : allSeries.values() ) {
+            for ( Entry<Edition, Set<GeneOntologyTerm>> dataPoint : series.entrySet() ) {
+                // String date = dataPoint.getKey();
+                Edition edition = dataPoint.getKey();
+                Set<GeneOntologyTerm> details = dataPoint.getValue();
 
-            throw new GeneNotFoundException();
-            /*
-             * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
-             * facesContext.getApplication().getNavigationHandler(); navigationHandler.handleNavigation( facesContext,
-             * null, "error400?faces-redirect=true" );
-             */
-        } else {
-            // Get secondary accessions
-            // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
-            for ( Accession accession : primaryAccessions ) {
-                primaryToSecondary.put( accession.getAccession(), accession.getSecondary() );
-                currentPrimaryAccessions.put( accession.getAccession(), accession );
+                Set<GeneOntologyTerm> combinedDataPoint = combinedSeries.get( edition );
+
+                if ( combinedDataPoint == null ) {
+                    combinedDataPoint = new HashSet<GeneOntologyTerm>();
+                    combinedSeries.put( edition, combinedDataPoint );
+                }
+
+                combinedDataPoint.addAll( details );
+
             }
-
-            // Obtain AnnotationDAO.
-            annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-            currentEdition = cache.getCurrentEditions().get( currentSpecies );
-
         }
 
-    }
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> result = new HashMap<String, Map<Edition, Set<GeneOntologyTerm>>>();
+        result.put( "All Accessions", combinedSeries );
 
-    private Map<String, Set<GeneOntologyTerm>> editionMapToDateMap( Map<Edition, Set<GeneOntologyTerm>> editionMap ) {
-        Map<String, Set<GeneOntologyTerm>> res = new HashMap<String, Set<GeneOntologyTerm>>();
-        for ( Entry<Edition, Set<GeneOntologyTerm>> es : editionMap.entrySet() ) {
-            res.put( es.getKey().getDate().toString(), es.getValue() );
-        }
-        return res;
+        return result;
+
     }
 
     private LineChartModel createChart( Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries, String title,
@@ -222,43 +217,143 @@ public class TrackView implements Serializable {
 
     }
 
-    public void itemSelect( ItemSelectEvent event ) {
+    private Map<String, Set<GeneOntologyTerm>> editionMapToDateMap( Map<Edition, Set<GeneOntologyTerm>> editionMap ) {
+        Map<String, Set<GeneOntologyTerm>> res = new HashMap<String, Set<GeneOntologyTerm>>();
+        for ( Entry<Edition, Set<GeneOntologyTerm>> es : editionMap.entrySet() ) {
+            res.put( es.getKey().getDate().toString(), es.getValue() );
+        }
+        return res;
+    }
 
-        // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
-        List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( currentChart.getSeries()
-                .get( event.getSeriesIndex() ).getData().entrySet() );
+    public void fetchDirectChart() {
+        // Direct Annotations Chart
+        System.out.println( "fetch Direct" );
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesDirect = annotationDAO.track( currentSpeciesId,
+                primaryToSecondary, false );
 
-        // Keep in mind that the list of entry sets is in the order that the data was inserted, not the order it is
-        // displayed!
-        String date = ( String ) es.get( event.getItemIndex() ).getKey();
+        tmpData = allSeriesDirect;
 
-        selectedDate = date;
-        Map<String, Set<GeneOntologyTerm>> series = seriesData.get( currentChart.getSeries()
-                .get( event.getSeriesIndex() ).getLabel() );
-        if ( series == null ) {
-            terms = new HashSet<GeneOntologyTerm>();
-        } else {
-            terms = series.get( date );
+        initChart( "direct", allSeriesDirect, "Direct Annotations vs Time", "Direct Annotations", cache
+                .getSpeciesAverages().get( currentSpeciesId ) );
+
+        seriesData = allSeriesData.get( "direct" );
+        currentChart = allCharts.get( "direct" );
+
+        chartsReady = true;
+    }
+
+    public void fetchPropagatedChart() {
+        // Propagated Annotations Chart
+        System.out.println( "fetch Propagated" );
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpeciesId,
+                primaryToSecondary, true );
+
+        // Add back direct parents if not there
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> seriesEntry : tmpData.entrySet() ) {
+            String seriesAccession = seriesEntry.getKey();
+            for ( Entry<Edition, Set<GeneOntologyTerm>> editionInSeriesEntry : seriesEntry.getValue().entrySet() ) {
+                Edition editionInSeries = editionInSeriesEntry.getKey();
+                Set<GeneOntologyTerm> dataPoints = allSeries.get( seriesAccession ).get( editionInSeries );
+                if ( dataPoints == null ) {
+                    dataPoints = new HashSet<GeneOntologyTerm>();
+                    // Commented out to ignore those editions where I have no GO structure data
+                    // It is misleading to show only direct parents here
+                    // allSeriesProp.get( seriesAccession ).put( editionInSeries, dataPoints );
+                }
+                dataPoints.addAll( editionInSeriesEntry.getValue() );
+            }
         }
 
+        tmpData = null;
+
+        initChart( "propagated", allSeries, "Propagated Annotations vs Time", "Propagated Annotations", null );
     }
 
-    public void changeGraph( String graphType ) {
-        // System.out.println( "New value: " + graphType );
-        this.graphType = graphType;
-        reloadGraph();
+    public List<String> getAspects() {
+        return aspects;
     }
 
-    public void toggleSplit() {
-        splitAccessions = !splitAccessions;
-        reloadGraph();
+    public LineChartModel getCurrentChart() {
+        return currentChart;
     }
 
-    public void reloadGraph() {
-        System.out.println( graphType + ( splitAccessions ? "" : "-combined" ) );
-        if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
-        currentChart = allCharts.get( graphType + ( splitAccessions ? "" : "-combined" ) );
-        seriesData = allSeriesData.get( graphType + ( splitAccessions ? "" : "-combined" ) );
+    public Map<String, Accession> getCurrentPrimaryAccessions() {
+        return currentPrimaryAccessions;
+    }
+
+    public ArrayList<Accession> getCurrentPrimaryAccessionsValues() {
+        return new ArrayList<Accession>( currentPrimaryAccessions.values() );
+    }
+
+    public Species getCurrentSpecies() {
+        return currentSpecies;
+    }
+
+    public Integer getCurrentSpeciesId() {
+        return currentSpeciesId;
+    }
+
+    public Collection<GeneOntologyTerm> getFilteredTerms() {
+        return filteredTerms;
+    }
+
+    public List<String> getGraphs() {
+        return graphs;
+    }
+
+    // public List<TrackValue> getTrackValues() {
+    // return trackValues;
+    // }
+
+    public String getQuery() {
+        return query;
+    }
+
+    public String getSelectedDate() {
+        return selectedDate;
+    }
+
+    public Collection<GeneOntologyTerm> getTerms() {
+        return terms;
+    }
+
+    public void init() throws GeneNotFoundException {
+        if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
+            return; // Skip ajax requests.
+        }
+        System.out.println( "TrackView init: " + currentSpeciesId + ": " + query );
+        Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( currentSpeciesId );
+        Collection<Accession> primaryAccessions;
+        if ( query == null
+                || currentSpeciesId == null
+                || c == null
+                || ( primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpeciesId ).get( query ) ) == null ) {
+
+            throw new GeneNotFoundException();
+            /*
+             * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
+             * facesContext.getApplication().getNavigationHandler(); navigationHandler.handleNavigation( facesContext,
+             * null, "error400?faces-redirect=true" );
+             */
+        } else {
+            // Get secondary accessions
+            // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
+            for ( Accession accession : primaryAccessions ) {
+                primaryToSecondary.put( accession.getAccession(), accession.getSecondary() );
+                currentPrimaryAccessions.put( accession.getAccession(), accession );
+            }
+
+            // Obtain AnnotationDAO.
+            annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
+            currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
+            for ( Species s : cache.getSpeciesList() ) {
+                if ( s.getId().equals( currentSpeciesId ) ) {
+                    currentSpecies = s;
+                }
+            }
+
+        }
+
     }
 
     private void initChart( String identifier, Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries,
@@ -288,167 +383,81 @@ public class TrackView implements Serializable {
         allSeriesData.put( identifier + "-combined", sData );
     }
 
-    public void fetchDirectChart() {
-        // Direct Annotations Chart
-        System.out.println( "fetch Direct" );
-        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesDirect = annotationDAO.track( currentSpecies,
-                primaryToSecondary, false );
-
-        tmpData = allSeriesDirect;
-
-        initChart( "direct", allSeriesDirect, "Direct Annotations vs Time", "Direct Annotations", cache
-                .getSpeciesAverages().get( currentSpecies ) );
-
-        seriesData = allSeriesData.get( "direct" );
-        currentChart = allCharts.get( "direct" );
-
-        chartsReady = true;
-    }
-
-    public void fetchPropagatedChart() {
-        // Propagated Annotations Chart
-        System.out.println( "fetch Propagated" );
-        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpecies,
-                primaryToSecondary, true );
-
-        // Add back direct parents if not there
-        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> seriesEntry : tmpData.entrySet() ) {
-            String seriesAccession = seriesEntry.getKey();
-            for ( Entry<Edition, Set<GeneOntologyTerm>> editionInSeriesEntry : seriesEntry.getValue().entrySet() ) {
-                Edition editionInSeries = editionInSeriesEntry.getKey();
-                Set<GeneOntologyTerm> dataPoints = allSeries.get( seriesAccession ).get( editionInSeries );
-                if ( dataPoints == null ) {
-                    dataPoints = new HashSet<GeneOntologyTerm>();
-                    // Commented out to ignore those editions where I have no GO structure data
-                    // It is misleading to show only direct parents here
-                    // allSeriesProp.get( seriesAccession ).put( editionInSeries, dataPoints );
-                }
-                dataPoints.addAll( editionInSeriesEntry.getValue() );
-            }
-        }
-
-        tmpData = null;
-
-        initChart( "propagated", allSeries, "Propagated Annotations vs Time", "Propagated Annotations", null );
-    }
-
-    private Map<String, Map<Edition, Set<GeneOntologyTerm>>> combineSeries(
-            Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries ) {
-        Map<Edition, Set<GeneOntologyTerm>> combinedSeries = new HashMap<Edition, Set<GeneOntologyTerm>>();
-        for ( Map<Edition, Set<GeneOntologyTerm>> series : allSeries.values() ) {
-            for ( Entry<Edition, Set<GeneOntologyTerm>> dataPoint : series.entrySet() ) {
-                // String date = dataPoint.getKey();
-                Edition edition = dataPoint.getKey();
-                Set<GeneOntologyTerm> details = dataPoint.getValue();
-
-                Set<GeneOntologyTerm> combinedDataPoint = combinedSeries.get( edition );
-
-                if ( combinedDataPoint == null ) {
-                    combinedDataPoint = new HashSet<GeneOntologyTerm>();
-                    combinedSeries.put( edition, combinedDataPoint );
-                }
-
-                combinedDataPoint.addAll( details );
-
-            }
-        }
-
-        Map<String, Map<Edition, Set<GeneOntologyTerm>>> result = new HashMap<String, Map<Edition, Set<GeneOntologyTerm>>>();
-        result.put( "All Accessions", combinedSeries );
-
-        return result;
-
-    }
-
-    public void showDialog() {
-        RequestContext.getCurrentInstance().openDialog( "dlg2" );
-    }
-
-    public LineChartModel getCurrentChart() {
-        return currentChart;
-    }
-
-    // public List<TrackValue> getTrackValues() {
-    // return trackValues;
-    // }
-
-    public Integer getCurrentSpecies() {
-        return currentSpecies;
-    }
-
-    public void setCurrentSpecies( Integer currentSpecies ) {
-        this.currentSpecies = currentSpecies;
-    }
-
-    public String getQuery() {
-        return query;
-    }
-
-    public void setQuery( String query ) {
-        this.query = query;
-    }
-
-    public void setCache( Cache cache ) {
-        this.cache = cache;
-    }
-
-    public String getSelectedDate() {
-        return selectedDate;
-    }
-
-    public void setSelectedDate( String selectedDate ) {
-        this.selectedDate = selectedDate;
-    }
-
-    public Collection<GeneOntologyTerm> getTerms() {
-        return terms;
-    }
-
-    public Collection<GeneOntologyTerm> getFilteredTerms() {
-        return filteredTerms;
-    }
-
-    public void setFilteredTerms( Collection<GeneOntologyTerm> filteredTerms ) {
-        this.filteredTerms = filteredTerms;
-    }
-
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
-    }
-
-    public List<String> getAspects() {
-        return aspects;
-    }
-
-    public List<String> getGraphs() {
-        return graphs;
-    }
-
-    public Map<String, Accession> getCurrentPrimaryAccessions() {
-        return currentPrimaryAccessions;
-    }
-
-    public ArrayList<Accession> getCurrentPrimaryAccessionsValues() {
-        return new ArrayList<Accession>( currentPrimaryAccessions.values() );
+    public boolean isChartsReady() {
+        return chartsReady;
     }
 
     public boolean isSplitAccessions() {
         return splitAccessions;
     }
 
+    public void itemSelect( ItemSelectEvent event ) {
+
+        // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
+        List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( currentChart.getSeries()
+                .get( event.getSeriesIndex() ).getData().entrySet() );
+
+        // Keep in mind that the list of entry sets is in the order that the data was inserted, not the order it is
+        // displayed!
+        String date = ( String ) es.get( event.getItemIndex() ).getKey();
+
+        selectedDate = date;
+        Map<String, Set<GeneOntologyTerm>> series = seriesData.get( currentChart.getSeries()
+                .get( event.getSeriesIndex() ).getLabel() );
+        if ( series == null ) {
+            terms = new HashSet<GeneOntologyTerm>();
+        } else {
+            terms = series.get( date );
+        }
+
+    }
+
+    public void keepAlive() {
+        System.out.println( "Kept alive" );
+    }
+
+    public void reloadGraph() {
+        System.out.println( graphType + ( splitAccessions ? "" : "-combined" ) );
+        if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
+        currentChart = allCharts.get( graphType + ( splitAccessions ? "" : "-combined" ) );
+        seriesData = allSeriesData.get( graphType + ( splitAccessions ? "" : "-combined" ) );
+    }
+
+    public void setCache( Cache cache ) {
+        this.cache = cache;
+    }
+
+    public void setCurrentSpeciesId( Integer currentSpeciesId ) {
+        this.currentSpeciesId = currentSpeciesId;
+    }
+
+    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
+        this.daoFactoryBean = daoFactoryBean;
+    }
+
+    public void setFilteredTerms( Collection<GeneOntologyTerm> filteredTerms ) {
+        this.filteredTerms = filteredTerms;
+    }
+
+    public void setQuery( String query ) {
+        this.query = query;
+    }
+
+    public void setSelectedDate( String selectedDate ) {
+        this.selectedDate = selectedDate;
+    }
+
     public void setSplitAccessions( boolean splitAccessions ) {
         this.splitAccessions = splitAccessions;
     }
 
-    public boolean isChartsReady() {
-        return chartsReady;
+    public void showDialog() {
+        RequestContext.getCurrentInstance().openDialog( "dlg2" );
     }
 
-}
-
-class CustomComparator implements Comparator<Edition> {
-    @Override
-    public int compare( Edition o1, Edition o2 ) {
-        return o1.getEdition().compareTo( o2.getEdition() );
+    public void toggleSplit() {
+        splitAccessions = !splitAccessions;
+        reloadGraph();
     }
+
 }
