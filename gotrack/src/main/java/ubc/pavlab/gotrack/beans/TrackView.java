@@ -88,9 +88,10 @@ public class TrackView implements Serializable {
     // private List<TrackValue> trackValues;
 
     // Static data
-    private Edition currentEdition;
+    // private Edition currentEdition;
     private Map<String, Accession> currentPrimaryAccessions = new HashMap<String, Accession>();
-    Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
+    private Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
+    private Collection<GeneOntologyTerm> allTerms = new HashSet<GeneOntologyTerm>();
 
     /* Chart Stuff */
     private Map<String, Map<Edition, Set<GeneOntologyTerm>>> tmpData;
@@ -101,10 +102,14 @@ public class TrackView implements Serializable {
                                                                                                                                                                  // series
     private boolean chartsReady = false;
 
-    // Select functionality
+    // Select Data Point functionality
     private String selectedDate;
     private Collection<GeneOntologyTerm> terms = new ArrayList<GeneOntologyTerm>();
     private Collection<GeneOntologyTerm> filteredTerms;
+
+    // Functionality
+    private List<GeneOntologyTerm> selectedTerms;
+    private Collection<GeneOntologyTerm> filteredAllTerms;
 
     // Static lists
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
@@ -112,7 +117,9 @@ public class TrackView implements Serializable {
 
     // Settings
     private boolean splitAccessions = true;
+    private boolean propagate = false;
     private String graphType = "direct";
+    private String scale = "linear";
 
     /**
      * 
@@ -209,7 +216,7 @@ public class TrackView implements Serializable {
         DateAxis axis = new DateAxis( "Dates" );
         // CategoryAxis axis = new CategoryAxis( "Editions" );
         axis.setTickAngle( -50 );
-        axis.setMax( currentEdition.getDate().toString() );
+        // axis.setMax( currentEdition.getDate());
         axis.setTickFormat( "%b %#d, %y" );
 
         dateModel.getAxes().put( AxisType.X, axis );
@@ -242,6 +249,29 @@ public class TrackView implements Serializable {
         chartsReady = true;
     }
 
+    public void fetchAllTerms() {
+        System.out.println( "fetch All Terms" );
+        allTerms.clear();
+        Map<String, Map<String, Set<GeneOntologyTerm>>> t = allSeriesData.get( "direct" );
+        for ( Map<String, Set<GeneOntologyTerm>> series : t.values() ) {
+            for ( Set<GeneOntologyTerm> terms : series.values() ) {
+                for ( GeneOntologyTerm geneOntologyTerm : terms ) {
+                    // if ( allTerms.contains( geneOntologyTerm ) && geneOntologyTerm.getAspect() != null ) {
+                    // System.out.println(geneOntologyTerm);
+                    // allTerms.remove( geneOntologyTerm );
+                    // allTerms.add( geneOntologyTerm );
+                    // } else {
+                    // allTerms.add( geneOntologyTerm );
+                    // }
+                    if ( geneOntologyTerm.getAspect() != null ) {
+                        allTerms.add( geneOntologyTerm );
+                    }
+
+                }
+            }
+        }
+    }
+
     public void fetchPropagatedChart() {
         // Propagated Annotations Chart
         System.out.println( "fetch Propagated" );
@@ -267,6 +297,22 @@ public class TrackView implements Serializable {
         tmpData = null;
 
         initChart( "propagated", allSeries, "Propagated Annotations vs Time", "Propagated Annotations", null );
+    }
+
+    public boolean isPropagate() {
+        return propagate;
+    }
+
+    public void setPropagate( boolean propagate ) {
+        this.propagate = propagate;
+    }
+
+    public String getScale() {
+        return scale;
+    }
+
+    public void setScale( String scale ) {
+        this.scale = scale;
     }
 
     public List<String> getAspects() {
@@ -297,6 +343,10 @@ public class TrackView implements Serializable {
         return filteredTerms;
     }
 
+    public Collection<GeneOntologyTerm> getFilteredAllTerms() {
+        return filteredAllTerms;
+    }
+
     public List<String> getGraphs() {
         return graphs;
     }
@@ -315,6 +365,18 @@ public class TrackView implements Serializable {
 
     public Collection<GeneOntologyTerm> getTerms() {
         return terms;
+    }
+
+    public Collection<GeneOntologyTerm> getAllTerms() {
+        return allTerms;
+    }
+
+    public List<GeneOntologyTerm> getSelectedTerms() {
+        return selectedTerms;
+    }
+
+    public void setSelectedTerms( List<GeneOntologyTerm> selectedTerms ) {
+        this.selectedTerms = selectedTerms;
     }
 
     public void init() throws GeneNotFoundException {
@@ -345,7 +407,7 @@ public class TrackView implements Serializable {
 
             // Obtain AnnotationDAO.
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-            currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
+            // currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
             for ( Species s : cache.getSpeciesList() ) {
                 if ( s.getId().equals( currentSpeciesId ) ) {
                     currentSpecies = s;
@@ -417,8 +479,10 @@ public class TrackView implements Serializable {
     }
 
     public void reloadGraph() {
-        System.out.println( graphType + ( splitAccessions ? "" : "-combined" ) );
+
         if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
+        graphType = propagate ? "propagated" : "direct";
+        System.out.println( graphType + ( splitAccessions ? "" : "-combined" ) );
         currentChart = allCharts.get( graphType + ( splitAccessions ? "" : "-combined" ) );
         seriesData = allSeriesData.get( graphType + ( splitAccessions ? "" : "-combined" ) );
     }
@@ -437,6 +501,10 @@ public class TrackView implements Serializable {
 
     public void setFilteredTerms( Collection<GeneOntologyTerm> filteredTerms ) {
         this.filteredTerms = filteredTerms;
+    }
+
+    public void setFilteredAllTerms( Collection<GeneOntologyTerm> filteredAllTerms ) {
+        this.filteredAllTerms = filteredAllTerms;
     }
 
     public void setQuery( String query ) {

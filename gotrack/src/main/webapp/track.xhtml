@@ -1,39 +1,40 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-	xmlns:f="http://java.sun.com/jsf/core"
 	xmlns:h="http://java.sun.com/jsf/html"
-	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
-	xmlns:p="http://primefaces.org/ui"
+	xmlns:f="http://java.sun.com/jsf/core"
 	xmlns:ui="http://java.sun.com/jsf/facelets"
-	>
-<f:metadata>
-	<f:viewParam id="currentSpeciesId" name="currentSpeciesId"
-		value="#{trackView.currentSpeciesId}" />
-	<f:viewParam id="query" name="query" value="#{trackView.query}" />
-	<f:event type="preRenderView" listener="#{trackView.init}" />
-</f:metadata>
-<h:head>
-	<title>UBC-CHiBi|GOtrack</title>
-	<h:outputStylesheet name="webjars/font-awesome/4.2.0/css/font-awesome.css" />
-	<h:outputStylesheet library="css" name="style.css" />
-	<h:outputStylesheet library="css" name="styles3.css" />
-	<h:outputStylesheet library="css" name="custom.css" />
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:fn="http://java.sun.com/jsp/jstl/functions">
 
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-	<!-- Prevents caching at the Proxy Server -->
+<f:view contentType="text/html">
+	<f:metadata>
+		<f:viewParam id="currentSpeciesId" name="currentSpeciesId"
+			value="#{trackView.currentSpeciesId}" />
+		<f:viewParam id="query" name="query" value="#{trackView.query}" />
+		<f:event type="preRenderView" listener="#{trackView.init}" />
+	</f:metadata>
+	<h:head>
+		<title>UBC-CHiBi|GOtrack</title>
+		<h:outputStylesheet
+			name="webjars/font-awesome/4.2.0/css/font-awesome.css" />
+		<h:outputStylesheet library="css" name="showcase.css" />
+		<h:outputStylesheet library="css" name="custom.css" />
+		<h:outputStylesheet library="css" name="track.css" />
 
-	<meta http-equiv="Expires" content="0" />
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<meta name="description"
-		content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<!-- Prevents caching at the Proxy Server -->
 
-	<meta name="keywords"
-		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
-	<meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
-	<!-- <h:outputScript library="js" name="lineHighlighter.js" /> -->
-	<h:outputScript library="js" name="gotrack.js" />
-	<script>
+		<meta http-equiv="Expires" content="0" />
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta name="description"
+			content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
+
+		<meta name="keywords"
+			content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
+
+		<h:outputScript library="js" name="gotrack.js" />
+		<h:outputScript library="js" name="jqplot.logAxisRenderer.js" />
+		<script>
       function chartExtender() {
          // this = chart widget instance        
          // this.cfg = options 
@@ -63,169 +64,260 @@
          }
          //console.log(this.cfg.axes);
          //this.cfg.axes.yaxis.label = "Per Capita Expenditure (local currency)";
-         //this.cfg.axes.yaxis.renderer = $.jqplot.LogAxisRenderer;
+         this.cfg.axes.yaxis.renderer = $.jqplot.LinearAxisRenderer;
 
-         //this.cfg.axes.yaxis.ticks = [1,100];
+         //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
       }
    </script>
-</h:head>
 
-<h:body>
-	<div id="site-wrapper">
-		<div id="header">
-			<div id="top">
-				<div class="left" id="logo">
-					<h:graphicImage library="img" width="130" height="110"
-						name="logo1.png" />
-				</div>
-				<div class="left navigation" id="main-nav">
-					<ul class="tabbed">
-						<li class="current-tab"><h:link value="Home"
-								outcome="index.xhtml" /></li>
-						<li><h:link value="Browse Global trends"
-								outcome="trends.xhtml" /></li>
-						<li><h:link value="Tutorial" outcome="about.xhtml" /></li>
-						<li><h:link value="Documentation"
-								outcome="documentation.xhtml" /></li>
+	</h:head>
 
-						<li><h:link value="Resources" outcome="resources.xhtml" /></li>
-					</ul>
-					<div class="clearer">&nbsp;</div>
-				</div>
-				<div class="clearer">&nbsp;</div>
-			</div>
-		</div>
+	<h:body>
 
+		<p:layout fullPage="true" onResize="centerResize()">
+			<p:layoutUnit id="top" position="north" size="50">
 
-		<!-- This is the delimiter for the menu nav bar, not implementing the sub-nav -->
-
-		<!-- Beginning of the two main columns -->
-		<div class="main" id="main-two-columns">
-			<!-- MAIN -->
-			<div id="page-title">
-				<h1>#{trackView.query} - #{trackView.currentSpecies.scientificName}</h1>
-				<h:form>
-				<p>
-				<ui:repeat value="#{trackView.getCurrentPrimaryAccessionsValues()}" var="acc" varStatus="loop">
-				    <a href="http://www.uniprot.org/uniprot/#{acc.accession}">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
-				</ui:repeat>
-				</p>
-				</h:form>
-			</div>
-
-			<div id="menuBar">
 				<h:form>
 					<p:menubar toggleEvent="click">
-						<p:submenu label="&nbsp; Count History" icon="fa fa-line-chart">
-							<p:menuitem value="Direct" actionListener="#{trackView.changeGraph('direct')}" update=":chartForm:chart1" icon="ui-icon-disk" >
-							</p:menuitem>
-							<p:menuitem value="Propagated"
-								actionListener="#{trackView.changeGraph('propagated')}"
-								icon="ui-icon-arrowrefresh-1-w" 
-								update=":chartForm:chart1"/>
-						</p:submenu>
-						<p:submenu label="&nbsp; Functionality" icon="fa fa-sitemap">
-							<p:menuitem value="Evidence Code History"
-								actionListener="#{trackView.keepAlive}" icon="ui-icon-close" />
-							<p:menuitem value="GO Term Membership"
-								actionListener="#{trackView.keepAlive}" icon="ui-icon-close" />
-						</p:submenu>
-				        <f:facet name="options">
-				        	<p:selectOneMenu id="selectspecies" value="#{indexView.currentSpeciesId}" style="margin-right:5px;">
-	        					<p:ajax event="change" update="selectspecies" />
+						<p:menuitem value="Home" url="index.xhtml" icon="fa fa-home"
+							styleClass="right-border" />
+						<p:menuitem value="Browse Global Trends" url="trends.xhtml"
+							icon="fa fa-globe" styleClass="right-border" />
+						<p:menuitem value="Tutorial" url="about.xhtml"
+							icon="fa fa-question-circle" styleClass="right-border" />
+						<p:menuitem value="Documentation" url="documentation.xhtml"
+							icon="fa fa-book" styleClass="right-border" />
+						<p:menuitem value="Resources" url="resources.xhtml"
+							icon="fa fa-info-circle" styleClass="right-border" />
+						<f:facet name="options">
+							<p:selectOneMenu id="selectspecies"
+								value="#{indexView.currentSpeciesId}" style="margin-right:5px;">
+								<p:ajax event="change" update="selectspecies" />
 								<f:selectItems value="#{cache.speciesList}" var="spec"
 									itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
 							</p:selectOneMenu>
-				            <p:autoComplete id="userinp" value="#{indexView.query}" completeMethod="#{indexView.complete}" 
-									queryDelay="600" minQueryLength="2" forceSelection="true" maxResults="10"  
-									label="ID" emptyMessage="No gene suggestions available,  please try again." style="margin-right:8px;">
-									<p:ajax event="focus" update="selectspecies" />
+							<p:autoComplete id="userinp" value="#{indexView.query}"
+								completeMethod="#{indexView.complete}" queryDelay="600"
+								minQueryLength="2" forceSelection="true" maxResults="10"
+								label="ID"
+								emptyMessage="No gene suggestions available,  please try again."
+								style="margin-right:8px;">
+								<p:ajax event="focus" update="selectspecies" />
 							</p:autoComplete>
-				            <p:commandButton type="submit" value="Go" action="#{indexView.go}"/>
-				        </f:facet>
+							<p:commandButton type="submit" value="Go"
+								action="#{indexView.go}" />
+						</f:facet>
 					</p:menubar>
 				</h:form>
-			</div>
+			</p:layoutUnit>
 
-			<div class="section">
-				<div class="post">
-					<div class="post-body">
-						<h:form  id="chartForm">
-							<p:dialog id="dlg2" header="Annotations" widgetVar="dlg2"
-								modal="false" width="700px">
-								<h:outputText id="dialogMsg"
-									value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.terms)}" />
-								    <p:dataTable id="dialogAnnotations" widgetVar="annotationsTable" var="term" value="#{trackView.terms}" scrollable="true" scrollHeight="250" sortMode="multiple" style="margin-bottom:0" emptyMessage="No annotations found with given criteria" filteredValue="#{trackView.filteredTerms}">
-								        <p:column filterBy="#{term.goId}" filterMatchMode="contains" headerText="Id" style="width:120px;">
-								            <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}" target="_blank"><i class="fa fa-external-link fa-sm" style="font-size:0.7em;"/> #{term.goId}</a>
-								        </p:column>
-								        <p:column filterBy="#{term.aspect}" filterMatchMode="in" headerText="Aspect" style="width:200px;">
-							                 <f:facet name="filter">
-								                <p:selectManyButton onchange="PF('annotationsTable').filter()" panelStyle="width:200px">
-								                    <f:selectItem itemLabel="BP" itemValue="BP"/>
-								                    <f:selectItem itemLabel="MF" itemValue="MF" />
-								                    <f:selectItem itemLabel="CC" itemValue="CC" />
-								                </p:selectManyButton>
-								            </f:facet>
-								            <h:outputText value="Biological Process" rendered="#{term.aspect == 'BP'}"/>
-								            <h:outputText value="Molecular Function" rendered="#{term.aspect == 'MF'}"/>
-								            <h:outputText value="Cellular Component" rendered="#{term.aspect == 'CC'}"/>
-								        </p:column>
-								        <p:column filterBy="#{term.name}" filterMatchMode="contains" headerText="Name">
-								            <h:outputText value="#{term.name}" />
-								        </p:column>
-								    </p:dataTable>
-							</p:dialog>
-							<div id = "allChartsDiv">
-							<p:outputPanel id="allCharts">
-								<div id="loading-spinner" class="loading"></div>
-								<p:chart id='chart1' type="line"
-									model="#{trackView.currentChart}" style="height:500px;"
-									widgetVar="chart" rendered="#{trackView.chartsReady}">
-									<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
-										onsuccess="PF('dlg2').show();"
-										update="dialogMsg,dialogAnnotations" />
-								</p:chart>
-								<p:contextMenu for="chart1">
-									<p:menuitem value="&nbsp; Toggle Accessions" actionListener="#{trackView.toggleSplit}" update="chart1" icon="fa fa-bars" />
-							    	<p:separator />
-							    	<p:menuitem value="&nbsp; Reset" onclick="PF('chart').resetZoom()" icon="fa fa-refresh" />
-							    </p:contextMenu>
-							</p:outputPanel>
-							</div>
-							<p:remoteCommand name="fetchCharts"                          
-							                  actionListener="#{trackView.fetchDirectChart()}" update="allCharts" oncomplete="loadPropagated(), hideLoadingSpinner()">
-							 </p:remoteCommand>
-							<p:remoteCommand  actionListener="#{trackView.fetchPropagatedChart()}" name="loadPropagated" >
-							 </p:remoteCommand>
+			<p:layoutUnit id="bottom" position="south" size="60">
+				<p id="bottom-footer" class="center">
+					&copy; UBC, Centre for High-Throughput Biology, 2015 <a
+						href="terms.xhtml">Terms and Conditions</a>
+				</p>
+			</p:layoutUnit>
+
+			<p:layoutUnit id="left" position="west" size="250" resizable="true"
+				collapsible="true" header="Options" minSize="250">
+				<h:form id="leftForm">
+					<h3 class="center">Data</h3>
+					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+						<h:outputText value="Propagate Annotations: " />
+						<p:inputSwitch value="#{trackView.propagate}">
+							<p:ajax listener="#{trackView.reloadGraph}"
+								update=":chartForm:chart1" />
+						</p:inputSwitch>
+
+						<h:outputText value="Split Accessions: " />
+						<p:inputSwitch value="#{trackView.splitAccessions}">
+							<p:ajax listener="#{trackView.reloadGraph}"
+								update=":chartForm:chart1" />
+						</p:inputSwitch>
 
 
-							<!-- PUT THE ACTUAL CONTENT -->
+					</h:panelGrid>
+					<p:separator style="max-width:200px" />
+					<h3 class="center">Graph</h3>
+					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+						<h:outputText value="Scale: " />
+						<p:selectOneButton id="scaleSelect" value="#{trackView.scale}"
+							onchange="changeGraphScale()">
+							<f:selectItem itemLabel="Linear" itemValue="linear" />
+							<f:selectItem itemLabel="Log" itemValue="log" />
+						</p:selectOneButton>
 
-							<!-- End of the FUNCTIONALITY CONTENT -->
-						</h:form>
 
+					</h:panelGrid>
+					<p:separator style="max-width:200px; height:5px;" />
+					<div align="center" style="margin-top: 20px;">
+						<p:commandButton value="&nbsp; Reset" onclick="centerResize()"
+							icon="fa fa-refresh" />
 					</div>
+				</h:form>
+
+
+				<f:facet name="footer">
+					<h:graphicImage library="img" width="130" height="110"
+						name="logo1.png" styleClass="center" />
+				</f:facet>
+			</p:layoutUnit>
+
+			<p:layoutUnit id="right" position="east" size="550" minSize="300"
+				header="Functionality" resizable="true" collapsible="true"
+				style="text-align:center">
+				<h:form id="funcForm">
+					<p:dataTable id="funcTable" widgetVar="funcTable" var="term"
+						value="#{trackView.allTerms}" scrollable="true"
+						sortMode="multiple" style="margin-bottom:0"
+						emptyMessage="No annotations found with given criteria"
+						filteredValue="#{trackView.filteredAllTerms}"
+						selectionMode="multiple" selection="#{trackView.selectedTerms}"
+						rowKey="#{term.goId}">
+						<p:column filterBy="#{term.goId}" filterMatchMode="contains"
+							headerText="Id" width="25%">
+							<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
+								target="_blank"><i class="fa fa-external-link fa-sm"
+								style="font-size: 0.7em;" /> #{term.goId}</a>
+						</p:column>
+						<p:column filterBy="#{term.aspect}" filterMatchMode="in"
+							headerText="Aspect" width="25%">
+							<f:facet name="filter">
+								<p:selectCheckboxMenu label="Aspect"
+									onchange="PF('funcTable').filter()"
+									panelStyleClass="without-selectall">
+									<f:selectItems value="#{trackView.aspects}" />
+								</p:selectCheckboxMenu>
+							</f:facet>
+							<h:outputText value="#{term.aspect}" />
+						</p:column>
+						<p:column filterBy="#{term.name}" filterMatchMode="contains"
+							headerText="Name" width="50%">
+							<h:outputText value="#{term.name}" />
+						</p:column>
+						<f:facet name="footer">
+							<p:commandButton process="funcTable"
+								update=":selectedTermsDetail" icon="ui-icon-search" value="View"
+								oncomplete="PF('selectedTermsDialog').show()" />
+						</f:facet>
+					</p:dataTable>
+					<p:remoteCommand actionListener="#{trackView.fetchAllTerms()}"
+						name="loadAllTerms" update="funcTable">
+					</p:remoteCommand>
+
+				</h:form>
+			</p:layoutUnit>
+
+			<p:layoutUnit id="center" position="center">
+
+				<div id="page-title">
+					<h1>#{trackView.query} -
+						#{trackView.currentSpecies.scientificName}</h1>
+					<h:form>
+						<p>
+							<ui:repeat
+								value="#{trackView.getCurrentPrimaryAccessionsValues()}"
+								var="acc" varStatus="loop">
+								<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
+									target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
+				</ui:repeat>
+						</p>
+					</h:form>
 				</div>
-			</div>
-			<div class="content-separator"></div>
+				<p:separator style="max-width:400px" />
+
+				<h:form id="chartForm">
+					<div id="allChartsDiv">
+						<p:outputPanel id="allCharts">
+							<div id="loading-spinner" class="loading"></div>
+							<p:chart id='chart1' type="line"
+								model="#{trackView.currentChart}" style="height:500px;"
+								widgetVar="chart" rendered="#{trackView.chartsReady}">
+								<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
+									onsuccess="PF('dlg2').show();"
+									update=":dialogMsg,:dialogAnnotations" />
+							</p:chart>
+
+						</p:outputPanel>
+					</div>
+					<p:remoteCommand name="fetchCharts"
+						actionListener="#{trackView.fetchDirectChart()}"
+						update="allCharts"
+						oncomplete="hideLoadingSpinner(), loadAllTerms(), loadPropagated()">
+					</p:remoteCommand>
+					<p:remoteCommand
+						actionListener="#{trackView.fetchPropagatedChart()}"
+						name="loadPropagated">
+					</p:remoteCommand>
 
 
-			<div class="clearer">&nbsp;</div>
-			<!-- MAIN -->
-		</div>
-	</div>
+					<!-- PUT THE ACTUAL CONTENT -->
 
-	<!-- This is the end of the two main columns -->
+					<!-- End of the FUNCTIONALITY CONTENT -->
+				</h:form>
 
-	<div id="footer">
-		<div class="center" id="footer-left">
-			<p>
-				&copy; UBC, Centre of High-throughput Biology, 2014 <a
-					href="terms.xhtml">Terms and Conditions</a>
-			</p>
-		</div>
-	</div>
-</h:body>
+
+			</p:layoutUnit>
+
+		</p:layout>
+
+		<p:dialog header="Basic Dialog" widgetVar="dlg" modal="true">
+			<h:outputText value="Resistance to PrimeFaces is futile!" />
+		</p:dialog>
+		<p:dialog id="selectedTermsDialog" header="Selected Terms"
+			widgetVar="selectedTermsDialog" modal="true" showEffect="fade"
+			hideEffect="fade" resizable="false" width="200">
+			<p:outputPanel id="selectedTermsDetail" style="text-align:center;">
+				<ui:repeat value="#{trackView.selectedTerms}" var="term">
+					<h:outputText value="#{term.goId} - #{term.name}"
+						style="display:block" />
+				</ui:repeat>
+			</p:outputPanel>
+		</p:dialog>
+		<p:dialog id="dlg2" header="Annotations" widgetVar="dlg2"
+			modal="false" width="700px">
+			<h:outputText id="dialogMsg"
+				value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.terms)}" />
+			<p:dataTable id="dialogAnnotations" widgetVar="annotationsTable"
+				var="term" value="#{trackView.terms}" scrollable="true"
+				scrollHeight="250" sortMode="multiple" style="margin-bottom:0"
+				emptyMessage="No annotations found with given criteria"
+				filteredValue="#{trackView.filteredTerms}">
+				<p:column filterBy="#{term.goId}" filterMatchMode="contains"
+					headerText="Id" style="width:120px;">
+					<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
+						target="_blank"><i class="fa fa-external-link fa-sm"
+						style="font-size: 0.7em;" /> #{term.goId}</a>
+				</p:column>
+				<p:column filterBy="#{term.aspect}" filterMatchMode="in"
+					headerText="Aspect" style="width:200px;">
+					<f:facet name="filter">
+						<p:selectManyButton onchange="PF('annotationsTable').filter()"
+							panelStyle="width:200px">
+							<f:selectItem itemLabel="BP" itemValue="BP" />
+							<f:selectItem itemLabel="MF" itemValue="MF" />
+							<f:selectItem itemLabel="CC" itemValue="CC" />
+						</p:selectManyButton>
+					</f:facet>
+					<h:outputText value="Biological Process"
+						rendered="#{term.aspect == 'BP'}" />
+					<h:outputText value="Molecular Function"
+						rendered="#{term.aspect == 'MF'}" />
+					<h:outputText value="Cellular Component"
+						rendered="#{term.aspect == 'CC'}" />
+				</p:column>
+				<p:column filterBy="#{term.name}" filterMatchMode="contains"
+					headerText="Name">
+					<h:outputText value="#{term.name}" />
+				</p:column>
+			</p:dataTable>
+		</p:dialog>
+
+
+
+	</h:body>
+
+</f:view>
+
+
 </html>
-

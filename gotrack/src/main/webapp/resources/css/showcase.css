@@ -1,0 +1,213 @@
+@charset "UTF-8";
+
+
+body{margin:0px; height:100%; overflow-x:hidden; overflow-y:auto; background-color:#20272a; font-family: 'exoregular', "Trebuchet MS", Arial, Helvetica, sans-serif;}
+	
+/* cursor */
+.cursorPointer{cursor:pointer;}
+	
+/* OTHERS */
+a{ text-decoration:none; outline:none;color: #25AAE1}
+.dispBlock{display:block !important;}
+.TextShadow{text-shadow: 0 1px 0 #ffffff}
+.TextShadowNone{text-shadow:none;}
+.underline{ text-decoration:underline;}
+.fontSize34{font-size:34px;}
+.fontSize30{font-size:30px;}
+.fontSize24{font-size:24px;}
+.fontSize21{font-size:21px;}
+.fontSize18{font-size:18px;}
+.fontSize14{font-size:14px;}
+.ContentX{width:95% !important; margin-bottom:30px; text-align:center; -webkit-transition: all 0.5s ease; -moz-transition: all 0.5s ease; -ms-transition: all 0.5s ease; -o-transition: all 0.5s ease; 
+		  transition: all 0.5s ease;}
+	.ContentX .defaultText{font-size:16px;}
+	.ContentX .defaultTopic{font-size:34px; line-height:36px; text-align:center;}
+	.ContentX .PropertyBox{height:220px;}
+	.ContentX .PropertyBox .PropertyTopic{font-size:14px;}
+	.ContentX .PropertyBox .PropertyText{font-size:12px;}
+.PFTopLinksCover{padding-top:130px !important; height:auto !important; min-height:60px !important; text-align:left !important;  -webkit-transition: all 0.5s ease; -moz-transition: all 0.5s ease; 
+				-ms-transition: all 0.5s ease; -o-transition: all 0.5s ease; transition: all 0.5s ease;}
+	.PFTopLinksCover .PFTopLinks{float:left !important; margin-top:0px;  -webkit-transition: all 0.5s ease; -moz-transition: all 0.5s ease; -ms-transition: all 0.5s ease; -o-transition: all 0.5s ease;
+								 transition: all 0.5s ease;}
+							
+.wid50{width:50px;}
+							
+.texAliCenter{text-align:center;}
+
+/* margins */
+.marginRight10{margin-right:10px;}
+.marginRight20{margin-right:20px;}
+.marginBottom20{margin-bottom:20px;}
+.marLefRigAuto{ margin-left:auto !important; margin-right:auto !important;}
+
+/*fonts*/
+.boldFont{font-family: 'exosemibold', "Trebuchet MS", Arial, Helvetica, sans-serif;}
+.boldItalicFont{font-family: 'exobolditalic', "Trebuchet MS", Arial, Helvetica, sans-serif;}
+.mediumFont{font-family: 'exomedium', "Trebuchet MS", Arial, Helvetica, sans-serif;}
+.regularFont{font-family: 'exoregular', "Trebuchet MS", Arial, Helvetica, sans-serif;}
+
+.bordersOfMenuSide{border-top:solid 1px #404a4e;}
+.hiddenIcons{opacity:0; filter:alpha(opacity=0);margin-left:-30px}
+.hiddenLogo{opacity:0; filter:alpha(opacity=0);margin-left:-62px}
+.emptyBox{display:block; height:121px;}
+
+/* display */
+.dispBlock{ display:block;}
+.dispTable{ display:table;}
+.overHidden{ overflow:hidden;}
+
+/* floating */
+.floatRight{float:right;}
+.floatLeft{float:left;}
+
+/* content boxes*/
+.Content33{width:33%; }
+.Content66{width:65%; background-position:left top; background-repeat:no-repeat;}
+.Content100{width:100%;}
+
+/* general text styles */
+.defaultText{font-size:18px; color:#84939f;}
+.defaultTopic{font-size:46px; color:#e26e60; line-height:46px; padding:10px 0px 10px 0px;}
+
+/* buttons */
+.BigButton{width:90%; box-sizing:border-box; -moz-box-sizing:border-box; -webkit-box-sizing:border-box; display:table; font-size:18px; font-family: 'exobolditalic', "Trebuchet MS", Arial, Helvetica, sans-serif; color:#404c51; margin:10px 0px 10px 0px; cursor:pointer;
+padding:20px; border-radius:5px; border-right:solid 60px #404c51;}
+	.BigButton img{ margin-right:-60px; height:23px;}	
+
+.YellowBtn{background-color:#fdd106; -webkit-box-shadow: 0px 2px 0px 0px rgba(231,191,9,1); -moz-box-shadow: 0px 2px 0px 0px rgba(231,191,9,1); box-shadow: 0px 2px 0px 0px rgba(231,191,9,1);}
+.YellowBtn:hover{ background-color:#fcdb42;}
+.OrangeBtn{background-color:#fba751; -webkit-box-shadow: 0px 2px 0px 0px rgba(212,135,56,1); -moz-box-shadow: 0px 2px 0px 0px rgba(212,135,56,1); box-shadow: 0px 2px 0px 0px rgba(212,135,56,1);}
+.OrangeBtn:hover{ background-color:#feb66d;}
+	
+/* text colors */
+.orange{color:#fca752;}
+.gray{color:#84939f;}
+.pink{color:#e26e61;}
+.yellow{color:#fdd106;}
+.green{color:#39b54a;}
+.blue{color:#25aae1;}
+.subitem{color:#84939f;}
+
+.fixedTop{position:fixed !important; margin-top:0 !important;}
+.animated{-webkit-transition: all 0.5s ease; -moz-transition: all 0.5s ease; -ms-transition: all 0.5s ease; -o-transition: all 0.5s ease; transition: all 0.5s ease;}
+
+input.searchInput {
+    padding-left: 30px;
+}
+
+.ui-tabs .ui-tabs-nav li.tab-doc {
+    float: right
+}
+
+/** ClearFix **/
+.clearfix:after { content: "."; display: block; height: 0; clear: both; visibility: hidden; }
+.clearfix { display: inline-block; }
+/* required comment for clearfix to work in Opera \*/
+* html .clearfix { height:1%; }
+.clearfix { display:block; }
+
+/* override */
+.ui-widget {
+    font-size: 90%;
+}
+
+
+
+
+
+/** Responsive **/
+@media (min-width: 929px) {
+	.PFTopLinks {
+		display: block
+	}
+    
+    .selectmenu {
+        display: none;
+    }
+
+    .mobileLogoCover {
+        display: none;
+    }
+    
+    .PFNextGen iframe {
+        margin-left: 100px;
+    }
+}
+
+@media (max-width: 1140px) {
+    #LOGOTEXTSIDE {
+        width: auto;
+        background: none;
+    }
+    
+    #LOGOTEXTSIDE span {
+        font-size: 24px;
+    }
+    
+    #PFTopLinksCover .PFTopLinks {
+        padding-left:0;
+        padding-right:0;
+    }
+}
+
+@media (max-width: 930px) {
+	.PFTopLinks {
+		display: none
+	}
+    
+    #PFTopLinksCover {
+        padding: 30px 15px 15px 15px;
+    }
+    
+    .selectmenu {
+        display: block;
+    }
+    
+    .mobileLogoCover {
+        display: block
+    }
+    
+    #MENUSIDE {
+        display: none
+    }
+    
+    #CONTENTSIDE {
+        margin-left:0
+    }
+        
+    #LOGOTEXTSIDE {
+        display: none
+    }
+    
+    .ContentSideSections{
+        padding:14px 24px;
+    }
+    
+    .Content33 {
+        width: 100%;
+    }
+    
+    .Content66 {
+        width: 100%;
+    }
+    
+    .ui-tabs .ui-tabs-nav li.tab-doc {
+        float: left
+    }
+    
+    .ui-tabs.ui-tabs-top > .ui-tabs-nav li {
+        width: 100%;
+    }
+    
+    .BigButton {
+        width: 100%;
+    }
+    
+    .PFNextGen iframe {
+        margin-left: 0;
+    }
+    
+    .SubSubMenu {
+        display: none;
+    }
+} 
