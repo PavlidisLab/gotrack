@@ -38,6 +38,7 @@ function getWidgetVarById(id) {
 
 function centerResize() {
    PrimeFaces.widgets.chart.plot.replot( {resetAxes:true} );
+   PrimeFaces.widgets.funcTable.render();
 }
 
 var changeGraphScale =  function() {

@@ -166,14 +166,14 @@
 			<p:layoutUnit id="right" position="east" size="550" minSize="300"
 				header="Functionality" resizable="true" collapsible="true"
 				style="text-align:center">
-				<h:form id="funcForm">
+				<h:form id="funcForm" style="height:100%;">
 					<p:dataTable id="funcTable" widgetVar="funcTable" var="term"
 						value="#{trackView.allTerms}" scrollable="true"
 						sortMode="multiple" style="margin-bottom:0"
 						emptyMessage="No annotations found with given criteria"
 						filteredValue="#{trackView.filteredAllTerms}"
 						selectionMode="multiple" selection="#{trackView.selectedTerms}"
-						rowKey="#{term.goId}">
+						rowKey="#{term.goId}" scrollHeight="100%">
 						<p:column filterBy="#{term.goId}" filterMatchMode="contains"
 							headerText="Id" width="25%">
 							<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
@@ -181,7 +181,7 @@
 								style="font-size: 0.7em;" /> #{term.goId}</a>
 						</p:column>
 						<p:column filterBy="#{term.aspect}" filterMatchMode="in"
-							headerText="Aspect" width="25%">
+							headerText="Aspect" width="20%">
 							<f:facet name="filter">
 								<p:selectCheckboxMenu label="Aspect"
 									onchange="PF('funcTable').filter()"
@@ -192,7 +192,7 @@
 							<h:outputText value="#{term.aspect}" />
 						</p:column>
 						<p:column filterBy="#{term.name}" filterMatchMode="contains"
-							headerText="Name" width="50%">
+							headerText="Name" width="55%">
 							<h:outputText value="#{term.name}" />
 						</p:column>
 						<f:facet name="footer">
