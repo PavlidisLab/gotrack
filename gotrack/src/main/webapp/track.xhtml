@@ -4,7 +4,8 @@
 	xmlns:f="http://java.sun.com/jsf/core"
 	xmlns:ui="http://java.sun.com/jsf/facelets"
 	xmlns:p="http://primefaces.org/ui"
-	xmlns:fn="http://java.sun.com/jsp/jstl/functions">
+	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	xmlns:pe="http://primefaces.org/ui/extensions">
 
 <f:view contentType="text/html">
 	<f:metadata>
@@ -256,7 +257,6 @@
 					<!-- End of the FUNCTIONALITY CONTENT -->
 				</h:form>
 
-
 			</p:layoutUnit>
 
 		</p:layout>
@@ -266,13 +266,20 @@
 		</p:dialog>
 		<p:dialog id="selectedTermsDialog" header="Selected Terms"
 			widgetVar="selectedTermsDialog" modal="true" showEffect="fade"
-			hideEffect="fade" resizable="false" width="200">
+			hideEffect="fade" resizable="false" width="700">
 			<p:outputPanel id="selectedTermsDetail" style="text-align:center;">
 				<ui:repeat value="#{trackView.selectedTerms}" var="term">
 					<h:outputText value="#{term.goId} - #{term.name}"
 						style="display:block" />
 				</ui:repeat>
 			</p:outputPanel>
+				<h:form id="timelineForm">
+				<pe:timeline id="timeline" value="#{customTimelineController.model}"
+             editable="false" selectable="false" eventMargin="10" eventMarginAxis="0"
+             locale="#{customTimelineController.locale}"
+             start="#{customTimelineController.start}"
+             end="#{customTimelineController.end}" stackEvents="false" themable="false"/>
+				</h:form>
 		</p:dialog>
 		<p:dialog id="dlg2" header="Annotations" widgetVar="dlg2"
 			modal="false" width="700px">
