@@ -197,13 +197,16 @@
 							<h:outputText value="#{term.name}" />
 						</p:column>
 						<f:facet name="footer">
-							<p:commandButton process="funcTable"
-								update=":selectedTermsDetail" icon="ui-icon-search" value="View"
+							<p:commandButton process="funcTable" icon="ui-icon-search" value="View" onclick="fetchTimeline()"
 								oncomplete="PF('selectedTermsDialog').show()" />
 						</f:facet>
 					</p:dataTable>
 					<p:remoteCommand actionListener="#{trackView.fetchAllTerms()}"
 						name="loadAllTerms" update="funcTable">
+					</p:remoteCommand>
+					
+					<p:remoteCommand actionListener="#{trackView.fetchTimeline()}"
+						name="fetchTimeline" update=":timelineForm">
 					</p:remoteCommand>
 
 				</h:form>
@@ -235,8 +238,8 @@
 								model="#{trackView.currentChart}" style="height:500px;"
 								widgetVar="chart" rendered="#{trackView.chartsReady}">
 								<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
-									onsuccess="PF('dlg2').show();"
-									update=":dialogMsg,:dialogAnnotations" />
+									onsuccess="PF('itemSelectDialog').show();"
+									update=":itemSelectForm:itemSelectMsg,:itemSelectForm:itemSelectData" />
 							</p:chart>
 
 						</p:outputPanel>
@@ -266,37 +269,31 @@
 		</p:dialog>
 		<p:dialog id="selectedTermsDialog" header="Selected Terms"
 			widgetVar="selectedTermsDialog" modal="true" showEffect="fade"
-			hideEffect="fade" resizable="false" width="700">
-			<p:outputPanel id="selectedTermsDetail" style="text-align:center;">
-				<ui:repeat value="#{trackView.selectedTerms}" var="term">
-					<h:outputText value="#{term.goId} - #{term.name}"
-						style="display:block" />
-				</ui:repeat>
-			</p:outputPanel>
+			hideEffect="fade" resizable="false" width="700" style="max-height:500px; overflow-y:auto;">
+			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm"/>
 				<h:form id="timelineForm">
-				<pe:timeline id="timeline" value="#{customTimelineController.model}"
-             editable="false" selectable="false" eventMargin="10" eventMarginAxis="0"
-             locale="#{customTimelineController.locale}"
-             start="#{customTimelineController.start}"
-             end="#{customTimelineController.end}" stackEvents="false" themable="false"/>
+				<pe:timeline id="timeline" value="#{trackView.timelineModel}"
+             editable="false" selectable="false" eventMargin="10" eventMarginAxis="0" stackEvents="false" themable="false" showCurrentTime="false"/>
 				</h:form>
 		</p:dialog>
-		<p:dialog id="dlg2" header="Annotations" widgetVar="dlg2"
+		<p:dialog id="itemSelectDialog" header="Annotations" widgetVar="itemSelectDialog"
 			modal="false" width="700px">
-			<h:outputText id="dialogMsg"
-				value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.terms)}" />
-			<p:dataTable id="dialogAnnotations" widgetVar="annotationsTable"
-				var="term" value="#{trackView.terms}" scrollable="true"
+			<p:ajax event="close" listener="#{trackView.cleanFilteredTerms}" update=":itemSelectForm:itemSelectData"/>
+			<h:form id="itemSelectForm" >
+			<h:outputText id="itemSelectMsg"
+				value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.itemSelectTerms)}" />
+			<p:dataTable id="itemSelectData" widgetVar="annotationsTable"
+				var="chartTerm" value="#{trackView.itemSelectTerms}" scrollable="true"
 				scrollHeight="250" sortMode="multiple" style="margin-bottom:0"
 				emptyMessage="No annotations found with given criteria"
 				filteredValue="#{trackView.filteredTerms}">
-				<p:column filterBy="#{term.goId}" filterMatchMode="contains"
+				<p:column filterBy="#{chartTerm.goId}" filterMatchMode="contains"
 					headerText="Id" style="width:120px;">
-					<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
+					<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{chartTerm.goId}"
 						target="_blank"><i class="fa fa-external-link fa-sm"
-						style="font-size: 0.7em;" /> #{term.goId}</a>
+						style="font-size: 0.7em;" /> #{chartTerm.goId}</a>
 				</p:column>
-				<p:column filterBy="#{term.aspect}" filterMatchMode="in"
+				<p:column filterBy="#{chartTerm.aspect}" filterMatchMode="in"
 					headerText="Aspect" style="width:200px;">
 					<f:facet name="filter">
 						<p:selectManyButton onchange="PF('annotationsTable').filter()"
@@ -307,17 +304,18 @@
 						</p:selectManyButton>
 					</f:facet>
 					<h:outputText value="Biological Process"
-						rendered="#{term.aspect == 'BP'}" />
+						rendered="#{chartTerm.aspect == 'BP'}" />
 					<h:outputText value="Molecular Function"
-						rendered="#{term.aspect == 'MF'}" />
+						rendered="#{chartTerm.aspect == 'MF'}" />
 					<h:outputText value="Cellular Component"
-						rendered="#{term.aspect == 'CC'}" />
+						rendered="#{chartTerm.aspect == 'CC'}" />
 				</p:column>
-				<p:column filterBy="#{term.name}" filterMatchMode="contains"
+				<p:column filterBy="#{chartTerm.name}" filterMatchMode="contains"
 					headerText="Name">
-					<h:outputText value="#{term.name}" />
+					<h:outputText value="#{chartTerm.name}" />
 				</p:column>
 			</p:dataTable>
+			</h:form>
 		</p:dialog>
 
 

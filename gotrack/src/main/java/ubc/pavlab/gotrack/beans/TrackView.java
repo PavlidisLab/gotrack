@@ -20,17 +20,25 @@
 package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
@@ -39,6 +47,8 @@ import javax.faces.context.FacesContext;
 
 import org.primefaces.context.RequestContext;
 import org.primefaces.event.ItemSelectEvent;
+import org.primefaces.extensions.model.timeline.TimelineEvent;
+import org.primefaces.extensions.model.timeline.TimelineModel;
 import org.primefaces.model.chart.AxisType;
 import org.primefaces.model.chart.DateAxis;
 import org.primefaces.model.chart.LineChartModel;
@@ -104,23 +114,28 @@ public class TrackView implements Serializable {
 
     // Select Data Point functionality
     private String selectedDate;
-    private Collection<GeneOntologyTerm> terms = new ArrayList<GeneOntologyTerm>();
+    private Collection<GeneOntologyTerm> itemSelectTerms;
     private Collection<GeneOntologyTerm> filteredTerms;
 
     // Functionality
     private List<GeneOntologyTerm> selectedTerms;
     private Collection<GeneOntologyTerm> filteredAllTerms;
 
-    // Static lists
+    // Static
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
     private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
+    private static final String COMBINED_TITLE = "All accessions";
+    private static final String COMBINED_SUFFIX = "-combined";
 
     // Settings
     private boolean splitAccessions = true;
     private boolean propagate = false;
     private String graphType = "direct";
     private String scale = "linear";
-
+    
+    // Timeline
+    private TimelineModel timelineModel;
+    
     /**
      * 
      */
@@ -156,7 +171,7 @@ public class TrackView implements Serializable {
         }
 
         Map<String, Map<Edition, Set<GeneOntologyTerm>>> result = new HashMap<String, Map<Edition, Set<GeneOntologyTerm>>>();
-        result.put( "All Accessions", combinedSeries );
+        result.put( COMBINED_TITLE, combinedSeries );
 
         return result;
 
@@ -298,6 +313,208 @@ public class TrackView implements Serializable {
 
         initChart( "propagated", allSeries, "Propagated Annotations vs Time", "Propagated Annotations", null );
     }
+    
+    public void fetchTimeline() {
+        
+        // <Selected Term, <Date, Exists>>
+        Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData = new HashMap<GeneOntologyTerm, Map<Date, Boolean>>();
+        
+        for ( GeneOntologyTerm geneOntologyTerm : selectedTerms ) {
+            timelineData.put( geneOntologyTerm, new HashMap<Date, Boolean>() );
+        }
+        
+        Map<String, Set<GeneOntologyTerm>> allCombinedDirectSeries = allSeriesData.get( "direct" + COMBINED_SUFFIX ).get(COMBINED_TITLE);
+        
+        for ( Entry<String, Set<GeneOntologyTerm>> esSeries : allCombinedDirectSeries.entrySet() ) {
+            String dateString = esSeries.getKey();
+            DateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH);
+            Date date = null;
+            try {
+                date = format.parse(dateString);
+            } catch ( ParseException e ) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+            
+            
+            
+            Set<GeneOntologyTerm> terms = esSeries.getValue();
+            
+            for ( GeneOntologyTerm geneOntologyTerm : selectedTerms ) {
+                Map<Date, Boolean> data = timelineData.get(geneOntologyTerm);
+                Boolean exists = data.get( date );
+                
+                if ( exists == null || !exists ) {
+                    data.put( date, terms.contains( geneOntologyTerm ) );
+                }
+                
+            }
+            
+        }
+
+        timelineModel = createTimeline(timelineData);
+
+        
+        
+    }
+    
+    private TimelineModel createTimeline( Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData) {
+        
+        TimelineModel model = new TimelineModel();
+        //DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        Calendar cal = Calendar.getInstance();
+        
+        for ( Entry<GeneOntologyTerm, Map<Date, Boolean>> esTermData : timelineData.entrySet() ) {
+            GeneOntologyTerm term = esTermData.getKey();
+            
+            Map<Date, Boolean> data = esTermData.getValue();
+            
+            SortedSet<Date> dates = new TreeSet<Date>(data.keySet());
+            Date prevDate = null;
+            for (Date date : dates) {
+                if ( prevDate != null ) {
+                    boolean exists = data.get(prevDate);
+                    TimelineEvent event = new TimelineEvent( "", prevDate, date, false, term.getGoId(),
+                            exists ? "timeline-green" : "timeline-red" );
+                    model.add( event );
+                }
+
+                prevDate = date;
+            }
+            
+            // give the last edition a span of 1 month
+            if ( dates.size() > 1) {
+                boolean exists = data.get(prevDate);
+                cal.setTime(prevDate);
+                cal.add(Calendar.MONTH, 1);
+                TimelineEvent event = new TimelineEvent( "", prevDate, cal.getTime(), false, term.getGoId(),
+                        exists ? "timeline-green" : "timeline-red" );
+                model.add( event );
+            }
+
+                   
+        }
+        
+        return model;
+        
+    }
+    
+    public void cleanTimeline() {
+        timelineModel = null;
+    }
+    
+    public void  cleanFilteredTerms() {
+        filteredTerms = null;
+    }
+    
+    public void init() throws GeneNotFoundException {
+        if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
+            return; // Skip ajax requests.
+        }
+        System.out.println( "TrackView init: " + currentSpeciesId + ": " + query );
+        Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( currentSpeciesId );
+        Collection<Accession> primaryAccessions;
+        if ( query == null
+                || currentSpeciesId == null
+                || c == null
+                || ( primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpeciesId ).get( query ) ) == null ) {
+
+            throw new GeneNotFoundException();
+            /*
+             * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
+             * facesContext.getApplication().getNavigationHandler(); navigationHandler.handleNavigation( facesContext,
+             * null, "error400?faces-redirect=true" );
+             */
+        } else {
+            // Get secondary accessions
+            // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
+            for ( Accession accession : primaryAccessions ) {
+                primaryToSecondary.put( accession.getAccession(), accession.getSecondary() );
+                currentPrimaryAccessions.put( accession.getAccession(), accession );
+            }
+
+            // Obtain AnnotationDAO.
+            annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
+            // currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
+            for ( Species s : cache.getSpeciesList() ) {
+                if ( s.getId().equals( currentSpeciesId ) ) {
+                    currentSpecies = s;
+                }
+            }
+
+        }
+
+    }
+
+    private void initChart( String identifier, Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries,
+            String title, String yAxis, Map<Edition, Double> staticData ) {
+
+        /* Base chart */
+        allCharts.put( identifier, createChart( allSeries, title, yAxis, staticData ) );
+
+        Map<String, Map<String, Set<GeneOntologyTerm>>> sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
+            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
+        }
+
+        allSeriesData.put( identifier, sData );
+
+        /* Combined chart */
+
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesCombined = combineSeries( allSeries );
+
+        allCharts.put( identifier + COMBINED_SUFFIX, createChart( allSeriesCombined, title, yAxis, null ) );
+
+        sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
+        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeriesCombined.entrySet() ) {
+            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
+        }
+
+        allSeriesData.put( identifier + COMBINED_SUFFIX, sData );
+    }
+    
+    public void itemSelect( ItemSelectEvent event ) {
+
+        // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
+        List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( currentChart.getSeries()
+                .get( event.getSeriesIndex() ).getData().entrySet() );
+
+        // Keep in mind that the list of entry sets is in the order that the data was inserted, not the order it is
+        // displayed!
+        String date = ( String ) es.get( event.getItemIndex() ).getKey();
+
+        selectedDate = date;
+        Map<String, Set<GeneOntologyTerm>> series = seriesData.get( currentChart.getSeries()
+                .get( event.getSeriesIndex() ).getLabel() );
+        if ( series == null ) {
+            itemSelectTerms = new HashSet<GeneOntologyTerm>();
+        } else {
+            itemSelectTerms = series.get( date );
+        }
+
+    }
+
+    public void keepAlive() {
+        System.out.println( "Kept alive" );
+    }
+
+    public void reloadGraph() {
+
+        if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
+        graphType = propagate ? "propagated" : "direct";
+        System.out.println( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+        currentChart = allCharts.get( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+        seriesData = allSeriesData.get( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+    }
+    
+    public void showDialog() {
+        RequestContext.getCurrentInstance().openDialog( "dlg2" );
+    }
+
+    public void toggleSplit() {
+        splitAccessions = !splitAccessions;
+        reloadGraph();
+    }
 
     public boolean isPropagate() {
         return propagate;
@@ -363,8 +580,8 @@ public class TrackView implements Serializable {
         return selectedDate;
     }
 
-    public Collection<GeneOntologyTerm> getTerms() {
-        return terms;
+    public Collection<GeneOntologyTerm> getItemSelectTerms() {
+        return itemSelectTerms;
     }
 
     public Collection<GeneOntologyTerm> getAllTerms() {
@@ -374,75 +591,9 @@ public class TrackView implements Serializable {
     public List<GeneOntologyTerm> getSelectedTerms() {
         return selectedTerms;
     }
-
-    public void setSelectedTerms( List<GeneOntologyTerm> selectedTerms ) {
-        this.selectedTerms = selectedTerms;
-    }
-
-    public void init() throws GeneNotFoundException {
-        if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
-            return; // Skip ajax requests.
-        }
-        System.out.println( "TrackView init: " + currentSpeciesId + ": " + query );
-        Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( currentSpeciesId );
-        Collection<Accession> primaryAccessions;
-        if ( query == null
-                || currentSpeciesId == null
-                || c == null
-                || ( primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpeciesId ).get( query ) ) == null ) {
-
-            throw new GeneNotFoundException();
-            /*
-             * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
-             * facesContext.getApplication().getNavigationHandler(); navigationHandler.handleNavigation( facesContext,
-             * null, "error400?faces-redirect=true" );
-             */
-        } else {
-            // Get secondary accessions
-            // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
-            for ( Accession accession : primaryAccessions ) {
-                primaryToSecondary.put( accession.getAccession(), accession.getSecondary() );
-                currentPrimaryAccessions.put( accession.getAccession(), accession );
-            }
-
-            // Obtain AnnotationDAO.
-            annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-            // currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
-            for ( Species s : cache.getSpeciesList() ) {
-                if ( s.getId().equals( currentSpeciesId ) ) {
-                    currentSpecies = s;
-                }
-            }
-
-        }
-
-    }
-
-    private void initChart( String identifier, Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries,
-            String title, String yAxis, Map<Edition, Double> staticData ) {
-
-        /* Base chart */
-        allCharts.put( identifier, createChart( allSeries, title, yAxis, staticData ) );
-
-        Map<String, Map<String, Set<GeneOntologyTerm>>> sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
-        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
-            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
-        }
-
-        allSeriesData.put( identifier, sData );
-
-        /* Combined chart */
-
-        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesCombined = combineSeries( allSeries );
-
-        allCharts.put( identifier + "-combined", createChart( allSeriesCombined, title, yAxis, null ) );
-
-        sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
-        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeriesCombined.entrySet() ) {
-            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
-        }
-
-        allSeriesData.put( identifier + "-combined", sData );
+    
+    public TimelineModel getTimelineModel() {
+        return timelineModel;
     }
 
     public boolean isChartsReady() {
@@ -452,39 +603,9 @@ public class TrackView implements Serializable {
     public boolean isSplitAccessions() {
         return splitAccessions;
     }
-
-    public void itemSelect( ItemSelectEvent event ) {
-
-        // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
-        List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( currentChart.getSeries()
-                .get( event.getSeriesIndex() ).getData().entrySet() );
-
-        // Keep in mind that the list of entry sets is in the order that the data was inserted, not the order it is
-        // displayed!
-        String date = ( String ) es.get( event.getItemIndex() ).getKey();
-
-        selectedDate = date;
-        Map<String, Set<GeneOntologyTerm>> series = seriesData.get( currentChart.getSeries()
-                .get( event.getSeriesIndex() ).getLabel() );
-        if ( series == null ) {
-            terms = new HashSet<GeneOntologyTerm>();
-        } else {
-            terms = series.get( date );
-        }
-
-    }
-
-    public void keepAlive() {
-        System.out.println( "Kept alive" );
-    }
-
-    public void reloadGraph() {
-
-        if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
-        graphType = propagate ? "propagated" : "direct";
-        System.out.println( graphType + ( splitAccessions ? "" : "-combined" ) );
-        currentChart = allCharts.get( graphType + ( splitAccessions ? "" : "-combined" ) );
-        seriesData = allSeriesData.get( graphType + ( splitAccessions ? "" : "-combined" ) );
+    
+    public void setSelectedTerms( List<GeneOntologyTerm> selectedTerms ) {
+        this.selectedTerms = selectedTerms;
     }
 
     public void setCache( Cache cache ) {
@@ -517,15 +638,6 @@ public class TrackView implements Serializable {
 
     public void setSplitAccessions( boolean splitAccessions ) {
         this.splitAccessions = splitAccessions;
-    }
-
-    public void showDialog() {
-        RequestContext.getCurrentInstance().openDialog( "dlg2" );
-    }
-
-    public void toggleSplit() {
-        splitAccessions = !splitAccessions;
-        reloadGraph();
     }
 
 }

@@ -8,7 +8,7 @@ $(document).ready(function() {
 
 var hideLoadingSpinner = function() {
   $('#loading-spinner').hide();
-  console.log($("#left-toggler"))
+  //console.log($("#left-toggler"))
   $("#left-toggler").append('<span class="vertical toggled-header">Options</span>');
   $("#right-toggler").append('<span class="vertical toggled-header">Functionality</span>');
   plot = PrimeFaces.widgets.chart.plot;

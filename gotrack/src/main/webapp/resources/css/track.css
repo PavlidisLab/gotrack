@@ -87,4 +87,14 @@ a:hover {text-decoration: underline;}
 #top span.ui-menuitem-icon {
 	font-size:15px;
 }
+
+div.timeline-red {  
+    background: #F03030 none !important;  /* red */  
+    border-color: #bd2828 !important;     /* red */  
+}  
+  
+div.timeline-green {  
+    background: #1AA11A none !important;  /* green */  
+    border-color: #136e13 !important;     /* green */  
+} 
     
