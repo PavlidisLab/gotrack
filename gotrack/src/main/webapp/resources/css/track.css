@@ -88,13 +88,37 @@ a:hover {text-decoration: underline;}
 	font-size:15px;
 }
 
-div.timeline-red {  
-    background: #F03030 none !important;  /* red */  
-    border-color: #bd2828 !important;     /* red */  
-}  
-  
-div.timeline-green {  
+div.timeline-true {  
     background: #1AA11A none !important;  /* green */  
-    border-color: #136e13 !important;     /* green */  
+    border-color: #1AA11A !important;     /* green */  
 } 
+
+/* div.timeline-true > div.timeline-event-content { 
+	color: #000; Fallback for older browsers
+    color: rgba(0, 0, 0, 0);
+} */
+
+div.timeline-false {  
+    background: lightgray none !important;  /* gray */  
+    border-color: lightgray !important;     /* gray */  
+} 
+
+/* div.timeline-false > div.timeline-event-content { 
+	color: #000; Fallback for older browsers
+    color: rgba(0, 0, 0, 0);
+}  */
+
+div.timeline-event-selected > div.timeline-event-content {
+	/* color: black; */
+	cursor: pointer !important;
+} 
+
+div.timeline-event-selected {
+	cursor: pointer !important;
+	border: 1px solid #79b7e7 !important;
+} 
+
+div.timeline-hidden {
+	font-size: 0 !important;
+}
     

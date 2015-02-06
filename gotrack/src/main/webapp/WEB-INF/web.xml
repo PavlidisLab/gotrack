@@ -18,6 +18,14 @@
 		<param-value>aristo</param-value>
 	</context-param>
 	
+	<!-- Install slf4j bridge handler -->
+	<listener>
+		<listener-class>
+		    	ubc.pavlab.gotrack.beans.Sl4jBridgeListener
+		  </listener-class>
+	</listener>
+	
+	
 	<!-- FacesServlet is main servlet responsible to handle all request. It 
 		acts as central controller. This servlet initializes the JSF components before 
 		the JSP is displayed. -->

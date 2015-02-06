@@ -60,3 +60,22 @@ var changeGraphScale =  function() {
    PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
    
 }
+
+
+function timelineSelect() {
+   var obj = PF('timelineWdgt').getSelectedEvent();
+   //console.log( obj ); 
+   var str = obj.className;
+   var patt = new RegExp("true");
+   var exists = patt.test(str);
+   
+   $('#timelineSelectMsgTerm').html('<b>Term:</b> '+ obj.group);
+   $('#timelineSelectMsgDate').html('<b>Date:</b> '+ obj.content);
+   $('#timelineSelectMsgExists').html('<b>Annotated:</b> ' + exists);
+}
+
+function cleanMsg() {
+   $('#timelineSelectMsgTerm').html('');
+   $('#timelineSelectMsgDate').html('');
+   $('#timelineSelectMsgExists').html('');
+}

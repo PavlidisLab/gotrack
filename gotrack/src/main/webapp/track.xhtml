@@ -197,7 +197,7 @@
 							<h:outputText value="#{term.name}" />
 						</p:column>
 						<f:facet name="footer">
-							<p:commandButton process="funcTable" icon="ui-icon-search" value="View" onclick="fetchTimeline()"
+							<p:commandButton process="funcTable" icon="ui-icon-search" value="View" onclick="fetchTimelineFromPanel()"
 								oncomplete="PF('selectedTermsDialog').show()" />
 						</f:facet>
 					</p:dataTable>
@@ -205,8 +205,8 @@
 						name="loadAllTerms" update="funcTable">
 					</p:remoteCommand>
 					
-					<p:remoteCommand actionListener="#{trackView.fetchTimeline()}"
-						name="fetchTimeline" update=":timelineForm">
+					<p:remoteCommand actionListener="#{trackView.fetchTimelineFromPanel()}"
+						name="fetchTimelineFromPanel" update=":timelineForm">
 					</p:remoteCommand>
 
 				</h:form>
@@ -269,15 +269,21 @@
 		</p:dialog>
 		<p:dialog id="selectedTermsDialog" header="Selected Terms"
 			widgetVar="selectedTermsDialog" modal="true" showEffect="fade"
-			hideEffect="fade" resizable="false" width="700" style="max-height:500px; overflow-y:auto;">
+			hideEffect="fade" resizable="false" width="700" style="max-height:500px; overflow-y:auto;text-align:center;" onHide="cleanMsg()">
+			<h:outputText id="timelineSelectMsgTerm"/>
+			<p:spacer width="30" height="16" />
+			<h:outputText id="timelineSelectMsgDate"/>
+			<p:spacer width="30" height="16" />
+			<h:outputText id="timelineSelectMsgExists"/>
 			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm"/>
 				<h:form id="timelineForm">
-				<pe:timeline id="timeline" value="#{trackView.timelineModel}"
-             editable="false" selectable="false" eventMargin="10" eventMarginAxis="0" stackEvents="false" themable="false" showCurrentTime="false"/>
+				<pe:timeline id="timeline" widgetVar="timelineWdgt" value="#{trackView.timelineModel}" selectable="true" eventMargin="10" eventMarginAxis="0" stackEvents="false" themable="false" showCurrentTime="false">
+				<pe:javascript event="select" execute="timelineSelect()"/>
+				</pe:timeline>
 				</h:form>
 		</p:dialog>
 		<p:dialog id="itemSelectDialog" header="Annotations" widgetVar="itemSelectDialog"
-			modal="false" width="700px">
+			modal="false" width="700px" onHide="PF('annotationsTable').clearFilters()">
 			<p:ajax event="close" listener="#{trackView.cleanFilteredTerms}" update=":itemSelectForm:itemSelectData"/>
 			<h:form id="itemSelectForm" >
 			<h:outputText id="itemSelectMsg"
@@ -286,7 +292,7 @@
 				var="chartTerm" value="#{trackView.itemSelectTerms}" scrollable="true"
 				scrollHeight="250" sortMode="multiple" style="margin-bottom:0"
 				emptyMessage="No annotations found with given criteria"
-				filteredValue="#{trackView.filteredTerms}">
+				filteredValue="#{trackView.filteredTerms}" selectionMode="multiple" selection="#{trackView.itemSelectViewTerms}" rowKey="#{chartTerm.goId}">
 				<p:column filterBy="#{chartTerm.goId}" filterMatchMode="contains"
 					headerText="Id" style="width:120px;">
 					<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{chartTerm.goId}"
@@ -314,7 +320,14 @@
 					headerText="Name">
 					<h:outputText value="#{chartTerm.name}" />
 				</p:column>
+						<f:facet name="footer">
+							<p:commandButton process="itemSelectData" icon="ui-icon-search" value="View" onclick="fetchTimelineFromDialog()"
+								oncomplete="PF('itemSelectDialog').hide(), PF('selectedTermsDialog').show()" />
+						</f:facet>
 			</p:dataTable>
+			<p:remoteCommand actionListener="#{trackView.fetchTimelineFromDialog()}"
+				name="fetchTimelineFromDialog" update=":timelineForm">
+			</p:remoteCommand>
 			</h:form>
 		</p:dialog>
 

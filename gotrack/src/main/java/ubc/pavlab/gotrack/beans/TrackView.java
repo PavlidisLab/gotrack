@@ -45,6 +45,7 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
 
+import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.extensions.model.timeline.TimelineEvent;
@@ -86,6 +87,8 @@ public class TrackView implements Serializable {
      * 
      */
     private static final long serialVersionUID = 7413572739210227872L;
+    
+    private static final Logger log = Logger.getLogger(TrackView.class);
 
     // DAO
     private AnnotationDAO annotationDAO;
@@ -116,6 +119,7 @@ public class TrackView implements Serializable {
     private String selectedDate;
     private Collection<GeneOntologyTerm> itemSelectTerms;
     private Collection<GeneOntologyTerm> filteredTerms;
+    private List<GeneOntologyTerm> itemSelectViewTerms;
 
     // Functionality
     private List<GeneOntologyTerm> selectedTerms;
@@ -141,6 +145,7 @@ public class TrackView implements Serializable {
      */
     public TrackView() {
         System.out.println( "TrackView created" );
+        log.info( "TrackView created" );
     }
 
     public void changeGraph( String graphType ) {
@@ -314,12 +319,22 @@ public class TrackView implements Serializable {
         initChart( "propagated", allSeries, "Propagated Annotations vs Time", "Propagated Annotations", null );
     }
     
-    public void fetchTimeline() {
+    public void fetchTimelineFromPanel() {
+        fetchTimeline(true);
+    }
+    
+    public void fetchTimelineFromDialog() {
+        fetchTimeline(false);
+    }
+    
+    private void fetchTimeline(boolean fromPanel) {
         
         // <Selected Term, <Date, Exists>>
         Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData = new HashMap<GeneOntologyTerm, Map<Date, Boolean>>();
         
-        for ( GeneOntologyTerm geneOntologyTerm : selectedTerms ) {
+        Collection<GeneOntologyTerm> selected = fromPanel ? selectedTerms : itemSelectViewTerms ;
+        
+        for ( GeneOntologyTerm geneOntologyTerm : selected ) {
             timelineData.put( geneOntologyTerm, new HashMap<Date, Boolean>() );
         }
         
@@ -340,7 +355,7 @@ public class TrackView implements Serializable {
             
             Set<GeneOntologyTerm> terms = esSeries.getValue();
             
-            for ( GeneOntologyTerm geneOntologyTerm : selectedTerms ) {
+            for ( GeneOntologyTerm geneOntologyTerm : selected ) {
                 Map<Date, Boolean> data = timelineData.get(geneOntologyTerm);
                 Boolean exists = data.get( date );
                 
@@ -361,7 +376,7 @@ public class TrackView implements Serializable {
     private TimelineModel createTimeline( Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData) {
         
         TimelineModel model = new TimelineModel();
-        //DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         Calendar cal = Calendar.getInstance();
         
         for ( Entry<GeneOntologyTerm, Map<Date, Boolean>> esTermData : timelineData.entrySet() ) {
@@ -374,8 +389,8 @@ public class TrackView implements Serializable {
             for (Date date : dates) {
                 if ( prevDate != null ) {
                     boolean exists = data.get(prevDate);
-                    TimelineEvent event = new TimelineEvent( "", prevDate, date, false, term.getGoId(),
-                            exists ? "timeline-green" : "timeline-red" );
+                    TimelineEvent event = new TimelineEvent( df.format(prevDate), prevDate, date, false, term.getGoId(),
+                            exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
                     model.add( event );
                 }
 
@@ -387,8 +402,8 @@ public class TrackView implements Serializable {
                 boolean exists = data.get(prevDate);
                 cal.setTime(prevDate);
                 cal.add(Calendar.MONTH, 1);
-                TimelineEvent event = new TimelineEvent( "", prevDate, cal.getTime(), false, term.getGoId(),
-                        exists ? "timeline-green" : "timeline-red" );
+                TimelineEvent event = new TimelineEvent( df.format(prevDate), prevDate, cal.getTime(), false, term.getGoId(),
+                        exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
                 model.add( event );
             }
 
@@ -638,6 +653,14 @@ public class TrackView implements Serializable {
 
     public void setSplitAccessions( boolean splitAccessions ) {
         this.splitAccessions = splitAccessions;
+    }
+
+    public List<GeneOntologyTerm> getItemSelectViewTerms() {
+        return itemSelectViewTerms;
+    }
+
+    public void setItemSelectViewTerms( List<GeneOntologyTerm> itemSelectViewTerms ) {
+        this.itemSelectViewTerms = itemSelectViewTerms;
     }
 
 }
