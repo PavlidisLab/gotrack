@@ -49,6 +49,7 @@ import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.extensions.model.timeline.TimelineEvent;
+import org.primefaces.extensions.model.timeline.TimelineGroup;
 import org.primefaces.extensions.model.timeline.TimelineModel;
 import org.primefaces.model.chart.AxisType;
 import org.primefaces.model.chart.DateAxis;
@@ -379,11 +380,19 @@ public class TrackView implements Serializable {
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         Calendar cal = Calendar.getInstance();
         
+        List<TimelineGroup> groups = new ArrayList<TimelineGroup>();
+        List<TimelineEvent> events = new ArrayList<TimelineEvent>();
+        
         for ( Entry<GeneOntologyTerm, Map<Date, Boolean>> esTermData : timelineData.entrySet() ) {
             GeneOntologyTerm term = esTermData.getKey();
             
             Map<Date, Boolean> data = esTermData.getValue();
             
+            TimelineGroup group = new TimelineGroup(term.getGoId(), term);
+            groups.add(group);
+            //model.addGroup( group );
+            
+
             SortedSet<Date> dates = new TreeSet<Date>(data.keySet());
             Date prevDate = null;
             for (Date date : dates) {
@@ -391,7 +400,9 @@ public class TrackView implements Serializable {
                     boolean exists = data.get(prevDate);
                     TimelineEvent event = new TimelineEvent( df.format(prevDate), prevDate, date, false, term.getGoId(),
                             exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                    model.add( event );
+                    //model.add( event );
+                    events.add(event);
+                    
                 }
 
                 prevDate = date;
@@ -404,11 +415,18 @@ public class TrackView implements Serializable {
                 cal.add(Calendar.MONTH, 1);
                 TimelineEvent event = new TimelineEvent( df.format(prevDate), prevDate, cal.getTime(), false, term.getGoId(),
                         exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                model.add( event );
+                //model.add( event );
+                events.add(event);
             }
+            
+            
+            
 
                    
         }
+        
+        model.setGroups( groups );
+        model.addAll(events);
         
         return model;
         

@@ -121,4 +121,15 @@ div.timeline-event-selected {
 div.timeline-hidden {
 	font-size: 0 !important;
 }
+
+div.timeline-groups-axis {
+	max-width:300px !important;
+}
+
+div.timeline-groups-text {
+	max-width:280px !important;
+	overflow:hidden;
+	text-overflow: ellipsis;
+}
+
     

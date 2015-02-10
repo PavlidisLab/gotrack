@@ -198,7 +198,7 @@
 						</p:column>
 						<f:facet name="footer">
 							<p:commandButton process="funcTable" icon="ui-icon-search" value="View" onclick="fetchTimelineFromPanel()"
-								oncomplete="PF('selectedTermsDialog').show()" />
+								oncomplete="PF('timelineDialog').show()" />
 						</f:facet>
 					</p:dataTable>
 					<p:remoteCommand actionListener="#{trackView.fetchAllTerms()}"
@@ -267,9 +267,9 @@
 		<p:dialog header="Basic Dialog" widgetVar="dlg" modal="true">
 			<h:outputText value="Resistance to PrimeFaces is futile!" />
 		</p:dialog>
-		<p:dialog id="selectedTermsDialog" header="Selected Terms"
-			widgetVar="selectedTermsDialog" modal="true" showEffect="fade"
-			hideEffect="fade" resizable="false" width="700" style="max-height:500px; overflow-y:auto;text-align:center;" onHide="cleanMsg()">
+		<p:dialog id="timelineDialog" header="Selected Terms"
+			widgetVar="timelineDialog" modal="true" showEffect="fade"
+			hideEffect="fade" resizable="false" width="800" style="max-height:500px; overflow-y:auto;text-align:center;" onHide="cleanMsg()">
 			<h:outputText id="timelineSelectMsgTerm"/>
 			<p:spacer width="30" height="16" />
 			<h:outputText id="timelineSelectMsgDate"/>
@@ -277,10 +277,14 @@
 			<h:outputText id="timelineSelectMsgExists"/>
 			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm"/>
 				<h:form id="timelineForm">
-				<pe:timeline id="timeline" widgetVar="timelineWdgt" value="#{trackView.timelineModel}" selectable="true" eventMargin="10" eventMarginAxis="0" stackEvents="false" themable="false" showCurrentTime="false">
+				<pe:timeline id="timeline" widgetVar="timelineWdgt" value="#{trackView.timelineModel}" varGroup="group" selectable="true" eventMargin="10" eventMarginAxis="0" stackEvents="false" themable="false" showCurrentTime="false">
 				<pe:javascript event="select" execute="timelineSelect()"/>
+			    <f:facet name="group">  
+			        <h:outputText value="#{group.goId}" title="#{group.name}"/>  
+			    </f:facet> 
 				</pe:timeline>
 				</h:form>
+				<pe:tooltip global="true" myPosition="top, right" atPosition="left center"/> 
 		</p:dialog>
 		<p:dialog id="itemSelectDialog" header="Annotations" widgetVar="itemSelectDialog"
 			modal="false" width="700px" onHide="PF('annotationsTable').clearFilters()">
@@ -322,7 +326,7 @@
 				</p:column>
 						<f:facet name="footer">
 							<p:commandButton process="itemSelectData" icon="ui-icon-search" value="View" onclick="fetchTimelineFromDialog()"
-								oncomplete="PF('itemSelectDialog').hide(), PF('selectedTermsDialog').show()" />
+								oncomplete="PF('timelineDialog').show()" />
 						</f:facet>
 			</p:dataTable>
 			<p:remoteCommand actionListener="#{trackView.fetchTimelineFromDialog()}"
