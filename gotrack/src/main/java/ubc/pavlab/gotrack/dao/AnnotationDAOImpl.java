@@ -36,6 +36,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
+import ubc.pavlab.gotrack.beans.TrackView;
 import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
@@ -48,6 +51,8 @@ import ubc.pavlab.gotrack.model.GeneOntologyTerm;
  */
 public class AnnotationDAOImpl implements AnnotationDAO {
 
+    private static final Logger log = Logger.getLogger(AnnotationDAOImpl.class);
+    
     // Constants ----------------------------------------------------------------------------------
 
     private static final String SQL_FIND_BY_ID = "SELECT edition, species_id, accession, symbol, go_id, reference, evidence, db_object_name, synonyms, db_object_type, taxon FROM gene_annotation WHERE id = ?";
@@ -57,8 +62,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     // private static final String SQL_EXIST_SYMBOL = "SELECT COUNT(*) FROM gene_annotation WHERE symbol = ?";
     // private static final String SQL_TRACK2 =
     // "select date, gene_annotation.edition, accession, COUNT(distinct gene_annotation.go_id) as direct from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? where gene_annotation.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, accession";
-    private static final String SQL_TRACK = "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, gene_annotation.go_id, go_term.name, go_term.aspect from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term on edition.go_date=go_term.date and go_term.id=gene_annotation.go_id where edition.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`, go_id";
-    private static final String SQL_TRACK_PROPAGATED = "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, go_ontology_tclosure.parent as go_id, go_term.name, go_term.aspect from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? INNER JOIN go_ontology_tclosure ON gene_annotation.go_id=child and go_ontology_tclosure.date=edition.go_date LEFT JOIN go_term on edition.go_date=go_term.date and go_term.id=go_ontology_tclosure.parent  where edition.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`, parent";
+    private static final String SQL_TRACK = "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, gene_annotation.go_id, go_term.name, go_term.aspect, go_term.is_obsolete from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term on edition.go_date=go_term.date and go_term.id=gene_annotation.go_id where edition.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`, go_id";
+    private static final String SQL_TRACK_PROPAGATED = "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, go_ontology_tclosure.parent as go_id, go_term.name, go_term.aspect, go_term.is_obsolete from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? INNER JOIN go_ontology_tclosure ON gene_annotation.go_id=child and go_ontology_tclosure.date=edition.go_date LEFT JOIN go_term on edition.go_date=go_term.date and go_term.id=go_ontology_tclosure.parent  where edition.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`, parent";
     private static final String SQL_TRACK_WHEN_THEN = "WHEN accession IN (%s) THEN ? ";
     private static final String SQL_FIND_UNIQUE_GO_IN_EDITION = "SELECT distinct go_id, evidence, reference from gene_annotation where accession in (%s) and edition = ? and species_id = ?";
     private static final String SQL_FIND_UNIQUE_GO = "SELECT distinct go_id from gene_annotation where accession in (%s) and species_id = ?";
@@ -118,7 +123,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             }
 
         }
-        System.out.println( sql_when );
+        //System.out.println( sql_when );
 
         params.add( species );
         params.add( species );
@@ -134,13 +139,13 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         String sql = String.format( ancestorsOnly ? SQL_TRACK_PROPAGATED : SQL_TRACK, sql_when,
                 preparePlaceHolders( allAccessions.size() ) );
 
-        System.out.println( sql );
+        log.debug(sql);
 
         try {
             connection = daoFactory.getConnection();
             statement = connection.prepareStatement( sql );
             setValues( statement, params.toArray() );
-            System.out.println( statement );
+            log.debug(statement);
             resultSet = statement.executeQuery();
             while ( resultSet.next() ) {
                 // Integer edition = resultSet.getInt( "edition" );
@@ -150,6 +155,10 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 term.setGoId( resultSet.getString( "go_id" ) );
                 term.setName( resultSet.getString( "name" ) );
                 term.setAspect( resultSet.getString( "aspect" ) );
+                term.setObsolete( resultSet.getBoolean( "is_obsolete" ) );
+                if ( term.isObsolete() ) {
+                    log.info(term);
+                }
 
                 Map<Edition, Set<GeneOntologyTerm>> series = allSeries.get( primary );
                 if ( series == null ) {
@@ -209,7 +218,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         ResultSet resultSet = null;
         List<Annotation> annotations = new ArrayList<Annotation>();
         String sql = String.format( SQL_FIND_LIST, preparePlaceHolders( accessions.size() ) );
-        System.out.println( sql );
+        log.debug(sql);
         List<Object> params = new ArrayList<Object>();
 
         for ( String acc : accessions ) {
@@ -222,7 +231,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             connection = daoFactory.getConnection();
             statement = connection.prepareStatement( sql );
             setValues( statement, params.toArray() );
-            System.out.println( statement );
+            log.debug(statement);
             resultSet = statement.executeQuery();
             while ( resultSet.next() ) {
                 annotations.add( map( resultSet ) );
@@ -245,7 +254,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         ResultSet resultSet = null;
         Collection<GeneOntologyTerm> goTerms = new HashSet<GeneOntologyTerm>();
         String sql = String.format( SQL_FIND_UNIQUE_GO_IN_EDITION, preparePlaceHolders( accessions.size() ) );
-        System.out.println( sql );
+        log.debug(sql);
         List<Object> params = new ArrayList<Object>();
 
         for ( String acc : accessions ) {
@@ -258,7 +267,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             connection = daoFactory.getConnection();
             statement = connection.prepareStatement( sql );
             setValues( statement, params.toArray() );
-            System.out.println( statement );
+            log.debug(statement);
             resultSet = statement.executeQuery();
             while ( resultSet.next() ) {
                 goTerms.add( new GeneOntologyTerm( resultSet.getString( "go_id" ), resultSet.getString( "evidence" ),
@@ -281,7 +290,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         ResultSet resultSet = null;
         Collection<String> goIds = new HashSet<String>();
         String sql = String.format( SQL_FIND_UNIQUE_GO, preparePlaceHolders( accessions.size() ) );
-        System.out.println( sql );
+        log.debug(sql);
         List<Object> params = new ArrayList<Object>();
 
         for ( String acc : accessions ) {
@@ -293,7 +302,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             connection = daoFactory.getConnection();
             statement = connection.prepareStatement( sql );
             setValues( statement, params.toArray() );
-            System.out.println( statement );
+            log.debug(statement);
             resultSet = statement.executeQuery();
             while ( resultSet.next() ) {
                 goIds.add( resultSet.getString( "go_id" ) );

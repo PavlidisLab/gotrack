@@ -28,6 +28,8 @@ import javax.annotation.PostConstruct;
 import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
 
+import org.apache.log4j.Logger;
+
 /**
  * TODO Document Me
  * 
@@ -45,6 +47,9 @@ public class Stats implements Serializable {
      * 
      */
     private static final long serialVersionUID = -4059683356445323944L;
+
+    private static final Logger log = Logger.getLogger( Stats.class );
+
     private List<String> popularGenes = new ArrayList<String>();
     private List<String> topMultifunc = new ArrayList<String>();
 
@@ -52,13 +57,13 @@ public class Stats implements Serializable {
      * 
      */
     public Stats() {
-        System.out.println( "Stats created" );
+        log.info( "Stats created" );
     }
 
     @PostConstruct
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
-        System.out.println( "Stats init" );
+        log.info( "Stats init" );
 
         // Obtain UserDAO.
         // SpeciesDAO speciesDAO = daoFactoryBean.getGotrack().getSpeciesDAO();

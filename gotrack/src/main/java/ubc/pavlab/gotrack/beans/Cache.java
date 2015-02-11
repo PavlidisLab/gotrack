@@ -35,6 +35,7 @@ import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
@@ -57,6 +58,8 @@ public class Cache implements Serializable {
      */
     private static final long serialVersionUID = -113622419234682946L;
 
+    private static final Logger log = Logger.getLogger( Cache.class );
+
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
 
@@ -71,27 +74,27 @@ public class Cache implements Serializable {
      * 
      */
     public Cache() {
-        System.out.println( "Cache created" );
+        log.info( "Cache created" );
     }
 
     @PostConstruct
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
-        System.out.println( "Cache init" );
+        log.info( "Cache init" );
 
         // Obtain SpeciesDAO.
         SpeciesDAO speciesDAO = daoFactoryBean.getGotrack().getSpeciesDAO();
-        System.out.println( "SpeciesDAO successfully obtained: " + speciesDAO );
+        log.info( "SpeciesDAO successfully obtained: " + speciesDAO );
 
         speciesList = speciesDAO.list();
 
         // Obtain CacheDAO.
         CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
-        System.out.println( "CacheDAO successfully obtained: " + cacheDAO );
+        log.info( "CacheDAO successfully obtained: " + cacheDAO );
 
         currentEditions = cacheDAO.getCurrentEditions();
 
-        System.out.println( "Loading accession to geneSymbol cache..." );
+        log.info( "Loading accession to geneSymbol cache..." );
         for ( Species species : speciesList ) {
             Integer speciesId = species.getId();
             Edition currEd = currentEditions.get( speciesId );
@@ -118,11 +121,11 @@ public class Cache implements Serializable {
 
             // symbols.put( speciesId, cacheDAO.getUniqueGeneSymbols( speciesId, currEd.getEdition() ) );
 
-            System.out.println( "Done loading accession to geneSymbol for species (" + speciesId + "), size: "
+            log.info( "Done loading accession to geneSymbol for species (" + speciesId + "), size: "
                     + currrentAccessions.get( speciesId ).size() + " unique symbols: "
                     + symbolToCurrentAccessions.get( speciesId ).size() );
         }
-        System.out.println( "Done loading accession to geneSymbol cache..." );
+        log.info( "Done loading accession to geneSymbol cache..." );
 
         speciesAverages = cacheDAO.getSpeciesAverages();
 

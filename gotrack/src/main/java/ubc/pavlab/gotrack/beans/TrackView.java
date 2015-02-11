@@ -88,8 +88,8 @@ public class TrackView implements Serializable {
      * 
      */
     private static final long serialVersionUID = 7413572739210227872L;
-    
-    private static final Logger log = Logger.getLogger(TrackView.class);
+
+    private static final Logger log = Logger.getLogger( TrackView.class );
 
     // DAO
     private AnnotationDAO annotationDAO;
@@ -137,15 +137,14 @@ public class TrackView implements Serializable {
     private boolean propagate = false;
     private String graphType = "direct";
     private String scale = "linear";
-    
+
     // Timeline
     private TimelineModel timelineModel;
-    
+
     /**
      * 
      */
     public TrackView() {
-        System.out.println( "TrackView created" );
         log.info( "TrackView created" );
     }
 
@@ -255,9 +254,11 @@ public class TrackView implements Serializable {
 
     public void fetchDirectChart() {
         // Direct Annotations Chart
-        System.out.println( "fetch Direct" );
+        log.info( "fetch Direct" );
         Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesDirect = annotationDAO.track( currentSpeciesId,
                 primaryToSecondary, false );
+
+        log.info( "fetched Direct" );
 
         tmpData = allSeriesDirect;
 
@@ -271,7 +272,7 @@ public class TrackView implements Serializable {
     }
 
     public void fetchAllTerms() {
-        System.out.println( "fetch All Terms" );
+        log.info( "fetch All Terms" );
         allTerms.clear();
         Map<String, Map<String, Set<GeneOntologyTerm>>> t = allSeriesData.get( "direct" );
         for ( Map<String, Set<GeneOntologyTerm>> series : t.values() ) {
@@ -295,9 +296,11 @@ public class TrackView implements Serializable {
 
     public void fetchPropagatedChart() {
         // Propagated Annotations Chart
-        System.out.println( "fetch Propagated" );
+        log.info( "fetch Propagated" );
         Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpeciesId,
                 primaryToSecondary, true );
+
+        log.info( "fetched Propagated" );
 
         // Add back direct parents if not there
         for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> seriesEntry : tmpData.entrySet() ) {
@@ -319,132 +322,124 @@ public class TrackView implements Serializable {
 
         initChart( "propagated", allSeries, "Propagated Annotations vs Time", "Propagated Annotations", null );
     }
-    
+
     public void fetchTimelineFromPanel() {
-        fetchTimeline(true);
+        fetchTimeline( true );
     }
-    
+
     public void fetchTimelineFromDialog() {
-        fetchTimeline(false);
+        fetchTimeline( false );
     }
-    
-    private void fetchTimeline(boolean fromPanel) {
-        
+
+    private void fetchTimeline( boolean fromPanel ) {
+
         // <Selected Term, <Date, Exists>>
         Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData = new HashMap<GeneOntologyTerm, Map<Date, Boolean>>();
-        
-        Collection<GeneOntologyTerm> selected = fromPanel ? selectedTerms : itemSelectViewTerms ;
-        
+
+        Collection<GeneOntologyTerm> selected = fromPanel ? selectedTerms : itemSelectViewTerms;
+
         for ( GeneOntologyTerm geneOntologyTerm : selected ) {
             timelineData.put( geneOntologyTerm, new HashMap<Date, Boolean>() );
         }
-        
-        Map<String, Set<GeneOntologyTerm>> allCombinedDirectSeries = allSeriesData.get( "direct" + COMBINED_SUFFIX ).get(COMBINED_TITLE);
-        
+
+        Map<String, Set<GeneOntologyTerm>> allCombinedDirectSeries = allSeriesData.get( "direct" + COMBINED_SUFFIX )
+                .get( COMBINED_TITLE );
+
         for ( Entry<String, Set<GeneOntologyTerm>> esSeries : allCombinedDirectSeries.entrySet() ) {
             String dateString = esSeries.getKey();
-            DateFormat format = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH);
+            DateFormat format = new SimpleDateFormat( "yyyy-MM-dd", Locale.ENGLISH );
             Date date = null;
             try {
-                date = format.parse(dateString);
+                date = format.parse( dateString );
             } catch ( ParseException e ) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-            
-            
-            
+
             Set<GeneOntologyTerm> terms = esSeries.getValue();
-            
+
             for ( GeneOntologyTerm geneOntologyTerm : selected ) {
-                Map<Date, Boolean> data = timelineData.get(geneOntologyTerm);
+                Map<Date, Boolean> data = timelineData.get( geneOntologyTerm );
                 Boolean exists = data.get( date );
-                
+
                 if ( exists == null || !exists ) {
                     data.put( date, terms.contains( geneOntologyTerm ) );
                 }
-                
+
             }
-            
+
         }
 
-        timelineModel = createTimeline(timelineData);
+        timelineModel = createTimeline( timelineData );
 
-        
-        
     }
-    
-    private TimelineModel createTimeline( Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData) {
-        
+
+    private TimelineModel createTimeline( Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData ) {
+
         TimelineModel model = new TimelineModel();
-        DateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
         Calendar cal = Calendar.getInstance();
-        
+
         List<TimelineGroup> groups = new ArrayList<TimelineGroup>();
         List<TimelineEvent> events = new ArrayList<TimelineEvent>();
-        
+
         for ( Entry<GeneOntologyTerm, Map<Date, Boolean>> esTermData : timelineData.entrySet() ) {
             GeneOntologyTerm term = esTermData.getKey();
-            
-            Map<Date, Boolean> data = esTermData.getValue();
-            
-            TimelineGroup group = new TimelineGroup(term.getGoId(), term);
-            groups.add(group);
-            //model.addGroup( group );
-            
 
-            SortedSet<Date> dates = new TreeSet<Date>(data.keySet());
+            Map<Date, Boolean> data = esTermData.getValue();
+
+            TimelineGroup group = new TimelineGroup( term.getGoId(), term );
+            groups.add( group );
+            // model.addGroup( group );
+
+            SortedSet<Date> dates = new TreeSet<Date>( data.keySet() );
             Date prevDate = null;
-            for (Date date : dates) {
+            for ( Date date : dates ) {
                 if ( prevDate != null ) {
-                    boolean exists = data.get(prevDate);
-                    TimelineEvent event = new TimelineEvent( df.format(prevDate), prevDate, date, false, term.getGoId(),
-                            exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                    //model.add( event );
-                    events.add(event);
-                    
+                    boolean exists = data.get( prevDate );
+                    TimelineEvent event = new TimelineEvent( df.format( prevDate ), prevDate, date, false,
+                            term.getGoId(), exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
+                    // model.add( event );
+                    events.add( event );
+
                 }
 
                 prevDate = date;
             }
-            
-            // give the last edition a span of 1 month
-            if ( dates.size() > 1) {
-                boolean exists = data.get(prevDate);
-                cal.setTime(prevDate);
-                cal.add(Calendar.MONTH, 1);
-                TimelineEvent event = new TimelineEvent( df.format(prevDate), prevDate, cal.getTime(), false, term.getGoId(),
-                        exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                //model.add( event );
-                events.add(event);
-            }
-            
-            
-            
 
-                   
+            // give the last edition a span of 1 month
+            if ( dates.size() > 1 ) {
+                boolean exists = data.get( prevDate );
+                cal.setTime( prevDate );
+                cal.add( Calendar.MONTH, 1 );
+                TimelineEvent event = new TimelineEvent( df.format( prevDate ), prevDate, cal.getTime(), false,
+                        term.getGoId(), exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
+                // model.add( event );
+                events.add( event );
+            }
+
         }
-        
+
         model.setGroups( groups );
-        model.addAll(events);
-        
+        model.addAll( events );
+
         return model;
-        
+
     }
-    
+
     public void cleanTimeline() {
         timelineModel = null;
     }
-    
-    public void  cleanFilteredTerms() {
+
+    public void cleanFilteredTerms() {
         filteredTerms = null;
     }
-    
-    public void init() throws GeneNotFoundException {
+
+    public String init() throws GeneNotFoundException {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
-            return; // Skip ajax requests.
+            return null; // Skip ajax requests.
         }
-        System.out.println( "TrackView init: " + currentSpeciesId + ": " + query );
+        log.info( "TrackView init: " + currentSpeciesId + ": " + query );
         Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( currentSpeciesId );
         Collection<Accession> primaryAccessions;
         if ( query == null
@@ -474,6 +469,8 @@ public class TrackView implements Serializable {
                     currentSpecies = s;
                 }
             }
+
+            return null;
 
         }
 
@@ -505,7 +502,7 @@ public class TrackView implements Serializable {
 
         allSeriesData.put( identifier + COMBINED_SUFFIX, sData );
     }
-    
+
     public void itemSelect( ItemSelectEvent event ) {
 
         // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
@@ -528,18 +525,20 @@ public class TrackView implements Serializable {
     }
 
     public void keepAlive() {
-        System.out.println( "Kept alive" );
+        log.info( "Kept alive" );
     }
 
     public void reloadGraph() {
 
         if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
         graphType = propagate ? "propagated" : "direct";
-        System.out.println( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+
+        log.info( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+
         currentChart = allCharts.get( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
         seriesData = allSeriesData.get( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
     }
-    
+
     public void showDialog() {
         RequestContext.getCurrentInstance().openDialog( "dlg2" );
     }
@@ -624,7 +623,7 @@ public class TrackView implements Serializable {
     public List<GeneOntologyTerm> getSelectedTerms() {
         return selectedTerms;
     }
-    
+
     public TimelineModel getTimelineModel() {
         return timelineModel;
     }
@@ -636,7 +635,7 @@ public class TrackView implements Serializable {
     public boolean isSplitAccessions() {
         return splitAccessions;
     }
-    
+
     public void setSelectedTerms( List<GeneOntologyTerm> selectedTerms ) {
         this.selectedTerms = selectedTerms;
     }

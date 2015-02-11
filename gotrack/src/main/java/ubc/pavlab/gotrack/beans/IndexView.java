@@ -33,6 +33,8 @@ import javax.faces.component.UIInput;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ComponentSystemEvent;
 
+import org.apache.log4j.Logger;
+
 import ubc.pavlab.gotrack.model.Accession;
 
 /**
@@ -49,6 +51,9 @@ public class IndexView implements Serializable {
      * 
      */
     private static final long serialVersionUID = -3038133837848883737L;
+
+    private static final Logger log = Logger.getLogger( IndexView.class );
+
     private Integer currentSpeciesId;
     private String query;
 
@@ -59,7 +64,7 @@ public class IndexView implements Serializable {
      * private Integer currentSpeciesId; private String query; /**
      */
     public IndexView() {
-        System.out.println( "IndexView created" );
+        log.info( "IndexView created" );
     }
 
     public void validateQuery( ComponentSystemEvent event ) {
@@ -128,7 +133,7 @@ public class IndexView implements Serializable {
 
     public List<String> complete( String query ) {
         List<String> result = this.cache.complete( query, currentSpeciesId );
-        System.out.println( "Found " + result.size() + " matches." );
+        log.debug( "Found " + result.size() + " matches." );
         return result;
     }
 

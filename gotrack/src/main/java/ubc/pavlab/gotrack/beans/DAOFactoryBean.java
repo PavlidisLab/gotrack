@@ -25,6 +25,8 @@ import javax.annotation.PostConstruct;
 import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
 
+import org.apache.log4j.Logger;
+
 import ubc.pavlab.gotrack.dao.DAOFactory;
 
 /**
@@ -41,22 +43,25 @@ public class DAOFactoryBean implements Serializable {
      * 
      */
     private static final long serialVersionUID = 8655251522916437925L;
+
+    private static final Logger log = Logger.getLogger( DAOFactoryBean.class );
+
     private static DAOFactory gotrack;
 
     /**
      * 
      */
     public DAOFactoryBean() {
-        System.out.println( "DAOFactoryBean created" );
+        log.info( "DAOFactoryBean created" );
     }
 
     @PostConstruct
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
-        System.out.println( "DAOFactoryBean init" );
+        log.info( "DAOFactoryBean init" );
         // Obtain DAOFactory.
         gotrack = DAOFactory.getInstance( "gotrack" );
-        System.out.println( "DAOFactory successfully obtained: " + gotrack );
+        log.info( "DAOFactory successfully obtained: " + gotrack );
     }
 
     public DAOFactory getGotrack() {
