@@ -102,7 +102,7 @@ public class TrackView implements Serializable {
     // private List<TrackValue> trackValues;
 
     // Static data
-    // private Edition currentEdition;
+    private Edition currentEdition;
     private Map<String, Accession> currentPrimaryAccessions = new HashMap<String, Accession>();
     private Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
     private Collection<GeneOntologyTerm> allTerms = new HashSet<GeneOntologyTerm>();
@@ -255,8 +255,9 @@ public class TrackView implements Serializable {
     public void fetchDirectChart() {
         // Direct Annotations Chart
         log.info( "fetch Direct" );
+        DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
         Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesDirect = annotationDAO.track( currentSpeciesId,
-                primaryToSecondary, false );
+                primaryToSecondary, df.format( currentEdition.getGoDate() ), false );
 
         log.info( "fetched Direct" );
 
@@ -297,8 +298,9 @@ public class TrackView implements Serializable {
     public void fetchPropagatedChart() {
         // Propagated Annotations Chart
         log.info( "fetch Propagated" );
+        DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
         Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpeciesId,
-                primaryToSecondary, true );
+                primaryToSecondary, df.format( currentEdition.getGoDate() ), true );
 
         log.info( "fetched Propagated" );
 
@@ -463,7 +465,7 @@ public class TrackView implements Serializable {
 
             // Obtain AnnotationDAO.
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-            // currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
+            currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
             for ( Species s : cache.getSpeciesList() ) {
                 if ( s.getId().equals( currentSpeciesId ) ) {
                     currentSpecies = s;

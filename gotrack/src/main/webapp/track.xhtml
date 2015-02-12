@@ -1,4 +1,5 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
 	xmlns:h="http://java.sun.com/jsf/html"
 	xmlns:f="http://java.sun.com/jsf/core"
@@ -32,20 +33,24 @@
 
 		<meta name="keywords"
 			content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
-
+		
+		<h:outputScript library="js" name="utility.js" />
 		<h:outputScript library="js" name="gotrack.js" />
 		<h:outputScript library="js" name="jqplot.logAxisRenderer.js" />
+		
 		<script>
+		//$.jqplot.postDrawHooks.push(function() {console.log('thjsiasfjnad od')});
       function chartExtender() {
          // this = chart widget instance        
          // this.cfg = options 
          this.cfg.legend = {
             renderer : $.jqplot.EnhancedLegendRenderer,
             show : true,
-            location : 'ne',
+            location : 's',
             placement : 'outsideGrid',
             rendererOptions : {
                numberRows : 0,
+               numberColumns : 10,
                seriesToggle: true,
                seriesToggleReplot : {resetAxes: true}
             }
@@ -66,14 +71,13 @@
          //console.log(this.cfg.axes);
          //this.cfg.axes.yaxis.label = "Per Capita Expenditure (local currency)";
          this.cfg.axes.yaxis.renderer = $.jqplot.LinearAxisRenderer;
-
          //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
       }
    </script>
 
 	</h:head>
 
-	<h:body>
+	<h:body id="body">
 
 		<p:layout fullPage="true" onResize="centerResize()">
 			<p:layoutUnit id="top" position="north" size="50">
@@ -152,8 +156,7 @@
 					</h:panelGrid>
 					<p:separator style="max-width:200px; height:5px;" />
 					<div align="center" style="margin-top: 20px;">
-						<p:commandButton value="&nbsp; Reset" onclick="centerResize()"
-							icon="fa fa-refresh" />
+						<p:commandButton value="&nbsp; Reset" onclick="showAllSeries()" type="button" icon="fa fa-refresh" />
 					</div>
 				</h:form>
 
@@ -168,13 +171,20 @@
 				header="Functionality" resizable="true" collapsible="true"
 				style="text-align:center">
 				<h:form id="funcForm" style="height:100%;">
-					<p:dataTable id="funcTable" widgetVar="funcTable" var="term"
-						value="#{trackView.allTerms}" scrollable="true"
-						sortMode="multiple" style="margin-bottom:0"
-						emptyMessage="No annotations found with given criteria"
-						filteredValue="#{trackView.filteredAllTerms}"
-						selectionMode="multiple" selection="#{trackView.selectedTerms}"
-						rowKey="#{term.goId}" scrollHeight="100%">
+					<p:dataTable 	id="funcTable" 
+									widgetVar="funcTable" 
+									var="term"
+									value="#{trackView.allTerms}" 
+									scrollable="true"
+									sortMode="multiple" 
+									style="margin-bottom:0"
+									emptyMessage="No annotations found with given criteria"
+									filteredValue="#{trackView.filteredAllTerms}"
+									selectionMode="multiple" 
+									selection="#{trackView.selectedTerms}"
+									rowKey="#{term.goId}" 
+									scrollHeight="100%" 
+									rowStyleClass="#{ term.obsolete == 'true' ? 'datatable-red' : null}">
 						<p:column filterBy="#{term.goId}" filterMatchMode="contains"
 							headerText="Id" width="25%">
 							<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
@@ -238,10 +248,9 @@
 								model="#{trackView.currentChart}" style="height:500px;"
 								widgetVar="chart" rendered="#{trackView.chartsReady}">
 								<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
-									onsuccess="PF('itemSelectDialog').show();"
-									update=":itemSelectForm:itemSelectMsg,:itemSelectForm:itemSelectData" />
+									oncomplete="openAnnotationDialog()"/>
 							</p:chart>
-
+							<!-- <pe:tooltip value="this is a test" shared="true" for="@(td.jqplot-table-legend-swatch)"/> -->
 						</p:outputPanel>
 					</div>
 					<p:remoteCommand name="fetchCharts"
@@ -253,6 +262,10 @@
 						actionListener="#{trackView.fetchPropagatedChart()}"
 						name="loadPropagated">
 					</p:remoteCommand>
+					<p:remoteCommand
+						oncomplete = "PF('itemSelectDialog').show();"
+						update=":itemSelectForm:itemSelectMsg,:itemSelectForm:itemSelectData"
+						name="openAnnotationDialog"/>
 
 
 					<!-- PUT THE ACTUAL CONTENT -->
@@ -287,16 +300,25 @@
 				<pe:tooltip global="true" myPosition="top, right" atPosition="left center"/> 
 		</p:dialog>
 		<p:dialog id="itemSelectDialog" header="Annotations" widgetVar="itemSelectDialog"
-			modal="false" width="700px" onHide="PF('annotationsTable').clearFilters()">
+			modal="false" width="700px">
 			<p:ajax event="close" listener="#{trackView.cleanFilteredTerms}" update=":itemSelectForm:itemSelectData"/>
 			<h:form id="itemSelectForm" >
 			<h:outputText id="itemSelectMsg"
 				value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.itemSelectTerms)}" />
-			<p:dataTable id="itemSelectData" widgetVar="annotationsTable"
-				var="chartTerm" value="#{trackView.itemSelectTerms}" scrollable="true"
-				scrollHeight="250" sortMode="multiple" style="margin-bottom:0"
-				emptyMessage="No annotations found with given criteria"
-				filteredValue="#{trackView.filteredTerms}" selectionMode="multiple" selection="#{trackView.itemSelectViewTerms}" rowKey="#{chartTerm.goId}">
+			<p:dataTable 	id="itemSelectData" 
+							widgetVar="annotationsTable"
+							var="chartTerm" 
+							value="#{trackView.itemSelectTerms}" 
+							scrollable="true"
+							scrollHeight="250" 
+							sortMode="multiple" 
+							style="margin-bottom:0"
+							emptyMessage="No annotations found with given criteria"
+							filteredValue="#{trackView.filteredTerms}" 
+							selectionMode="multiple" 
+							selection="#{trackView.itemSelectViewTerms}" 
+							rowKey="#{chartTerm.goId}" 
+							rowStyleClass="#{ chartTerm.obsolete == 'true' ? 'datatable-red' : null}">
 				<p:column filterBy="#{chartTerm.goId}" filterMatchMode="contains"
 					headerText="Id" style="width:120px;">
 					<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{chartTerm.goId}"
@@ -334,6 +356,7 @@
 			</p:remoteCommand>
 			</h:form>
 		</p:dialog>
+		
 
 
 

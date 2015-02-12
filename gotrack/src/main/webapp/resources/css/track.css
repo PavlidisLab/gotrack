@@ -132,4 +132,26 @@ div.timeline-groups-text {
 	text-overflow: ellipsis;
 }
 
+tr.datatable-red {
+	background-color: #fcc;
+	background-image: none;
+	color: #000000;
+}
+
+td {
+    position: relative;
+}
+
+/* tr.strikeout td:before {
+    content: " ";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    border-bottom: 1px solid #111;
+    width: 100%;
+} */
     
+    
+#body tr.ui-state-highlight td{
+	text-shadow: none;
+}

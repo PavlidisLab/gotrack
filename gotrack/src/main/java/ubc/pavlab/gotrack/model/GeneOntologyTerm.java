@@ -32,6 +32,7 @@ public class GeneOntologyTerm {
     private String aspect;
     private String evidence;
     private String reference;
+    private Boolean obsolete;
 
     /**
      * 
@@ -96,10 +97,22 @@ public class GeneOntologyTerm {
         this.aspect = aspect;
     }
 
+    public Boolean isObsolete() {
+        return obsolete;
+    }
+
+    public Boolean getObsolete() {
+        return obsolete;
+    }
+
+    public void setObsolete( Boolean obsolete ) {
+        this.obsolete = obsolete;
+    }
+
     @Override
     public String toString() {
-        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", evidence=" + evidence + ", reference="
-                + reference + "]";
+        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + ", evidence=" + evidence
+                + ", reference=" + reference + ", obsolete=" + obsolete + "]";
     }
 
     @Override
