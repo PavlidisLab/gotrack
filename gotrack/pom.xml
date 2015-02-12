@@ -134,12 +134,6 @@
 			<version>1.10</version>
 		</dependency>
 
-		<dependency>
-			<groupId>org.glassfish.web</groupId>
-			<artifactId>el-impl</artifactId>
-			<version>2.2</version>
-		</dependency>
-
 		<!-- Logging -->
 
 		<dependency>
