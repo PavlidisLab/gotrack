@@ -255,9 +255,9 @@ public class TrackView implements Serializable {
     public void fetchDirectChart() {
         // Direct Annotations Chart
         log.info( "fetch Direct" );
-        DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
+        // DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
         Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesDirect = annotationDAO.track( currentSpeciesId,
-                primaryToSecondary, df.format( currentEdition.getGoDate() ), false );
+                primaryToSecondary, currentEdition.getGoEditionId(), false );
 
         log.info( "fetched Direct" );
 
@@ -298,9 +298,9 @@ public class TrackView implements Serializable {
     public void fetchPropagatedChart() {
         // Propagated Annotations Chart
         log.info( "fetch Propagated" );
-        DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
+        // DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
         Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpeciesId,
-                primaryToSecondary, df.format( currentEdition.getGoDate() ), true );
+                primaryToSecondary, currentEdition.getGoEditionId(), true );
 
         log.info( "fetched Propagated" );
 
@@ -444,10 +444,7 @@ public class TrackView implements Serializable {
         log.info( "TrackView init: " + currentSpeciesId + ": " + query );
         Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( currentSpeciesId );
         Collection<Accession> primaryAccessions;
-        if ( query == null
-                || currentSpeciesId == null
-                || c == null
-                || ( primaryAccessions = cache.getSymbolToCurrentAccessions().get( currentSpeciesId ).get( query ) ) == null ) {
+        if ( query == null || currentSpeciesId == null || c == null || ( primaryAccessions = c.get( query ) ) == null ) {
 
             throw new GeneNotFoundException();
             /*

@@ -32,6 +32,7 @@ public class Edition {
     private Integer edition;
     private Date date;
     private Date goDate;
+    private Integer goEditionId;
 
     /**
      * 
@@ -46,11 +47,12 @@ public class Edition {
         this.date = date;
     }
 
-    public Edition( Integer edition, Date date, Date goDate ) {
+    public Edition( Integer edition, Date date, Date goDate, Integer goEditionId ) {
         super();
         this.edition = edition;
         this.date = date;
         this.goDate = goDate;
+        this.goEditionId = goEditionId;
     }
 
     public Integer getEdition() {
@@ -77,9 +79,18 @@ public class Edition {
         this.goDate = goDate;
     }
 
+    public Integer getGoEditionId() {
+        return goEditionId;
+    }
+
+    public void setGoEditionId( Integer goEditionId ) {
+        this.goEditionId = goEditionId;
+    }
+
     @Override
     public String toString() {
-        return "Edition [edition=" + edition + ", date=" + date + ", goDate=" + goDate + "]";
+        return "Edition [edition=" + edition + ", date=" + date + ", goDate=" + goDate + ", goEditionId=" + goEditionId
+                + "]";
     }
 
     @Override

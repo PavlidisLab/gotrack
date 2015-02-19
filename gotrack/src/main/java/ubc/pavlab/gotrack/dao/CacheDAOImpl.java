@@ -46,10 +46,14 @@ public class CacheDAOImpl implements CacheDAO {
 
     // Constants ----------------------------------------------------------------------------------
 
-    private static final String SQL_CURRENT_EDITIONS = "select species_id, edition, date, go_date from (select * from edition order by edition DESC) as temp group by species_id";
+    private static final String SQL_CURRENT_EDITIONS = "select species_id, edition, date, go_date, go_edition_id_fk "
+            + "from (select species_id, edition, edition.date, go_edition.date as go_date, edition.go_edition_id_fk "
+            + "from edition INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id order by edition DESC) "
+            + "as temp group by species_id";
     private static final String SQL_CURRENT_ACCESSIONS = "select distinct symbol, accession, synonyms, sec from gene_annotation LEFT JOIN sec_ac on accession=ac where species_id = ? AND edition=?";
     private static final String SQL_UNIQUE_SYMBOL = "select distinct symbol from gene_annotation where species_id = ? AND edition=?";
-    private static final String SQL_SPECIES_AVERAGES = "select agg2.species_id, agg2.edition, date, avg_direct from agg2 inner join edition on agg2.species_id=edition.species_id and agg2.edition = edition.edition";
+    private static final String SQL_SPECIES_AVERAGES = "select aggregate.species_id, aggregate.edition, date, avg_direct "
+            + "from aggregate inner join edition on aggregate.species_id=edition.species_id and aggregate.edition = edition.edition";
     // Vars ---------------------------------------------------------------------------------------
 
     private DAOFactory daoFactory;
@@ -83,7 +87,7 @@ public class CacheDAOImpl implements CacheDAO {
                 editions.put(
                         resultSet.getInt( "species_id" ),
                         new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ), resultSet
-                                .getDate( "go_date" ) ) );
+                                .getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) ) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );

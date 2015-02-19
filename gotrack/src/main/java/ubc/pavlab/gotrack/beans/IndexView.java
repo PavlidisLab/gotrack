@@ -54,7 +54,7 @@ public class IndexView implements Serializable {
 
     private static final Logger log = Logger.getLogger( IndexView.class );
 
-    private Integer currentSpeciesId;
+    private Integer currentSpeciesId = 1;
     private String query;
 
     @ManagedProperty("#{cache}")

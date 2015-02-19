@@ -81,7 +81,7 @@ public interface AnnotationDAO {
     public Collection<String> findUniqueGO( List<String> accessions, Integer species ) throws DAOException;
 
     public Map<String, Map<Edition, Set<GeneOntologyTerm>>> track( Integer species,
-            Map<String, Collection<String>> primaryToSecondary, String currentDate, boolean propagate )
+            Map<String, Collection<String>> primaryToSecondary, Integer goEditionId, boolean propagate )
             throws DAOException;
 
 }

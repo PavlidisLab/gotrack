@@ -93,13 +93,14 @@ public class Cache implements Serializable {
         log.info( "CacheDAO successfully obtained: " + cacheDAO );
 
         currentEditions = cacheDAO.getCurrentEditions();
-
+        log.debug( "Current Editions Size: " + currentEditions.size() );
         log.info( "Loading accession to geneSymbol cache..." );
         for ( Species species : speciesList ) {
             Integer speciesId = species.getId();
             Edition currEd = currentEditions.get( speciesId );
-            if ( currEd == null ) continue;
 
+            if ( currEd == null ) continue;
+            log.debug( species.getCommonName() + ": " + currEd.toString() );
             // Create Map of current accessions
             Map<String, Accession> currAccMap = cacheDAO.getCurrentAccessions( speciesId, currEd.getEdition() );
             currrentAccessions.put( speciesId, currAccMap );
