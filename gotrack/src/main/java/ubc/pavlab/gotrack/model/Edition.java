@@ -27,7 +27,7 @@ import java.sql.Date;
  * @author mjacobson
  * @version $Id$
  */
-public class Edition {
+public class Edition implements Comparable<Edition> {
 
     private Integer edition;
     private Date date;
@@ -111,6 +111,11 @@ public class Edition {
             if ( other.edition != null ) return false;
         } else if ( !edition.equals( other.edition ) ) return false;
         return true;
+    }
+
+    @Override
+    public int compareTo( Edition o ) {
+        return this.getEdition().compareTo( o.getEdition() );
     }
 
 }

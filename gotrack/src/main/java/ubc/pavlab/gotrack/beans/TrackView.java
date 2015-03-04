@@ -21,19 +21,18 @@ package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -61,16 +60,19 @@ import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.GoChart;
+import ubc.pavlab.gotrack.model.GraphTypeKey;
+import ubc.pavlab.gotrack.model.GraphTypeKey.GraphType;
 import ubc.pavlab.gotrack.model.Species;
-
-class CustomComparator implements Comparator<Edition> {
-    @Override
-    public int compare( Edition o1, Edition o2 ) {
-        return o1.getEdition().compareTo( o2.getEdition() );
-    }
-}
+import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
+ * @author mjacobson
+ * @version $Id$
+ */
+/**
+ * TODO Document Me
+ * 
  * @author mjacobson
  * @version $Id$
  */
@@ -103,17 +105,23 @@ public class TrackView implements Serializable {
 
     // Static data
     private Edition currentEdition;
+    private LinkedList<Edition> allEditions = new LinkedList<Edition>();
     private Map<String, Accession> currentPrimaryAccessions = new HashMap<String, Accession>();
     private Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
     private Collection<GeneOntologyTerm> allTerms = new HashSet<GeneOntologyTerm>();
 
     /* Chart Stuff */
-    private Map<String, Map<Edition, Set<GeneOntologyTerm>>> tmpData;
     private LineChartModel currentChart; // Current chart
-    private Map<String, Map<String, Set<GeneOntologyTerm>>> seriesData; // Current data in chart used for select
-    private Map<String, LineChartModel> allCharts = new HashMap<String, LineChartModel>(); // All Charts
-    private Map<String, Map<String, Map<String, Set<GeneOntologyTerm>>>> allSeriesData = new HashMap<String, Map<String, Map<String, Set<GeneOntologyTerm>>>>(); // All
-                                                                                                                                                                 // series
+    private GoChart<Edition, Set<GeneOntologyTerm>> currentGoChart;
+
+    // select
+    // private Map<String, LineChartModel> allCharts = new HashMap<String, LineChartModel>(); // All Charts
+    private Map<GraphTypeKey, LineChartModel> lineChartModelMap = new HashMap<GraphTypeKey, LineChartModel>();
+    // private Map<String, GoChart<Edition, Set<GeneOntologyTerm>>> allGoCharts = new HashMap<String, GoChart<Edition,
+    // GeneOntologyTerm>>();
+    private Map<GraphTypeKey, GoChart<Edition, Set<GeneOntologyTerm>>> goChartMap = new HashMap<GraphTypeKey, GoChart<Edition, Set<GeneOntologyTerm>>>();
+
+    // series
     private boolean chartsReady = false;
 
     // Select Data Point functionality
@@ -130,12 +138,11 @@ public class TrackView implements Serializable {
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
     private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
     private static final String COMBINED_TITLE = "All accessions";
-    private static final String COMBINED_SUFFIX = "-combined";
 
     // Settings
     private boolean splitAccessions = true;
     private boolean propagate = false;
-    private String graphType = "direct";
+    private String graphType = "annotation";
     private String scale = "linear";
 
     // Timeline
@@ -148,81 +155,70 @@ public class TrackView implements Serializable {
         log.info( "TrackView created" );
     }
 
+    /**
+     * Change current graph
+     * 
+     * @param graphType graph type to change to
+     */
     public void changeGraph( String graphType ) {
         // System.out.println( "New value: " + graphType );
         this.graphType = graphType;
         reloadGraph();
     }
 
-    private Map<String, Map<Edition, Set<GeneOntologyTerm>>> combineSeries(
-            Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries ) {
-        Map<Edition, Set<GeneOntologyTerm>> combinedSeries = new HashMap<Edition, Set<GeneOntologyTerm>>();
-        for ( Map<Edition, Set<GeneOntologyTerm>> series : allSeries.values() ) {
-            for ( Entry<Edition, Set<GeneOntologyTerm>> dataPoint : series.entrySet() ) {
-                // String date = dataPoint.getKey();
-                Edition edition = dataPoint.getKey();
-                Set<GeneOntologyTerm> details = dataPoint.getValue();
-
-                Set<GeneOntologyTerm> combinedDataPoint = combinedSeries.get( edition );
-
-                if ( combinedDataPoint == null ) {
-                    combinedDataPoint = new HashSet<GeneOntologyTerm>();
-                    combinedSeries.put( edition, combinedDataPoint );
-                }
-
-                combinedDataPoint.addAll( details );
-
-            }
-        }
-
-        Map<String, Map<Edition, Set<GeneOntologyTerm>>> result = new HashMap<String, Map<Edition, Set<GeneOntologyTerm>>>();
-        result.put( COMBINED_TITLE, combinedSeries );
-
-        return result;
-
-    }
-
-    private LineChartModel createChart( Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries, String title,
-            String yAxis, Map<Edition, Double> staticData ) {
+    /**
+     * Creates LineChartModel based on series data
+     * 
+     * @param <T>
+     * @param allSeries map of unique series title to data, data is a map of edition to go term set
+     * @param title title of chart
+     * @param yAxis y-axis label
+     * @param staticData data for a single series that will not contain a breakdown of it's value into go terms, usually
+     *        for species averages
+     * @return LineChartModel for given data and specifications
+     */
+    private <T extends Number> LineChartModel createChart( GoChart<Edition, Set<GeneOntologyTerm>> goChart,
+            GoChart<Edition, T> staticData ) {
 
         LineChartModel dateModel = new LineChartModel();
 
         if ( staticData != null ) {
-            List<Edition> editions = new ArrayList<Edition>( staticData.keySet() );
-            Collections.sort( editions, new CustomComparator() );
-            LineChartSeries series = new LineChartSeries();
-            series.setLabel( "Species Avg" );
-            series.setShowMarker( false );
-            for ( Edition edition : editions ) {
-                String date = edition.getDate().toString();
-                Double count = staticData.get( edition );
-                series.set( date, count );
+            for ( Entry<String, LinkedHashMap<Edition, T>> es : staticData.getSeries().entrySet() ) {
+                String label = es.getKey();
+                Map<Edition, T> sData = es.getValue();
+
+                LineChartSeries series = new LineChartSeries();
+                series.setLabel( label );
+                series.setShowMarker( false );
+
+                for ( Entry<Edition, T> dataPoint : sData.entrySet() ) {
+                    String date = dataPoint.getKey().getDate().toString();
+                    T val = dataPoint.getValue();
+                    series.set( date, val );
+                }
+
+                dateModel.addSeries( series );
             }
-            dateModel.addSeries( series );
         }
 
-        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
+        for ( Entry<String, LinkedHashMap<Edition, Set<GeneOntologyTerm>>> es : goChart.getSeries().entrySet() ) {
             String primary = es.getKey();
             Map<Edition, Set<GeneOntologyTerm>> sData = es.getValue();
-
-            List<Edition> editions = new ArrayList<Edition>( sData.keySet() );
-            // Sort so that display order or series matches ItemIndex order returned by ItemSelectEvent
-            Collections.sort( editions, new CustomComparator() );
 
             LineChartSeries series = new LineChartSeries();
             series.setLabel( primary );
             series.setMarkerStyle( "filledDiamond" );
 
-            for ( Edition edition : editions ) {
-                String date = edition.getDate().toString();
-                Integer count = sData.get( edition ).size();
+            for ( Entry<Edition, Set<GeneOntologyTerm>> dataPoint : sData.entrySet() ) {
+                String date = dataPoint.getKey().getDate().toString();
+                Integer count = dataPoint.getValue().size();
                 series.set( date, count );
             }
 
             dateModel.addSeries( series );
         }
 
-        dateModel.setTitle( title );
+        dateModel.setTitle( goChart.getTitle() );
         dateModel.setZoom( true );
 
         dateModel.setLegendPosition( "nw" );
@@ -231,9 +227,17 @@ public class TrackView implements Serializable {
         dateModel.setMouseoverHighlight( true );
         dateModel.setExtender( "chartExtender" );
 
-        dateModel.getAxis( AxisType.Y ).setLabel( yAxis );
-        dateModel.getAxis( AxisType.Y ).setMin( 0 );
-        DateAxis axis = new DateAxis( "Dates" );
+        dateModel.getAxis( AxisType.Y ).setLabel( goChart.getyLabel() );
+
+        if ( goChart.getMin() != null ) {
+            dateModel.getAxis( AxisType.Y ).setMin( goChart.getMin() );
+        }
+
+        if ( goChart.getMax() != null ) {
+            dateModel.getAxis( AxisType.Y ).setMax( goChart.getMax() );
+        }
+
+        DateAxis axis = new DateAxis( goChart.getxLabel() );
         // CategoryAxis axis = new CategoryAxis( "Editions" );
         axis.setTickAngle( -50 );
         // axis.setMax( currentEdition.getDate());
@@ -244,39 +248,49 @@ public class TrackView implements Serializable {
 
     }
 
-    private Map<String, Set<GeneOntologyTerm>> editionMapToDateMap( Map<Edition, Set<GeneOntologyTerm>> editionMap ) {
-        Map<String, Set<GeneOntologyTerm>> res = new HashMap<String, Set<GeneOntologyTerm>>();
-        for ( Entry<Edition, Set<GeneOntologyTerm>> es : editionMap.entrySet() ) {
-            res.put( es.getKey().getDate().toString(), es.getValue() );
-        }
-        return res;
-    }
-
+    /**
+     * Creates chart based on direct annotation data, this is done separately for lazy-loading purposes in the front-end
+     */
     public void fetchDirectChart() {
         // Direct Annotations Chart
         log.info( "fetch Direct" );
-        // DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
-        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesDirect = annotationDAO.track( currentSpeciesId,
-                primaryToSecondary, currentEdition.getGoEditionId(), false );
+
+        GoChart<Edition, Set<GeneOntologyTerm>> goChart = new GoChart<Edition, Set<GeneOntologyTerm>>(
+                "Direct Annotations vs Time", "Dates", "Direct Annotations", annotationDAO.track2( currentSpeciesId,
+                        query, currentEdition.getEdition(), currentEdition.getGoEditionId(), false ) );
 
         log.info( "fetched Direct" );
 
-        tmpData = allSeriesDirect;
+        GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
 
-        initChart( "direct", allSeriesDirect, "Direct Annotations vs Time", "Direct Annotations", cache
-                .getSpeciesAverages().get( currentSpeciesId ) );
+        Map<String, Map<Edition, Double>> staticData = new HashMap<String, Map<Edition, Double>>();
+        staticData.put( "Species Avg", cache.getSpeciesAverages().get( currentSpeciesId ) );
+        // Base Chart
+        initChart( gtk, goChart, new GoChart<Edition, Double>( "Direct Annotations vs Time", "Dates",
+                "Direct Annotations", staticData ) );
+        // Combined Chart
+        initChart( new GraphTypeKey( GraphType.annotation, false, false ),
+                GoChart.combineSeries( COMBINED_TITLE, goChart ), null );
 
-        seriesData = allSeriesData.get( "direct" );
-        currentChart = allCharts.get( "direct" );
+        // currentGoChart = allGoCharts.get( "direct" );
+        currentGoChart = goChartMap.get( gtk );
+        // currentChart = allCharts.get( "direct" );
+        currentChart = lineChartModelMap.get( gtk );
 
+        // chart is rendered on the front-end when this is set to true
         chartsReady = true;
     }
 
+    /**
+     * Fetch Union of all terms in all editions for this gene to be displayed in a table on the front-end
+     */
     public void fetchAllTerms() {
         log.info( "fetch All Terms" );
         allTerms.clear();
-        Map<String, Map<String, Set<GeneOntologyTerm>>> t = allSeriesData.get( "direct" );
-        for ( Map<String, Set<GeneOntologyTerm>> series : t.values() ) {
+        // GoChart<Edition, Set<GeneOntologyTerm>> t = allGoCharts.get( "direct" );
+        GoChart<Edition, Set<GeneOntologyTerm>> t = goChartMap
+                .get( new GraphTypeKey( GraphType.annotation, true, false ) );
+        for ( Map<Edition, Set<GeneOntologyTerm>> series : t.getSeries().values() ) {
             for ( Set<GeneOntologyTerm> terms : series.values() ) {
                 for ( GeneOntologyTerm geneOntologyTerm : terms ) {
                     // if ( allTerms.contains( geneOntologyTerm ) && geneOntologyTerm.getAspect() != null ) {
@@ -295,17 +309,25 @@ public class TrackView implements Serializable {
         }
     }
 
+    /**
+     * Creates chart based on direct annotation data, this is done separately for lazy-loading purposes in the front-end
+     */
     public void fetchPropagatedChart() {
         // Propagated Annotations Chart
         log.info( "fetch Propagated" );
-        // DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
-        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpeciesId,
-                primaryToSecondary, currentEdition.getGoEditionId(), true );
+
+        // Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track( currentSpeciesId,
+        // primaryToSecondary, currentEdition.getGoEditionId(), true );
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = annotationDAO.track2( currentSpeciesId, query,
+                currentEdition.getEdition(), currentEdition.getGoEditionId(), true );
 
         log.info( "fetched Propagated" );
 
         // Add back direct parents if not there
-        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> seriesEntry : tmpData.entrySet() ) {
+        // for ( Entry<String, LinkedHashMap<Edition, Set<GeneOntologyTerm>>> seriesEntry : allGoCharts.get( "direct"
+        // ).getSeries().entrySet() ) {
+        for ( Entry<String, LinkedHashMap<Edition, Set<GeneOntologyTerm>>> seriesEntry : goChartMap
+                .get( new GraphTypeKey( GraphType.annotation, true, false ) ).getSeries().entrySet() ) {
             String seriesAccession = seriesEntry.getKey();
             for ( Entry<Edition, Set<GeneOntologyTerm>> editionInSeriesEntry : seriesEntry.getValue().entrySet() ) {
                 Edition editionInSeries = editionInSeriesEntry.getKey();
@@ -320,19 +342,118 @@ public class TrackView implements Serializable {
             }
         }
 
-        tmpData = null;
+        GoChart<Edition, Set<GeneOntologyTerm>> goChart = new GoChart<Edition, Set<GeneOntologyTerm>>(
+                "Propagated Annotations vs Time", "Dates", "Propagated Annotations", allSeries );
 
-        initChart( "propagated", allSeries, "Propagated Annotations vs Time", "Propagated Annotations", null );
+        // Base Chart
+        initChart( new GraphTypeKey( GraphType.annotation, true, true ), goChart, null );
+        // Combined Chart
+        initChart( new GraphTypeKey( GraphType.annotation, false, true ),
+                GoChart.combineSeries( COMBINED_TITLE, goChart ), null );
     }
 
+    public void fetchJaccardChart() {
+        log.info( "fetch Jaccard" );
+
+        Map<String, Map<Edition, Double>> staticData = new HashMap<String, Map<Edition, Double>>();
+
+        for ( Entry<String, LinkedHashMap<Edition, Set<GeneOntologyTerm>>> seriesEntry : goChartMap
+                .get( new GraphTypeKey( GraphType.annotation, true, false ) ).getSeries().entrySet() ) {
+            String seriesAccession = seriesEntry.getKey();
+            LinkedHashMap<Edition, Set<GeneOntologyTerm>> series = seriesEntry.getValue();
+            // Loop through to get current set of Go Ids
+            Set<GeneOntologyTerm> currentGoSet = new HashSet<GeneOntologyTerm>();
+            for ( Iterator<Set<GeneOntologyTerm>> iterator = series.values().iterator(); iterator.hasNext(); ) {
+                if ( iterator.hasNext() ) {
+                    currentGoSet = iterator.next();
+                }
+            }
+
+            Map<Edition, Double> jaccardSeries = new HashMap<Edition, Double>();
+
+            for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
+                Double jaccard = Jaccard.similarity( editionEntry.getValue(), currentGoSet );
+                jaccardSeries.put( editionEntry.getKey(), jaccard );
+            }
+
+            staticData.put( seriesAccession, jaccardSeries );
+
+        }
+
+        GraphTypeKey gtk = new GraphTypeKey( GraphType.jaccard, true, false );
+        GoChart<Edition, Set<GeneOntologyTerm>> template = new GoChart<Edition, Set<GeneOntologyTerm>>(
+                "Jaccard Similarity vs Time", "Dates", "Jaccard Similarity" );
+        template.setMin( 0 );
+        template.setMax( 1 );
+        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        // initChart( gtk, new GoChart<Edition, Set<GeneOntologyTerm>>(), staticData );
+        copyChart( gtk, new GraphTypeKey( GraphType.jaccard, false, false ) );
+        copyChart( gtk, new GraphTypeKey( GraphType.jaccard, false, true ) );
+        copyChart( gtk, new GraphTypeKey( GraphType.jaccard, true, true ) );
+
+    }
+
+    public void fetchLossGainChart() {
+        log.info( "fetch Loss / Gain" );
+
+        Map<String, Map<Edition, Integer>> staticData = new HashMap<String, Map<Edition, Integer>>();
+
+        for ( Entry<String, LinkedHashMap<Edition, Set<GeneOntologyTerm>>> seriesEntry : goChartMap
+                .get( new GraphTypeKey( GraphType.annotation, false, false ) ).getSeries().entrySet() ) {
+            String seriesAccession = seriesEntry.getKey();
+            LinkedHashMap<Edition, Set<GeneOntologyTerm>> series = seriesEntry.getValue();
+
+            Map<Edition, Integer> lossSeries = new HashMap<Edition, Integer>();
+            Map<Edition, Integer> gainSeries = new HashMap<Edition, Integer>();
+            Set<GeneOntologyTerm> previousGoSet = null;
+            for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
+                if ( previousGoSet != null ) {
+                    lossSeries.put( editionEntry.getKey(), setDifferenceSize( previousGoSet, editionEntry.getValue() ) );
+                    gainSeries.put( editionEntry.getKey(), setDifferenceSize( editionEntry.getValue(), previousGoSet ) );
+
+                }
+                previousGoSet = editionEntry.getValue();
+            }
+
+            staticData.put( seriesAccession + " - loss", lossSeries );
+            staticData.put( seriesAccession + " - gain", gainSeries );
+
+        }
+
+        GraphTypeKey gtk = new GraphTypeKey( GraphType.lossgain, false, false );
+        GoChart<Edition, Set<GeneOntologyTerm>> template = new GoChart<Edition, Set<GeneOntologyTerm>>(
+                "Loss & Gain vs Time", "Dates", "Change" );
+        initChart( gtk, template, new GoChart<Edition, Integer>( staticData ) );
+        // initChart( gtk, new GoChart<Edition, Set<GeneOntologyTerm>>(), staticData );
+        copyChart( gtk, new GraphTypeKey( GraphType.lossgain, true, false ) );
+        copyChart( gtk, new GraphTypeKey( GraphType.lossgain, false, true ) );
+        copyChart( gtk, new GraphTypeKey( GraphType.lossgain, true, true ) );
+
+    }
+
+    private static <T> Integer setDifferenceSize( Set<T> setA, Set<T> setB ) {
+        Set<T> tmp = new HashSet<T>( setA );
+        tmp.removeAll( setB );
+        return tmp.size();
+    }
+
+    /**
+     * Entry-point for creating timeline from the sidepanel of all terms
+     */
     public void fetchTimelineFromPanel() {
         fetchTimeline( true );
     }
 
+    /**
+     * Entry-point for creating timeline from the dialog breakdown of an edition's go terms
+     */
     public void fetchTimelineFromDialog() {
         fetchTimeline( false );
     }
 
+    /**
+     * @param fromPanel Fetch data then create timeline from panel or not (from dialog)
+     */
     private void fetchTimeline( boolean fromPanel ) {
 
         // <Selected Term, <Date, Exists>>
@@ -344,19 +465,13 @@ public class TrackView implements Serializable {
             timelineData.put( geneOntologyTerm, new HashMap<Date, Boolean>() );
         }
 
-        Map<String, Set<GeneOntologyTerm>> allCombinedDirectSeries = allSeriesData.get( "direct" + COMBINED_SUFFIX )
-                .get( COMBINED_TITLE );
+        // Map<Edition, Set<GeneOntologyTerm>> allCombinedDirectSeries = allGoCharts.get( "direct" + COMBINED_SUFFIX
+        // ).get( COMBINED_TITLE );
+        Map<Edition, Set<GeneOntologyTerm>> allCombinedDirectSeries = goChartMap.get(
+                new GraphTypeKey( GraphType.annotation, false, false ) ).get( COMBINED_TITLE );
 
-        for ( Entry<String, Set<GeneOntologyTerm>> esSeries : allCombinedDirectSeries.entrySet() ) {
-            String dateString = esSeries.getKey();
-            DateFormat format = new SimpleDateFormat( "yyyy-MM-dd", Locale.ENGLISH );
-            Date date = null;
-            try {
-                date = format.parse( dateString );
-            } catch ( ParseException e ) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
+        for ( Entry<Edition, Set<GeneOntologyTerm>> esSeries : allCombinedDirectSeries.entrySet() ) {
+            Date date = esSeries.getKey().getDate();
 
             Set<GeneOntologyTerm> terms = esSeries.getValue();
 
@@ -376,6 +491,13 @@ public class TrackView implements Serializable {
 
     }
 
+    /**
+     * create timeline based on data
+     * 
+     * @param timelineData timeline data, map of terms to map of date to boolean representing whether the term existed
+     *        on that date
+     * @return
+     */
     private TimelineModel createTimeline( Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData ) {
 
         TimelineModel model = new TimelineModel();
@@ -463,6 +585,7 @@ public class TrackView implements Serializable {
             // Obtain AnnotationDAO.
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
             currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
+            allEditions = cache.getAllEditions().get( currentSpeciesId );
             for ( Species s : cache.getSpeciesList() ) {
                 if ( s.getId().equals( currentSpeciesId ) ) {
                     currentSpecies = s;
@@ -475,31 +598,34 @@ public class TrackView implements Serializable {
 
     }
 
-    private void initChart( String identifier, Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries,
-            String title, String yAxis, Map<Edition, Double> staticData ) {
+    /**
+     * Initialize a chart, store it in map of all charts and it's data in a similar map of all data
+     * 
+     * @param <T>
+     * @param identifier unique identifier to access the chart
+     * @param goChart contains data
+     * @param staticData data for a single series that will not contain a breakdown of it's value into go terms, usually
+     *        for species averages
+     */
+    private <T extends Number> void initChart( GraphTypeKey graphTypeKey,
+            GoChart<Edition, Set<GeneOntologyTerm>> goChart, GoChart<Edition, T> staticData ) {
 
         /* Base chart */
-        allCharts.put( identifier, createChart( allSeries, title, yAxis, staticData ) );
+        lineChartModelMap.put( graphTypeKey, createChart( goChart, staticData ) );
+        goChartMap.put( graphTypeKey, goChart );
 
-        Map<String, Map<String, Set<GeneOntologyTerm>>> sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
-        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeries.entrySet() ) {
-            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
-        }
+        /*
+         * Combined chart
+         * 
+         * GoChart<Edition, Set<GeneOntologyTerm>> g = GoChart.combineSeries( COMBINED_TITLE, goChart );
+         * lineChartModelMap.put( graphTypeKey, createChart( g, null ) ); goChartMap.put( graphTypeKey, g );
+         */
+        log.info( graphTypeKey + " chart initialized" );
+    }
 
-        allSeriesData.put( identifier, sData );
-
-        /* Combined chart */
-
-        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeriesCombined = combineSeries( allSeries );
-
-        allCharts.put( identifier + COMBINED_SUFFIX, createChart( allSeriesCombined, title, yAxis, null ) );
-
-        sData = new HashMap<String, Map<String, Set<GeneOntologyTerm>>>();
-        for ( Entry<String, Map<Edition, Set<GeneOntologyTerm>>> es : allSeriesCombined.entrySet() ) {
-            sData.put( es.getKey(), editionMapToDateMap( es.getValue() ) );
-        }
-
-        allSeriesData.put( identifier + COMBINED_SUFFIX, sData );
+    private void copyChart( GraphTypeKey fromGraphTypeKey, GraphTypeKey toGraphTypeKey ) {
+        lineChartModelMap.put( toGraphTypeKey, lineChartModelMap.get( fromGraphTypeKey ) );
+        goChartMap.put( toGraphTypeKey, goChartMap.get( fromGraphTypeKey ) );
     }
 
     public void itemSelect( ItemSelectEvent event ) {
@@ -513,29 +639,58 @@ public class TrackView implements Serializable {
         String date = ( String ) es.get( event.getItemIndex() ).getKey();
 
         selectedDate = date;
-        Map<String, Set<GeneOntologyTerm>> series = seriesData.get( currentChart.getSeries()
+        Map<Edition, Set<GeneOntologyTerm>> series = currentGoChart.get( currentChart.getSeries()
                 .get( event.getSeriesIndex() ).getLabel() );
+
+        Collection<Edition> ed = getGoEditionsFromDate( date );
+        itemSelectTerms = new HashSet<GeneOntologyTerm>();
         if ( series == null ) {
-            itemSelectTerms = new HashSet<GeneOntologyTerm>();
+            log.debug( "Could not find series for  ("
+                    + currentChart.getSeries().get( event.getSeriesIndex() ).getLabel() + ")" );
+        } else if ( ed.size() == 0 ) {
+            log.debug( "Found no editions for date (" + date + ")" );
         } else {
-            itemSelectTerms = series.get( date );
+
+            if ( ed.size() > 1 ) log.debug( "Found more than one edition for date (" + date + ")" );
+
+            itemSelectTerms = series.get( ed.iterator().next() );
         }
 
+    }
+
+    private Collection<Edition> getGoEditionsFromDate( Date date ) {
+        return getGoEditionsFromDate( date.toString() );
+    }
+
+    private Collection<Edition> getGoEditionsFromDate( String date ) {
+        List<Edition> results = new ArrayList<Edition>();
+        for ( Edition ed : allEditions ) {
+            if ( ed.getDate().toString().equals( date ) ) {
+                results.add( ed );
+            }
+
+        }
+        return results;
     }
 
     public void keepAlive() {
         log.info( "Kept alive" );
     }
 
+    /**
+     * Sets current graph and series data based on @graphType
+     */
     public void reloadGraph() {
 
-        if ( graphType == null || graphType.equals( "" ) ) graphType = "direct";
-        graphType = propagate ? "propagated" : "direct";
+        if ( graphType == null || graphType.equals( "" ) ) graphType = "annotation";
+        // graphType = propagate ? "propagated" : "direct";
 
-        log.info( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+        GraphTypeKey gtk = new GraphTypeKey( GraphType.valueOf( graphType ), splitAccessions, propagate );
 
-        currentChart = allCharts.get( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
-        seriesData = allSeriesData.get( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+        // log.info( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+
+        currentChart = lineChartModelMap.get( gtk );
+        currentGoChart = goChartMap.get( gtk );
     }
 
     public void showDialog() {
@@ -627,6 +782,10 @@ public class TrackView implements Serializable {
         return timelineModel;
     }
 
+    public String getGraphType() {
+        return this.graphType;
+    }
+
     public boolean isChartsReady() {
         return chartsReady;
     }
@@ -669,6 +828,10 @@ public class TrackView implements Serializable {
 
     public void setSplitAccessions( boolean splitAccessions ) {
         this.splitAccessions = splitAccessions;
+    }
+
+    public void setGraphType( String graphType ) {
+        this.graphType = graphType;
     }
 
     public List<GeneOntologyTerm> getItemSelectViewTerms() {

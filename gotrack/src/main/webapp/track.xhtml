@@ -126,6 +126,21 @@
 			<p:layoutUnit id="left" position="west" size="250" resizable="true"
 				collapsible="true" header="Options" minSize="250">
 				<h:form id="leftForm">
+					<h3 class="center">Graph</h3>
+					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+						<h:outputText value="Type: " />
+				        <p:selectOneMenu value="#{trackView.graphType}">
+							<p:ajax listener="#{trackView.reloadGraph}"
+								update=":chartForm:chart1" />
+				            <f:selectItem itemLabel="Annotation" itemValue="annotation" />
+				            <f:selectItem itemLabel="Jaccard" itemValue="jaccard" />
+				            <f:selectItem itemLabel="Multifunctionality" itemValue="multifunctionality" />
+				            <f:selectItem itemLabel="Loss / Gain" itemValue="lossgain" />
+				        </p:selectOneMenu>
+
+
+					</h:panelGrid>
+					<p:separator style="max-width:200px" />
 					<h3 class="center">Data</h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
 						<h:outputText value="Propagate Annotations: " />
@@ -143,7 +158,7 @@
 
 					</h:panelGrid>
 					<p:separator style="max-width:200px" />
-					<h3 class="center">Graph</h3>
+					<h3 class="center">Display</h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
 						<h:outputText value="Scale: " />
 						<p:selectOneButton id="scaleSelect" value="#{trackView.scale}"
@@ -256,7 +271,15 @@
 					<p:remoteCommand name="fetchCharts"
 						actionListener="#{trackView.fetchDirectChart()}"
 						update="allCharts"
-						oncomplete="hideLoadingSpinner(), loadAllTerms(), loadPropagated()">
+						oncomplete="hideLoadingSpinner(), loadAllTerms(), loadJaccard(),loadLossGain(), loadPropagated()">
+					</p:remoteCommand>
+					<p:remoteCommand
+						actionListener="#{trackView.fetchJaccardChart()}"
+						name="loadJaccard">
+					</p:remoteCommand>
+					<p:remoteCommand
+						actionListener="#{trackView.fetchLossGainChart()}"
+						name="loadLossGain">
 					</p:remoteCommand>
 					<p:remoteCommand
 						actionListener="#{trackView.fetchPropagatedChart()}"

@@ -84,4 +84,7 @@ public interface AnnotationDAO {
             Map<String, Collection<String>> primaryToSecondary, Integer goEditionId, boolean propagate )
             throws DAOException;
 
+    public Map<String, Map<Edition, Set<GeneOntologyTerm>>> track2( Integer species, String symbol, Integer edition,
+            Integer goEditionId, boolean ancestorsOnly ) throws DAOException;
+
 }

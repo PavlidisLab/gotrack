@@ -80,6 +80,10 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_FIND_UNIQUE_GO_IN_EDITION = "SELECT distinct go_id, evidence, reference from gene_annotation where accession in (%s) and edition = ? and species_id = ?";
     private static final String SQL_FIND_UNIQUE_GO = "SELECT distinct go_id from gene_annotation where accession in (%s) and species_id = ?";
 
+    // tests for new queries
+    // symbol,edition,species,species,go_edition,species
+    private static final String SQL_TRACK2 = "select edition.date, gene_annotation.edition, temp.accession as `primary`, gene_annotation.go_id, gt1.name, gt1.aspect, gt2.is_obsolete from (select distinct accession from gene_annotation WHERE symbol=? AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term gt1 on edition.go_edition_id_fk=gt1.go_edition_id_fk and gt1.go_id=gene_annotation.go_id LEFT JOIN go_term gt2 on gt2.go_id=gene_annotation.go_id AND gt2.go_edition_id_fk = ? where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.accession, gene_annotation.go_id ORDER BY NULL";
+    private static final String SQL_TRACK_PROPAGATED2 = "select edition.date, gene_annotation.edition, temp.accession as `primary`, parent as `go_id`, gt1.name, gt1.aspect, gt2.is_obsolete from (select distinct accession from gene_annotation WHERE symbol=? AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? INNER JOIN go_ontology_tclosure ON gene_annotation.go_id=child and go_ontology_tclosure.go_edition_id_fk=edition.go_edition_id_fk LEFT JOIN go_term gt1 on edition.go_edition_id_fk=gt1.go_edition_id_fk and gt1.go_id=go_ontology_tclosure.parent LEFT JOIN go_term gt2 on gt2.go_id=go_ontology_tclosure.parent AND gt2.go_edition_id_fk = ? where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.accession, parent ORDER BY NULL";
     // Vars ---------------------------------------------------------------------------------------
 
     private DAOFactory daoFactory;
@@ -198,6 +202,88 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 if ( dataTerms == null ) {
                     dataTerms = new HashSet<GeneOntologyTerm>();
                     series.put( edition, dataTerms );
+                }
+
+                dataTerms.add( term );
+
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return allSeries;
+    }
+
+    @Override
+    public Map<String, Map<Edition, Set<GeneOntologyTerm>>> track2( Integer species, String symbol, Integer edition,
+            Integer goEditionId, boolean ancestorsOnly ) throws DAOException {
+
+        List<Object> params = new ArrayList<Object>();
+
+        // symbol,edition,species,species,go_edition,species
+        params.add( symbol );
+        params.add( edition );
+        params.add( species );
+        params.add( species );
+        params.add( goEditionId );
+        params.add( species );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+        // List<TrackValue> tvs = new ArrayList<TrackValue>();
+        Map<String, Map<Edition, Set<GeneOntologyTerm>>> allSeries = new HashMap<String, Map<Edition, Set<GeneOntologyTerm>>>();
+        String sql = ancestorsOnly ? SQL_TRACK_PROPAGATED2 : SQL_TRACK2;
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+                // Integer edition = resultSet.getInt( "edition" );
+                String primary = resultSet.getString( "primary" );
+                // TODO fill rest of Edition properties
+                Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ) );
+                GeneOntologyTerm term = new GeneOntologyTerm();
+                term.setGoId( resultSet.getString( "go_id" ) );
+                term.setName( resultSet.getString( "name" ) );
+                term.setAspect( resultSet.getString( "aspect" ) );
+                Byte b = resultSet.getByte( "is_obsolete" );
+                if ( b == null ) {
+                    term.setObsolete( null );
+                } else {
+                    term.setObsolete( b.intValue() == 0 ? false : true );
+                }
+
+                Map<Edition, Set<GeneOntologyTerm>> series = allSeries.get( primary );
+                if ( series == null ) {
+                    series = new HashMap<Edition, Set<GeneOntologyTerm>>();
+                    allSeries.put( primary, series );
+                }
+
+                Set<GeneOntologyTerm> dataTerms = series.get( ed );
+                if ( dataTerms == null ) {
+                    dataTerms = new HashSet<GeneOntologyTerm>();
+                    series.put( ed, dataTerms );
                 }
 
                 dataTerms.add( term );

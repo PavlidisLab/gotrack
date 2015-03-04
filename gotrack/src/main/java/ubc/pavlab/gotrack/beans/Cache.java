@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -64,7 +65,8 @@ public class Cache implements Serializable {
     private DAOFactoryBean daoFactoryBean;
 
     private static List<Species> speciesList;
-    private static Map<Integer, Edition> currentEditions;
+    private static Map<Integer, Edition> currentEditions = new HashMap<Integer, Edition>();
+    private static Map<Integer, LinkedList<Edition>> allEditions = new HashMap<Integer, LinkedList<Edition>>();
     private static Map<Integer, Map<String, Accession>> currrentAccessions = new HashMap<Integer, Map<String, Accession>>();
     // private static Map<Integer, Collection<String>> symbols = new HashMap<Integer, Collection<String>>();
     private static Map<Integer, Map<String, Collection<Accession>>> symbolToCurrentAccessions = new HashMap<Integer, Map<String, Collection<Accession>>>();
@@ -92,8 +94,18 @@ public class Cache implements Serializable {
         CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
         log.info( "CacheDAO successfully obtained: " + cacheDAO );
 
-        currentEditions = cacheDAO.getCurrentEditions();
-        log.debug( "Current Editions Size: " + currentEditions.size() );
+        // currentEditions = cacheDAO.getCurrentEditions();
+        // log.debug( "Current Editions Size: " + currentEditions.size() );
+
+        allEditions = cacheDAO.getAllEditions();
+        log.debug( "All Editions Size: " + allEditions.size() );
+
+        for ( Integer species : allEditions.keySet() ) {
+            Edition ed = allEditions.get( species ).getLast();
+            log.debug( "Current edition for species_id (" + species + "): " + ed.getEdition() );
+            currentEditions.put( species, ed );
+        }
+
         log.info( "Loading accession to geneSymbol cache..." );
         for ( Species species : speciesList ) {
             Integer speciesId = species.getId();
@@ -188,6 +200,10 @@ public class Cache implements Serializable {
 
     public Map<Integer, Edition> getCurrentEditions() {
         return currentEditions;
+    }
+
+    public Map<Integer, LinkedList<Edition>> getAllEditions() {
+        return allEditions;
     }
 
     public Map<Integer, Map<String, Accession>> getCurrrentAccessions() {

@@ -30,6 +30,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +51,8 @@ public class CacheDAOImpl implements CacheDAO {
             + "from (select species_id, edition, edition.date, go_edition.date as go_date, edition.go_edition_id_fk "
             + "from edition INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id order by edition DESC) "
             + "as temp group by species_id";
+    private static final String SQL_ALL_EDITIONS = "select species_id, edition, edition.date, go_edition.date as go_date, go_edition_id_fk "
+            + "from edition inner join go_edition on edition.go_edition_id_fk=go_edition.id order by edition";
     private static final String SQL_CURRENT_ACCESSIONS = "select distinct symbol, accession, synonyms, sec from gene_annotation LEFT JOIN sec_ac on accession=ac where species_id = ? AND edition=?";
     private static final String SQL_UNIQUE_SYMBOL = "select distinct symbol from gene_annotation where species_id = ? AND edition=?";
     private static final String SQL_SPECIES_AVERAGES = "select aggregate.species_id, aggregate.edition, date, avg_direct "
@@ -96,6 +99,42 @@ public class CacheDAOImpl implements CacheDAO {
         }
 
         return editions;
+
+    }
+
+    @Override
+    public Map<Integer, LinkedList<Edition>> getAllEditions() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<Integer, LinkedList<Edition>> results = new HashMap<Integer, LinkedList<Edition>>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_ALL_EDITIONS );
+            resultSet = preparedStatement.executeQuery();
+
+            while ( resultSet.next() ) {
+                int speciesId = resultSet.getInt( "species_id" );
+                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
+                        resultSet.getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) );
+                LinkedList<Edition> editionsInSpecies = results.get( speciesId );
+
+                if ( editionsInSpecies == null ) {
+                    editionsInSpecies = new LinkedList<Edition>();
+                    results.put( speciesId, editionsInSpecies );
+                }
+
+                editionsInSpecies.add( edition );
+
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
 
     }
 
