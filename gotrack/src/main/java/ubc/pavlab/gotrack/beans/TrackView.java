@@ -110,19 +110,13 @@ public class TrackView implements Serializable {
     private Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
     private Collection<GeneOntologyTerm> allTerms = new HashSet<GeneOntologyTerm>();
 
-    /* Chart Stuff */
+    /* Current Chart Stuff */
     private LineChartModel currentChart; // Current chart
     private GoChart<Edition, Set<GeneOntologyTerm>> currentGoChart;
 
-    // select
-    // private Map<String, LineChartModel> allCharts = new HashMap<String, LineChartModel>(); // All Charts
+    // All charts
     private Map<GraphTypeKey, LineChartModel> lineChartModelMap = new HashMap<GraphTypeKey, LineChartModel>();
-    // private Map<String, GoChart<Edition, Set<GeneOntologyTerm>>> allGoCharts = new HashMap<String, GoChart<Edition,
-    // GeneOntologyTerm>>();
     private Map<GraphTypeKey, GoChart<Edition, Set<GeneOntologyTerm>>> goChartMap = new HashMap<GraphTypeKey, GoChart<Edition, Set<GeneOntologyTerm>>>();
-
-    // series
-    private boolean chartsReady = false;
 
     // Select Data Point functionality
     private String selectedDate;
@@ -130,7 +124,7 @@ public class TrackView implements Serializable {
     private Collection<GeneOntologyTerm> filteredTerms;
     private List<GeneOntologyTerm> itemSelectViewTerms;
 
-    // Functionality
+    // Right Panel
     private List<GeneOntologyTerm> selectedTerms;
     private Collection<GeneOntologyTerm> filteredAllTerms;
 
@@ -144,6 +138,8 @@ public class TrackView implements Serializable {
     private boolean propagate = false;
     private String graphType = "annotation";
     private String scale = "linear";
+    private boolean chartsReady = false;
+    private boolean firstChartReady = false;
 
     // Timeline
     private TimelineModel timelineModel;
@@ -278,7 +274,7 @@ public class TrackView implements Serializable {
         currentChart = lineChartModelMap.get( gtk );
 
         // chart is rendered on the front-end when this is set to true
-        chartsReady = true;
+        firstChartReady = true;
     }
 
     /**
@@ -350,6 +346,8 @@ public class TrackView implements Serializable {
         // Combined Chart
         initChart( new GraphTypeKey( GraphType.annotation, false, true ),
                 GoChart.combineSeries( COMBINED_TITLE, goChart ), null );
+
+        chartsReady = true;
     }
 
     public void fetchJaccardChart() {
@@ -788,6 +786,14 @@ public class TrackView implements Serializable {
 
     public boolean isChartsReady() {
         return chartsReady;
+    }
+
+    public boolean isFirstChartReady() {
+        return firstChartReady;
+    }
+
+    public void setFirstChartReady( boolean firstChartReady ) {
+        this.firstChartReady = firstChartReady;
     }
 
     public boolean isSplitAccessions() {
