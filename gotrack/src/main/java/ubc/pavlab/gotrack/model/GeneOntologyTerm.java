@@ -33,12 +33,24 @@ public class GeneOntologyTerm {
     private String evidence;
     private String reference;
     private Boolean obsolete;
+    private Integer geneSetSize;
 
     /**
      * 
      */
     public GeneOntologyTerm() {
         // TODO Auto-generated constructor stub
+    }
+
+    public GeneOntologyTerm( String goId ) {
+        super();
+        this.goId = goId;
+    }
+
+    public GeneOntologyTerm( String goId, Integer geneSetSize ) {
+        super();
+        this.goId = goId;
+        this.geneSetSize = geneSetSize;
     }
 
     public GeneOntologyTerm( String goId, String evidence, String reference ) {
@@ -95,6 +107,14 @@ public class GeneOntologyTerm {
 
     public void setAspect( String aspect ) {
         this.aspect = aspect;
+    }
+
+    public Integer getGeneSetSize() {
+        return geneSetSize;
+    }
+
+    public void setGeneSetSize( Integer geneSetSize ) {
+        this.geneSetSize = geneSetSize;
     }
 
     public Boolean isObsolete() {

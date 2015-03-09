@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -79,6 +80,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_TRACK_WHEN_THEN = "WHEN accession IN (%s) THEN ? ";
     private static final String SQL_FIND_UNIQUE_GO_IN_EDITION = "SELECT distinct go_id, evidence, reference from gene_annotation where accession in (%s) and edition = ? and species_id = ?";
     private static final String SQL_FIND_UNIQUE_GO = "SELECT distinct go_id from gene_annotation where accession in (%s) and species_id = ?";
+    private static final String SQL_ACCESSION_TO_GO = "SELECT DISTINCT accession as `primary`, go_id FROM gene_annotation WHERE species_id=? AND edition=? AND accession IS NOT NULL";
+    private static final String SQL_SYMBOL_TO_GO = "SELECT DISTINCT symbol as `primary`, go_id FROM gene_annotation WHERE species_id=? AND edition=? AND symbol IS NOT NULL";
 
     // tests for new queries
     // symbol,edition,species,species,go_edition,species
@@ -115,6 +118,65 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         for ( int i = 0; i < values.length; i++ ) {
             preparedStatement.setObject( i + 1, values[i] );
         }
+    }
+
+    @Override
+    public Map<String, Collection<String>> geneToGoSet( Integer speciesId, Integer edition, Boolean useSymbols )
+            throws DAOException {
+        List<Object> params = new ArrayList<Object>();
+        params.add( speciesId );
+        params.add( edition );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        Map<String, Collection<String>> results = new LinkedHashMap<String, Collection<String>>();
+        String sql = useSymbols ? SQL_SYMBOL_TO_GO : SQL_ACCESSION_TO_GO;
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+
+                String gene = resultSet.getString( "primary" );
+                String go = resultSet.getString( "go_id" );
+
+                Collection<String> goSet = results.get( gene );
+                if ( goSet == null ) {
+                    goSet = new HashSet<String>();
+                    results.put( gene, goSet );
+                }
+
+                goSet.add( go );
+
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+
     }
 
     @Override

@@ -48,4 +48,7 @@ public interface CacheDAO {
      */
     public Map<Integer, LinkedList<Edition>> getAllEditions() throws DAOException;
 
+    public Map<String, Integer> getGOSizes( Integer speciesId, Integer edition, int minimum, boolean useSymbols )
+            throws DAOException;
+
 }

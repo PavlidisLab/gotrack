@@ -57,6 +57,9 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_UNIQUE_SYMBOL = "select distinct symbol from gene_annotation where species_id = ? AND edition=?";
     private static final String SQL_SPECIES_AVERAGES = "select aggregate.species_id, aggregate.edition, date, avg_direct "
             + "from aggregate inner join edition on aggregate.species_id=edition.species_id and aggregate.edition = edition.edition";
+    private static final String SQL_GO_ACCESSION_SIZES = "select go_id, COUNT(distinct accession) as count from gene_annotation where species_id=? and edition=? group by go_id having count > ? order by null";
+    private static final String SQL_GO_SYMBOL_SIZES = "select go_id, COUNT(distinct symbol) as count from gene_annotation where species_id=? and edition=? group by go_id having count > ? order by null";
+    private static final String SQL_ALL_GO_SIZES = "select edition, go_id, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition, go_id having count > ? order by null";
     // Vars ---------------------------------------------------------------------------------------
 
     private DAOFactory daoFactory;
@@ -74,6 +77,33 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     // Actions ------------------------------------------------------------------------------------
+
+    @Override
+    public Map<String, Integer> getGOSizes( Integer speciesId, Integer edition, int minimum, boolean useSymbols )
+            throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<String, Integer> goTerms = new HashMap<String, Integer>();
+
+        try {
+            connection = daoFactory.getConnection();
+            String sql = useSymbols ? SQL_GO_SYMBOL_SIZES : SQL_GO_ACCESSION_SIZES;
+            preparedStatement = prepareStatement( connection,
+                    useSymbols ? SQL_GO_SYMBOL_SIZES : SQL_GO_ACCESSION_SIZES, false, speciesId, edition, minimum );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                goTerms.put( resultSet.getString( "go_id" ), resultSet.getInt( "count" ) );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return goTerms;
+
+    }
 
     @Override
     public Map<Integer, Edition> getCurrentEditions() throws DAOException {

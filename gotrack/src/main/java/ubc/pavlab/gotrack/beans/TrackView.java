@@ -149,6 +149,8 @@ public class TrackView implements Serializable {
      */
     public TrackView() {
         log.info( "TrackView created" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
     }
 
     /**
@@ -275,6 +277,23 @@ public class TrackView implements Serializable {
 
         // chart is rendered on the front-end when this is set to true
         firstChartReady = true;
+
+        Double multi = 0.0;
+        Map<String, Integer> sizes = cache.getGoSetSizes();
+        Integer total = 43247;
+        Set<GeneOntologyTerm> data = goChartMap.get( new GraphTypeKey( GraphType.annotation, false, false ) )
+                .get( COMBINED_TITLE ).get( new Edition( 137 ) );
+
+        for ( GeneOntologyTerm geneOntologyTerm : data ) {
+            Integer inGroup = sizes.get( geneOntologyTerm.getGoId() );
+            log.info( geneOntologyTerm.getGoId() + " " + inGroup );
+            if ( inGroup != null ) {
+                multi += 1 / ( inGroup * ( total - inGroup ) );
+            }
+        }
+
+        log.info( "multifuncationlity edition 137:" + multi );
+
     }
 
     /**

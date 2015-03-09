@@ -61,6 +61,9 @@ public class Cache implements Serializable {
 
     private static final Logger log = Logger.getLogger( Cache.class );
 
+    @ManagedProperty("#{settingsCache}")
+    private SettingsCache settingsCache;
+
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
 
@@ -71,6 +74,7 @@ public class Cache implements Serializable {
     // private static Map<Integer, Collection<String>> symbols = new HashMap<Integer, Collection<String>>();
     private static Map<Integer, Map<String, Collection<Accession>>> symbolToCurrentAccessions = new HashMap<Integer, Map<String, Collection<Accession>>>();
     private static Map<Integer, Map<Edition, Double>> speciesAverages = new HashMap<Integer, Map<Edition, Double>>();
+    private Map<String, Integer> goSetSizes;
 
     /**
      * 
@@ -83,6 +87,8 @@ public class Cache implements Serializable {
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "Cache init" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
 
         // Obtain SpeciesDAO.
         SpeciesDAO speciesDAO = daoFactoryBean.getGotrack().getSpeciesDAO();
@@ -93,6 +99,13 @@ public class Cache implements Serializable {
         // Obtain CacheDAO.
         CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
         log.info( "CacheDAO successfully obtained: " + cacheDAO );
+
+        goSetSizes = cacheDAO.getGOSizes( 7, 137, 1, false );
+
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
+
+        log.info( goSetSizes.size() );
 
         // currentEditions = cacheDAO.getCurrentEditions();
         // log.debug( "Current Editions Size: " + currentEditions.size() );
@@ -141,6 +154,8 @@ public class Cache implements Serializable {
         log.info( "Done loading accession to geneSymbol cache..." );
 
         speciesAverages = cacheDAO.getSpeciesAverages();
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
 
     }
 
@@ -218,8 +233,16 @@ public class Cache implements Serializable {
         return speciesAverages;
     }
 
+    public Map<String, Integer> getGoSetSizes() {
+        return Collections.unmodifiableMap( goSetSizes );
+    }
+
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
         this.daoFactoryBean = daoFactoryBean;
+    }
+
+    public void setSettingsCache( SettingsCache settingsCache ) {
+        this.settingsCache = settingsCache;
     }
 
 }

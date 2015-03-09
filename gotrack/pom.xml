@@ -189,6 +189,15 @@
 			<version>0.9.1</version>
 			<scope>test</scope>
 		</dependency>
+		
+		<!-- ErmineJ -->
+		
+		<dependency>
+            <groupId>ermineJ</groupId>
+            <artifactId>ermineJ</artifactId>
+            <version>3.0.3-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
 
 	</dependencies>
 

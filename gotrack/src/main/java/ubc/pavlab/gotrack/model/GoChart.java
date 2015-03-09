@@ -68,14 +68,16 @@ public class GoChart<X extends Comparable<X>, Y> {
         if ( sMap != null ) {
             for ( Entry<String, Map<X, Y>> sEntry : sMap.entrySet() ) {
                 Map<X, Y> s = sEntry.getValue();
-                String label = sEntry.getKey();
-                List<X> editions = new ArrayList<X>( s.keySet() );
-                Collections.sort( editions );
-                LinkedHashMap<X, Y> orderedMap = new LinkedHashMap<X, Y>();
-                for ( X x : editions ) {
-                    orderedMap.put( x, s.get( x ) );
+                if ( s != null ) {
+                    String label = sEntry.getKey();
+                    List<X> editions = new ArrayList<X>( s.keySet() );
+                    Collections.sort( editions );
+                    LinkedHashMap<X, Y> orderedMap = new LinkedHashMap<X, Y>();
+                    for ( X x : editions ) {
+                        orderedMap.put( x, s.get( x ) );
+                    }
+                    series.put( label, orderedMap );
                 }
-                series.put( label, orderedMap );
             }
         }
 

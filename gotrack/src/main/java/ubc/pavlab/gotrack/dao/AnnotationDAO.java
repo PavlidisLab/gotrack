@@ -87,4 +87,7 @@ public interface AnnotationDAO {
     public Map<String, Map<Edition, Set<GeneOntologyTerm>>> track2( Integer species, String symbol, Integer edition,
             Integer goEditionId, boolean ancestorsOnly ) throws DAOException;
 
+    public Map<String, Collection<String>> geneToGoSet( Integer speciesId, Integer edition, Boolean useSymbols )
+            throws DAOException;
+
 }

@@ -24,6 +24,7 @@ import java.io.Serializable;
 import javax.annotation.PostConstruct;
 import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
+import javax.faces.bean.ManagedProperty;
 
 import org.apache.log4j.Logger;
 
@@ -48,6 +49,9 @@ public class DAOFactoryBean implements Serializable {
 
     private static DAOFactory gotrack;
 
+    @ManagedProperty("#{settingsCache}")
+    private SettingsCache settingsCache;
+
     /**
      * 
      */
@@ -60,12 +64,16 @@ public class DAOFactoryBean implements Serializable {
         // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "DAOFactoryBean init" );
         // Obtain DAOFactory.
-        gotrack = DAOFactory.getInstance( "gotrack" );
+        gotrack = DAOFactory.getInstance( settingsCache.getProperty( "gotrack.db" ) );
         log.info( "DAOFactory successfully obtained: " + gotrack );
     }
 
     public DAOFactory getGotrack() {
         return gotrack;
+    }
+
+    public void setSettingsCache( SettingsCache settingsCache ) {
+        this.settingsCache = settingsCache;
     }
 
 }

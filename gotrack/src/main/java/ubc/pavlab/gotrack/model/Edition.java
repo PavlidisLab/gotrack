@@ -41,6 +41,11 @@ public class Edition implements Comparable<Edition> {
         // TODO Auto-generated constructor stub
     }
 
+    public Edition( Integer edition ) {
+        super();
+        this.edition = edition;
+    }
+
     public Edition( Integer edition, Date date ) {
         super();
         this.edition = edition;
