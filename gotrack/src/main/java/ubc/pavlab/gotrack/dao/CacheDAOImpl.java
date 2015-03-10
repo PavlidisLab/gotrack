@@ -26,13 +26,15 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
@@ -45,6 +47,8 @@ import ubc.pavlab.gotrack.model.Edition;
  */
 public class CacheDAOImpl implements CacheDAO {
 
+    private static final Logger log = Logger.getLogger( CacheDAOImpl.class );
+
     // Constants ----------------------------------------------------------------------------------
 
     private static final String SQL_CURRENT_EDITIONS = "select species_id, edition, date, go_date, go_edition_id_fk "
@@ -53,13 +57,16 @@ public class CacheDAOImpl implements CacheDAO {
             + "as temp group by species_id";
     private static final String SQL_ALL_EDITIONS = "select species_id, edition, edition.date, go_edition.date as go_date, go_edition_id_fk "
             + "from edition inner join go_edition on edition.go_edition_id_fk=go_edition.id order by edition";
-    private static final String SQL_CURRENT_ACCESSIONS = "select distinct symbol, accession, synonyms, sec from gene_annotation LEFT JOIN sec_ac on accession=ac where species_id = ? AND edition=?";
+    private static final String SQL_ACCESSIONS = "select distinct symbol, accession, synonyms, sec from gene_annotation LEFT JOIN sec_ac on accession=ac where species_id = ? AND edition=?";
     private static final String SQL_UNIQUE_SYMBOL = "select distinct symbol from gene_annotation where species_id = ? AND edition=?";
     private static final String SQL_SPECIES_AVERAGES = "select aggregate.species_id, aggregate.edition, date, avg_direct "
             + "from aggregate inner join edition on aggregate.species_id=edition.species_id and aggregate.edition = edition.edition";
-    private static final String SQL_GO_ACCESSION_SIZES = "select go_id, COUNT(distinct accession) as count from gene_annotation where species_id=? and edition=? group by go_id having count > ? order by null";
-    private static final String SQL_GO_SYMBOL_SIZES = "select go_id, COUNT(distinct symbol) as count from gene_annotation where species_id=? and edition=? group by go_id having count > ? order by null";
+    // private static final String SQL_GO_ACCESSION_SIZES =
+    // "select go_id, COUNT(distinct accession) as count from gene_annotation where species_id=? and edition=? group by go_id having count > ? order by null";
+    // private static final String SQL_GO_SYMBOL_SIZES =
+    // "select go_id, COUNT(distinct symbol) as count from gene_annotation where species_id=? and edition=? group by go_id having count > ? order by null";
     private static final String SQL_ALL_GO_SIZES = "select edition, go_id, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition, go_id having count > ? order by null";
+    private static final String SQL_ACCESSION_SIZES = "select edition, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition order by NULL;";
     // Vars ---------------------------------------------------------------------------------------
 
     private DAOFactory daoFactory;
@@ -79,29 +86,50 @@ public class CacheDAOImpl implements CacheDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public Map<String, Integer> getGOSizes( Integer speciesId, Integer edition, int minimum, boolean useSymbols )
+    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes( Integer speciesId, int minimum )
             throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<String, Integer> goTerms = new HashMap<String, Integer>();
+        Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
 
         try {
             connection = daoFactory.getConnection();
-            String sql = useSymbols ? SQL_GO_SYMBOL_SIZES : SQL_GO_ACCESSION_SIZES;
-            preparedStatement = prepareStatement( connection,
-                    useSymbols ? SQL_GO_SYMBOL_SIZES : SQL_GO_ACCESSION_SIZES, false, speciesId, edition, minimum );
+            preparedStatement = prepareStatement( connection, SQL_ALL_GO_SIZES, false, speciesId, minimum );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                goTerms.put( resultSet.getString( "go_id" ), resultSet.getInt( "count" ) );
+                String goid = resultSet.getString( "go_id" );
+                Integer count = resultSet.getInt( "count" );
+                Integer ed = resultSet.getInt( "edition" );
+
+                Map<Integer, Map<String, Integer>> a = goSetSizes.get( speciesId );
+                if ( a == null ) {
+                    a = new HashMap<Integer, Map<String, Integer>>();
+                    goSetSizes.put( speciesId, a );
+                }
+
+                Map<String, Integer> b = a.get( ed );
+                if ( b == null ) {
+                    b = new HashMap<String, Integer>();
+                    a.put( ed, b );
+                }
+
+                Integer c = b.get( goid );
+                if ( c == null ) {
+                    b.put( goid, count );
+                } else {
+                    log.warn( goid + "|" + speciesId + "|" + ed );
+                }
+
             }
+
         } catch ( SQLException e ) {
             throw new DAOException( e );
         } finally {
             close( connection, preparedStatement, resultSet );
         }
 
-        return goTerms;
+        return goSetSizes;
 
     }
 
@@ -133,11 +161,11 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Map<Integer, LinkedList<Edition>> getAllEditions() throws DAOException {
+    public Map<Integer, List<Edition>> getAllEditions() throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<Integer, LinkedList<Edition>> results = new HashMap<Integer, LinkedList<Edition>>();
+        Map<Integer, List<Edition>> results = new HashMap<>();
 
         try {
             connection = daoFactory.getConnection();
@@ -148,10 +176,10 @@ public class CacheDAOImpl implements CacheDAO {
                 int speciesId = resultSet.getInt( "species_id" );
                 Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
                         resultSet.getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) );
-                LinkedList<Edition> editionsInSpecies = results.get( speciesId );
+                List<Edition> editionsInSpecies = results.get( speciesId );
 
                 if ( editionsInSpecies == null ) {
-                    editionsInSpecies = new LinkedList<Edition>();
+                    editionsInSpecies = new ArrayList<Edition>();
                     results.put( speciesId, editionsInSpecies );
                 }
 
@@ -169,7 +197,7 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Map<String, Accession> getCurrentAccessions( Integer species, Integer edition ) throws DAOException {
+    public Map<String, Accession> getAccessions( Integer species, Integer edition ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
@@ -177,7 +205,7 @@ public class CacheDAOImpl implements CacheDAO {
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = prepareStatement( connection, SQL_CURRENT_ACCESSIONS, false, species, edition );
+            preparedStatement = prepareStatement( connection, SQL_ACCESSIONS, false, species, edition );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 String accession = resultSet.getString( "accession" );
@@ -265,5 +293,29 @@ public class CacheDAOImpl implements CacheDAO {
         }
 
         return results;
+    }
+
+    @Override
+    public Map<Integer, Integer> getAccessionSizes( Integer speciesId ) throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<Integer, Integer> accessionSizes = new HashMap<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = prepareStatement( connection, SQL_ACCESSION_SIZES, false, speciesId );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                accessionSizes.put( resultSet.getInt( "edition" ), resultSet.getInt( "count" ) );
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return accessionSizes;
     }
 }

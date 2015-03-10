@@ -31,7 +31,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -59,12 +58,16 @@ import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.GoChart;
 import ubc.pavlab.gotrack.model.GraphTypeKey;
 import ubc.pavlab.gotrack.model.GraphTypeKey.GraphType;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.utilities.Jaccard;
+
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 
 /**
  * @author mjacobson
@@ -104,10 +107,10 @@ public class TrackView implements Serializable {
     // private List<TrackValue> trackValues;
 
     // Static data
+    private Gene currentGene;
     private Edition currentEdition;
-    private LinkedList<Edition> allEditions = new LinkedList<Edition>();
-    private Map<String, Accession> currentPrimaryAccessions = new HashMap<String, Accession>();
-    private Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
+    private List<Edition> allEditions = new ArrayList<>();
+    private BiMap<Date, Integer> dateToEdition = HashBiMap.create();
     private Collection<GeneOntologyTerm> allTerms = new HashSet<GeneOntologyTerm>();
 
     /* Current Chart Stuff */
@@ -262,7 +265,7 @@ public class TrackView implements Serializable {
         GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
 
         Map<String, Map<Edition, Double>> staticData = new HashMap<String, Map<Edition, Double>>();
-        staticData.put( "Species Avg", cache.getSpeciesAverages().get( currentSpeciesId ) );
+        staticData.put( "Species Avg", cache.getSpeciesAverages( currentSpeciesId ) );
         // Base Chart
         initChart( gtk, goChart, new GoChart<Edition, Double>( "Direct Annotations vs Time", "Dates",
                 "Direct Annotations", staticData ) );
@@ -277,22 +280,6 @@ public class TrackView implements Serializable {
 
         // chart is rendered on the front-end when this is set to true
         firstChartReady = true;
-
-        Double multi = 0.0;
-        Map<String, Integer> sizes = cache.getGoSetSizes();
-        Integer total = 43247;
-        Set<GeneOntologyTerm> data = goChartMap.get( new GraphTypeKey( GraphType.annotation, false, false ) )
-                .get( COMBINED_TITLE ).get( new Edition( 137 ) );
-
-        for ( GeneOntologyTerm geneOntologyTerm : data ) {
-            Integer inGroup = sizes.get( geneOntologyTerm.getGoId() );
-            log.info( geneOntologyTerm.getGoId() + " " + inGroup );
-            if ( inGroup != null ) {
-                multi += 1 / ( inGroup * ( total - inGroup ) );
-            }
-        }
-
-        log.info( "multifuncationlity edition 137:" + multi );
 
     }
 
@@ -408,6 +395,65 @@ public class TrackView implements Serializable {
         copyChart( gtk, new GraphTypeKey( GraphType.jaccard, false, true ) );
         copyChart( gtk, new GraphTypeKey( GraphType.jaccard, true, true ) );
 
+        log.info( "fetched Jaccard" );
+
+    }
+
+    public void fetchMultiChart() {
+        log.info( "fetch Multifunctionality" );
+
+        Map<String, Map<Edition, Double>> staticData = createMultiData( goChartMap.get( new GraphTypeKey(
+                GraphType.annotation, true, false ) ) );
+
+        GraphTypeKey gtk = new GraphTypeKey( GraphType.multifunctionality, true, false );
+        GoChart<Edition, Set<GeneOntologyTerm>> template = new GoChart<Edition, Set<GeneOntologyTerm>>(
+                "Multifunctionality vs Time", "Dates", "Multifunctionality" );
+        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+
+        // Combined
+        staticData = createMultiData( goChartMap.get( new GraphTypeKey( GraphType.annotation, false, false ) ) );
+        gtk = new GraphTypeKey( GraphType.multifunctionality, false, false );
+        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+
+        // initChart( gtk, new GoChart<Edition, Set<GeneOntologyTerm>>(), staticData );
+        copyChart( gtk, new GraphTypeKey( GraphType.multifunctionality, false, true ) );
+        copyChart( gtk, new GraphTypeKey( GraphType.multifunctionality, true, true ) );
+        log.info( "fetched Multifunctionality" );
+    }
+
+    private Map<String, Map<Edition, Double>> createMultiData( GoChart<Edition, Set<GeneOntologyTerm>> goChart ) {
+        Map<String, Map<Edition, Double>> staticData = new HashMap<>();
+        for ( Entry<String, LinkedHashMap<Edition, Set<GeneOntologyTerm>>> seriesEntry : goChart.getSeries().entrySet() ) {
+            String seriesAccession = seriesEntry.getKey();
+            LinkedHashMap<Edition, Set<GeneOntologyTerm>> series = seriesEntry.getValue();
+
+            Map<Edition, Double> multiSeries = new HashMap<>();
+
+            for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
+
+                Double multi = 0.0;
+                Edition ed = editionEntry.getKey();
+                Integer total = cache.getAccessionSize( currentSpeciesId, ed.getEdition() );
+                Set<GeneOntologyTerm> data = editionEntry.getValue();
+                if ( total != null ) {
+                    for ( GeneOntologyTerm geneOntologyTerm : data ) {
+                        Integer inGroup = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(),
+                                geneOntologyTerm.getGoId() );
+                        if ( inGroup != null ) {
+                            multi += 1.0 / ( inGroup * ( total - inGroup ) );
+                        }
+                    }
+
+                    multiSeries.put( ed, multi );
+
+                }
+
+            }
+
+            staticData.put( seriesAccession, multiSeries );
+
+        }
+        return staticData;
     }
 
     public void fetchLossGainChart() {
@@ -445,7 +491,7 @@ public class TrackView implements Serializable {
         copyChart( gtk, new GraphTypeKey( GraphType.lossgain, true, false ) );
         copyChart( gtk, new GraphTypeKey( GraphType.lossgain, false, true ) );
         copyChart( gtk, new GraphTypeKey( GraphType.lossgain, true, true ) );
-
+        log.info( "fetched Loss / Gain" );
     }
 
     private static <T> Integer setDifferenceSize( Set<T> setA, Set<T> setB ) {
@@ -581,9 +627,8 @@ public class TrackView implements Serializable {
             return null; // Skip ajax requests.
         }
         log.info( "TrackView init: " + currentSpeciesId + ": " + query );
-        Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( currentSpeciesId );
-        Collection<Accession> primaryAccessions;
-        if ( query == null || currentSpeciesId == null || c == null || ( primaryAccessions = c.get( query ) ) == null ) {
+        currentGene = cache.getCurrentGene( currentSpeciesId, query );
+        if ( currentGene == null ) {
 
             throw new GeneNotFoundException();
             /*
@@ -594,15 +639,11 @@ public class TrackView implements Serializable {
         } else {
             // Get secondary accessions
             // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
-            for ( Accession accession : primaryAccessions ) {
-                primaryToSecondary.put( accession.getAccession(), accession.getSecondary() );
-                currentPrimaryAccessions.put( accession.getAccession(), accession );
-            }
 
             // Obtain AnnotationDAO.
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-            currentEdition = cache.getCurrentEditions().get( currentSpeciesId );
-            allEditions = cache.getAllEditions().get( currentSpeciesId );
+            currentEdition = cache.getCurrentEditions( currentSpeciesId );
+            allEditions = cache.getAllEditions( currentSpeciesId );
             for ( Species s : cache.getSpeciesList() ) {
                 if ( s.getId().equals( currentSpeciesId ) ) {
                     currentSpecies = s;
@@ -703,7 +744,7 @@ public class TrackView implements Serializable {
         // graphType = propagate ? "propagated" : "direct";
 
         GraphTypeKey gtk = new GraphTypeKey( GraphType.valueOf( graphType ), splitAccessions, propagate );
-
+        log.info( gtk );
         // log.info( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
 
         currentChart = lineChartModelMap.get( gtk );
@@ -743,12 +784,8 @@ public class TrackView implements Serializable {
         return currentChart;
     }
 
-    public Map<String, Accession> getCurrentPrimaryAccessions() {
-        return currentPrimaryAccessions;
-    }
-
     public ArrayList<Accession> getCurrentPrimaryAccessionsValues() {
-        return new ArrayList<Accession>( currentPrimaryAccessions.values() );
+        return new ArrayList<Accession>( currentGene.getAccessions() );
     }
 
     public Species getCurrentSpecies() {

@@ -20,9 +20,7 @@
 package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import javax.faces.application.FacesMessage;
 import javax.faces.bean.ManagedBean;
@@ -34,8 +32,6 @@ import javax.faces.context.FacesContext;
 import javax.faces.event.ComponentSystemEvent;
 
 import org.apache.log4j.Logger;
-
-import ubc.pavlab.gotrack.model.Accession;
 
 /**
  * TODO Document Me
@@ -53,6 +49,7 @@ public class IndexView implements Serializable {
     private static final long serialVersionUID = -3038133837848883737L;
 
     private static final Logger log = Logger.getLogger( IndexView.class );
+    private static final Integer MAX_RESULTS = 10;
 
     private Integer currentSpeciesId = 1;
     private String query;
@@ -98,8 +95,7 @@ public class IndexView implements Serializable {
             return;
         }
 
-        Map<String, Collection<Accession>> c = cache.getSymbolToCurrentAccessions().get( selectspecies );
-        if ( currentQuery == null || selectspecies == null || c == null || c.get( currentQuery ) == null ) {
+        if ( cache.currentSymbolExists( selectspecies, currentQuery ) ) {
 
             FacesMessage msg = new FacesMessage( "The selected gene symbol could not be found." );
             msg.setSeverity( FacesMessage.SEVERITY_ERROR );
@@ -132,9 +128,7 @@ public class IndexView implements Serializable {
     }
 
     public List<String> complete( String query ) {
-        List<String> result = this.cache.complete( query, currentSpeciesId );
-        log.debug( "Found " + result.size() + " matches." );
-        return result;
+        return this.cache.complete( query, currentSpeciesId, MAX_RESULTS );
     }
 
     public void setCache( Cache cache ) {

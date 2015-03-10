@@ -198,6 +198,15 @@
             <version>3.0.3-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
+        
+        <!-- Guava -->
+        
+        <dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>18.0</version>
+		</dependency>
+        
 
 	</dependencies>
 

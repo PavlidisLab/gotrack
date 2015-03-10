@@ -271,7 +271,7 @@
 					<p:remoteCommand name="fetchCharts"
 						actionListener="#{trackView.fetchDirectChart()}"
 						update="allCharts"
-						oncomplete="hideLoadingSpinner(), loadAllTerms(), loadJaccard(),loadLossGain(), loadPropagated()">
+						oncomplete="hideLoadingSpinner(), loadAllTerms(), loadJaccard(),loadLossGain(),loadMulti(), loadPropagated()">
 					</p:remoteCommand>
 					<p:remoteCommand
 						actionListener="#{trackView.fetchJaccardChart()}"
@@ -280,6 +280,10 @@
 					<p:remoteCommand
 						actionListener="#{trackView.fetchLossGainChart()}"
 						name="loadLossGain">
+					</p:remoteCommand>
+					<p:remoteCommand
+						actionListener="#{trackView.fetchMultiChart()}"
+						name="loadMulti">
 					</p:remoteCommand>
 					<p:remoteCommand
 						actionListener="#{trackView.fetchPropagatedChart()}"

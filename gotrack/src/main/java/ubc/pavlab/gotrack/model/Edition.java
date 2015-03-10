@@ -22,34 +22,31 @@ package ubc.pavlab.gotrack.model;
 import java.sql.Date;
 
 /**
- * TODO Document Me
+ * Immutable representation of an edition of gene annotations
  * 
  * @author mjacobson
  * @version $Id$
  */
 public class Edition implements Comparable<Edition> {
 
-    private Integer edition;
-    private Date date;
-    private Date goDate;
-    private Integer goEditionId;
+    private final Integer edition;
+    private final Date date;
+    private final Date goDate;
+    private final Integer goEditionId;
 
     /**
      * 
      */
     public Edition() {
-        // TODO Auto-generated constructor stub
+        this( null, null, null, null );
     }
 
     public Edition( Integer edition ) {
-        super();
-        this.edition = edition;
+        this( edition, null, null, null );
     }
 
     public Edition( Integer edition, Date date ) {
-        super();
-        this.edition = edition;
-        this.date = date;
+        this( edition, date, null, null );
     }
 
     public Edition( Integer edition, Date date, Date goDate, Integer goEditionId ) {
@@ -64,32 +61,16 @@ public class Edition implements Comparable<Edition> {
         return edition;
     }
 
-    public void setEdition( Integer edition ) {
-        this.edition = edition;
-    }
-
     public Date getDate() {
         return date;
-    }
-
-    public void setDate( Date date ) {
-        this.date = date;
     }
 
     public Date getGoDate() {
         return goDate;
     }
 
-    public void setGoDate( Date goDate ) {
-        this.goDate = goDate;
-    }
-
     public Integer getGoEditionId() {
         return goEditionId;
-    }
-
-    public void setGoEditionId( Integer goEditionId ) {
-        this.goEditionId = goEditionId;
     }
 
     @Override

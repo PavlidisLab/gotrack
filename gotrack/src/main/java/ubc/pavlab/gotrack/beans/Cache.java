@@ -26,9 +26,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.PostConstruct;
 import javax.faces.bean.ApplicationScoped;
@@ -42,10 +42,14 @@ import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 
+import com.google.common.collect.Iterables;
+
 /**
- * TODO Document Me
+ * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
+ * necessarily created AFTER initialization, thus prohibiting stale memory
  * 
  * @author mjacobson
  * @version $Id$
@@ -67,14 +71,17 @@ public class Cache implements Serializable {
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
 
-    private static List<Species> speciesList;
-    private static Map<Integer, Edition> currentEditions = new HashMap<Integer, Edition>();
-    private static Map<Integer, LinkedList<Edition>> allEditions = new HashMap<Integer, LinkedList<Edition>>();
-    private static Map<Integer, Map<String, Accession>> currrentAccessions = new HashMap<Integer, Map<String, Accession>>();
-    // private static Map<Integer, Collection<String>> symbols = new HashMap<Integer, Collection<String>>();
-    private static Map<Integer, Map<String, Collection<Accession>>> symbolToCurrentAccessions = new HashMap<Integer, Map<String, Collection<Accession>>>();
-    private static Map<Integer, Map<Edition, Double>> speciesAverages = new HashMap<Integer, Map<Edition, Double>>();
-    private Map<String, Integer> goSetSizes;
+    private List<Species> speciesList;
+    private Map<Integer, Edition> currentEditions = new HashMap<>();
+    private Map<Integer, List<Edition>> allEditions = new HashMap<>();
+    private Map<Integer, Map<Edition, Double>> speciesAverages = new HashMap<>();
+    private Map<Integer, Map<String, Gene>> speciesToCurrentGenes = new HashMap<>();
+
+    // Map<species, Map<edition, Map<go_id, count>>>
+    private Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
+
+    // Map<species, Map<edition, unique accession count>>
+    private Map<Integer, Map<Integer, Integer>> accessionSizes = new HashMap<>();
 
     /**
      * 
@@ -100,12 +107,22 @@ public class Cache implements Serializable {
         CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
         log.info( "CacheDAO successfully obtained: " + cacheDAO );
 
-        goSetSizes = cacheDAO.getGOSizes( 7, 137, 1, false );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
+
+        goSetSizes = cacheDAO.getGOSizes( 7, 1 );
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        log.info( goSetSizes.size() );
+        for ( Species species : speciesList ) {
+            accessionSizes.put( species.getId(), cacheDAO.getAccessionSizes( species.getId() ) );
+
+            log.info( "Done loading accession sizes for species (" + species + ")" );
+
+            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                    / 1000000 + " MB" );
+        }
 
         // currentEditions = cacheDAO.getCurrentEditions();
         // log.debug( "Current Editions Size: " + currentEditions.size() );
@@ -114,8 +131,10 @@ public class Cache implements Serializable {
         log.debug( "All Editions Size: " + allEditions.size() );
 
         for ( Integer species : allEditions.keySet() ) {
-            Edition ed = allEditions.get( species ).getLast();
-            log.debug( "Current edition for species_id (" + species + "): " + ed.getEdition() );
+            List<Edition> l = allEditions.get( species );
+            Collections.sort( l );
+            Edition ed = Iterables.getLast( l, null );
+            log.debug( "Current edition for species_id (" + species + "): " + ed );
             currentEditions.put( species, ed );
         }
 
@@ -126,30 +145,27 @@ public class Cache implements Serializable {
 
             if ( currEd == null ) continue;
             log.debug( species.getCommonName() + ": " + currEd.toString() );
-            // Create Map of current accessions
-            Map<String, Accession> currAccMap = cacheDAO.getCurrentAccessions( speciesId, currEd.getEdition() );
-            currrentAccessions.put( speciesId, currAccMap );
+            // get current accessions
+            Map<String, Accession> currAccMap = cacheDAO.getAccessions( speciesId, currEd.getEdition() );
 
-            // Create symbols to collection of associated current accessions map
-            Map<String, Collection<Accession>> currSymMap = new HashMap<String, Collection<Accession>>();
+            // Create Map of current genes
+            Map<String, Gene> currentGenes = new HashMap<>();
+
             for ( Accession acc : currAccMap.values() ) {
-                Collection<Accession> symbolAccessions = currSymMap.get( acc.getSymbol() );
-                if ( symbolAccessions == null ) {
-                    symbolAccessions = new HashSet<Accession>();
-                    symbolAccessions.add( acc );
-                    currSymMap.put( acc.getSymbol(), symbolAccessions );
-                } else {
-                    symbolAccessions.add( acc );
+                String symbol = acc.getSymbol();
+                Gene gene = currentGenes.get( symbol );
+                if ( gene == null ) {
+                    gene = new Gene( symbol );
+                    currentGenes.put( symbol.toUpperCase(), gene );
                 }
-
+                gene.getAccessions().add( acc );
+                gene.getSynonyms().addAll( acc.getSynonyms() );
             }
-            symbolToCurrentAccessions.put( speciesId, currSymMap );
 
-            // symbols.put( speciesId, cacheDAO.getUniqueGeneSymbols( speciesId, currEd.getEdition() ) );
+            speciesToCurrentGenes.put( speciesId, currentGenes );
 
             log.info( "Done loading accession to geneSymbol for species (" + speciesId + "), size: "
-                    + currrentAccessions.get( speciesId ).size() + " unique symbols: "
-                    + symbolToCurrentAccessions.get( speciesId ).size() );
+                    + currAccMap.size() + " unique symbols: " + currentGenes.size() );
         }
         log.info( "Done loading accession to geneSymbol cache..." );
 
@@ -159,7 +175,7 @@ public class Cache implements Serializable {
 
     }
 
-    public List<String> complete( String query, Integer species ) {
+    public List<String> complete( String query, Integer species, Integer maxResults ) {
 
         if ( query == null ) return new ArrayList<String>();
         String queryUpper = query.toUpperCase();
@@ -168,14 +184,18 @@ public class Cache implements Serializable {
         Collection<String> possible = new HashSet<String>();
         // Map<GOTerm, Long> results = new HashMap<GOTerm, Long>();
         // log.info( "search: " + queryString );
-        Map<String, Accession> gs = currrentAccessions.get( species );
+        // Map<String, Accession> gs = currrentAccessions.get( species );
+        Map<String, Gene> gs = speciesToCurrentGenes.get( species );
+
         if ( gs != null ) {
-            for ( Accession gene : gs.values() ) {
-                if ( queryUpper.toUpperCase().equals( gene.getSymbol().toUpperCase() ) ) {
+
+            for ( Gene gene : gs.values() ) {
+                if ( queryUpper.equals( gene.getSymbol().toUpperCase() ) ) {
                     exact.add( gene.getSymbol() );
                     continue;
                 }
-                List<String> synonyms = gene.getSynonyms();
+
+                Set<String> synonyms = gene.getSynonyms();
 
                 for ( String symbol : synonyms ) {
                     if ( queryUpper.equals( symbol.toUpperCase() ) ) {
@@ -192,49 +212,103 @@ public class Cache implements Serializable {
                     possible.add( gene.getSymbol() );
                     continue;
                 }
+
             }
+
         }
 
-        if ( exact.size() > 0 ) {
-            return new ArrayList<String>( exact );
-        } else if ( exactSynonym.size() > 0 ) {
-            return new ArrayList<String>( exactSynonym );
-        } else if ( possible.size() > 0 ) {
-            ArrayList<String> p = new ArrayList<String>( possible );
-            Collections.sort( p, new LevenshteinComparator( query ) );
-            return p;
-        } else {
-            return new ArrayList<String>();
+        log.debug( "Found " + ( exact.size() + exactSynonym.size() + possible.size() ) + " matches." );
+
+        List<String> orderedResults = new ArrayList<>();
+
+        orderedResults.addAll( exact );
+        orderedResults.addAll( exactSynonym );
+
+        if ( maxResults != null && orderedResults.size() >= maxResults ) {
+            // Return early for performance reasons if enough results have been obtained
+            return orderedResults;
         }
+
+        ArrayList<String> p = new ArrayList<String>( possible );
+        Collections.sort( p, new LevenshteinComparator( query ) );
+
+        orderedResults.addAll( p );
+
+        if ( maxResults != null && orderedResults.size() > maxResults ) {
+            // If there are more than maxResults, remove the excess range
+            orderedResults.subList( maxResults, orderedResults.size() ).clear();
+        }
+
+        return orderedResults;
 
     }
 
     public List<Species> getSpeciesList() {
-        return speciesList;
+        return Collections.unmodifiableList( speciesList );
     }
 
-    public Map<Integer, Edition> getCurrentEditions() {
-        return currentEditions;
+    public Edition getCurrentEditions( Integer speciesId ) {
+        return currentEditions.get( speciesId );
     }
 
-    public Map<Integer, LinkedList<Edition>> getAllEditions() {
-        return allEditions;
+    public List<Edition> getAllEditions( Integer speciesId ) {
+        return Collections.unmodifiableList( allEditions.get( speciesId ) );
     }
 
-    public Map<Integer, Map<String, Accession>> getCurrrentAccessions() {
-        return currrentAccessions;
+    public Map<Edition, Double> getSpeciesAverages( Integer speciesId ) {
+        return Collections.unmodifiableMap( speciesAverages.get( speciesId ) );
     }
 
-    public Map<Integer, Map<String, Collection<Accession>>> getSymbolToCurrentAccessions() {
-        return symbolToCurrentAccessions;
+    public Integer getGoSetSizes( Integer speciesId, Integer Edition, String goId ) {
+        Map<Integer, Map<String, Integer>> map2 = goSetSizes.get( speciesId );
+        if ( map2 != null ) {
+            Map<String, Integer> map3 = map2.get( Edition );
+            if ( map3 != null ) {
+                return map3.get( goId );
+            }
+        }
+        return null;
     }
 
-    public Map<Integer, Map<Edition, Double>> getSpeciesAverages() {
-        return speciesAverages;
+    public Map<Integer, Map<String, Gene>> getSpeciesToCurrentGenes() {
+        return speciesToCurrentGenes;
     }
 
-    public Map<String, Integer> getGoSetSizes() {
-        return Collections.unmodifiableMap( goSetSizes );
+    public Map<String, Gene> getSpeciesToCurrentGenes( Integer speciesId ) {
+        return Collections.unmodifiableMap( speciesToCurrentGenes.get( speciesId ) );
+    }
+
+    public Gene getCurrentGene( Integer speciesId, String symbol ) {
+        if ( speciesId == null || symbol == null ) {
+            return null;
+        }
+        Map<String, Gene> map2 = speciesToCurrentGenes.get( speciesId );
+        if ( map2 != null ) {
+            return map2.get( symbol.toUpperCase() );
+        }
+        return null;
+    }
+
+    public boolean currentSymbolExists( Integer speciesId, String symbol ) {
+        if ( speciesId == null || symbol == null ) {
+            return false;
+        }
+        Map<String, Gene> map2 = speciesToCurrentGenes.get( speciesId );
+        if ( map2 != null ) {
+            return map2.containsKey( symbol.toUpperCase() );
+        }
+        return false;
+    }
+
+    public Integer getAccessionSize( Integer speciesId, Integer edition ) {
+        if ( speciesId == null || edition == null ) {
+            return null;
+        }
+        Map<Integer, Integer> map2 = accessionSizes.get( speciesId );
+        if ( map2 != null ) {
+            return map2.get( edition );
+        }
+        return null;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

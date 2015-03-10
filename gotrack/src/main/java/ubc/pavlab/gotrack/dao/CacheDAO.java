@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.dao;
 
 import java.util.Collection;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 
 import ubc.pavlab.gotrack.model.Accession;
@@ -36,7 +36,7 @@ public interface CacheDAO {
 
     public Map<Integer, Edition> getCurrentEditions() throws DAOException;
 
-    public Map<String, Accession> getCurrentAccessions( Integer species, Integer edition ) throws DAOException;
+    public Map<String, Accession> getAccessions( Integer species, Integer edition ) throws DAOException;
 
     public Collection<String> getUniqueGeneSymbols( Integer species, Integer edition ) throws DAOException;
 
@@ -46,9 +46,11 @@ public interface CacheDAO {
      * @return Map of species to ordered linkedlist of editions
      * @throws DAOException
      */
-    public Map<Integer, LinkedList<Edition>> getAllEditions() throws DAOException;
+    public Map<Integer, List<Edition>> getAllEditions() throws DAOException;
 
-    public Map<String, Integer> getGOSizes( Integer speciesId, Integer edition, int minimum, boolean useSymbols )
+    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes( Integer speciesId, int minimum )
             throws DAOException;
+
+    public Map<Integer, Integer> getAccessionSizes( Integer speciesId ) throws DAOException;
 
 }
