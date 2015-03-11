@@ -84,15 +84,17 @@
 
 				<h:form>
 					<p:menubar toggleEvent="click">
-						<p:menuitem value="Home" url="index.xhtml" icon="fa fa-home"
+						<p:menuitem value="&nbsp; Home" url="index.xhtml" icon="fa fa-home"
 							styleClass="right-border" />
-						<p:menuitem value="Browse Global Trends" url="trends.xhtml"
+						<p:menuitem value="&nbsp; Browse Global Trends" url="trends.xhtml"
 							icon="fa fa-globe" styleClass="right-border" />
-						<p:menuitem value="Tutorial" url="about.xhtml"
+						<p:menuitem value="&nbsp; GO Enrichment" url="enrichment.xhtml"
+							icon="fa fa-bar-chart" styleClass="right-border" />
+						<p:menuitem value="&nbsp; Tutorial" url="about.xhtml"
 							icon="fa fa-question-circle" styleClass="right-border" />
-						<p:menuitem value="Documentation" url="documentation.xhtml"
+						<p:menuitem value="&nbsp; Documentation" url="documentation.xhtml"
 							icon="fa fa-book" styleClass="right-border" />
-						<p:menuitem value="Resources" url="resources.xhtml"
+						<p:menuitem value="&nbsp; Resources" url="resources.xhtml"
 							icon="fa fa-info-circle" styleClass="right-border" />
 						<f:facet name="options">
 							<p:selectOneMenu id="selectspecies"
@@ -332,7 +334,7 @@
 			<p:ajax event="close" listener="#{trackView.cleanFilteredTerms}" update=":itemSelectForm:itemSelectData"/>
 			<h:form id="itemSelectForm" >
 			<h:outputText id="itemSelectMsg"
-				value="Date: #{trackView.selectedDate}, Count: #{fn:length(trackView.itemSelectTerms)}" />
+				value="Date: #{trackView.selectedDate}, Count: #{trackView.chartValue}" />
 			<p:dataTable 	id="itemSelectData" 
 							widgetVar="annotationsTable"
 							var="chartTerm" 

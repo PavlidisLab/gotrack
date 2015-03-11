@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.annotation.PostConstruct;
@@ -44,6 +45,7 @@ import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.StatsEntry;
 
 import com.google.common.collect.Iterables;
 
@@ -74,14 +76,14 @@ public class Cache implements Serializable {
     private List<Species> speciesList;
     private Map<Integer, Edition> currentEditions = new HashMap<>();
     private Map<Integer, List<Edition>> allEditions = new HashMap<>();
-    private Map<Integer, Map<Edition, Double>> speciesAverages = new HashMap<>();
     private Map<Integer, Map<String, Gene>> speciesToCurrentGenes = new HashMap<>();
+
+    private Map<Integer, Map<Edition, StatsEntry>> aggregates = new HashMap<>();
+    // view of aggregates for Map<species, Map<edition, avg_direct>>
+    private Map<Integer, Map<Edition, Double>> speciesAverage = new HashMap<>();
 
     // Map<species, Map<edition, Map<go_id, count>>>
     private Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
-
-    // Map<species, Map<edition, unique accession count>>
-    private Map<Integer, Map<Integer, Integer>> accessionSizes = new HashMap<>();
 
     /**
      * 
@@ -110,19 +112,31 @@ public class Cache implements Serializable {
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        goSetSizes = cacheDAO.getGOSizes( 7, 1 );
+        goSetSizes = cacheDAO.getGOSizesFromPrecompute();
+
+        log.info( "goSetSizes successfully obtained" );
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        for ( Species species : speciesList ) {
-            accessionSizes.put( species.getId(), cacheDAO.getAccessionSizes( species.getId() ) );
+        aggregates = cacheDAO.getAggregates();
 
-            log.info( "Done loading accession sizes for species (" + species + ")" );
+        log.info( "aggregates successfully obtained" );
 
-            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                    / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
+
+        // Create speciesAverage view
+        for ( Entry<Integer, Map<Edition, StatsEntry>> speciesEntry : aggregates.entrySet() ) {
+            Integer speciesId = speciesEntry.getKey();
+            HashMap<Edition, Double> sa = new HashMap<Edition, Double>();
+            for ( Entry<Edition, StatsEntry> editionEntry : speciesEntry.getValue().entrySet() ) {
+                sa.put( editionEntry.getKey(), editionEntry.getValue().getAverageDirects() );
+            }
+            speciesAverage.put( speciesId, sa );
         }
+
+        log.info( "speciesAverages successfully computed" );
 
         // currentEditions = cacheDAO.getCurrentEditions();
         // log.debug( "Current Editions Size: " + currentEditions.size() );
@@ -153,13 +167,14 @@ public class Cache implements Serializable {
 
             for ( Accession acc : currAccMap.values() ) {
                 String symbol = acc.getSymbol();
-                Gene gene = currentGenes.get( symbol );
+                Gene gene = currentGenes.get( symbol.toUpperCase() );
                 if ( gene == null ) {
                     gene = new Gene( symbol );
                     currentGenes.put( symbol.toUpperCase(), gene );
                 }
                 gene.getAccessions().add( acc );
                 gene.getSynonyms().addAll( acc.getSynonyms() );
+
             }
 
             speciesToCurrentGenes.put( speciesId, currentGenes );
@@ -169,7 +184,6 @@ public class Cache implements Serializable {
         }
         log.info( "Done loading accession to geneSymbol cache..." );
 
-        speciesAverages = cacheDAO.getSpeciesAverages();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
@@ -255,10 +269,6 @@ public class Cache implements Serializable {
         return Collections.unmodifiableList( allEditions.get( speciesId ) );
     }
 
-    public Map<Edition, Double> getSpeciesAverages( Integer speciesId ) {
-        return Collections.unmodifiableMap( speciesAverages.get( speciesId ) );
-    }
-
     public Integer getGoSetSizes( Integer speciesId, Integer Edition, String goId ) {
         Map<Integer, Map<String, Integer>> map2 = goSetSizes.get( speciesId );
         if ( map2 != null ) {
@@ -270,12 +280,16 @@ public class Cache implements Serializable {
         return null;
     }
 
-    public Map<Integer, Map<String, Gene>> getSpeciesToCurrentGenes() {
-        return speciesToCurrentGenes;
-    }
-
     public Map<String, Gene> getSpeciesToCurrentGenes( Integer speciesId ) {
         return Collections.unmodifiableMap( speciesToCurrentGenes.get( speciesId ) );
+    }
+
+    public Map<Edition, StatsEntry> getAggregates( Integer speciesId ) {
+        return Collections.unmodifiableMap( aggregates.get( speciesId ) );
+    }
+
+    public Map<Edition, Double> getSpeciesAverage( Integer speciesId ) {
+        return Collections.unmodifiableMap( speciesAverage.get( speciesId ) );
     }
 
     public Gene getCurrentGene( Integer speciesId, String symbol ) {
@@ -300,13 +314,17 @@ public class Cache implements Serializable {
         return false;
     }
 
-    public Integer getAccessionSize( Integer speciesId, Integer edition ) {
+    public Integer getAccessionSize( Integer speciesId, Edition edition ) {
         if ( speciesId == null || edition == null ) {
             return null;
         }
-        Map<Integer, Integer> map2 = accessionSizes.get( speciesId );
+        Map<Edition, StatsEntry> map2 = aggregates.get( speciesId );
         if ( map2 != null ) {
-            return map2.get( edition );
+            StatsEntry se = map2.get( edition );
+            if ( se != null ) {
+                return se.getUniqueAccesions();
+            }
+
         }
         return null;
     }

@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.StatsEntry;
 
 /**
  * Holds methods for retrieving data that is meant to be cached
@@ -66,7 +67,9 @@ public class CacheDAOImpl implements CacheDAO {
     // private static final String SQL_GO_SYMBOL_SIZES =
     // "select go_id, COUNT(distinct symbol) as count from gene_annotation where species_id=? and edition=? group by go_id having count > ? order by null";
     private static final String SQL_ALL_GO_SIZES = "select edition, go_id, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition, go_id having count > ? order by null";
+    private static final String SQL_ALL_GO_SIZES_FROM_PRECOMPUTE = "select species_id, edition, go_id, unique_accessions from gene_annotation_aggregate";
     private static final String SQL_ACCESSION_SIZES = "select edition, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition order by NULL;";
+    private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, date, avg_direct, unique_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id";
     // Vars ---------------------------------------------------------------------------------------
 
     private DAOFactory daoFactory;
@@ -96,11 +99,61 @@ public class CacheDAOImpl implements CacheDAO {
         try {
             connection = daoFactory.getConnection();
             preparedStatement = prepareStatement( connection, SQL_ALL_GO_SIZES, false, speciesId, minimum );
+            log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 String goid = resultSet.getString( "go_id" );
                 Integer count = resultSet.getInt( "count" );
                 Integer ed = resultSet.getInt( "edition" );
+
+                Map<Integer, Map<String, Integer>> a = goSetSizes.get( speciesId );
+                if ( a == null ) {
+                    a = new HashMap<Integer, Map<String, Integer>>();
+                    goSetSizes.put( speciesId, a );
+                }
+
+                Map<String, Integer> b = a.get( ed );
+                if ( b == null ) {
+                    b = new HashMap<String, Integer>();
+                    a.put( ed, b );
+                }
+
+                Integer c = b.get( goid );
+                if ( c == null ) {
+                    b.put( goid, count );
+                } else {
+                    log.warn( goid + "|" + speciesId + "|" + ed );
+                }
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return goSetSizes;
+
+    }
+
+    @Override
+    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizesFromPrecompute() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_ALL_GO_SIZES_FROM_PRECOMPUTE );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                Integer speciesId = resultSet.getInt( "species_id" );
+                Integer ed = resultSet.getInt( "edition" );
+                String goid = resultSet.getString( "go_id" );
+                Integer count = resultSet.getInt( "unique_accessions" );
 
                 Map<Integer, Map<String, Integer>> a = goSetSizes.get( speciesId );
                 if ( a == null ) {
@@ -143,6 +196,7 @@ public class CacheDAOImpl implements CacheDAO {
         try {
             connection = daoFactory.getConnection();
             preparedStatement = connection.prepareStatement( SQL_CURRENT_EDITIONS );
+            log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 editions.put(
@@ -170,6 +224,7 @@ public class CacheDAOImpl implements CacheDAO {
         try {
             connection = daoFactory.getConnection();
             preparedStatement = connection.prepareStatement( SQL_ALL_EDITIONS );
+            log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
 
             while ( resultSet.next() ) {
@@ -206,6 +261,7 @@ public class CacheDAOImpl implements CacheDAO {
         try {
             connection = daoFactory.getConnection();
             preparedStatement = prepareStatement( connection, SQL_ACCESSIONS, false, species, edition );
+            log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 String accession = resultSet.getString( "accession" );
@@ -248,6 +304,7 @@ public class CacheDAOImpl implements CacheDAO {
         try {
             connection = daoFactory.getConnection();
             preparedStatement = prepareStatement( connection, SQL_UNIQUE_SYMBOL, false, species, edition );
+            log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 results.add( resultSet.getString( "symbol" ) );
@@ -271,6 +328,7 @@ public class CacheDAOImpl implements CacheDAO {
         try {
             connection = daoFactory.getConnection();
             preparedStatement = prepareStatement( connection, SQL_SPECIES_AVERAGES, false );
+            log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 int speciesId = resultSet.getInt( "species_id" );
@@ -295,6 +353,7 @@ public class CacheDAOImpl implements CacheDAO {
         return results;
     }
 
+    @Deprecated
     @Override
     public Map<Integer, Integer> getAccessionSizes( Integer speciesId ) throws DAOException {
         Connection connection = null;
@@ -305,6 +364,7 @@ public class CacheDAOImpl implements CacheDAO {
         try {
             connection = daoFactory.getConnection();
             preparedStatement = prepareStatement( connection, SQL_ACCESSION_SIZES, false, speciesId );
+            log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 accessionSizes.put( resultSet.getInt( "edition" ), resultSet.getInt( "count" ) );
@@ -317,5 +377,43 @@ public class CacheDAOImpl implements CacheDAO {
         }
 
         return accessionSizes;
+    }
+
+    @Override
+    public Map<Integer, Map<Edition, StatsEntry>> getAggregates() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<Integer, Map<Edition, StatsEntry>> aggregates = new HashMap<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_AGGREGATE );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                Integer speciesId = resultSet.getInt( "species_id" );
+                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ) );
+                StatsEntry se = new StatsEntry( resultSet.getInt( "unique_accessions" ),
+                        resultSet.getDouble( "avg_direct" ) );
+
+                Map<Edition, StatsEntry> speciesMap = aggregates.get( speciesId );
+
+                if ( speciesMap == null ) {
+                    speciesMap = new HashMap<>();
+                    aggregates.put( speciesId, speciesMap );
+                }
+
+                speciesMap.put( edition, se );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return aggregates;
     }
 }

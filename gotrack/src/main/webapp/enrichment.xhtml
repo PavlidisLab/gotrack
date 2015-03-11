@@ -1,0 +1,152 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	xmlns:pe="http://primefaces.org/ui/extensions">
+
+<f:view contentType="text/html">
+	<f:metadata>
+		<f:event type="preRenderView" listener="#{enrichmentView.init}" />
+	</f:metadata>
+	<h:head>
+		<title>UBC-CHiBi|GOtrack</title>
+		<h:outputStylesheet
+			name="webjars/font-awesome/4.2.0/css/font-awesome.css" />
+		<h:outputStylesheet library="css" name="showcase.css" />
+		<h:outputStylesheet library="css" name="custom.css" />
+		<h:outputStylesheet library="css" name="track.css" />
+
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+		<!-- Prevents caching at the Proxy Server -->
+
+		<meta http-equiv="Expires" content="0" />
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<meta name="description"
+			content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
+
+		<meta name="keywords"
+			content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
+		
+		<h:outputScript library="js" name="utility.js" />
+		<!-- <h:outputScript library="js" name="gotrack.js" /> -->
+		<!-- <h:outputScript library="js" name="jqplot.logAxisRenderer.js" /> -->
+		<h:outputScript library="js" name="enrichment.js" />
+		
+	</h:head>
+
+	<h:body id="body" onload="onLoad()">
+
+		<p:layout fullPage="true">
+			<p:layoutUnit id="top" position="north" size="50">
+
+				<h:form>
+					<p:menubar toggleEvent="click">
+						<p:menuitem value="&nbsp; Home" url="index.xhtml" icon="fa fa-home"
+							styleClass="right-border" />
+						<p:menuitem value="&nbsp; Browse Global Trends" url="trends.xhtml"
+							icon="fa fa-globe" styleClass="right-border" />
+						<p:menuitem value="&nbsp; GO Enrichment" url="enrichment.xhtml"
+							icon="fa fa-bar-chart" styleClass="right-border" />
+						<p:menuitem value="&nbsp; Tutorial" url="about.xhtml"
+							icon="fa fa-question-circle" styleClass="right-border" />
+						<p:menuitem value="&nbsp; Documentation" url="documentation.xhtml"
+							icon="fa fa-book" styleClass="right-border" />
+						<p:menuitem value="&nbsp; Resources" url="resources.xhtml"
+							icon="fa fa-info-circle" styleClass="right-border" />
+					</p:menubar>
+				</h:form>
+			</p:layoutUnit>
+
+			<p:layoutUnit id="bottom" position="south" size="60">
+				<p id="bottom-footer" class="center">
+					&copy; UBC, Centre for High-Throughput Biology, 2015 <a
+						href="terms.xhtml">Terms and Conditions</a>
+				</p>
+			</p:layoutUnit>
+
+			<p:layoutUnit id="left" position="west" size="250" resizable="true"
+				collapsible="true" header="Options" minSize="250">
+					<h:form id="formSelect">
+						<p:growl id="selectGrowl" life="2000" />
+						<h3 class="center">General</h3>
+							
+						<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+							<h:outputText value="Species: " />
+							<p:selectOneMenu id="selectspecies" value="#{enrichmentView.currentSpeciesId}">
+								<p:ajax event="change" process="@this" update=":formGenes:tableGenes"/>
+								<f:selectItems value="#{cache.speciesList}" var="spec"
+									itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
+							</p:selectOneMenu>
+							<h:outputText value="Gene: " />
+							<p:autoComplete id="geneInput" value="#{enrichmentView.query}" completeMethod="#{enrichmentView.complete}" minQueryLength="2" forceSelection="true" maxResults="10"  
+							label="ID" emptyMessage="No gene suggestions available,  please try again.">
+							<p:ajax event="itemSelect" process="@this"/>  
+							</p:autoComplete>
+						</h:panelGrid>
+					<p:separator style="max-width:200px; height:5px;" />
+					<div align="center" style="margin-top: 20px;">
+						<p:commandButton value="&nbsp; Add" actionListener="#{enrichmentView.addGene}" icon="fa fa-plus" update=":formSelect:selectGrowl, :formGenes:tableGenes"/>
+					</div>
+					</h:form>
+
+
+				<f:facet name="footer">
+					<h:graphicImage library="img" width="130" height="110"
+						name="logo1.png" styleClass="center" />
+				</f:facet>
+			</p:layoutUnit>
+			
+			<p:layoutUnit id="right" position="east" size="550" minSize="350"
+				header="Selected Genes" resizable="true" collapsible="true"
+				style="text-align:center">
+				<h:form id="formGenes">	
+					<p:growl id="tableGrowl" life="2000" />		
+				    <p:dataTable id="tableGenes" var="gene" value="#{enrichmentView.selectedGenes}" sortBy="#{gene.symbol}">
+				        <p:column headerText="Symbol">
+				            <h:outputText value="#{gene.symbol}" />
+				        </p:column>
+				        <p:column style="width:80px;text-align: center">
+				             <p:commandButton update=":geneDetail" oncomplete="PF('geneDialog').show()" icon="ui-icon-search" title="View">
+				                <f:setPropertyActionListener value="#{gene}" target="#{enrichmentView.viewGene}" />
+				            </p:commandButton>
+				             <p:commandButton update=":formGenes:tableGrowl, :formGenes:tableGenes" icon="fa fa-remove" title="Remove" action="#{enrichmentView.removeGene}">
+				                <f:setPropertyActionListener value="#{gene}" target="#{enrichmentView.geneToRemove}" />
+				            </p:commandButton>
+				        </p:column>
+				    </p:dataTable>
+				    				    
+				</h:form>
+				
+			</p:layoutUnit>
+
+			<p:layoutUnit id="center" position="center">
+
+			</p:layoutUnit>
+
+		</p:layout>
+		
+	    <p:dialog header="Gene Info" widgetVar="geneDialog" modal="false" showEffect="fade" hideEffect="fade" resizable="false">
+	        <p:outputPanel id="geneDetail" style="text-align:center;">
+	            <p:panelGrid  columns="2">	 
+	                <h:outputText value="Symbol" />
+	                <h:outputText value="#{enrichmentView.viewGene.symbol}" styleClass="sqlDialogText"/>
+	 
+	                <h:outputText value="Synonyms" />
+	                <h:outputText value="#{enrichmentView.viewGene.viewSynonyms()}" styleClass="sqlDialogText"/>
+	                
+	                <h:outputText value="Accessions" />
+	                <h:outputText value="#{enrichmentView.viewGene.viewAccessions()}" styleClass="sqlDialogText"/>
+	            </p:panelGrid>
+	        </p:outputPanel>
+	    </p:dialog>
+
+	</h:body>
+
+</f:view>
+
+
+</html>

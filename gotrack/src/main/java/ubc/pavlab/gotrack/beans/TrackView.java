@@ -66,9 +66,6 @@ import ubc.pavlab.gotrack.model.GraphTypeKey.GraphType;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
-import com.google.common.collect.BiMap;
-import com.google.common.collect.HashBiMap;
-
 /**
  * @author mjacobson
  * @version $Id$
@@ -110,7 +107,6 @@ public class TrackView implements Serializable {
     private Gene currentGene;
     private Edition currentEdition;
     private List<Edition> allEditions = new ArrayList<>();
-    private BiMap<Date, Integer> dateToEdition = HashBiMap.create();
     private Collection<GeneOntologyTerm> allTerms = new HashSet<GeneOntologyTerm>();
 
     /* Current Chart Stuff */
@@ -126,6 +122,7 @@ public class TrackView implements Serializable {
     private Collection<GeneOntologyTerm> itemSelectTerms;
     private Collection<GeneOntologyTerm> filteredTerms;
     private List<GeneOntologyTerm> itemSelectViewTerms;
+    private Number chartValue;
 
     // Right Panel
     private List<GeneOntologyTerm> selectedTerms;
@@ -265,7 +262,7 @@ public class TrackView implements Serializable {
         GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
 
         Map<String, Map<Edition, Double>> staticData = new HashMap<String, Map<Edition, Double>>();
-        staticData.put( "Species Avg", cache.getSpeciesAverages( currentSpeciesId ) );
+        staticData.put( "Species Avg", cache.getSpeciesAverage( currentSpeciesId ) );
         // Base Chart
         initChart( gtk, goChart, new GoChart<Edition, Double>( "Direct Annotations vs Time", "Dates",
                 "Direct Annotations", staticData ) );
@@ -433,7 +430,7 @@ public class TrackView implements Serializable {
 
                 Double multi = 0.0;
                 Edition ed = editionEntry.getKey();
-                Integer total = cache.getAccessionSize( currentSpeciesId, ed.getEdition() );
+                Integer total = cache.getAccessionSize( currentSpeciesId, ed );
                 Set<GeneOntologyTerm> data = editionEntry.getValue();
                 if ( total != null ) {
                     for ( GeneOntologyTerm geneOntologyTerm : data ) {
@@ -641,6 +638,12 @@ public class TrackView implements Serializable {
             // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
 
             // Obtain AnnotationDAO.
+            log.info( "symbol: " + currentGene.getSymbol() );
+            log.info( "synonyms: " + currentGene.getSynonyms() );
+            log.info( "accessions: " + currentGene.getAccessions() );
+
+            log.info( "Gene: " + currentGene );
+
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
             currentEdition = cache.getCurrentEditions( currentSpeciesId );
             allEditions = cache.getAllEditions( currentSpeciesId );
@@ -694,24 +697,34 @@ public class TrackView implements Serializable {
 
         // Keep in mind that the list of entry sets is in the order that the data was inserted, not the order it is
         // displayed!
+
+        // log.info( "Key: " + es.get( event.getItemIndex() ).getKey() );
+        // log.info( "Value: " + es.get( event.getItemIndex() ).getValue() );
+
         String date = ( String ) es.get( event.getItemIndex() ).getKey();
+        chartValue = es.get( event.getItemIndex() ).getValue();
+
+        String label = currentChart.getSeries().get( event.getSeriesIndex() ).getLabel();
 
         selectedDate = date;
-        Map<Edition, Set<GeneOntologyTerm>> series = currentGoChart.get( currentChart.getSeries()
-                .get( event.getSeriesIndex() ).getLabel() );
 
         Collection<Edition> ed = getGoEditionsFromDate( date );
+
         itemSelectTerms = new HashSet<GeneOntologyTerm>();
-        if ( series == null ) {
-            log.debug( "Could not find series for  ("
-                    + currentChart.getSeries().get( event.getSeriesIndex() ).getLabel() + ")" );
-        } else if ( ed.size() == 0 ) {
-            log.debug( "Found no editions for date (" + date + ")" );
+        if ( ed.size() == 0 ) {
+            log.warn( "Found no editions for date (" + date + ")" );
         } else {
 
-            if ( ed.size() > 1 ) log.debug( "Found more than one edition for date (" + date + ")" );
+            if ( ed.size() > 1 ) log.warn( "Found more than one edition for date (" + date + ")" );
 
-            itemSelectTerms = series.get( ed.iterator().next() );
+            Map<Edition, Set<GeneOntologyTerm>> series = currentGoChart.get( label );
+
+            if ( series == null ) {
+                log.debug( "Could not find series for  (" + label + ")" );
+            } else {
+                itemSelectTerms = series.get( ed.iterator().next() );
+            }
+
         }
 
     }
@@ -838,6 +851,10 @@ public class TrackView implements Serializable {
 
     public String getGraphType() {
         return this.graphType;
+    }
+
+    public Number getChartValue() {
+        return chartValue;
     }
 
     public boolean isChartsReady() {

@@ -25,6 +25,7 @@ import java.util.Map;
 
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.StatsEntry;
 
 /**
  * Holds methods for retrieving data that is meant to be cached
@@ -52,5 +53,9 @@ public interface CacheDAO {
             throws DAOException;
 
     public Map<Integer, Integer> getAccessionSizes( Integer speciesId ) throws DAOException;
+
+    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizesFromPrecompute() throws DAOException;
+
+    public Map<Integer, Map<Edition, StatsEntry>> getAggregates() throws DAOException;
 
 }

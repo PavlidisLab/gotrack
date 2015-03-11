@@ -113,4 +113,10 @@ div.timeline-event-selected {
     background: #BECEFE none !important;
     border-color: #97B0F8 !important;
 }
+
+.sqlDialogText {
+    display: block;
+    width: 600px; /* Optional, depends otherwise on parent. */
+    overflow: auto;
+}
             

@@ -20,7 +20,10 @@
 package ubc.pavlab.gotrack.model;
 
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
+
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * TODO Document Me
@@ -50,6 +53,26 @@ public class Gene {
         this.synonyms = synonyms;
     }
 
+    public String viewSynonyms() {
+        return StringUtils.join( synonyms, "|" );
+    }
+
+    public String viewAccessions() {
+        String result = null;
+        if ( accessions != null ) {
+            StringBuilder sb = new StringBuilder();
+            Iterator<Accession> it = accessions.iterator();
+            if ( it.hasNext() ) {
+                sb.append( it.next().getAccession() );
+            }
+            while ( it.hasNext() ) {
+                sb.append( "|" ).append( it.next().getAccession() );
+            }
+            result = sb.toString();
+        }
+        return result;
+    }
+
     public String getSymbol() {
         return symbol;
     }
@@ -72,6 +95,11 @@ public class Gene {
 
     public void setSynonyms( Set<String> synonyms ) {
         this.synonyms = synonyms;
+    }
+
+    @Override
+    public String toString() {
+        return "Gene [symbol=" + symbol + ", accessions=" + accessions + ", synonyms=" + synonyms + "]";
     }
 
 }

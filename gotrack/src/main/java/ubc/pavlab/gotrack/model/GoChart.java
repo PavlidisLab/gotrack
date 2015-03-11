@@ -84,7 +84,12 @@ public class GoChart<X extends Comparable<X>, Y> {
     }
 
     public Map<X, Y> get( String label ) {
-        return Collections.unmodifiableMap( series.get( label ) );
+        LinkedHashMap<X, Y> a = series.get( label );
+        if ( a != null ) {
+            return Collections.unmodifiableMap( series.get( label ) );
+        } else {
+            return null;
+        }
     }
 
     public Map<X, Y> put( String label, Map<X, Y> s ) {
