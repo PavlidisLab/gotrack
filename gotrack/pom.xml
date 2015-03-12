@@ -192,12 +192,12 @@
 		
 		<!-- ErmineJ -->
 		
-		<dependency>
+<!-- 		<dependency>
             <groupId>ermineJ</groupId>
             <artifactId>ermineJ</artifactId>
             <version>3.0.3-SNAPSHOT</version>
             <type>jar</type>
-        </dependency>
+        </dependency> -->
         
         <!-- Guava -->
         
@@ -206,6 +206,15 @@
 			<artifactId>guava</artifactId>
 			<version>18.0</version>
 		</dependency>
+		
+		<!-- Trove -->
+		
+		<dependency>
+			<groupId>net.sf.trove4j</groupId>
+			<artifactId>trove4j</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+		
         
 
 	</dependencies>

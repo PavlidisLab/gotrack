@@ -41,6 +41,7 @@ import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
+import ubc.pavlab.gotrack.go.GeneOntology;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
@@ -85,6 +86,8 @@ public class Cache implements Serializable {
     // Map<species, Map<edition, Map<go_id, count>>>
     private Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
 
+    private Map<Integer, GeneOntology> ontologies = new HashMap<>();
+
     /**
      * 
      */
@@ -108,16 +111,26 @@ public class Cache implements Serializable {
         // Obtain CacheDAO.
         CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
         log.info( "CacheDAO successfully obtained: " + cacheDAO );
-
+        System.gc();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        goSetSizes = cacheDAO.getGOSizesFromPrecompute();
-
-        log.info( "goSetSizes successfully obtained" );
-
+        // goSetSizes = cacheDAO.getGOSizesFromPrecompute();
+        // System.gc();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
+        int cnt = 0;
+        Set<Integer> eds = cacheDAO.getGOEditions();
+        for ( Integer goEdition : eds ) {
+            ontologies.put( goEdition, new GeneOntology( cacheDAO.getAdjacencyList( goEdition ) ) );
+            cnt++;
+            if ( cnt % 10 == 0 ) {
+                log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
+                System.gc();
+                log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                        / 1000000 + " MB" );
+            }
+        }
 
         aggregates = cacheDAO.getAggregates();
 

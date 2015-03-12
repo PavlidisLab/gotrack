@@ -22,9 +22,11 @@ package ubc.pavlab.gotrack.dao;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Relationship;
 import ubc.pavlab.gotrack.model.StatsEntry;
 
 /**
@@ -57,5 +59,9 @@ public interface CacheDAO {
     public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizesFromPrecompute() throws DAOException;
 
     public Map<Integer, Map<Edition, StatsEntry>> getAggregates() throws DAOException;
+
+    public Set<Relationship> getAdjacencyList( int go_edition_id_fk ) throws DAOException;
+
+    public Set<Integer> getGOEditions() throws DAOException;
 
 }

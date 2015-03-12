@@ -62,6 +62,8 @@ public class IndexView implements Serializable {
      */
     public IndexView() {
         log.info( "IndexView created" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
     }
 
     public void validateQuery( ComponentSystemEvent event ) {

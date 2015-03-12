@@ -33,11 +33,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Relationship;
+import ubc.pavlab.gotrack.model.RelationshipType;
 import ubc.pavlab.gotrack.model.StatsEntry;
 
 /**
@@ -70,6 +73,8 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_ALL_GO_SIZES_FROM_PRECOMPUTE = "select species_id, edition, go_id, unique_accessions from gene_annotation_aggregate";
     private static final String SQL_ACCESSION_SIZES = "select edition, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition order by NULL;";
     private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, date, avg_direct, unique_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id";
+    private static final String SQL_GO_ADJACENCY_BY_EDITION = "select child, parent, relationship from go_adjacency where go_edition_id_fk=?";
+    private static final String SQL_GO_EDITIONS = "SELECT distinct id from go_edition";
     // Vars ---------------------------------------------------------------------------------------
 
     private DAOFactory daoFactory;
@@ -416,4 +421,71 @@ public class CacheDAOImpl implements CacheDAO {
 
         return aggregates;
     }
+
+    @Override
+    public Set<Relationship> getAdjacencyList( int go_edition_id_fk ) throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Set<Relationship> rels = new HashSet<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = prepareStatement( connection, SQL_GO_ADJACENCY_BY_EDITION, false, go_edition_id_fk );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                String a = resultSet.getString( "child" );
+                int childId = Integer.parseInt( a.substring( a.length() - 7 ) );
+
+                Relationship rel;
+                a = resultSet.getString( "parent" );
+                if ( resultSet.wasNull() ) {
+                    rel = new Relationship( childId, null, null );
+                } else {
+                    int parentId = Integer.parseInt( a.substring( a.length() - 7 ) );
+                    rel = new Relationship( childId, parentId, RelationshipType.valueOf( resultSet
+                            .getString( "relationship" ) ) );
+                }
+
+                rels.add( rel );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return rels;
+    }
+
+    @Override
+    public Set<Integer> getGOEditions() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Set<Integer> eds = new HashSet<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_GO_EDITIONS );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+
+                eds.add( resultSet.getInt( "id" ) );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return eds;
+    }
+
 }
