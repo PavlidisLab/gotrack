@@ -6,7 +6,8 @@
 	xmlns:ui="http://java.sun.com/jsf/facelets"
 	xmlns:p="http://primefaces.org/ui"
 	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
-	xmlns:pe="http://primefaces.org/ui/extensions">
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:of="http://omnifaces.org/functions">
 
 <f:view contentType="text/html">
 	<f:metadata>
@@ -228,9 +229,6 @@
 								oncomplete="PF('timelineDialog').show()" />
 						</f:facet>
 					</p:dataTable>
-					<p:remoteCommand actionListener="#{trackView.fetchAllTerms()}"
-						name="loadAllTerms" update="funcTable">
-					</p:remoteCommand>
 					
 					<p:remoteCommand actionListener="#{trackView.fetchTimelineFromPanel()}"
 						name="fetchTimelineFromPanel" update=":timelineForm">
@@ -263,7 +261,7 @@
 							<div id="loading-spinner" class="loading"></div>
 							<p:chart id='chart1' type="line"
 								model="#{trackView.currentChart}" style="height:500px;"
-								widgetVar="chart" rendered="#{trackView.firstChartReady}">
+								widgetVar="chart" rendered="#{trackView.chartsReady}">
 								<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
 									oncomplete="openAnnotationDialog()"/>
 							</p:chart>
@@ -271,26 +269,9 @@
 						</p:outputPanel>
 					</div>
 					<p:remoteCommand name="fetchCharts"
-						actionListener="#{trackView.fetchDirectChart()}"
-						update="allCharts"
-						oncomplete="hideLoadingSpinner(), loadAllTerms(), loadJaccard(),loadLossGain(),loadMulti(), loadPropagated()">
-					</p:remoteCommand>
-					<p:remoteCommand
-						actionListener="#{trackView.fetchJaccardChart()}"
-						name="loadJaccard">
-					</p:remoteCommand>
-					<p:remoteCommand
-						actionListener="#{trackView.fetchLossGainChart()}"
-						name="loadLossGain">
-					</p:remoteCommand>
-					<p:remoteCommand
-						actionListener="#{trackView.fetchMultiChart()}"
-						name="loadMulti">
-					</p:remoteCommand>
-					<p:remoteCommand
-						actionListener="#{trackView.fetchPropagatedChart()}"
-						name="loadPropagated"
-						update=":leftForm">
+						actionListener="#{trackView.fetchAll()}"
+						update="allCharts,:leftForm,:funcForm:funcTable"
+						oncomplete="hideLoadingSpinner()">
 					</p:remoteCommand>
 					<p:remoteCommand
 						oncomplete = "PF('itemSelectDialog').show();"
@@ -312,29 +293,43 @@
 		</p:dialog>
 		<p:dialog id="timelineDialog" header="Selected Terms"
 			widgetVar="timelineDialog" modal="true" showEffect="fade"
-			hideEffect="fade" resizable="false" width="800" style="max-height:500px; overflow-y:auto;text-align:center;" onHide="cleanMsg()">
-			<h:outputText id="timelineSelectMsgTerm"/>
+			hideEffect="fade" resizable="false" width="800"
+			style="max-height:500px; overflow-y:auto;text-align:center;"
+			onHide="cleanMsg()">
+			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm" />
+			
+			<h:outputText id="timelineSelectMsgTerm" />
 			<p:spacer width="30" height="16" />
-			<h:outputText id="timelineSelectMsgDate"/>
+			<h:outputText id="timelineSelectMsgDate" />
 			<p:spacer width="30" height="16" />
-			<h:outputText id="timelineSelectMsgExists"/>
-			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm"/>
-				<h:form id="timelineForm">
-				<pe:timeline id="timeline" widgetVar="timelineWdgt" value="#{trackView.timelineModel}" varGroup="group" selectable="true" eventMargin="10" eventMarginAxis="0" stackEvents="false" themable="false" showCurrentTime="false">
-				<pe:javascript event="select" execute="timelineSelect()"/>
-			    <f:facet name="group">  
-			        <h:outputText value="#{group.goId}" title="#{group.name}"/>  
-			    </f:facet> 
-				</pe:timeline>
-				</h:form>
-				<pe:tooltip global="true" myPosition="top, right" atPosition="left center"/> 
+			<h:outputText id="timelineSelectMsgExists" />
+
+
+			<h:form id="timelineForm">
+				<p:dataGrid id="timelineDataGrid" var="tl"
+					value="#{trackView.timelines}" columns="1" style="border:none;" rowIndexVar="rowIndex" widgetVar="timelineDataGridWidget">
+					<p:panel style="text-align:center">
+			        <f:facet name="header">
+			        	<h:outputText value="#{tl.title.goId} - #{of:abbreviate(tl.title.goId, 20)}" title="#{tl.title.name}"/>  
+			        </f:facet>
+					<pe:timeline id="timeline-#{rowIndex}" widgetVar="timelineWidget-#{rowIndex}" value="#{tl}" varGroup="group" selectable="true"
+						eventMargin="10" eventMarginAxis="0" stackEvents="false"
+						themable="false" showCurrentTime="false">
+						<pe:javascript event="select" execute="timelineSelect('#{rowIndex}')" />
+						<pe:javascript event="rangechange" execute="onTimelineRangeChange('#{rowIndex}')"/>
+
+					</pe:timeline>
+					</p:panel>
+				</p:dataGrid>
+			</h:form>
+			<pe:tooltip global="true" myPosition="center left" atPosition="top right"/>
 		</p:dialog>
 		<p:dialog id="itemSelectDialog" header="Annotations" widgetVar="itemSelectDialog"
 			modal="false" width="700px">
 			<p:ajax event="close" listener="#{trackView.cleanFilteredTerms}" update=":itemSelectForm:itemSelectData"/>
 			<h:form id="itemSelectForm" >
 			<h:outputText id="itemSelectMsg"
-				value="Date: #{trackView.selectedDate}, Count: #{trackView.chartValue}" />
+				value="Date: #{trackView.selectedDate}, Count: #{trackView.itemSelectValue}" />
 			<p:dataTable 	id="itemSelectData" 
 							widgetVar="annotationsTable"
 							var="chartTerm" 

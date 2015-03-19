@@ -29,11 +29,19 @@ public class Relationship {
     private final int childId;
     private final Integer parentId;
     private final RelationshipType type;
+    private final String childName;
+    private final Aspect childAspect;
+    private final boolean childObsolete;
 
-    public Relationship( int childId, Integer parentId, RelationshipType type ) {
+    public Relationship( int childId, Integer parentId, RelationshipType type, String childName, Aspect childAspect,
+            boolean childObsolete ) {
+        super();
         this.childId = childId;
         this.parentId = parentId;
         this.type = type;
+        this.childName = childName;
+        this.childAspect = childAspect;
+        this.childObsolete = childObsolete;
     }
 
     public int getChildId() {
@@ -46,6 +54,18 @@ public class Relationship {
 
     public RelationshipType getType() {
         return type;
+    }
+
+    public String getChildName() {
+        return childName;
+    }
+
+    public Aspect getChildAspect() {
+        return childAspect;
+    }
+
+    public boolean isChildObsolete() {
+        return childObsolete;
     }
 
     @Override

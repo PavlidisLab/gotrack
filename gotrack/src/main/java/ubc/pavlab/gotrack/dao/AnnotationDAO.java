@@ -25,11 +25,14 @@ import java.util.Map;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.AnnotationDetailed;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 
 /**
- * This interface represents a contract for a DAO for the {@link Annotation} model. Note that all methods are read-only.
+ * This interface represents a contract for a DAO for the {@link AnnotationDetailed} model. Note that all methods are
+ * read-only.
  */
 public interface AnnotationDAO {
 
@@ -42,7 +45,7 @@ public interface AnnotationDAO {
      * @return The annotation from the database matching the given ID, otherwise null.
      * @throws DAOException If something fails at database level.
      */
-    public Annotation find( Long id ) throws DAOException;
+    public AnnotationDetailed find( Long id ) throws DAOException;
 
     /**
      * Returns the annotations from the database matching the given accession, edition and species, otherwise null.
@@ -53,7 +56,7 @@ public interface AnnotationDAO {
      * @return The annotations from the database matching the given email and password, otherwise null.
      * @throws DAOException If something fails at database level.
      */
-    public List<Annotation> find( String accession, Integer edition, Integer species ) throws DAOException;
+    public List<AnnotationDetailed> find( String accession, Integer edition, Integer species ) throws DAOException;
 
     /**
      * Returns the annotations from the database matching the given accessions, edition and species, otherwise null.
@@ -64,7 +67,8 @@ public interface AnnotationDAO {
      * @return The annotations from the database matching the given email and password, otherwise null.
      * @throws DAOException If something fails at database level.
      */
-    public List<Annotation> find( List<String> accession, Integer edition, Integer species ) throws DAOException;
+    public List<AnnotationDetailed> find( List<String> accession, Integer edition, Integer species )
+            throws DAOException;
 
     /**
      * Returns true if the given symbol exists in the database.
@@ -75,19 +79,22 @@ public interface AnnotationDAO {
      */
     public boolean existSymbol( String symbol ) throws DAOException;
 
-    public Collection<GeneOntologyTerm> findUniqueGOInEdition( List<String> accessions, Integer edition, Integer species )
+    public Collection<Annotation> findUniqueGOInEdition( List<String> accessions, Integer edition, Integer species )
             throws DAOException;
 
     public Collection<String> findUniqueGO( List<String> accessions, Integer species ) throws DAOException;
 
-    public Map<String, Map<Edition, Set<GeneOntologyTerm>>> track( Integer species,
+    public Map<String, Map<Edition, Set<Annotation>>> track( Integer species,
             Map<String, Collection<String>> primaryToSecondary, Integer goEditionId, boolean propagate )
             throws DAOException;
 
-    public Map<String, Map<Edition, Set<GeneOntologyTerm>>> track2( Integer species, String symbol, Integer edition,
+    public Map<String, Map<Edition, Set<Annotation>>> track2( Integer species, String symbol, Integer edition,
             Integer goEditionId, boolean ancestorsOnly ) throws DAOException;
 
     public Map<String, Collection<String>> geneToGoSet( Integer speciesId, Integer edition, Boolean useSymbols )
             throws DAOException;
+
+    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track3( Integer species,
+            String symbol, Integer edition, Integer goEditionId, boolean ancestorsOnly ) throws DAOException;
 
 }

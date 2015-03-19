@@ -26,12 +26,21 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
 import org.apache.log4j.Logger;
 
+import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.Aspect;
+import ubc.pavlab.gotrack.model.EvidenceReference;
+import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.Relationship;
 import ubc.pavlab.gotrack.model.RelationshipType;
 
@@ -73,6 +82,125 @@ public class GeneOntology {
         return termMap.size();
     }
 
+    private int convertGOId( String goid ) {
+        if ( goid.startsWith( "GO:" ) ) {
+            int id;
+            try {
+                id = Integer.parseInt( goid.substring( goid.length() - 7 ) );
+            } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
+                throw new IllegalArgumentException( "Gene Ontology ID (" + goid + ") not in correct format." );
+            }
+            return id;
+        } else {
+            throw new IllegalArgumentException( "Gene Ontology ID (" + goid + ") not in correct format." );
+        }
+    }
+
+    private String convertGOId( int id ) {
+        return "GO:" + String.valueOf( id );
+    }
+
+    public Set<Term> propagate( Collection<Term> goSet ) {
+        Set<Term> propagations = new HashSet<>();
+        for ( Term term : new HashSet<Term>( goSet ) ) {
+            propagations.addAll( getAncestors( term ) );
+        }
+        return Collections.unmodifiableSet( propagations );
+
+    }
+
+    public Set<Annotation> propagateAnnotations( Collection<Annotation> goAnnotations ) {
+
+        Set<Annotation> propagatedAnnotations = new HashSet<Annotation>();
+
+        for ( Annotation annotation : goAnnotations ) {
+            propagatedAnnotations.add( annotation );
+            Term term = termMap.get( convertGOId( annotation.getGoId() ) );
+            if ( term != null ) {
+                Set<Term> propagations = getAncestors( term );
+                for ( Term t : propagations ) {
+                    propagatedAnnotations
+                            .add( new Annotation( t, annotation.getEvidence(), annotation.getReference() ) );
+                }
+            }
+        }
+
+        return Collections.unmodifiableSet( propagatedAnnotations );
+
+    }
+
+    public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
+            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations ) {
+
+        Map<GeneOntologyTerm, Set<EvidenceReference>> propagatedAnnotations = new HashMap<>();
+        for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> goEntry : goAnnotations.entrySet() ) {
+            GeneOntologyTerm go = goEntry.getKey();
+            Set<EvidenceReference> ev = goEntry.getValue();
+            // Add current terms annotations
+            Set<EvidenceReference> evidence = propagatedAnnotations.get( go );
+            if ( evidence == null ) {
+                evidence = new HashSet<>();
+                propagatedAnnotations.put( go, evidence );
+            }
+
+            evidence.addAll( ev );
+
+            Term term = termMap.get( convertGOId( goEntry.getKey().getGoId() ) );
+            if ( term != null ) {
+                Set<Term> propagations = getAncestors( term );
+                for ( Term t : propagations ) {
+
+                    GeneOntologyTerm propagatedGO = new GeneOntologyTerm( convertGOId( t.getId() ), t.getName(), t
+                            .getAspect().toString() );
+                    evidence = propagatedAnnotations.get( propagatedGO );
+                    if ( evidence == null ) {
+                        evidence = new HashSet<>();
+                        propagatedAnnotations.put( propagatedGO, evidence );
+                    }
+
+                    evidence.addAll( ev );
+                }
+            }
+        }
+
+        return propagatedAnnotations;
+    }
+
+    public Set<Term> getAncestors( String goid ) throws IllegalArgumentException {
+        return getAncestors( convertGOId( goid ) );
+    }
+
+    public Set<Term> getAncestors( int id ) {
+        return getAncestors( termMap.get( id ) );
+    }
+
+    private Set<Term> getAncestors( Term t ) {
+        Set<Term> ancestors = new HashSet<>();
+
+        Set<Term> parents = t.getParents();
+
+        for ( Term parent : parents ) {
+            ancestors.add( parent );
+            ancestors.addAll( getAncestors( parent ) );
+        }
+
+        return Collections.unmodifiableSet( ancestors );
+
+    }
+
+    public Set<Term> getParents( String goid ) throws IllegalArgumentException {
+        return getParents( convertGOId( goid ) );
+    }
+
+    public Set<Term> getParents( int id ) {
+        return getParents( termMap.get( id ) );
+    }
+
+    private Set<Term> getParents( Term t ) {
+        return t.getParents();
+
+    }
+
     public void parseAdjacencyList( Set<Relationship> relationships ) {
         termMap = new TIntObjectHashMap<>();
 
@@ -80,8 +208,12 @@ public class GeneOntology {
 
             Term term = termMap.get( rel.getChildId() );
             if ( term == null ) {
-                term = new Term( rel.getChildId() );
+                term = new Term( rel.getChildId(), rel.getChildName(), rel.getChildAspect(), rel.isChildObsolete() );
                 termMap.put( rel.getChildId(), term );
+            } else if ( term.getName() == null || term.getAspect() == null ) {
+                term.setName( rel.getChildName() );
+                term.setAspect( rel.getChildAspect() );
+                term.setObsolete( rel.isChildObsolete() );
             }
             if ( rel.getType() != null ) {
                 if ( rel.getType().equals( RelationshipType.IS_A ) ) {// TODO only IS_A until I figure out how to store

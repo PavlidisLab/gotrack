@@ -1,7 +1,7 @@
 /*
  * The gotrack project
  * 
- * Copyright (c) 2014 University of British Columbia
+ * Copyright (c) 2015 University of British Columbia
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,44 +27,14 @@ package ubc.pavlab.gotrack.model;
  */
 public class GeneOntologyTerm {
 
-    private String goId;
-    private String name;
-    private String aspect;
-    private String evidence;
-    private String reference;
-    private Boolean obsolete;
-    private Integer geneSetSize;
+    private final String goId;
+    private final String name;
+    private final String aspect;
+    private final boolean obsolete = false;
 
-    /**
-     * 
-     */
-    public GeneOntologyTerm() {
-        // TODO Auto-generated constructor stub
-    }
-
-    public GeneOntologyTerm( String goId ) {
+    public GeneOntologyTerm( String goId, String name, String aspect ) {
         super();
         this.goId = goId;
-    }
-
-    public GeneOntologyTerm( String goId, Integer geneSetSize ) {
-        super();
-        this.goId = goId;
-        this.geneSetSize = geneSetSize;
-    }
-
-    public GeneOntologyTerm( String goId, String evidence, String reference ) {
-        super();
-        this.goId = goId;
-        this.evidence = evidence;
-        this.reference = reference;
-    }
-
-    public GeneOntologyTerm( String goId, String evidence, String reference, String name, String aspect ) {
-        super();
-        this.goId = goId;
-        this.evidence = evidence;
-        this.reference = reference;
         this.name = name;
         this.aspect = aspect;
     }
@@ -73,66 +43,17 @@ public class GeneOntologyTerm {
         return goId;
     }
 
-    public void setGoId( String goId ) {
-        this.goId = goId;
-    }
-
-    public String getEvidence() {
-        return evidence;
-    }
-
-    public void setEvidence( String evidence ) {
-        this.evidence = evidence;
-    }
-
-    public String getReference() {
-        return reference;
-    }
-
-    public void setReference( String reference ) {
-        this.reference = reference;
-    }
-
     public String getName() {
         return name;
-    }
-
-    public void setName( String name ) {
-        this.name = name;
     }
 
     public String getAspect() {
         return aspect;
     }
 
-    public void setAspect( String aspect ) {
-        this.aspect = aspect;
-    }
-
-    public Integer getGeneSetSize() {
-        return geneSetSize;
-    }
-
-    public void setGeneSetSize( Integer geneSetSize ) {
-        this.geneSetSize = geneSetSize;
-    }
-
-    public Boolean isObsolete() {
-        return obsolete;
-    }
-
-    public Boolean getObsolete() {
-        return obsolete;
-    }
-
-    public void setObsolete( Boolean obsolete ) {
-        this.obsolete = obsolete;
-    }
-
     @Override
     public String toString() {
-        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + ", evidence=" + evidence
-                + ", reference=" + reference + ", obsolete=" + obsolete + "]";
+        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + "]";
     }
 
     @Override
@@ -153,6 +74,10 @@ public class GeneOntologyTerm {
             if ( other.goId != null ) return false;
         } else if ( !goId.equals( other.goId ) ) return false;
         return true;
+    }
+
+    public boolean isObsolete() {
+        return obsolete;
     }
 
 }

@@ -19,7 +19,7 @@
 
 package ubc.pavlab.gotrack.model;
 
-import java.util.List;
+import ubc.pavlab.gotrack.go.Term;
 
 /**
  * TODO Document Me
@@ -29,57 +29,49 @@ import java.util.List;
  */
 public class Annotation {
 
-    private String accession;
-    private Integer edition;
     private String goId;
-    private Integer species;
-    private String symbol;
-    private String reference;
-    private String evidence;
     private String name;
-    private List<String> synonyms;
-    private String type;
-    private Integer taxon;
-    private Integer interactingTaxon;
+    private String aspect;
+    private String evidence;
+    private String reference;
+    private Boolean obsolete;
 
     /**
      * 
      */
     public Annotation() {
+        // TODO Auto-generated constructor stub
     }
 
-    public Annotation( String accession, Integer edition, String goId, Integer species, String symbol,
-            String reference, String evidence, String name, List<String> synonyms, String type, Integer taxon,
-            Integer interactingTaxon ) {
+    public Annotation( String goId ) {
         super();
-        this.accession = accession;
-        this.edition = edition;
         this.goId = goId;
-        this.species = species;
-        this.symbol = symbol;
-        this.reference = reference;
+    }
+
+    public Annotation( String goId, String evidence, String reference ) {
+        super();
+        this.goId = goId;
         this.evidence = evidence;
+        this.reference = reference;
+    }
+
+    public Annotation( String goId, String evidence, String reference, String name, String aspect ) {
+        super();
+        this.goId = goId;
+        this.evidence = evidence;
+        this.reference = reference;
         this.name = name;
-        this.synonyms = synonyms;
-        this.type = type;
-        this.taxon = taxon;
-        this.interactingTaxon = interactingTaxon;
+        this.aspect = aspect;
     }
 
-    public String getAccession() {
-        return accession;
-    }
-
-    public void setAccession( String accession ) {
-        this.accession = accession;
-    }
-
-    public Integer getEdition() {
-        return edition;
-    }
-
-    public void setEdition( Integer edition ) {
-        this.edition = edition;
+    public Annotation( Term t, String evidence, String reference ) {
+        super();
+        this.goId = "GO:" + String.valueOf( t.getId() );
+        this.evidence = evidence;
+        this.reference = reference;
+        this.name = t.getName();
+        this.aspect = t.getAspect().toString();
+        this.obsolete = t.isObsolete();
     }
 
     public String getGoId() {
@@ -90,20 +82,12 @@ public class Annotation {
         this.goId = goId;
     }
 
-    public Integer getSpecies() {
-        return species;
+    public String getEvidence() {
+        return evidence;
     }
 
-    public void setSpecies( Integer species ) {
-        this.species = species;
-    }
-
-    public String getSymbol() {
-        return symbol;
-    }
-
-    public void setSymbol( String symbol ) {
-        this.symbol = symbol;
+    public void setEvidence( String evidence ) {
+        this.evidence = evidence;
     }
 
     public String getReference() {
@@ -114,14 +98,6 @@ public class Annotation {
         this.reference = reference;
     }
 
-    public String getEvidence() {
-        return evidence;
-    }
-
-    public void setEvidence( String evidence ) {
-        this.evidence = evidence;
-    }
-
     public String getName() {
         return name;
     }
@@ -130,54 +106,39 @@ public class Annotation {
         this.name = name;
     }
 
-    public List<String> getSynonyms() {
-        return synonyms;
+    public String getAspect() {
+        return aspect;
     }
 
-    public void setSynonyms( List<String> synonyms ) {
-        this.synonyms = synonyms;
+    public void setAspect( String aspect ) {
+        this.aspect = aspect;
     }
 
-    public String getType() {
-        return type;
+    public Boolean isObsolete() {
+        return obsolete;
     }
 
-    public void setType( String type ) {
-        this.type = type;
+    public Boolean getObsolete() {
+        return obsolete;
     }
 
-    public Integer getTaxon() {
-        return taxon;
-    }
-
-    public void setTaxon( Integer taxon ) {
-        this.taxon = taxon;
-    }
-
-    public Integer getInteractingTaxon() {
-        return interactingTaxon;
-    }
-
-    public void setInteractingTaxon( Integer interactingTaxon ) {
-        this.interactingTaxon = interactingTaxon;
+    public void setObsolete( Boolean obsolete ) {
+        this.obsolete = obsolete;
     }
 
     @Override
     public String toString() {
-        return "Annotation [accession=" + accession + ", edition=" + edition + ", goId=" + goId + ", species="
-                + species + ", symbol=" + symbol + "]";
+        return "Annotation [goId=" + goId + ", name=" + name + ", aspect=" + aspect + ", evidence=" + evidence
+                + ", reference=" + reference + ", obsolete=" + obsolete + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( accession == null ) ? 0 : accession.hashCode() );
-        result = prime * result + ( ( edition == null ) ? 0 : edition.hashCode() );
         result = prime * result + ( ( evidence == null ) ? 0 : evidence.hashCode() );
         result = prime * result + ( ( goId == null ) ? 0 : goId.hashCode() );
         result = prime * result + ( ( reference == null ) ? 0 : reference.hashCode() );
-        result = prime * result + ( ( species == null ) ? 0 : species.hashCode() );
         return result;
     }
 
@@ -187,12 +148,6 @@ public class Annotation {
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
         Annotation other = ( Annotation ) obj;
-        if ( accession == null ) {
-            if ( other.accession != null ) return false;
-        } else if ( !accession.equals( other.accession ) ) return false;
-        if ( edition == null ) {
-            if ( other.edition != null ) return false;
-        } else if ( !edition.equals( other.edition ) ) return false;
         if ( evidence == null ) {
             if ( other.evidence != null ) return false;
         } else if ( !evidence.equals( other.evidence ) ) return false;
@@ -202,9 +157,6 @@ public class Annotation {
         if ( reference == null ) {
             if ( other.reference != null ) return false;
         } else if ( !reference.equals( other.reference ) ) return false;
-        if ( species == null ) {
-            if ( other.species != null ) return false;
-        } else if ( !species.equals( other.species ) ) return false;
         return true;
     }
 

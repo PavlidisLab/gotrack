@@ -33,11 +33,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import ubc.pavlab.gotrack.go.GeneOntology;
 import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Relationship;
 import ubc.pavlab.gotrack.model.RelationshipType;
@@ -60,7 +63,7 @@ public class CacheDAOImpl implements CacheDAO {
             + "from edition INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id order by edition DESC) "
             + "as temp group by species_id";
     private static final String SQL_ALL_EDITIONS = "select species_id, edition, edition.date, go_edition.date as go_date, go_edition_id_fk "
-            + "from edition inner join go_edition on edition.go_edition_id_fk=go_edition.id order by edition";
+            + "from edition left join go_edition on edition.go_edition_id_fk=go_edition.id order by edition";
     private static final String SQL_ACCESSIONS = "select distinct symbol, accession, synonyms, sec from gene_annotation LEFT JOIN sec_ac on accession=ac where species_id = ? AND edition=?";
     private static final String SQL_UNIQUE_SYMBOL = "select distinct symbol from gene_annotation where species_id = ? AND edition=?";
     private static final String SQL_SPECIES_AVERAGES = "select aggregate.species_id, aggregate.edition, date, avg_direct "
@@ -73,8 +76,12 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_ALL_GO_SIZES_FROM_PRECOMPUTE = "select species_id, edition, go_id, unique_accessions from gene_annotation_aggregate";
     private static final String SQL_ACCESSION_SIZES = "select edition, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition order by NULL;";
     private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, date, avg_direct, unique_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id";
-    private static final String SQL_GO_ADJACENCY_BY_EDITION = "select child, parent, relationship from go_adjacency where go_edition_id_fk=?";
+    private static final String SQL_GO_ADJACENCY_BY_EDITION = "select child, parent, relationship, name, aspect, is_obsolete from go_adjacency inner join go_term on go_term.go_id=go_adjacency.child and go_term.go_edition_id_fk=go_adjacency.go_edition_id_fk where go_adjacency.go_edition_id_fk=?";
     private static final String SQL_GO_EDITIONS = "SELECT distinct id from go_edition";
+    private static final String SQL_GO_ADJACENCIES = "select go_adjacency.go_edition_id_fk, child, parent, relationship, name as child_name, aspect as child_aspect, is_obsolete as child_is_obsolete from go_adjacency inner join go_term on go_term.go_id=go_adjacency.child and go_term.go_edition_id_fk=go_adjacency.go_edition_id_fk";
+    private static final String SQL_GO_ADJACENCIES_BY_RANGE = "select go_adjacency.go_edition_id_fk, child, parent, relationship, name as child_name, aspect as child_aspect, is_obsolete as child_is_obsolete from go_adjacency inner join go_term on go_term.go_id=go_adjacency.child and go_term.go_edition_id_fk=go_adjacency.go_edition_id_fk where go_adjacency.go_edition_id_fk IN (%s)";
+    private static final String SQL_EVIDENCE_CATEGORIES = "select evidence, category from evidence_categories";
+
     // Vars ---------------------------------------------------------------------------------------
 
     private DAOFactory daoFactory;
@@ -435,17 +442,20 @@ public class CacheDAOImpl implements CacheDAO {
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
+                // child, parent, relationship, name, aspect, is_obsolete
                 String a = resultSet.getString( "child" );
                 int childId = Integer.parseInt( a.substring( a.length() - 7 ) );
 
                 Relationship rel;
                 a = resultSet.getString( "parent" );
                 if ( resultSet.wasNull() ) {
-                    rel = new Relationship( childId, null, null );
+                    rel = new Relationship( childId, null, null, resultSet.getString( "name" ),
+                            Aspect.valueOf( resultSet.getString( "aspect" ) ), resultSet.getBoolean( "is_obsolete" ) );
                 } else {
                     int parentId = Integer.parseInt( a.substring( a.length() - 7 ) );
                     rel = new Relationship( childId, parentId, RelationshipType.valueOf( resultSet
-                            .getString( "relationship" ) ) );
+                            .getString( "relationship" ) ), resultSet.getString( "name" ), Aspect.valueOf( resultSet
+                            .getString( "aspect" ) ), resultSet.getBoolean( "is_obsolete" ) );
                 }
 
                 rels.add( rel );
@@ -488,4 +498,147 @@ public class CacheDAOImpl implements CacheDAO {
         return eds;
     }
 
+    @Override
+    public Map<Integer, GeneOntology> getOntologies() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<Integer, Set<Relationship>> relsMap = new HashMap<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_GO_ADJACENCIES );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                // go_edition_id_fk, child, parent, relationship, child_name, child_aspect, child_is_obsolete
+                Integer goEd = resultSet.getInt( "go_edition_id_fk" );
+                String a = resultSet.getString( "child" );
+                int childId = Integer.parseInt( a.substring( a.length() - 7 ) );
+
+                Relationship rel;
+                a = resultSet.getString( "parent" );
+                if ( resultSet.wasNull() ) {
+                    rel = new Relationship( childId, null, null, resultSet.getString( "child_name" ),
+                            Aspect.valueOf( resultSet.getString( "child_aspect" ) ),
+                            resultSet.getBoolean( "child_is_obsolete" ) );
+                } else {
+                    int parentId = Integer.parseInt( a.substring( a.length() - 7 ) );
+                    rel = new Relationship( childId, parentId, RelationshipType.valueOf( resultSet
+                            .getString( "relationship" ) ), resultSet.getString( "child_name" ),
+                            Aspect.valueOf( resultSet.getString( "child_aspect" ) ),
+                            resultSet.getBoolean( "child_is_obsolete" ) );
+                }
+
+                Set<Relationship> rels = relsMap.get( goEd );
+                if ( rels == null ) {
+                    rels = new HashSet<>();
+                    relsMap.put( goEd, rels );
+                }
+
+                rels.add( rel );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        log.info( "Done resultsets" );
+        System.gc();
+
+        Map<Integer, GeneOntology> ontologies = new HashMap<>();
+
+        for ( Entry<Integer, Set<Relationship>> relsEntry : relsMap.entrySet() ) {
+            ontologies.put( relsEntry.getKey(), new GeneOntology( relsEntry.getValue() ) );
+        }
+
+        return ontologies;
+    }
+
+    @Override
+    public Map<Integer, Set<Relationship>> getOntologies( Collection<Integer> range ) throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<Integer, Set<Relationship>> relsMap = new HashMap<>();
+        String sql = String.format( SQL_GO_ADJACENCIES_BY_RANGE, DAOUtil.preparePlaceHolders( range.size() ) );
+        List<Object> params = new ArrayList<Object>();
+
+        for ( Integer id : range ) {
+            params.add( id );
+        }
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                // go_edition_id_fk, child, parent, relationship, child_name, child_aspect, child_is_obsolete
+                Integer goEd = resultSet.getInt( "go_edition_id_fk" );
+                String a = resultSet.getString( "child" );
+                int childId = Integer.parseInt( a.substring( a.length() - 7 ) );
+
+                Relationship rel;
+                a = resultSet.getString( "parent" );
+                if ( resultSet.wasNull() ) {
+                    rel = new Relationship( childId, null, null, resultSet.getString( "child_name" ),
+                            Aspect.valueOf( resultSet.getString( "child_aspect" ) ),
+                            resultSet.getBoolean( "child_is_obsolete" ) );
+                } else {
+                    int parentId = Integer.parseInt( a.substring( a.length() - 7 ) );
+                    rel = new Relationship( childId, parentId, RelationshipType.valueOf( resultSet
+                            .getString( "relationship" ) ), resultSet.getString( "child_name" ),
+                            Aspect.valueOf( resultSet.getString( "child_aspect" ) ),
+                            resultSet.getBoolean( "child_is_obsolete" ) );
+                }
+
+                Set<Relationship> rels = relsMap.get( goEd );
+                if ( rels == null ) {
+                    rels = new HashSet<>();
+                    relsMap.put( goEd, rels );
+                }
+
+                rels.add( rel );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return relsMap;
+    }
+
+    @Override
+    public Map<String, String> getEvidenceCategories() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<String, String> results = new HashMap<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_EVIDENCE_CATEGORIES );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                String evidence = resultSet.getString( "evidence" );
+                String category = resultSet.getString( "category" );
+                results.put( evidence, category );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
+    }
 }

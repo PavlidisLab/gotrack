@@ -56,14 +56,14 @@ var changeGraphScale =  function() {
 }
 
 
-function timelineSelect() {
-   var obj = PF('timelineWdgt').getSelectedEvent();
+function timelineSelect(timelineIndex) {
+   var obj = PF('timelineWidget-'+timelineIndex).getSelectedEvent();
    //console.log( obj ); 
    var str = obj.className;
    var patt = new RegExp("true");
    var exists = patt.test(str);
    
-   $('#timelineSelectMsgTerm').html('<b>Term:</b> '+ obj.group);
+   $('#timelineSelectMsgTerm').html('<b>Annotation Category:</b> '+ obj.group);
    $('#timelineSelectMsgDate').html('<b>Date:</b> '+ obj.content);
    $('#timelineSelectMsgExists').html('<b>Annotated:</b> ' + exists);
 }
@@ -159,6 +159,17 @@ function showAllSeries() {
       showSeries(i, false);
    }
    PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
+}
+
+function onTimelineRangeChange(timelineIndex) {
+   var range = PF('timelineWidget-'+timelineIndex).getVisibleRange(); 
+   var timelines = PrimeFaces.widgets.timelineDataGridWidget.content.find('tr').length
+   for (var int = 0; int < timelines; int++) {
+      if ( timelineIndex !== int ) {
+         PF('timelineWidget-'+int).setVisibleRange(range.start, range.end); 
+      }       
+   }
+   
 }
 
 $(document).ready(function() {

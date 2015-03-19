@@ -97,7 +97,7 @@ public class IndexView implements Serializable {
             return;
         }
 
-        if ( cache.currentSymbolExists( selectspecies, currentQuery ) ) {
+        if ( !cache.currentSymbolExists( selectspecies, currentQuery ) ) {
 
             FacesMessage msg = new FacesMessage( "The selected gene symbol could not be found." );
             msg.setSeverity( FacesMessage.SEVERITY_ERROR );

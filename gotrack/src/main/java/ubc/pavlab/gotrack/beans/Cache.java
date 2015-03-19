@@ -44,11 +44,15 @@ import ubc.pavlab.gotrack.dao.SpeciesDAO;
 import ubc.pavlab.gotrack.go.GeneOntology;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.Relationship;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.StatsEntry;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -88,6 +92,9 @@ public class Cache implements Serializable {
 
     private Map<Integer, GeneOntology> ontologies = new HashMap<>();
 
+    // Static
+    private Map<String, String> evidenceCodeCategories = new HashMap<>();
+
     /**
      * 
      */
@@ -99,6 +106,7 @@ public class Cache implements Serializable {
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "Cache init" );
+
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
@@ -108,48 +116,75 @@ public class Cache implements Serializable {
 
         speciesList = speciesDAO.list();
 
+        log.info( "Species List successfully obtained: " + speciesList );
+
         // Obtain CacheDAO.
         CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
         log.info( "CacheDAO successfully obtained: " + cacheDAO );
+
+        evidenceCodeCategories = cacheDAO.getEvidenceCategories();
+
         System.gc();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        // goSetSizes = cacheDAO.getGOSizesFromPrecompute();
-        // System.gc();
+        goSetSizes = cacheDAO.getGOSizesFromPrecompute();
+
+        log.info( "GO Set sizes successfully obtained" );
+
+        System.gc();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
+
+        List<Integer> eds = new ArrayList<Integer>( cacheDAO.getGOEditions() );
+        List<List<Integer>> edPartitions = Lists.partition( eds, 20 );
         int cnt = 0;
-        Set<Integer> eds = cacheDAO.getGOEditions();
-        for ( Integer goEdition : eds ) {
-            ontologies.put( goEdition, new GeneOntology( cacheDAO.getAdjacencyList( goEdition ) ) );
-            cnt++;
-            if ( cnt % 10 == 0 ) {
-                log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
-                System.gc();
-                log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                        / 1000000 + " MB" );
+        for ( List<Integer> list : edPartitions ) {
+            Map<Integer, Set<Relationship>> tmp = cacheDAO.getOntologies( list );
+            for ( Entry<Integer, Set<Relationship>> relsEntry : tmp.entrySet() ) {
+                ontologies.put( relsEntry.getKey(), new GeneOntology( relsEntry.getValue() ) );
+                cnt++;
+                relsEntry.getValue().clear();
+
             }
+            System.gc();
+            log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
+            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                    / 1000000 + " MB" );
+
         }
+
+        // ontologies = cacheDAO.getOntologies();
+
+        System.gc();
+        log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
 
         aggregates = cacheDAO.getAggregates();
 
-        log.info( "aggregates successfully obtained" );
+        log.info( "Aggregates successfully obtained" );
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
         // Create speciesAverage view
-        for ( Entry<Integer, Map<Edition, StatsEntry>> speciesEntry : aggregates.entrySet() ) {
-            Integer speciesId = speciesEntry.getKey();
+        for ( Species species : speciesList ) {
+            Integer speciesId = species.getId();
+            Map<Edition, StatsEntry> a = aggregates.get( speciesId );
             HashMap<Edition, Double> sa = new HashMap<Edition, Double>();
-            for ( Entry<Edition, StatsEntry> editionEntry : speciesEntry.getValue().entrySet() ) {
-                sa.put( editionEntry.getKey(), editionEntry.getValue().getAverageDirects() );
+            if ( a != null ) {
+                for ( Entry<Edition, StatsEntry> editionEntry : a.entrySet() ) {
+                    sa.put( editionEntry.getKey(), editionEntry.getValue().getAverageDirects() );
+                }
             }
             speciesAverage.put( speciesId, sa );
         }
 
         log.info( "speciesAverages successfully computed" );
+
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
 
         // currentEditions = cacheDAO.getCurrentEditions();
         // log.debug( "Current Editions Size: " + currentEditions.size() );
@@ -199,6 +234,8 @@ public class Cache implements Serializable {
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
+
+        log.info( "Cache Completed" );
 
     }
 
@@ -338,6 +375,25 @@ public class Cache implements Serializable {
                 return se.getUniqueAccesions();
             }
 
+        }
+        return null;
+    }
+
+    public String getEvidenceCategory( String evidence ) {
+        if ( evidence == null ) {
+            return null;
+        }
+        return evidenceCodeCategories.get( evidence );
+    }
+
+    public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
+            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations, Integer goEdition ) {
+        if ( goAnnotations == null || goEdition == null ) {
+            return null;
+        }
+        GeneOntology o = ontologies.get( goEdition );
+        if ( o != null ) {
+            return o.propagate( goAnnotations );
         }
         return null;
     }
