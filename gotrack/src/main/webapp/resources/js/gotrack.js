@@ -35,11 +35,11 @@ function centerResize() {
    PrimeFaces.widgets.funcTable.render();
 }
 
-var changeGraphScale =  function() {
+function changeGraphScale() {
    var renderer;
    var scale = $("#leftForm\\:scaleSelect div.ui-state-active > input").val();
-   var options = plot.options;
-   var data = plot.data;
+   var options = PrimeFaces.widgets.chart.plot.options;
+   var data = PrimeFaces.widgets.chart.plot.data;
    
    if (scale == "log") {
       renderer = $.jqplot.LogAxisRenderer;              
