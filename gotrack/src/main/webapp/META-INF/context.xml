@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- THIS FILE SHOULD BE ALTERED IN YOUR TOMCAT CONFIGURATION -->
+<Context>
+    <Resource
+        name="jdbc/gotrack_sandbox" type="javax.sql.DataSource"
+        maxActive="100" maxIdle="30" maxWait="10000" 
+        url="jdbc:mysql://webdb.pavlab.chibi.ubc.ca:3306/gotrack_sandbox"
+        driverClassName="com.mysql.jdbc.Driver"
+                username="dbuser" password="dbpassword"
+    />
+    <Resource
+        name="jdbc/gotrack_test" type="javax.sql.DataSource"
+        maxActive="100" maxIdle="30" maxWait="10000" 
+        url="jdbc:mysql://webdb.pavlab.chibi.ubc.ca:3306/gotrack_test"
+        driverClassName="com.mysql.jdbc.Driver"
+                username="dbuser" password="dbpassword"
+    />
+    <Resource
+        name="jdbc/gotrack" type="javax.sql.DataSource"
+        maxActive="100" maxIdle="30" maxWait="10000" 
+        url="jdbc:mysql://127.0.0.1:3306/gotrack"
+        driverClassName="com.mysql.jdbc.Driver"
+                username="dbuser" password="dbpassword"
+    />
+</Context>

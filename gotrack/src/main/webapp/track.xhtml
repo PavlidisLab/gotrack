@@ -99,21 +99,19 @@
 							icon="fa fa-info-circle" styleClass="right-border" />
 						<f:facet name="options">
 							<p:selectOneMenu id="selectspecies"
-								value="#{indexView.currentSpeciesId}" style="margin-right:5px;">
-								<p:ajax event="change" update="selectspecies" />
+								value="#{geneSearchView.speciesId}" style="margin-right:5px;">
+								<p:ajax event="change" process="@this"/>
 								<f:selectItems value="#{cache.speciesList}" var="spec"
 									itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
 							</p:selectOneMenu>
-							<p:autoComplete id="userinp" value="#{indexView.query}"
-								completeMethod="#{indexView.complete}" queryDelay="600"
+							<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
+								completeMethod="#{geneSearchView.complete}" queryDelay="600"
 								minQueryLength="2" forceSelection="true" maxResults="10"
 								label="ID"
-								emptyMessage="No gene suggestions available,  please try again."
-								style="margin-right:8px;">
-								<p:ajax event="focus" update="selectspecies" />
-							</p:autoComplete>
+								emptyMessage="No gene suggestions available, please try again."
+								style="margin-right:8px;"/>
 							<p:commandButton type="submit" value="Go"
-								action="#{indexView.go}" />
+								action="#{geneSearchView.go}" />
 						</f:facet>
 					</p:menubar>
 				</h:form>
@@ -239,7 +237,7 @@
 			<p:layoutUnit id="center" position="center">
 
 				<div id="page-title">
-					<h1>#{trackView.query} -
+					<h1>#{trackView.currentGene.symbol} -
 						#{trackView.currentSpecies.scientificName}</h1>
 					<h:form>
 						<p>
@@ -309,7 +307,7 @@
 					value="#{trackView.timelines}" columns="1" style="border:none;" rowIndexVar="rowIndex" widgetVar="timelineDataGridWidget">
 					<p:panel style="text-align:center">
 			        <f:facet name="header">
-			        	<h:outputText value="#{tl.title.goId} - #{of:abbreviate(tl.title.goId, 20)}" title="#{tl.title.name}"/>  
+			        	<h:outputText value="#{tl.title.goId} - #{of:abbreviate(tl.title.name, 50)}" title="#{tl.title.name}"/>  
 			        </f:facet>
 					<pe:timeline id="timeline-#{rowIndex}" widgetVar="timelineWidget-#{rowIndex}" value="#{tl}" varGroup="group" selectable="true"
 						eventMargin="10" eventMarginAxis="0" stackEvents="false"

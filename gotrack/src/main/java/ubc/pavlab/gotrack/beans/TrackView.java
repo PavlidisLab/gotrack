@@ -83,6 +83,9 @@ public class TrackView {
     @ManagedProperty("#{stats}")
     private Stats stats;
 
+    @ManagedProperty("#{sessionCache}")
+    private SessionCache sessionCache;
+
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
 
@@ -139,9 +142,8 @@ public class TrackView {
     private static final String COMBINED_TITLE = "All Accessions";
 
     public TrackView() {
-        log.info( "TrackView2 created" );
-        // TODO remove this
-        System.gc();
+        log.info( "TrackView created" );
+        // System.gc();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
     }
@@ -192,10 +194,20 @@ public class TrackView {
     public void fetchAll() {
         log.info( "fetch Annotation Data" );
         // <PrimaryAccession, <Edition, <GOID, annotations>>>
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = annotationDAO.track3(
-                currentSpeciesId, query, currentEdition.getEdition(), currentEdition.getGoEditionId(), false );
+        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = sessionCache
+                .getData( currentGene );
 
-        log.info( "size: " + data.get( "acc1" ).get( currentEdition ) );
+        if ( data == null ) {
+
+            data = annotationDAO.track3( currentSpeciesId, query, currentEdition.getEdition(),
+                    currentEdition.getGoEditionId(), false );
+
+            sessionCache.addData( currentGene, data );
+            log.info( "Retrieved data from db" );
+        } else {
+            log.info( "Retrieved data from SessionCache" );
+
+        }
 
         Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData = propagate( data );
         log.info( "Annotation Data fetched" );
@@ -205,6 +217,7 @@ public class TrackView {
         createJaccardChart( data, "Jaccard Similarity vs Time", "Dates", "Jaccard Similarity" );
         createMultiChart( data, "Multifunctionality vs Time", "Dates", "Multifunctionality" );
         createLossGainChart( data, "Loss & Gain vs Time", "Dates", "Change" );
+        sessionCache.addCharts( currentGene, lineChartModelMap, goChartMap );
 
         GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
 
@@ -700,9 +713,12 @@ public class TrackView {
 
                 Set<EvidenceReference> allEvidenceInEdition = allTermsInEdition.get( geneOntologyTerm );
 
-                for ( EvidenceReference er : allEvidenceInEdition ) {
-                    categories.add( er.getCategory() );
-                    setGroups.add( er.getCategory() );
+                if ( allEvidenceInEdition != null ) {
+
+                    for ( EvidenceReference er : allEvidenceInEdition ) {
+                        categories.add( er.getCategory() );
+                        setGroups.add( er.getCategory() );
+                    }
                 }
 
             }
@@ -916,6 +932,10 @@ public class TrackView {
         return currentSpecies;
     }
 
+    public Gene getCurrentGene() {
+        return currentGene;
+    }
+
     public Integer getCurrentSpeciesId() {
         return currentSpeciesId;
     }
@@ -1030,6 +1050,10 @@ public class TrackView {
 
     public void setStats( Stats stats ) {
         this.stats = stats;
+    }
+
+    public void setSessionCache( SessionCache sessionCache ) {
+        this.sessionCache = sessionCache;
     }
 
 }

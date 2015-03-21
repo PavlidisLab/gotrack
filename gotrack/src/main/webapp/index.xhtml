@@ -178,27 +178,28 @@
 								<h:panelGrid id="usrinp" columns="3"
 									style="border:none;margin:0 auto;width:700px;">
 								
-								<f:event listener="#{indexView.validateQuery}" type="postValidate" />
+								<f:event listener="#{geneSearchView.validateQuery}" type="postValidate" />
 								
 								<h:outputText
 										value="Select the species of interest (required): " />
-									<p:selectOneMenu id="selectspecies" value="#{indexView.currentSpeciesId}">
-										<p:ajax event="change" update="selectspecies" />
+									<p:selectOneMenu id="selectspecies" value="#{geneSearchView.speciesId}">
+										<p:ajax event="change" process="@this"/>
 										<f:selectItems value="#{cache.speciesList}" var="spec"
 											itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
 									</p:selectOneMenu>
 									<p:tooltip id="toolTip2" for="selectspecies"
 										value="Select the species of interest" />
 
-									<h:outputLabel for="userinp"
+									<h:outputLabel for="geneInput"
 										value="Write the gene product ID or GO term to visualize:" />
-									<p:autoComplete id="userinp" value="#{indexView.query}" completeMethod="#{indexView.complete}" 
-									queryDelay="600" minQueryLength="2" forceSelection="true" maxResults="10"  
-									label="ID" emptyMessage="No gene suggestions available,  please try again.">
-									<p:ajax event="focus" update="selectspecies" />
-									</p:autoComplete>
 
-									<p:tooltip id="toolTip1" for="userinp"
+									<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
+										completeMethod="#{geneSearchView.complete}" queryDelay="600"
+										minQueryLength="2" forceSelection="true" maxResults="10"
+										label="ID"
+										emptyMessage="No gene suggestions available, please try again."/>
+
+									<p:tooltip id="toolTip1" for="geneInput"
 										value="Write the gene symbol to visualize" />
 
 								</h:panelGrid>
@@ -206,7 +207,7 @@
 
 								<p:messages id="messages" showDetail="false" autoUpdate="true"
 									closable="true" />
-								<p:commandButton type="submit" value="Continue" action="#{indexView.go}"/>
+								<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
 
 
 							</h:form></hgroup>
