@@ -312,11 +312,11 @@
 			onHide="cleanMsg()">
 			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm" />
 			<p:scrollPanel id="timeline-scrollpanel" mode="native" style="max-height:500px">
-			<h:outputText id="timelineSelectMsgTerm" />
-			<p:spacer width="30" height="16" />
 			<h:outputText id="timelineSelectMsgDate" />
 			<p:spacer width="30" height="16" />
-			<h:outputText id="timelineSelectMsgExists" />
+			<h:outputText id="timelineSelectMsgTerm" />
+			<p:spacer width="30" height="16" />
+			<h:outputText id="timelineSelectMsgReference" />
 
 
 			<h:form id="timelineForm">

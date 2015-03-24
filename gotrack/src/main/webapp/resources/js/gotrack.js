@@ -62,10 +62,10 @@ function timelineSelect(timelineIndex) {
    var str = obj.className;
    var patt = new RegExp("true");
    var exists = patt.test(str);
-   
-   $('#timelineSelectMsgTerm').html('<b>Annotation Category:</b> '+ obj.group);
-   $('#timelineSelectMsgDate').html('<b>Date:</b> '+ obj.content);
-   $('#timelineSelectMsgExists').html('<b>Annotated:</b> ' + exists);
+   var tags = obj.content.split("(|)");
+   $('#timelineSelectMsgTerm').html('<b>Evidence:</b> '+ tags[1]);
+   $('#timelineSelectMsgDate').html('<b>Date:</b> '+ obj.start.toLocaleDateString());
+   $('#timelineSelectMsgReference').html('<b>Reference:</b> ' + tags[0]);
 }
 
 function cleanMsg() {

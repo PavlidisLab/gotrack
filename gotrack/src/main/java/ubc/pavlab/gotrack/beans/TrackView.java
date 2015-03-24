@@ -697,39 +697,31 @@ public class TrackView {
      */
     private void fetchTimeline( boolean fromPanel ) {
 
-        // <Selected Term, <Date, Exists>>
-        // Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData = new HashMap<>();
-        Map<GeneOntologyTerm, Map<Date, Set<String>>> timelineData = new HashMap<>();
-        Map<GeneOntologyTerm, Set<String>> timelineGroups = new HashMap<>();
+        // TODO Currently we only select the first found evidence for each group to display, there might be more
 
         Collection<GeneOntologyTerm> selected = fromPanel ? selectedTerms : itemSelectViewTerms;
-
-        for ( GeneOntologyTerm term : selected ) {
-            timelineData.put( term, new HashMap<Date, Set<String>>() );
-            timelineGroups.put( term, new HashSet<String>() );
-        }
 
         Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> allCombinedDirectSeries = goChartMap.get(
                 new GraphTypeKey( GraphType.annotation, false, false ) ).get( COMBINED_TITLE );
 
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> esSeries : allCombinedDirectSeries
+        Map<GeneOntologyTerm, CustomTimelineModel<GeneOntologyTerm>> timelineMap = new HashMap<>();
+        Map<GeneOntologyTerm, Set<String>> timelineGroups = new HashMap<>();
+
+        for ( GeneOntologyTerm term : selected ) {
+            CustomTimelineModel<GeneOntologyTerm> model = new CustomTimelineModel<>( term );
+            timelineMap.put( term, model );
+            timelineGroups.put( term, new HashSet<String>() );
+        }
+
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : allCombinedDirectSeries
                 .entrySet() ) {
-            Date date = esSeries.getKey().getDate();
 
-            Map<GeneOntologyTerm, Set<EvidenceReference>> allTermsInEdition = esSeries.getValue();
-
-            for ( GeneOntologyTerm geneOntologyTerm : selected ) {
-                Set<String> categories = new HashSet<>();
-                timelineData.get( geneOntologyTerm ).put( date, categories );
-                Set<String> setGroups = timelineGroups.get( geneOntologyTerm );
-
-                Set<EvidenceReference> allEvidenceInEdition = allTermsInEdition.get( geneOntologyTerm );
-
-                if ( allEvidenceInEdition != null ) {
-
-                    for ( EvidenceReference er : allEvidenceInEdition ) {
-                        categories.add( er.getCategory() );
-                        setGroups.add( er.getCategory() );
+            for ( GeneOntologyTerm term : selected ) {
+                Set<EvidenceReference> evs = editionEntry.getValue().get( term );
+                Set<String> grp = timelineGroups.get( term );
+                if ( evs != null ) {
+                    for ( EvidenceReference ev : evs ) {
+                        grp.add( ev.getCategory() );
                     }
                 }
 
@@ -737,8 +729,84 @@ public class TrackView {
 
         }
 
-        // timelineModel = createTimeline( timelineData );
-        timelines = createTimelines( timelineData, timelineGroups );
+        SortedSet<Edition> editions = new TreeSet<Edition>( allCombinedDirectSeries.keySet() );
+
+        Edition currentEdition = null;
+        for ( Edition nextEdition : editions ) {
+            if ( currentEdition != null ) {
+
+                for ( GeneOntologyTerm term : selected ) {
+                    CustomTimelineModel<GeneOntologyTerm> timeline = timelineMap.get( term );
+                    Set<EvidenceReference> evs = allCombinedDirectSeries.get( currentEdition ).get( term );
+
+                    if ( evs != null ) {
+                        Set<String> grps = timelineGroups.get( term );
+
+                        for ( String grp : grps ) {
+                            EvidenceReference foundEV = null;
+                            for ( EvidenceReference ev : evs ) {
+                                if ( ev.getCategory().equals( grp ) ) {
+                                    foundEV = ev;
+                                    break;
+                                }
+                            }
+
+                            if ( foundEV != null ) {
+                                TimelineEvent event = new TimelineEvent( foundEV.getReference() + "(|)"
+                                        + foundEV.getEvidence(), currentEdition.getDate(), nextEdition.getDate(),
+                                        false, grp, "timeline-true timeline-hidden" );
+                                timeline.add( event );
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+            currentEdition = nextEdition;
+        }
+
+        // give the last edition a span of 1 month
+
+        if ( editions.size() > 1 ) {
+            Calendar cal = Calendar.getInstance();
+            cal.setTime( currentEdition.getDate() );
+            cal.add( Calendar.MONTH, 1 );
+
+            for ( GeneOntologyTerm term : selected ) {
+                CustomTimelineModel<GeneOntologyTerm> timeline = timelineMap.get( term );
+                Set<EvidenceReference> evs = allCombinedDirectSeries.get( currentEdition ).get( term );
+
+                if ( evs != null ) {
+                    Set<String> grps = timelineGroups.get( term );
+
+                    for ( String grp : grps ) {
+                        EvidenceReference foundEV = null;
+                        for ( EvidenceReference ev : evs ) {
+                            if ( ev.getCategory().equals( grp ) ) {
+                                foundEV = ev;
+                                break;
+                            }
+                        }
+
+                        if ( foundEV != null ) {
+                            TimelineEvent event = new TimelineEvent( foundEV.getReference() + "(|)"
+                                    + foundEV.getEvidence(), currentEdition.getDate(), cal.getTime(), false, grp,
+                                    "timeline-true timeline-hidden" );
+                            timeline.add( event );
+                        }
+
+                    }
+                }
+
+            }
+
+        }
+
+        timelines = new ArrayList<>( timelineMap.values() );
 
     }
 
