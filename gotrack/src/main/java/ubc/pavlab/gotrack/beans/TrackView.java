@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
+import javax.annotation.PostConstruct;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
@@ -132,13 +133,18 @@ public class TrackView {
     private boolean splitAccessions = true;
     private boolean propagate = false;
     private String graphType = "annotation";
-    private String scale = "linear";
+    private String scale;
     private boolean chartsReady = false;
+    private List<String> filterAspect;
+    private boolean filterEnabled = true;
+    private boolean dataEnabled = true;
     // private boolean firstChartReady = false;
 
     // Static
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
     private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
+    private static final List<GraphType> filterEnabledGraphs = Arrays.asList( GraphType.annotation );
+    private static final List<GraphType> dataEnabledGraphs = Arrays.asList( GraphType.annotation );
     private static final String COMBINED_TITLE = "All Accessions";
 
     public TrackView() {
@@ -146,6 +152,12 @@ public class TrackView {
         // System.gc();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
+    }
+
+    @PostConstruct
+    public void postConstruct() {
+        filterAspect = aspects;
+        scale = "linear";
     }
 
     public String init() throws GeneNotFoundException {
@@ -805,63 +817,33 @@ public class TrackView {
 
     }
 
-    /**
-     * create timeline based on data
-     * 
-     * @param timelineData timeline data, map of terms to map of date to boolean representing whether the term existed
-     *        on that date
-     * @return
-     */
-    private TimelineModel createTimeline( Map<GeneOntologyTerm, Map<Date, Boolean>> timelineData ) {
-
-        TimelineModel model = new TimelineModel();
-        DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
-        Calendar cal = Calendar.getInstance();
-
-        List<TimelineGroup> groups = new ArrayList<TimelineGroup>();
-        List<TimelineEvent> events = new ArrayList<TimelineEvent>();
-
-        for ( Entry<GeneOntologyTerm, Map<Date, Boolean>> esTermData : timelineData.entrySet() ) {
-            GeneOntologyTerm term = esTermData.getKey();
-
-            Map<Date, Boolean> data = esTermData.getValue();
-
-            TimelineGroup group = new TimelineGroup( term.getGoId(), term );
-            groups.add( group );
-            // model.addGroup( group );
-
-            SortedSet<Date> dates = new TreeSet<Date>( data.keySet() );
-            Date prevDate = null;
-            for ( Date date : dates ) {
-                if ( prevDate != null ) {
-                    boolean exists = data.get( prevDate );
-                    TimelineEvent event = new TimelineEvent( df.format( prevDate ), prevDate, date, false,
-                            term.getGoId(), exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                    // model.add( event );
-                    events.add( event );
+    private void filter( GraphTypeKey gtk, List<String> aspectList ) {
+        log.info( "Filter: " + gtk + " - " + aspectList );
+        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart = goChartMap.get( gtk );
+        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = new HashMap<>();
+        for ( Entry<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : goChart
+                .getSeries().entrySet() ) {
+            Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionMap = new HashMap<>();
+            data.put( seriesEntry.getKey(), editionMap );
+            for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : seriesEntry.getValue()
+                    .entrySet() ) {
+                Map<GeneOntologyTerm, Set<EvidenceReference>> termMap = new HashMap<>();
+                editionMap.put( editionEntry.getKey(), termMap );
+                for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> termEntry : editionEntry.getValue().entrySet() ) {
+                    if ( aspectList.contains( termEntry.getKey().getAspect() ) ) {
+                        termMap.put( termEntry.getKey(), termEntry.getValue() );
+                    }
 
                 }
-
-                prevDate = date;
             }
-
-            // give the last edition a span of 1 month
-            if ( dates.size() > 1 ) {
-                boolean exists = data.get( prevDate );
-                cal.setTime( prevDate );
-                cal.add( Calendar.MONTH, 1 );
-                TimelineEvent event = new TimelineEvent( df.format( prevDate ), prevDate, cal.getTime(), false,
-                        term.getGoId(), exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                // model.add( event );
-                events.add( event );
-            }
-
         }
 
-        model.setGroups( groups );
-        model.addAll( events );
+        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> newChart = new GoChart<>( "Filtered "
+                + goChart.getTitle(), goChart.getxLabel(), goChart.getyLabel(), data );
 
-        return model;
+        // Base Chart
+        currentChart = createChart( newChart, null );
+        currentGoChart = newChart;
 
     }
 
@@ -883,13 +865,19 @@ public class TrackView {
 
         if ( graphType == null || graphType.equals( "" ) ) graphType = "annotation";
         // graphType = propagate ? "propagated" : "direct";
-
         GraphTypeKey gtk = new GraphTypeKey( GraphType.valueOf( graphType ), splitAccessions, propagate );
+        filterEnabled = filterEnabledGraphs.contains( gtk.getGraphType() );
+        dataEnabled = dataEnabledGraphs.contains( gtk.getGraphType() );
+
         log.info( gtk );
         // log.info( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
+        if ( filterEnabled ) {
+            filter( gtk, filterAspect );
+        } else {
+            currentChart = lineChartModelMap.get( gtk );
+            currentGoChart = goChartMap.get( gtk );
+        }
 
-        currentChart = lineChartModelMap.get( gtk );
-        currentGoChart = goChartMap.get( gtk );
     }
 
     public void cleanTimeline() {
@@ -898,6 +886,22 @@ public class TrackView {
 
     public void cleanFilteredTerms() {
         filteredTerms = null;
+    }
+
+    public boolean isFilterEnabled() {
+        return filterEnabled;
+    }
+
+    public boolean isDataEnabled() {
+        return dataEnabled;
+    }
+
+    public List<String> getFilterAspect() {
+        return filterAspect;
+    }
+
+    public void setFilterAspect( List<String> filterAspect ) {
+        this.filterAspect = filterAspect;
     }
 
     public boolean isPropagate() {

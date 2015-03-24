@@ -90,11 +90,11 @@ public class Stats implements Serializable {
 
     public void countHit( String key ) {
         synchronized ( hits ) {
-            Integer cnt = hits.get( key );
+            Integer cnt = hits.get( key.toUpperCase() );
             if ( cnt == null ) {
                 cnt = 0;
             }
-            hits.put( key, ++cnt );
+            hits.put( key.toUpperCase(), ++cnt );
         }
         log.info( hits );
     }

@@ -547,7 +547,7 @@ public class CacheDAOImpl implements CacheDAO {
         }
 
         log.info( "Done resultsets" );
-        System.gc();
+        // System.gc();
 
         Map<Integer, GeneOntology> ontologies = new HashMap<>();
 

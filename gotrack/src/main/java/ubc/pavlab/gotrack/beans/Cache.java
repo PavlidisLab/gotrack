@@ -124,7 +124,7 @@ public class Cache implements Serializable {
 
         evidenceCodeCategories = cacheDAO.getEvidenceCategories();
 
-        System.gc();
+        // System.gc();();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
@@ -132,7 +132,7 @@ public class Cache implements Serializable {
 
         log.info( "GO Set sizes successfully obtained" );
 
-        System.gc();
+        // System.gc();
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
@@ -141,13 +141,14 @@ public class Cache implements Serializable {
         int cnt = 0;
         for ( List<Integer> list : edPartitions ) {
             Map<Integer, Set<Relationship>> tmp = cacheDAO.getOntologies( list );
+            log.info( "GO Ontologies Retrieved: " + tmp.size() );
             for ( Entry<Integer, Set<Relationship>> relsEntry : tmp.entrySet() ) {
                 ontologies.put( relsEntry.getKey(), new GeneOntology( relsEntry.getValue() ) );
                 cnt++;
                 relsEntry.getValue().clear();
 
             }
-            System.gc();
+            // System.gc();
             log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
             log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                     / 1000000 + " MB" );
@@ -156,7 +157,7 @@ public class Cache implements Serializable {
 
         // ontologies = cacheDAO.getOntologies();
 
-        System.gc();
+        // System.gc();
         log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
