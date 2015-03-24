@@ -172,7 +172,7 @@
 					</h:panelGrid>
 					
 					<p:separator style="max-width:200px" />
-					<h3 class="center">Filter <p:commandButton actionListener="#{trackView.clearOptionFilters()}" icon="fa fa-trash" update=":chartForm:chart1, :leftForm" oncomplete="changeGraphScale()" styleClass="icon-only"/></h3>
+					<h3 class="center">Filter <p:commandButton actionListener="#{trackView.clearOptionFilters()}" icon="fa fa-trash" update=":chartForm:chart1, :leftForm" oncomplete="changeGraphScale()" styleClass="icon-only" disabled="#{!(trackView.chartsReady) || !(trackView.filterEnabled)}"/></h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
 						<h:outputText value="Aspect: " />
 						<p:selectManyButton id="optionFilterAspect" value="#{trackView.filterAspect}" disabled="#{!(trackView.chartsReady) || !(trackView.filterEnabled)}">
