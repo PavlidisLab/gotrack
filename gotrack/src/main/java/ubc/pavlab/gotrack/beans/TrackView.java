@@ -43,6 +43,7 @@ import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.extensions.model.timeline.TimelineEvent;
@@ -84,8 +85,8 @@ public class TrackView {
     @ManagedProperty("#{stats}")
     private Stats stats;
 
-    @ManagedProperty("#{sessionCache}")
-    private SessionCache sessionCache;
+    @ManagedProperty("#{sessionManager}")
+    private SessionManager sessionManager;
 
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
@@ -136,6 +137,8 @@ public class TrackView {
     private String scale;
     private boolean chartsReady = false;
     private List<String> filterAspect;
+    private String filterId;
+    private String filterName;
     private boolean filterEnabled = true;
     private boolean dataEnabled = true;
     // private boolean firstChartReady = false;
@@ -156,7 +159,7 @@ public class TrackView {
 
     @PostConstruct
     public void postConstruct() {
-        filterAspect = aspects;
+        filterAspect = new ArrayList<>( aspects );
         scale = "linear";
     }
 
@@ -203,10 +206,43 @@ public class TrackView {
 
     }
 
+    public String handleCommand( String command, String[] params ) {
+        if ( command.equals( "greet" ) ) {
+            if ( params.length > 0 )
+                return "Hello " + params[0];
+            else
+                return "Hello Stranger";
+        } else if ( command.equals( "date" ) ) {
+            return new Date().toString();
+        } else if ( command.equals( "" ) ) {
+            return "";
+        }
+
+        if ( command.equals( "auth" ) ) {
+            if ( sessionManager.getAuthenticated() ) {
+                return "Already authenticated";
+            }
+            if ( params.length > 0 ) {
+                return sessionManager.authenticate( params[0] );
+            } else {
+                return "auth requires passphrase";
+            }
+        }
+
+        if ( sessionManager.getAuthenticated() ) {
+            if ( command.equals( "reload_settings" ) ) {
+                sessionManager.reloadSettings();
+                return "Settings reloaded";
+            }
+        }
+
+        return command + " not found";
+    }
+
     public void fetchAll() {
         log.info( "fetch Annotation Data" );
         // <PrimaryAccession, <Edition, <GOID, annotations>>>
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = sessionCache
+        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = sessionManager
                 .getData( currentGene );
 
         if ( data == null ) {
@@ -214,7 +250,7 @@ public class TrackView {
             data = annotationDAO.track3( currentSpeciesId, query, currentEdition.getEdition(),
                     currentEdition.getGoEditionId(), false );
 
-            sessionCache.addData( currentGene, data );
+            sessionManager.addData( currentGene, data );
             log.info( "Retrieved data from db" );
         } else {
             log.info( "Retrieved data from SessionCache" );
@@ -229,7 +265,7 @@ public class TrackView {
         createJaccardChart( data, "Jaccard Similarity vs Time", "Dates", "Jaccard Similarity" );
         createMultiChart( data, "Multifunctionality vs Time", "Dates", "Multifunctionality" );
         createLossGainChart( data, "Loss & Gain vs Time", "Dates", "Change" );
-        sessionCache.addCharts( currentGene, lineChartModelMap, goChartMap );
+        sessionManager.addCharts( currentGene, lineChartModelMap, goChartMap );
 
         GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
 
@@ -885,8 +921,8 @@ public class TrackView {
 
     }
 
-    private void filter( GraphTypeKey gtk, List<String> aspectList ) {
-        log.info( "Filter: " + gtk + " - " + aspectList );
+    private void filter( GraphTypeKey gtk, boolean idBypass, boolean nameBypass, boolean filterBypass ) {
+        log.info( "Filter: " + gtk + ", ID: " + filterId + " Name: " + filterName + " Aspects: " + filterAspect );
         GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart = goChartMap.get( gtk );
         Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = new HashMap<>();
         for ( Entry<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : goChart
@@ -898,10 +934,11 @@ public class TrackView {
                 Map<GeneOntologyTerm, Set<EvidenceReference>> termMap = new HashMap<>();
                 editionMap.put( editionEntry.getKey(), termMap );
                 for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> termEntry : editionEntry.getValue().entrySet() ) {
-                    if ( aspectList.contains( termEntry.getKey().getAspect() ) ) {
+                    if ( ( filterBypass || filterAspect.contains( termEntry.getKey().getAspect() ) )
+                            && ( idBypass || termEntry.getKey().getGoId().equals( filterId ) )
+                            && ( nameBypass || termEntry.getKey().getName().contains( filterName ) ) ) {
                         termMap.put( termEntry.getKey(), termEntry.getValue() );
                     }
-
                 }
             }
         }
@@ -912,6 +949,50 @@ public class TrackView {
         // Base Chart
         currentChart = createChart( newChart, null );
         currentGoChart = newChart;
+
+    }
+
+    public void clearOptionFilters() {
+        log.info( "Option Filters Cleared." );
+        filterAspect = new ArrayList<>( aspects );
+        filterId = null;
+        filterName = null;
+        reloadGraph();
+    }
+
+    public List<String> completeId( String query ) {
+        if ( query == null ) return new ArrayList<String>();
+
+        String queryUpper = query.toUpperCase();
+
+        Collection<String> exact = new HashSet<String>();
+        Collection<String> possible = new HashSet<String>();
+        for ( GeneOntologyTerm term : allAnnotations.keySet() ) {
+            if ( queryUpper.equals( term.getGoId().toUpperCase() ) ) {
+                exact.add( term.getGoId() );
+                continue;
+            }
+
+            String pattern = "(.*)" + queryUpper + "(.*)";
+            // Pattern r = Pattern.compile(pattern);
+            String m = term.getGoId().toUpperCase();
+            // Matcher m = r.matcher( term.getTerm() );
+            if ( m.matches( pattern ) ) {
+                possible.add( term.getGoId() );
+                continue;
+            }
+
+        }
+
+        List<String> orderedResults = new ArrayList<>();
+
+        orderedResults.addAll( exact );
+
+        ArrayList<String> p = new ArrayList<String>( possible );
+        Collections.sort( p, new LevenshteinComparator( query ) );
+
+        orderedResults.addAll( p );
+        return orderedResults;
 
     }
 
@@ -939,8 +1020,11 @@ public class TrackView {
 
         log.info( gtk );
         // log.info( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
-        if ( filterEnabled ) {
-            filter( gtk, filterAspect );
+        boolean idBypass = StringUtils.isEmpty( filterId );
+        boolean nameBypass = StringUtils.isEmpty( filterName );
+        boolean filterBypass = filterAspect.containsAll( aspects );
+        if ( filterEnabled && ( !idBypass || !nameBypass || !filterBypass ) ) {
+            filter( gtk, idBypass, nameBypass, filterBypass );
         } else {
             currentChart = lineChartModelMap.get( gtk );
             currentGoChart = goChartMap.get( gtk );
@@ -970,6 +1054,22 @@ public class TrackView {
 
     public void setFilterAspect( List<String> filterAspect ) {
         this.filterAspect = filterAspect;
+    }
+
+    public String getFilterId() {
+        return filterId;
+    }
+
+    public void setFilterId( String filterId ) {
+        this.filterId = filterId;
+    }
+
+    public String getFilterName() {
+        return filterName;
+    }
+
+    public void setFilterName( String filterName ) {
+        this.filterName = filterName;
     }
 
     public boolean isPropagate() {
@@ -1124,8 +1224,8 @@ public class TrackView {
         this.stats = stats;
     }
 
-    public void setSessionCache( SessionCache sessionCache ) {
-        this.sessionCache = sessionCache;
+    public void setSessionManager( SessionManager sessionManager ) {
+        this.sessionManager = sessionManager;
     }
 
 }

@@ -71,7 +71,7 @@ function timelineSelect(timelineIndex) {
 function cleanMsg() {
    $('#timelineSelectMsgTerm').html('');
    $('#timelineSelectMsgDate').html('');
-   $('#timelineSelectMsgExists').html('');
+   $('#timelineSelectMsgReference').html('');
 }
 
 function hideSeries(sidx, replot) {
@@ -170,6 +170,15 @@ function onTimelineRangeChange(timelineIndex) {
       }       
    }
    
+}
+
+function test() {
+   console.log('test');
+}
+
+function showTerminal() {
+   PF('terminalDialogWdg').show();
+   PF('terminalWdg').focus();
 }
 
 $(document).ready(function() {

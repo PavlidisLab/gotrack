@@ -215,6 +215,14 @@
 			<version>3.0.3</version>
 		</dependency>
 		
+				
+		<!-- BCrypt -->
+		<dependency>
+			<groupId>org.mindrot</groupId>
+			<artifactId>jbcrypt</artifactId>
+			<version>0.3m</version>
+		</dependency>
+		
         
 
 	</dependencies>

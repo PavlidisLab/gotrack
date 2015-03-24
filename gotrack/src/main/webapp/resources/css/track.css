@@ -159,3 +159,15 @@ td {
 #timeline-scrollpanel {
 	border:none;
 }
+
+div.ui-terminal {
+	background: black;
+	color: white;
+}
+
+button.icon-only {
+	height: 0px;
+	width: 0px;
+	top: 14px;
+	left: 5px;
+}

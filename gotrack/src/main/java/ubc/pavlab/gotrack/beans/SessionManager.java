@@ -27,6 +27,7 @@ import java.util.Set;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.faces.bean.ManagedBean;
+import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.SessionScoped;
 
 import org.apache.log4j.Logger;
@@ -48,10 +49,17 @@ import ubc.pavlab.gotrack.model.GraphTypeKey;
  */
 @ManagedBean
 @SessionScoped
-public class SessionCache {
+public class SessionManager {
 
-    private static final Logger log = Logger.getLogger( SessionCache.class );
+    private static final Logger log = Logger.getLogger( SessionManager.class );
     private final int MAX_ENTRIES = 5;
+    private Boolean authenticated = false;
+
+    @ManagedProperty(value = "#{security}")
+    private Security security;
+
+    @ManagedProperty("#{settingsCache}")
+    private SettingsCache settingsCache;
 
     private Map<Gene, ChartTuple> chartCache = new LinkedHashMap<Gene, ChartTuple>( MAX_ENTRIES + 1, 0.75F, true ) {
         // This method is called just after a new entry has been added
@@ -69,21 +77,43 @@ public class SessionCache {
         }
     };
 
-    public SessionCache() {
-        log.info( "Cache created" );
+    public SessionManager() {
+        log.info( "SessionManager created" );
     }
 
     @PostConstruct
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
-        log.info( "SessionCache init" );
+        log.info( "SessionManager init" );
         chartCache = Collections.synchronizedMap( chartCache );
         dataCache = Collections.synchronizedMap( dataCache );
     }
 
     @PreDestroy
     public void destroy() {
-        log.info( "SessionCache destroyed" );
+        log.info( "SessionManager destroyed" );
+    }
+
+    public String authenticate( String password ) {
+        synchronized ( authenticated ) {
+            authenticated = security.checkPassword( password );
+            log.info( "authenticated: " + authenticated );
+            if ( !authenticated ) {
+                // Brute force authentication delay
+                try {
+                    Thread.sleep( 3000 );
+                } catch ( InterruptedException e ) {
+                    log.error( "Authentication Delay Interrupted", e );
+                }
+                return "Authentication Failed";
+            } else {
+                return "Successfully authenticated, welcome...";
+            }
+        }
+    }
+
+    public synchronized void reloadSettings() {
+        settingsCache.reload();
     }
 
     public ChartTuple getCharts( Gene g ) {
@@ -112,5 +142,17 @@ public class SessionCache {
         synchronized ( dataCache ) {
             dataCache.put( g, data );
         }
+    }
+
+    public Boolean getAuthenticated() {
+        return authenticated;
+    }
+
+    public void setSecurity( Security security ) {
+        this.security = security;
+    }
+
+    public void setSettingsCache( SettingsCache settingsCache ) {
+        this.settingsCache = settingsCache;
     }
 }
