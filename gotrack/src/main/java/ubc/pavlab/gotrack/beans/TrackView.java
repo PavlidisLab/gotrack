@@ -972,7 +972,8 @@ public class TrackView {
                 for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> termEntry : editionEntry.getValue().entrySet() ) {
                     if ( ( filterBypass || filterAspect.contains( termEntry.getKey().getAspect() ) )
                             && ( idBypass || termEntry.getKey().getGoId().equals( filterId ) )
-                            && ( nameBypass || termEntry.getKey().getName().contains( filterName ) ) ) {
+                            && ( nameBypass || StringUtils
+                                    .containsIgnoreCase( termEntry.getKey().getName(), filterName ) ) ) {
                         termMap.put( termEntry.getKey(), termEntry.getValue() );
                     }
                 }

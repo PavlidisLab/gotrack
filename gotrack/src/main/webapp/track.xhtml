@@ -195,9 +195,9 @@
 						</p:autoComplete>
 						
 						<h:outputText value="Name: " />
-						<p:autoComplete id="optionFilterName" value="#{trackView.filterName}" disabled="#{!(trackView.chartsReady) || !(trackView.filterEnabled)}">
+						<p:inputText id="optionFilterName" value="#{trackView.filterName}" disabled="#{!(trackView.chartsReady) || !(trackView.filterEnabled)}">
 								<p:ajax event="change" listener="#{trackView.reloadGraph}" update=":chartForm:chart1" oncomplete="changeGraphScale()"/>
-						</p:autoComplete>
+						</p:inputText>
 						
 
 					</h:panelGrid>
