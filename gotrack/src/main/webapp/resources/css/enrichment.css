@@ -1,0 +1,8 @@
+#formSelect\:pThresholdInput_input {
+	width:50px;
+}
+
+table.no-border, table.no-border tr, table.no-border td {
+ border:none !important;
+  border-style: none !important;
+ }

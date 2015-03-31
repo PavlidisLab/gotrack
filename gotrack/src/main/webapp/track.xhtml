@@ -80,7 +80,8 @@
 
 	<h:body id="body">
 
-		<p:layout fullPage="true" onResize="centerResize()">
+		<p:layout fullPage="true" onResize="centerResize()">v
+		<p:growl globalOnly="true"/>
 			<p:layoutUnit id="top" position="north" size="50">
 
 				<h:form>
@@ -98,7 +99,7 @@
 						<p:menuitem value="&nbsp; Resources" url="resources.xhtml"
 							icon="fa fa-info-circle" styleClass="right-border" />
 						<f:facet name="options">
-							<p:commandButton type="button" icon="fa fa-terminal" onclick="showTerminal()"/>
+							<p:commandButton type="button" icon="fa fa-terminal" onclick="showTerminal()" rendered="#{facesContext.application.projectStage != 'Production'}"/>
 							<p:selectOneMenu id="selectspecies"
 								value="#{geneSearchView.speciesId}" style="margin-right:5px;">
 								<p:ajax event="change" process="@this"/>
@@ -268,6 +269,7 @@
 			</p:layoutUnit>
 
 			<p:layoutUnit id="center" position="center">
+			<p:messages for="betaMessage" closable="true" />
 
 				<div id="page-title">
 					<h1>#{trackView.currentGene.symbol} -

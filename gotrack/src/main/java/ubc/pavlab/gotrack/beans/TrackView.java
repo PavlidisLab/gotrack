@@ -38,6 +38,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import javax.annotation.PostConstruct;
+import javax.faces.application.FacesMessage;
+import javax.faces.application.ProjectStage;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 import javax.faces.bean.ViewScoped;
@@ -169,6 +171,15 @@ public class TrackView {
             return null; // Skip ajax requests.
         }
         log.info( "TrackView init: " + currentSpeciesId + ": " + query );
+
+        if ( FacesContext.getCurrentInstance().getApplication().getProjectStage() == ProjectStage.Development ) {
+            FacesContext.getCurrentInstance()
+                    .addMessage(
+                            "betaMessage",
+                            new FacesMessage( FacesMessage.SEVERITY_WARN,
+                                    "This is the DEVELOPMENT version of GOTrack!", null ) );
+        }
+
         currentGene = cache.getCurrentGene( currentSpeciesId, query );
         if ( currentGene == null ) {
 
@@ -243,18 +254,19 @@ public class TrackView {
     public void fetchAll() {
         log.info( "fetch Annotation Data" );
         // <PrimaryAccession, <Edition, <GOID, annotations>>>
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = sessionManager
-                .getData( currentGene );
+        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = cache.getData( currentGene );
 
         if ( data == null ) {
 
             data = annotationDAO.track3( currentSpeciesId, query, currentEdition.getEdition(),
                     currentEdition.getGoEditionId(), false );
 
-            sessionManager.addData( currentGene, data );
+            // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
+
+            cache.addData( currentGene, data );
             log.info( "Retrieved data from db" );
         } else {
-            log.info( "Retrieved data from SessionCache" );
+            log.info( "Retrieved data from cache" );
 
         }
 
@@ -266,7 +278,7 @@ public class TrackView {
         createJaccardChart( "Jaccard Similarity vs Time", "Dates", "Jaccard Similarity" );
         createMultiChart( "Multifunctionality vs Time", "Dates", "Multifunctionality" );
         createLossGainChart( "Loss & Gain vs Time", "Dates", "Change" );
-        sessionManager.addCharts( currentGene, lineChartModelMap, goChartMap );
+        // sessionManager.addCharts( currentGene, lineChartModelMap, goChartMap );
 
         GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
 
@@ -425,7 +437,6 @@ public class TrackView {
                 .entrySet() ) {
             String seriesAccession = seriesEntry.getKey();
             Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = seriesEntry.getValue();
-
             Set<GeneOntologyTerm> currentGoSet = series.get( currentEdition ).keySet();
 
             Map<Edition, Double> jaccardSeries = new HashMap<>();
@@ -483,7 +494,8 @@ public class TrackView {
 
                 Double multi = 0.0;
                 Edition ed = editionEntry.getKey();
-                Integer total = cache.getAccessionSize( currentSpeciesId, ed );
+                Integer total = cache.getGenePopulation( currentSpeciesId, ed );
+                // Integer total = cache.getAccessionSize( currentSpeciesId, ed );
                 Set<GeneOntologyTerm> goSet = editionEntry.getValue().keySet();
                 if ( total != null ) {
                     for ( GeneOntologyTerm term : goSet ) {
@@ -492,7 +504,6 @@ public class TrackView {
                             multi += 1.0 / ( inGroup * ( total - inGroup ) );
                         }
                     }
-
                     multiSeries.put( ed, multi );
 
                 }

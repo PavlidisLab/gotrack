@@ -116,6 +116,7 @@ public class SessionManager {
         settingsCache.reload();
     }
 
+    @Deprecated
     public ChartTuple getCharts( Gene g ) {
         // TODO not sure if necessary, not a big deal either way
         synchronized ( chartCache ) {
@@ -123,6 +124,7 @@ public class SessionManager {
         }
     }
 
+    @Deprecated
     public void addCharts( Gene g, Map<GraphTypeKey, LineChartModel> lineChartModelMap,
             Map<GraphTypeKey, GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> goChartMap ) {
         ChartTuple ct = new ChartTuple( lineChartModelMap, goChartMap );
@@ -131,6 +133,7 @@ public class SessionManager {
         }
     }
 
+    @Deprecated
     public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> getData( Gene g ) {
         // TODO not sure if necessary, not a big deal either way
         synchronized ( dataCache ) {
@@ -138,6 +141,7 @@ public class SessionManager {
         }
     }
 
+    @Deprecated
     public void addData( Gene g, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
         synchronized ( dataCache ) {
             dataCache.put( g, data );

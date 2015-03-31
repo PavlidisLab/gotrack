@@ -32,6 +32,10 @@ public class GeneOntologyTerm {
     private final String aspect;
     private final boolean obsolete = false;
 
+    public GeneOntologyTerm( String goId ) {
+        this( goId, null, null );
+    }
+
     public GeneOntologyTerm( String goId, String name, String aspect ) {
         super();
         this.goId = goId;

@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -72,6 +73,9 @@ public class Cache implements Serializable {
 
     private static final Logger log = Logger.getLogger( Cache.class );
 
+    private final int MAX_DATA_ENTRIES = 20;
+    private final int MAX_ENRICHMENT_ENTRIES = 5;
+
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
 
@@ -83,9 +87,12 @@ public class Cache implements Serializable {
     private Map<Integer, List<Edition>> allEditions = new HashMap<>();
     private Map<Integer, Map<String, Gene>> speciesToCurrentGenes = new HashMap<>();
 
+    // TODO not necessary atm since gene populations are not stored on the aggregate table
     private Map<Integer, Map<Edition, StatsEntry>> aggregates = new HashMap<>();
     // view of aggregates for Map<species, Map<edition, avg_direct>>
     private Map<Integer, Map<Edition, Double>> speciesAverage = new HashMap<>();
+
+    private Map<Integer, Map<Edition, Integer>> genePopulations = new HashMap<>();
 
     // Map<species, Map<edition, Map<go_id, count>>>
     private Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
@@ -94,6 +101,23 @@ public class Cache implements Serializable {
 
     // Static
     private Map<String, String> evidenceCodeCategories = new HashMap<>();
+
+    private Map<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> applicationLevelDataCache = new LinkedHashMap<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>>(
+            MAX_DATA_ENTRIES + 1, 0.75F, true ) {
+        // This method is called just after a new entry has been added
+        public boolean removeEldestEntry(
+                Map.Entry<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> eldest ) {
+            return size() > MAX_DATA_ENTRIES;
+        }
+    };
+
+    private Map<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>> applicationLevelEnrichmentCache = new LinkedHashMap<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>>(
+            MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true ) {
+        // This method is called just after a new entry has been added
+        public boolean removeEldestEntry( Map.Entry<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>> eldest ) {
+            return size() > MAX_ENRICHMENT_ENTRIES;
+        }
+    };
 
     /**
      * 
@@ -106,6 +130,8 @@ public class Cache implements Serializable {
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "Cache init" );
+
+        applicationLevelDataCache = Collections.synchronizedMap( applicationLevelDataCache );
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
@@ -183,6 +209,13 @@ public class Cache implements Serializable {
         }
 
         log.info( "speciesAverages successfully computed" );
+
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
+
+        genePopulations = cacheDAO.getPopulations();
+
+        log.info( "gene populations successfully obtained" );
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
@@ -380,6 +413,17 @@ public class Cache implements Serializable {
         return null;
     }
 
+    public Integer getGenePopulation( Integer speciesId, Edition edition ) {
+        if ( speciesId == null || edition == null ) {
+            return null;
+        }
+        Map<Edition, Integer> map2 = genePopulations.get( speciesId );
+        if ( map2 != null ) {
+            return map2.get( edition );
+        }
+        return null;
+    }
+
     public String getEvidenceCategory( String evidence ) {
         if ( evidence == null ) {
             return null;
@@ -397,6 +441,34 @@ public class Cache implements Serializable {
             return o.propagate( goAnnotations );
         }
         return null;
+    }
+
+    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> getData( Gene g ) {
+        // TODO not sure if necessary, not a big deal either way
+        synchronized ( applicationLevelDataCache ) {
+            return applicationLevelDataCache.get( g );
+        }
+    }
+
+    public void addData( Gene g, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
+        synchronized ( applicationLevelDataCache ) {
+            applicationLevelDataCache.put( g, data );
+        }
+    }
+
+    public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> getEnrichmentData( Set<Gene> genes ) {
+        // TODO not sure if necessary, not a big deal either way
+        synchronized ( applicationLevelEnrichmentCache ) {
+            return applicationLevelEnrichmentCache.get( genes );
+        }
+    }
+
+    public void addEnrichmentData( Set<Gene> genes, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> data ) {
+        synchronized ( applicationLevelEnrichmentCache ) {
+            // New HashSet because: The behavior of a map is not specified if the value of an object is changed in a
+            // manner that affects equals comparisons while the object is a key in the map
+            applicationLevelEnrichmentCache.put( new HashSet<>( genes ), data );
+        }
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

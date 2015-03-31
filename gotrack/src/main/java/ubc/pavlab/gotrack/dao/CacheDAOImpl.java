@@ -73,7 +73,7 @@ public class CacheDAOImpl implements CacheDAO {
     // private static final String SQL_GO_SYMBOL_SIZES =
     // "select go_id, COUNT(distinct symbol) as count from gene_annotation where species_id=? and edition=? group by go_id having count > ? order by null";
     private static final String SQL_ALL_GO_SIZES = "select edition, go_id, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition, go_id having count > ? order by null";
-    private static final String SQL_ALL_GO_SIZES_FROM_PRECOMPUTE = "select species_id, edition, go_id, unique_accessions from gene_annotation_aggregate";
+    private static final String SQL_ALL_GO_SIZES_FROM_PRECOMPUTE = "select species_id, edition, go_id, unique_accessions from gene_annotation_go_aggregate";
     private static final String SQL_ACCESSION_SIZES = "select edition, COUNT(distinct accession) as count from gene_annotation where species_id=? group by edition order by NULL;";
     private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, date, avg_direct, unique_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id";
     private static final String SQL_GO_ADJACENCY_BY_EDITION = "select child, parent, relationship, name, aspect, is_obsolete from go_adjacency inner join go_term on go_term.go_id=go_adjacency.child and go_term.go_edition_id_fk=go_adjacency.go_edition_id_fk where go_adjacency.go_edition_id_fk=?";
@@ -81,6 +81,8 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_GO_ADJACENCIES = "select go_adjacency.go_edition_id_fk, child, parent, relationship, name as child_name, aspect as child_aspect, is_obsolete as child_is_obsolete from go_adjacency inner join go_term on go_term.go_id=go_adjacency.child and go_term.go_edition_id_fk=go_adjacency.go_edition_id_fk";
     private static final String SQL_GO_ADJACENCIES_BY_RANGE = "select go_adjacency.go_edition_id_fk, child, parent, relationship, name as child_name, aspect as child_aspect, is_obsolete as child_is_obsolete from go_adjacency inner join go_term on go_term.go_id=go_adjacency.child and go_term.go_edition_id_fk=go_adjacency.go_edition_id_fk where go_adjacency.go_edition_id_fk IN (%s)";
     private static final String SQL_EVIDENCE_CATEGORIES = "select evidence, category from evidence_categories";
+
+    private static final String SQL_GENE_POPULATIONS = "select gene_populations.species_id, edition, date, population from gene_populations inner join edition using(edition)";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -641,4 +643,42 @@ public class CacheDAOImpl implements CacheDAO {
 
         return results;
     }
+
+    @Override
+    public Map<Integer, Map<Edition, Integer>> getPopulations() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Map<Integer, Map<Edition, Integer>> pops = new HashMap<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_GENE_POPULATIONS );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                Integer speciesId = resultSet.getInt( "species_id" );
+                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ) );
+                Integer population = resultSet.getInt( "population" );
+
+                Map<Edition, Integer> speciesMap = pops.get( speciesId );
+
+                if ( speciesMap == null ) {
+                    speciesMap = new HashMap<>();
+                    pops.put( speciesId, speciesMap );
+                }
+
+                speciesMap.put( edition, population );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return pops;
+    }
+
 }

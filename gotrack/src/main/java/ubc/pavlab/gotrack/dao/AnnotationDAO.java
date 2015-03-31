@@ -28,6 +28,7 @@ import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.AnnotationDetailed;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
+import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 
 /**
@@ -96,5 +97,11 @@ public interface AnnotationDAO {
 
     public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track3( Integer species,
             String symbol, Integer edition, Integer goEditionId, boolean ancestorsOnly ) throws DAOException;
+
+    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> trackBySymbolOnly( Integer species,
+            String symbol ) throws DAOException;
+
+    public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentData( Integer species, Set<Gene> genes,
+            Integer currentEdition ) throws DAOException;
 
 }
