@@ -74,6 +74,27 @@ function cleanMsg() {
    $('#timelineSelectMsgReference').html('');
 }
 
+function setTimelineInitialRange() {
+	   var timelines = PrimeFaces.widgets.timelineDataGridWidget.content.find('tr').length
+	   var minDate = PF('timelineWidget-0').getVisibleRange().start;
+	   var maxDate = PF('timelineWidget-0').getVisibleRange().end;
+	   for (var int = 0; int < timelines; int++) {
+	         var a = PF('timelineWidget-'+int).getVisibleRange(); 
+	         if ( a.start < minDate ) {
+	        	 minDate = a.start;
+	         }
+	         
+	         if ( a.end < maxDate ) {
+	        	 maxDate = a.end;
+	         }
+	   }
+	
+	   for (var int = 0; int < timelines; int++) {
+		   PF('timelineWidget-'+int).setVisibleRange(minDate, maxDate);
+	   }
+	   
+}
+
 function onTimelineRangeChange(timelineIndex) {
    var range = PF('timelineWidget-'+timelineIndex).getVisibleRange(); 
    var timelines = PrimeFaces.widgets.timelineDataGridWidget.content.find('tr').length

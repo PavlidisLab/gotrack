@@ -291,7 +291,7 @@
 			widgetVar="timelineDialog" modal="true" showEffect="fade"
 			hideEffect="fade" resizable="false" width="800" max-height="600"
 			style="text-align:center;"
-			onHide="cleanMsg()">
+			onHide="cleanMsg()" onShow="setTimelineInitialRange()">
 			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm" />
 			<p:scrollPanel id="timeline-scrollpanel" mode="native" style="max-height:500px">
 			<h:outputText id="timelineSelectMsgDate" />
@@ -310,7 +310,7 @@
 			        </f:facet>
 					<pe:timeline id="timeline-#{rowIndex}" widgetVar="timelineWidget-#{rowIndex}" value="#{tl}" varGroup="group" selectable="true"
 						eventMargin="10" eventMarginAxis="0" stackEvents="false"
-						themable="false" showCurrentTime="false">
+						themable="false" showCurrentTime="false" groupsWidth="125px">
 						<pe:javascript event="select" execute="timelineSelect('#{rowIndex}')" />
 						<pe:javascript event="rangechange" execute="onTimelineRangeChange('#{rowIndex}')"/>
 
