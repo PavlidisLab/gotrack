@@ -96,7 +96,7 @@ public class GeneOntology {
     }
 
     private String convertGOId( int id ) {
-        return "GO:" + String.valueOf( id );
+        return "GO:" + String.format( "%07d", id );
     }
 
     public Set<GeneOntologyTerm> propagate( Collection<GeneOntologyTerm> goSet ) {

@@ -103,9 +103,13 @@
 						<pe:inputNumber id="pThresholdInput"
 							value="#{enrichmentView.pThreshold}" emptyValue="zero"
 							decimalPlaces="4" style="max-width: 100px" />
+							
+						<i class="fa fa-info-circle"
+							title="Select only those terms with annotated gene populations above this minimum">&nbsp;
+							Population min:</i>
+						<p:spinner id="annotatedPopulationInput" value="#{enrichmentView.minAnnotatedPopulation}" min="0"/>
 
 					</h:panelGrid>
-					
 					<p:separator style="max-width:200px; height:5px;" />
 					<div align="center" style="margin-top: 20px;">
 						<p:commandButton value="Run Enrichment"

@@ -86,7 +86,7 @@ public class EnrichmentView implements Serializable {
     // DAO
     private AnnotationDAO annotationDAO;
 
-    private Integer currentSpeciesId;
+    private Integer currentSpeciesId = 7;
     private String query;
     private String bulkQuery;
 
@@ -103,6 +103,7 @@ public class EnrichmentView implements Serializable {
     private boolean bonferroniCorrection = true;
     private double pThreshold = 0.05;
     private boolean propagate = false;
+    private int minAnnotatedPopulation = 0;
 
     // Chart Filters
     private List<String> filterAspect;
@@ -186,21 +187,43 @@ public class EnrichmentView implements Serializable {
 
             currentGoSets = new HashMap<>();
 
-            for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
-                Edition ed = editionEntry.getKey();
-                Set<GeneOntologyTerm> goSet = new HashSet<>();
-                currentGoSets.put( ed, goSet );
-                for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
-                    if ( propagate ) {
-                        geneEntry.setValue( cache.propagate( geneEntry.getValue(), ed.getGoEditionId() ) );
+            if ( propagate ) {
+                Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> propagatedGeneGOMap = new HashMap<>();
+                for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
+                    Edition ed = editionEntry.getKey();
+                    Set<GeneOntologyTerm> goSet = new HashSet<>();
+                    currentGoSets.put( ed, goSet );
+
+                    HashMap<Gene, Set<GeneOntologyTerm>> propagatedGenes = new HashMap<>();
+                    propagatedGeneGOMap.put( ed, propagatedGenes );
+
+                    for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
+
+                        Set<GeneOntologyTerm> propagatedSet = cache.propagate( geneEntry.getValue(),
+                                ed.getGoEditionId() );
+                        propagatedGenes.put( geneEntry.getKey(), propagatedSet );
+
+                        goSet.addAll( propagatedSet );
+                        currentAllTerms.addAll( propagatedSet );
                     }
-
-                    goSet.addAll( geneEntry.getValue() );
-                    currentAllTerms.addAll( geneEntry.getValue() );
                 }
-            }
 
-            enrichmentAnalysis( geneGOMap, currentGoSets, 0 );
+                enrichmentAnalysis( propagatedGeneGOMap, currentGoSets, minAnnotatedPopulation );
+            } else {
+                for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
+                    Edition ed = editionEntry.getKey();
+                    Set<GeneOntologyTerm> goSet = new HashSet<>();
+                    currentGoSets.put( ed, goSet );
+
+                    for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
+
+                        goSet.addAll( geneEntry.getValue() );
+                        currentAllTerms.addAll( geneEntry.getValue() );
+                    }
+                }
+
+                enrichmentAnalysis( geneGOMap, currentGoSets, minAnnotatedPopulation );
+            }
 
         } else {
             log.info( "Empty geneset" );
@@ -763,6 +786,14 @@ public class EnrichmentView implements Serializable {
 
     public boolean isChartEmpty() {
         return chartEmpty;
+    }
+
+    public int getMinAnnotatedPopulation() {
+        return minAnnotatedPopulation;
+    }
+
+    public void setMinAnnotatedPopulation( int minAnnotatedPopulation ) {
+        this.minAnnotatedPopulation = minAnnotatedPopulation;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

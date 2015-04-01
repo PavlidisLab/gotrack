@@ -51,7 +51,7 @@ public class GeneSearchView implements Serializable {
     private static final Logger log = Logger.getLogger( GeneSearchView.class );
     private static final Integer MAX_RESULTS = 10;
 
-    private Integer speciesId = 1;
+    private Integer speciesId = 7;
     private String query;
 
     @ManagedProperty("#{cache}")
