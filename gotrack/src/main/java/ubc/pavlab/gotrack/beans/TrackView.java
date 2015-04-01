@@ -57,7 +57,6 @@ import org.primefaces.model.chart.LineChartModel;
 import org.primefaces.model.chart.LineChartSeries;
 
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
-import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.CustomTimelineModel;
@@ -133,7 +132,7 @@ public class TrackView {
     private List<CustomTimelineModel<GeneOntologyTerm>> timelines = new ArrayList<>();
 
     // Settings
-    private boolean splitAccessions = true;
+    private boolean splitAccessions = false;
     private boolean propagate = false;
     private String graphType = "annotation";
     private String scale;
@@ -204,8 +203,7 @@ public class TrackView {
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
             currentEdition = cache.getCurrentEditions( currentSpeciesId );
             // allEditions = cache.getAllEditions( currentSpeciesId );
-            CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
-            allEditions = cacheDAO.getAllEditions().get( currentSpeciesId );
+            allEditions = cache.getAllEditions( currentSpeciesId );
             for ( Species s : cache.getSpeciesList() ) {
                 if ( s.getId().equals( currentSpeciesId ) ) {
                     currentSpecies = s;
@@ -280,7 +278,7 @@ public class TrackView {
         createLossGainChart( "Loss & Gain vs Time", "Dates", "Change" );
         // sessionManager.addCharts( currentGene, lineChartModelMap, goChartMap );
 
-        GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
+        GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, false, false );
 
         currentGoChart = goChartMap.get( gtk );
         currentChart = lineChartModelMap.get( gtk );

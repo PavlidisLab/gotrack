@@ -99,7 +99,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_TRACK_BY_SYMBOL_ONLY = "select edition.date, gene_annotation.edition, edition.go_edition_id_fk, gene_annotation.accession as `primary`, symbol, gene_annotation.go_id, go_term.name, go_term.aspect, gene_annotation.evidence, gene_annotation.reference, evidence_categories.category from gene_annotation INNER JOIN evidence_categories on gene_annotation.evidence=evidence_categories.evidence INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk where gene_annotation.species_id = ? and gene_annotation.symbol=? GROUP BY gene_annotation.edition, gene_annotation.accession, gene_annotation.go_id, evidence, reference ORDER BY NULL";
 
     // symbol edition, species, species, species
-    private static final String SQL_ENRICHMENT_GENE_DATA = "select edition.date, gene_annotation.edition, edition.go_edition_id_fk, temp.symbol, gene_annotation.go_id from (select distinct symbol, accession from gene_annotation WHERE symbol IN (%s) AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = gene_annotation.species_id where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.symbol, gene_annotation.go_id ORDER BY NULL";
+    private static final String SQL_ENRICHMENT_GENE_DATA = "select edition.date, gene_annotation.edition, edition.go_edition_id_fk, temp.symbol, gene_annotation.go_id, go_term.name, go_term.aspect from (select distinct symbol, accession from gene_annotation WHERE symbol IN (%s) AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = gene_annotation.species_id LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.symbol, gene_annotation.go_id ORDER BY NULL";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -608,7 +608,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 // Gene g = new Gene( resultSet.getString( "symbol" ) );
                 Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
                         resultSet.getInt( "go_edition_id_fk" ) );
-                GeneOntologyTerm go = new GeneOntologyTerm( resultSet.getString( "go_id" ) );
+                GeneOntologyTerm go = new GeneOntologyTerm( resultSet.getString( "go_id" ),
+                        resultSet.getString( "name" ), resultSet.getString( "aspect" ) );
 
                 Map<Gene, Set<GeneOntologyTerm>> edEntry = data.get( ed );
                 if ( edEntry == null ) {

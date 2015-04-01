@@ -74,93 +74,6 @@ function cleanMsg() {
    $('#timelineSelectMsgReference').html('');
 }
 
-function hideSeries(sidx, replot) {
-   if ( utility.isUndefined(sidx) ) return;
-   if ( utility.isUndefined(replot) ) replot=false;
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   var s = my_plot.series[sidx ];
-   if (!s.canvas._elem.is(':hidden') || s.show) {
-
-      my_plot.legend._elem.find('td').eq(sidx * 2).addClass('jqplot-series-hidden');
-      my_plot.legend._elem.find('td').eq((sidx * 2) + 1).addClass('jqplot-series-hidden');
-      
-      s.toggleDisplay({data:{}});
-      s.canvas._elem.hide();
-      s.show = false;
-      
-      if ( replot ) {
-         PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
-      } 
-      
-   
-      //my_plot.legend._elem.find('td').eq(sidx * 2).click()
-   }
-      
-}
-
-function showSeries(sidx, replot) {
-   if ( utility.isUndefined(sidx) ) return;
-   if ( utility.isUndefined(replot) ) replot=false;
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   var s = my_plot.series[sidx ];
-   if (s.canvas._elem.is(':hidden') || !s.show) {
-
-   
-      my_plot.legend._elem.find('td').eq(sidx * 2).removeClass('jqplot-series-hidden');
-      my_plot.legend._elem.find('td').eq((sidx * 2) + 1).removeClass('jqplot-series-hidden');
-      
-      s.toggleDisplay({data:{}});
-      s.canvas._elem.show();
-      s.show = true;
-      
-      if ( replot ) {
-         PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
-      }
-   
-   
-      //my_plot.legend._elem.find('td').eq(sidx * 2).click()
-   }
-}
-
-function isolateSeries(sidx) {
-   if ( utility.isUndefined(sidx) ) return;
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   for (var i = 0; i < my_plot.series.length; i++) {
-      if (i == sidx) {
-        showSeries(i, false);
-      } else {
-         hideSeries(i, false);
-      }
-      
-   }
-   PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
-   
-}
-
-function isolateSeriesFromSwatch(el) {
-   if ( utility.isUndefined(el) ) return;
-   
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   var sidx = $(el).closest('table').find('td').index($(el).closest('td'))/2;
-   isolateSeries(sidx);
-   
-/*      for (var i = 0; i < my_plot.series.length; i++) {
-      if (i == sidx) {
-        showSeries(i, false);
-      } else {
-         hideSeries(i, false);
-      }*/
-      
-   }
-
-function showAllSeries() {
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   for (var i = 0; i < my_plot.series.length; i++) {
-      showSeries(i, false);
-   }
-   PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
-}
-
 function onTimelineRangeChange(timelineIndex) {
    var range = PF('timelineWidget-'+timelineIndex).getVisibleRange(); 
    var timelines = PrimeFaces.widgets.timelineDataGridWidget.content.find('tr').length
@@ -180,6 +93,41 @@ function showTerminal() {
    PF('terminalDialogWdg').show();
    PF('terminalWdg').focus();
 }
+
+function chartExtender() {
+    // this = chart widget instance        
+    // this.cfg = options 
+    this.cfg.legend = {
+       renderer : $.jqplot.EnhancedLegendRenderer,
+       show : true,
+       location : 's',
+       placement : 'outside',
+       marginTop : '100px',
+       rendererOptions : {
+          numberRows : 0,
+          numberColumns : 10,
+          seriesToggle: true,
+          seriesToggleReplot : {resetAxes: true}
+       }
+    }
+    this.cfg.highlighter = {
+       show : true,
+       tooltipLocation : 'sw',
+       useAxesFormatters : true,
+       tooltipAxes : 'xy',
+       yvalues : 1,
+       formatString : 'Date: %s ~ Count: %s',
+       tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
+          return plot.series[seriesIndex].label + ": " + str;
+       },
+       bringSeriesToFront : true
+
+    }
+    //console.log(this.cfg.axes);
+    //this.cfg.axes.yaxis.label = "Per Capita Expenditure (local currency)";
+    this.cfg.axes.yaxis.renderer = $.jqplot.LinearAxisRenderer;
+    //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
+ }
 
 $(document).ready(function() {
    //calling remoteCommands

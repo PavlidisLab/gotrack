@@ -37,50 +37,14 @@
 		
 		<h:outputScript library="js" name="utility.js" />
 		<h:outputScript library="js" name="gotrack.js" />
+		<h:outputScript library="js" name="chartExtendedFunctionality.js" />
 		<h:outputScript library="js" name="jqplot.logAxisRenderer.js" />
-		
-		<script>
-		//$.jqplot.postDrawHooks.push(function() {console.log('thjsiasfjnad od')});
-      function chartExtender() {
-         // this = chart widget instance        
-         // this.cfg = options 
-         this.cfg.legend = {
-            renderer : $.jqplot.EnhancedLegendRenderer,
-            show : true,
-            location : 's',
-            placement : 'outsideGrid',
-            rendererOptions : {
-               numberRows : 0,
-               numberColumns : 10,
-               seriesToggle: true,
-               seriesToggleReplot : {resetAxes: true}
-            }
-         }
-         this.cfg.highlighter = {
-            show : true,
-            tooltipLocation : 'sw',
-            useAxesFormatters : true,
-            tooltipAxes : 'xy',
-            yvalues : 1,
-            formatString : 'Date: %s ~ Count: %s',
-            tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
-               return plot.series[seriesIndex].label + ": " + str;
-            },
-            bringSeriesToFront : true
-
-         }
-         //console.log(this.cfg.axes);
-         //this.cfg.axes.yaxis.label = "Per Capita Expenditure (local currency)";
-         this.cfg.axes.yaxis.renderer = $.jqplot.LinearAxisRenderer;
-         //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
-      }
-   </script>
 
 	</h:head>
 
 	<h:body id="body">
 
-		<p:layout fullPage="true" onResize="centerResize()">v
+		<p:layout fullPage="true" onResize="centerResize()">
 		<p:growl globalOnly="true"/>
 			<p:layoutUnit id="top" position="north" size="50">
 
@@ -126,8 +90,8 @@
 				</p>
 			</p:layoutUnit>
 
-			<p:layoutUnit id="left" position="west" size="250" resizable="true"
-				collapsible="true" header="Options" minSize="250">
+			<p:layoutUnit id="left" position="west" size="275" resizable="true"
+				collapsible="true" header="Options" minSize="275">
 				<h:form id="leftForm">
 					<h3 class="center">Graph</h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">

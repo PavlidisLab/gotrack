@@ -37,7 +37,6 @@ import java.util.zip.GZIPInputStream;
 
 import org.apache.log4j.Logger;
 
-import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
@@ -100,32 +99,23 @@ public class GeneOntology {
         return "GO:" + String.valueOf( id );
     }
 
-    public Set<Term> propagate( Collection<Term> goSet ) {
-        Set<Term> propagations = new HashSet<>();
-        for ( Term term : new HashSet<Term>( goSet ) ) {
-            propagations.addAll( getAncestors( term ) );
-        }
-        return Collections.unmodifiableSet( propagations );
-
-    }
-
-    public Set<Annotation> propagateAnnotations( Collection<Annotation> goAnnotations ) {
-
-        Set<Annotation> propagatedAnnotations = new HashSet<Annotation>();
-
-        for ( Annotation annotation : goAnnotations ) {
-            propagatedAnnotations.add( annotation );
-            Term term = termMap.get( convertGOId( annotation.getGoId() ) );
+    public Set<GeneOntologyTerm> propagate( Collection<GeneOntologyTerm> goSet ) {
+        Set<GeneOntologyTerm> allPropagations = new HashSet<>();
+        for ( GeneOntologyTerm go : new HashSet<GeneOntologyTerm>( goSet ) ) {
+            allPropagations.add( go );
+            Term term = termMap.get( convertGOId( go.getGoId() ) );
             if ( term != null ) {
                 Set<Term> propagations = getAncestors( term );
                 for ( Term t : propagations ) {
-                    propagatedAnnotations
-                            .add( new Annotation( t, annotation.getEvidence(), annotation.getReference() ) );
+
+                    GeneOntologyTerm propagatedGO = new GeneOntologyTerm( convertGOId( t.getId() ), t.getName(), t
+                            .getAspect().toString() );
+                    allPropagations.add( propagatedGO );
+
                 }
             }
         }
-
-        return Collections.unmodifiableSet( propagatedAnnotations );
+        return Collections.unmodifiableSet( allPropagations );
 
     }
 

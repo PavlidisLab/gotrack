@@ -21,6 +21,8 @@ package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,6 +31,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import javax.annotation.PostConstruct;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
 import javax.faces.bean.ManagedBean;
@@ -41,6 +44,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.distribution.HypergeometricDistribution;
 import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.apache.log4j.Logger;
+import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.model.chart.AxisType;
 import org.primefaces.model.chart.DateAxis;
 import org.primefaces.model.chart.LineChartModel;
@@ -92,16 +96,40 @@ public class EnrichmentView implements Serializable {
 
     // Chart stuff
     private LineChartModel enrichmentChart;
+    private Map<Edition, Set<GeneOntologyTerm>> currentGoSets;
+    private Set<GeneOntologyTerm> currentAllTerms;
+    Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData;
     private boolean chartReady = false;
     private boolean bonferroniCorrection = true;
     private double pThreshold = 0.05;
     private boolean propagate = false;
+
+    // Chart Filters
+    private List<String> filterAspect;
+    private String filterId;
+    private String filterName;
+    private boolean chartEmpty = false;
+
+    // Select Data Point functionality
+    private Edition selectedEdition;
+    private GeneOntologyTerm selectedTerm;
+    private Number selectedValue;
+
+    private List<Edition> allEditions;
+
+    // Static final
+    private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
 
     public EnrichmentView() {
         log.info( "EnrichmentView created" );
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
+    }
+
+    @PostConstruct
+    public void postConstruct() {
+        filterAspect = new ArrayList<>( aspects );
     }
 
     public String init() {
@@ -118,12 +146,14 @@ public class EnrichmentView implements Serializable {
         }
 
         annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-
         return null;
     }
 
     public void enrich() {
+        clearOptionFilters( false );
         chartReady = false;
+        allEditions = cache.getAllEditions( currentSpeciesId );
+        currentAllTerms = new HashSet<>();
         Edition currentEdition = cache.getCurrentEditions( currentSpeciesId );
         Set<Gene> genes = new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) );
         log.info( "Current species: " + currentSpeciesId );
@@ -154,18 +184,23 @@ public class EnrichmentView implements Serializable {
 
             }
 
-            Map<Edition, Set<GeneOntologyTerm>> allTerms = new HashMap<>();
+            currentGoSets = new HashMap<>();
 
             for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
                 Edition ed = editionEntry.getKey();
                 Set<GeneOntologyTerm> goSet = new HashSet<>();
-                allTerms.put( ed, goSet );
+                currentGoSets.put( ed, goSet );
                 for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
+                    if ( propagate ) {
+                        geneEntry.setValue( cache.propagate( geneEntry.getValue(), ed.getGoEditionId() ) );
+                    }
+
                     goSet.addAll( geneEntry.getValue() );
+                    currentAllTerms.addAll( geneEntry.getValue() );
                 }
             }
 
-            enrichmentAnalysis( geneGOMap, allTerms, 0 );
+            enrichmentAnalysis( geneGOMap, currentGoSets, 0 );
 
         } else {
             log.info( "Empty geneset" );
@@ -175,7 +210,7 @@ public class EnrichmentView implements Serializable {
     private void enrichmentAnalysis( Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> geneGOMap,
             Map<Edition, Set<GeneOntologyTerm>> allTerms, int minAnnotedPopulation ) {
 
-        Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData = new HashMap<>();
+        enrichmentData = new HashMap<>();
         boolean emptyChart = true;
 
         List<Edition> eds = new ArrayList<Edition>( geneGOMap.keySet() );
@@ -208,9 +243,10 @@ public class EnrichmentView implements Serializable {
                         continue;
                     }
 
-                    int populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(), term.getGoId() );
+                    Integer populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(),
+                            term.getGoId() );
 
-                    if ( populationAnnotated >= minAnnotedPopulation ) {
+                    if ( populationAnnotated != null && populationAnnotated >= minAnnotedPopulation ) {
                         HypergeometricDistribution hyper = new HypergeometricDistribution( populationSize,
                                 populationAnnotated, k );
 
@@ -244,7 +280,7 @@ public class EnrichmentView implements Serializable {
                         // log.info( "Edition: (" + ed.getEdition() + ") " + hyper.upperCumulativeProbability( r ) );
 
                     } else {
-                        // log.info( term + " skipped; too small" );
+                        // log.info( term + " skipped; too small or isn't annotated" );
                     }
                 }
             }
@@ -313,27 +349,30 @@ public class EnrichmentView implements Serializable {
         LineChartModel dateModel = new LineChartModel();
 
         Map<GeneOntologyTerm, LineChartSeries> allSeries = new HashMap<>();
+        if ( enrichmentData != null ) {
+            List<Edition> eds = new ArrayList<Edition>( enrichmentData.keySet() );
+            Collections.sort( eds );
 
-        for ( Entry<Edition, Map<GeneOntologyTerm, Double>> editionEntry : enrichmentData.entrySet() ) {
-            String date = editionEntry.getKey().getDate().toString();
-            for ( Entry<GeneOntologyTerm, Double> dataPoint : editionEntry.getValue().entrySet() ) {
+            for ( Edition edition : eds ) {
+                String date = edition.getDate().toString();
+                for ( Entry<GeneOntologyTerm, Double> dataPoint : enrichmentData.get( edition ).entrySet() ) {
 
-                GeneOntologyTerm term = dataPoint.getKey();
-                LineChartSeries s = allSeries.get( term );
-                if ( s == null ) {
-                    s = new LineChartSeries();
-                    s.setLabel( term.getGoId() );
-                    s.setMarkerStyle( "filledDiamond" );
-                    allSeries.put( term, s );
+                    GeneOntologyTerm term = dataPoint.getKey();
+                    LineChartSeries s = allSeries.get( term );
+                    if ( s == null ) {
+                        s = new LineChartSeries();
+                        s.setLabel( term.getGoId() );
+                        s.setMarkerStyle( "filledDiamond" );
+                        allSeries.put( term, s );
+                    }
+                    Double pValue = dataPoint.getValue();
+                    s.set( date, pValue );
                 }
-                Double pValue = dataPoint.getValue();
-                s.set( date, pValue );
             }
 
-        }
-
-        for ( LineChartSeries series : allSeries.values() ) {
-            dateModel.addSeries( series );
+            for ( LineChartSeries series : allSeries.values() ) {
+                dateModel.addSeries( series );
+            }
         }
 
         dateModel.setTitle( title );
@@ -356,11 +395,162 @@ public class EnrichmentView implements Serializable {
 
     }
 
+    public void itemSelect( ItemSelectEvent event ) {
+
+        // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
+        List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( enrichmentChart.getSeries()
+                .get( event.getSeriesIndex() ).getData().entrySet() );
+
+        // Keep in mind that the list of entry sets is in the order that the data was inserted, not the order it is
+        // displayed!
+
+        // log.info( "Key: " + es.get( event.getItemIndex() ).getKey() );
+        // log.info( "Value: " + es.get( event.getItemIndex() ).getValue() );
+
+        String date = ( String ) es.get( event.getItemIndex() ).getKey();
+        selectedValue = es.get( event.getItemIndex() ).getValue();
+
+        String label = enrichmentChart.getSeries().get( event.getSeriesIndex() ).getLabel();
+
+        String selectedDate = date;
+
+        Collection<Edition> eds = getGoEditionsFromDate( date );
+
+        selectedTerm = null;
+        selectedEdition = null;
+        if ( eds.size() == 0 ) {
+            log.warn( "Found no editions for date (" + date + ")" );
+        } else {
+            selectedEdition = eds.iterator().next();
+            if ( eds.size() > 1 ) {
+                log.warn( "Found more than one edition for date (" + date + ")" );
+
+            }
+            for ( GeneOntologyTerm term : currentGoSets.get( selectedEdition ) ) {
+                if ( term.getGoId().equals( label ) ) {
+                    selectedTerm = term;
+                }
+            }
+            if ( selectedTerm == null ) {
+                log.debug( "Could not find series for  (" + label + ")" );
+            }
+
+        }
+
+    }
+
+    private Collection<Edition> getGoEditionsFromDate( String date ) {
+        List<Edition> results = new ArrayList<Edition>();
+        for ( Edition ed : allEditions ) {
+            if ( ed.getDate().toString().equals( date ) ) {
+                results.add( ed );
+            }
+
+        }
+        return results;
+    }
+
+    public void clearOptionFilters( boolean reload ) {
+        log.info( "Option Filters Cleared." );
+        filterAspect = new ArrayList<>( aspects );
+        filterId = null;
+        filterName = null;
+        if ( reload ) {
+            reloadGraph();
+        }
+
+    }
+
+    public void reloadGraph() {
+        log.info( "reload" );
+        boolean idBypass = StringUtils.isEmpty( filterId );
+        boolean nameBypass = StringUtils.isEmpty( filterName );
+        boolean aspectBypass = filterAspect.containsAll( aspects );
+        if ( !idBypass || !nameBypass || !aspectBypass ) {
+            filter( idBypass, nameBypass, aspectBypass );
+        } else {
+            enrichmentChart = createChart( enrichmentData, "Enrichment Stability", "Date", "p-value" );
+            chartReady = true;
+            chartEmpty = false;
+        }
+
+    }
+
+    private void filter( boolean idBypass, boolean nameBypass, boolean aspectBypass ) {
+        log.info( "Filter: ID: " + filterId + " Name: " + filterName + " Aspects: " + filterAspect );
+        Map<Edition, Map<GeneOntologyTerm, Double>> filteredData = new HashMap<>();
+        boolean emptyChart = true;
+        for ( Entry<Edition, Map<GeneOntologyTerm, Double>> editionEntry : enrichmentData.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            Map<GeneOntologyTerm, Double> termsInEdition = new HashMap<>();
+            filteredData.put( ed, termsInEdition );
+
+            for ( Entry<GeneOntologyTerm, Double> termsEntry : editionEntry.getValue().entrySet() ) {
+                GeneOntologyTerm term = termsEntry.getKey();
+                Double pvalue = termsEntry.getValue();
+
+                if ( ( aspectBypass || filterAspect.contains( term.getAspect() ) )
+                        && ( idBypass || term.getGoId().equals( filterId ) )
+                        && ( nameBypass || StringUtils.containsIgnoreCase( term.getName(), filterName ) ) ) {
+                    termsInEdition.put( term, pvalue );
+                    emptyChart = false;
+                }
+            }
+        }
+
+        if ( !emptyChart ) {
+            enrichmentChart = createChart( filteredData, "Filtered Enrichment Stability", "Date", "p-value" );
+            chartEmpty = false;
+            log.info( "Chart filtered" );
+        } else {
+            chartEmpty = true;
+            log.info( "Chart Empty" );
+            enrichmentChart = null;
+        }
+
+    }
+
     public List<String> complete( String query ) {
         if ( StringUtils.isEmpty( query.trim() ) || currentSpeciesId == null ) {
             return new ArrayList<String>();
         }
         return this.cache.complete( query, currentSpeciesId, MAX_RESULTS );
+    }
+
+    public List<String> completeId( String query ) {
+        if ( query == null ) return new ArrayList<String>();
+
+        String queryUpper = query.toUpperCase();
+
+        Collection<String> exact = new HashSet<String>();
+        Collection<String> possible = new HashSet<String>();
+        for ( GeneOntologyTerm term : currentAllTerms ) {
+            if ( queryUpper.equals( term.getGoId().toUpperCase() ) ) {
+                exact.add( term.getGoId() );
+                continue;
+            }
+
+            String pattern = "(.*)" + queryUpper + "(.*)";
+            // Pattern r = Pattern.compile(pattern);
+            String m = term.getGoId().toUpperCase();
+            // Matcher m = r.matcher( term.getTerm() );
+            if ( m.matches( pattern ) ) {
+                possible.add( term.getGoId() );
+                continue;
+            }
+
+        }
+
+        List<String> orderedResults = new ArrayList<>();
+
+        orderedResults.addAll( exact );
+
+        ArrayList<String> p = new ArrayList<String>( possible );
+        Collections.sort( p, new LevenshteinComparator( query ) );
+
+        orderedResults.addAll( p );
+        return orderedResults;
+
     }
 
     public void addGene( ActionEvent actionEvent ) {
@@ -521,6 +711,58 @@ public class EnrichmentView implements Serializable {
 
     public void setViewGene( Gene viewGene ) {
         this.viewGene = viewGene;
+    }
+
+    public Edition getSelectedEdition() {
+        return selectedEdition;
+    }
+
+    public void setSelectedDate( Edition selectedEdition ) {
+        this.selectedEdition = selectedEdition;
+    }
+
+    public GeneOntologyTerm getSelectedTerm() {
+        return selectedTerm;
+    }
+
+    public void setSelectedTerm( GeneOntologyTerm selectedTerm ) {
+        this.selectedTerm = selectedTerm;
+    }
+
+    public Number getSelectedValue() {
+        return selectedValue;
+    }
+
+    public void setSelectedValue( Number selectedValue ) {
+        this.selectedValue = selectedValue;
+    }
+
+    public List<String> getFilterAspect() {
+        return filterAspect;
+    }
+
+    public void setFilterAspect( List<String> filterAspect ) {
+        this.filterAspect = filterAspect;
+    }
+
+    public String getFilterId() {
+        return filterId;
+    }
+
+    public void setFilterId( String filterId ) {
+        this.filterId = filterId;
+    }
+
+    public String getFilterName() {
+        return filterName;
+    }
+
+    public void setFilterName( String filterName ) {
+        this.filterName = filterName;
+    }
+
+    public boolean isChartEmpty() {
+        return chartEmpty;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

@@ -105,6 +105,7 @@ public class Cache implements Serializable {
     private Map<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> applicationLevelDataCache = new LinkedHashMap<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>>(
             MAX_DATA_ENTRIES + 1, 0.75F, true ) {
         // This method is called just after a new entry has been added
+        @Override
         public boolean removeEldestEntry(
                 Map.Entry<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> eldest ) {
             return size() > MAX_DATA_ENTRIES;
@@ -114,6 +115,7 @@ public class Cache implements Serializable {
     private Map<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>> applicationLevelEnrichmentCache = new LinkedHashMap<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>>(
             MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true ) {
         // This method is called just after a new entry has been added
+        @Override
         public boolean removeEldestEntry( Map.Entry<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>> eldest ) {
             return size() > MAX_ENRICHMENT_ENTRIES;
         }
@@ -439,6 +441,17 @@ public class Cache implements Serializable {
         GeneOntology o = ontologies.get( goEdition );
         if ( o != null ) {
             return o.propagate( goAnnotations );
+        }
+        return null;
+    }
+
+    public Set<GeneOntologyTerm> propagate( Set<GeneOntologyTerm> terms, Integer goEdition ) {
+        if ( terms == null || goEdition == null ) {
+            return null;
+        }
+        GeneOntology o = ontologies.get( goEdition );
+        if ( o != null ) {
+            return o.propagate( terms );
         }
         return null;
     }
