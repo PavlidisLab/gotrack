@@ -58,11 +58,22 @@ var hideLoadingSpinner = function() {
          bringSeriesToFront : true
 
       }
+      this.cfg.canvasOverlay = {
+              show:true,
+              objects: [{
+            	  dashedHorizontalLine: { color: 'rgb(89, 198, 154)', y: 0.05, lineWidth: 2,shadow:false}
+               }]
+      }
       //console.log(this.cfg.axes);
       //this.cfg.axes.yaxis.label = "Per Capita Expenditure (local currency)";
       this.cfg.axes.yaxis.renderer = $.jqplot.LogAxisRenderer;
       //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
    }
+  
+  function drawThreshold(t) {
+	  PrimeFaces.widgets.chart.plot.plugins.canvasOverlay.objects[0].options.y=t;
+	  PrimeFaces.widgets.chart.plot.plugins.canvasOverlay.draw(PrimeFaces.widgets.chart.plot);
+  }
   
   function escDialog() {
 	   $(document).keyup(function(e) {
