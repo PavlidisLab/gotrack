@@ -256,8 +256,8 @@ public class TrackView {
 
         if ( data == null ) {
 
-            data = annotationDAO.track3( currentSpeciesId, query, currentEdition.getEdition(),
-                    currentEdition.getGoEditionId(), false );
+            data = annotationDAO.track( currentSpeciesId, query, currentEdition.getEdition(),
+                    currentEdition.getGoEditionId() );
 
             // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
 
@@ -597,8 +597,22 @@ public class TrackView {
     }
 
     private <T extends Number> LineChartModel createChart(
+            GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart ) {
+
+        return createChart( goChart, null, false );
+
+    }
+
+    private <T extends Number> LineChartModel createChart(
             GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart, GoChart<Edition, T> staticData ) {
 
+        return createChart( goChart, staticData, false );
+
+    }
+
+    private <T extends Number> LineChartModel createChart(
+            GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart, GoChart<Edition, T> staticData,
+            boolean logAxis ) {
         LineChartModel dateModel = new LineChartModel();
 
         if ( staticData != null ) {
@@ -612,7 +626,7 @@ public class TrackView {
 
                 for ( Entry<Edition, T> dataPoint : sData.entrySet() ) {
                     String date = dataPoint.getKey().getDate().toString();
-                    T val = dataPoint.getValue();
+                    Number val = logAxis ? Math.log10( ( double ) dataPoint.getValue() ) : dataPoint.getValue();
                     series.set( date, val );
                 }
 
@@ -632,7 +646,7 @@ public class TrackView {
             for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> dataPoint : sData.entrySet() ) {
                 String date = dataPoint.getKey().getDate().toString();
                 Integer count = dataPoint.getValue().size();
-                series.set( date, count );
+                series.set( date, logAxis ? Math.log10( count ) : count );
             }
 
             dateModel.addSeries( series );
@@ -647,7 +661,7 @@ public class TrackView {
         dateModel.setMouseoverHighlight( true );
         dateModel.setExtender( "chartExtender" );
 
-        dateModel.getAxis( AxisType.Y ).setLabel( goChart.getyLabel() );
+        dateModel.getAxis( AxisType.Y ).setLabel( ( logAxis ? "Log of " : "" ) + goChart.getyLabel() );
 
         if ( goChart.getMin() != null ) {
             dateModel.getAxis( AxisType.Y ).setMin( goChart.getMin() );
@@ -665,7 +679,6 @@ public class TrackView {
 
         dateModel.getAxes().put( AxisType.X, axis );
         return dateModel;
-
     }
 
     private void copyChart( GraphTypeKey fromGraphTypeKey, GraphTypeKey toGraphTypeKey ) {
@@ -993,7 +1006,7 @@ public class TrackView {
                 + goChart.getTitle(), goChart.getxLabel(), goChart.getyLabel(), data );
 
         // Base Chart
-        currentChart = createChart( newChart, null );
+        currentChart = createChart( newChart );
         currentGoChart = newChart;
 
     }
@@ -1075,6 +1088,11 @@ public class TrackView {
             currentChart = lineChartModelMap.get( gtk );
             currentGoChart = goChartMap.get( gtk );
         }
+
+        // if ( scale.equals( "log" ) ) {
+        // // Base Chart
+        // currentChart = createChart( currentGoChart, null, true );
+        // }
 
     }
 

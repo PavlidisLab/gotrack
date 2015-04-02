@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -59,44 +58,26 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     // Constants ----------------------------------------------------------------------------------
 
     private static final String SQL_FIND_BY_ID = "SELECT edition, species_id, accession, symbol, go_id, reference, evidence, db_object_name, synonyms, db_object_type, taxon FROM gene_annotation WHERE id = ?";
-    // private static final String SQL_FIND =
-    // "SELECT edition, species_id, accession, symbol, go_id, reference, evidence, db_object_name, synonyms, db_object_type, taxon FROM gene_annotation WHERE accession = ? AND edition = ? AND species_id = ?";
     private static final String SQL_FIND_LIST = "SELECT edition, species_id, accession, symbol, go_id, reference, evidence, db_object_name, synonyms, db_object_type, taxon FROM gene_annotation WHERE accession IN (%s) AND edition = ? AND species_id = ?";
-    // private static final String SQL_EXIST_SYMBOL = "SELECT COUNT(*) FROM gene_annotation WHERE symbol = ?";
-    // private static final String SQL_TRACK2 =
-    // "select date, gene_annotation.edition, accession, COUNT(distinct gene_annotation.go_id) as direct from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? where gene_annotation.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, accession";
-    // private static final String SQL_TRACK =
-    // "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, gene_annotation.go_id, go_term.name, go_term.aspect, go_term.is_obsolete from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term on edition.go_date=go_term.date and go_term.id=gene_annotation.go_id where edition.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`, go_id";
-    // private static final String SQL_TRACK_PROPAGATED =
-    // "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, go_ontology_tclosure.parent as go_id, go_term.name, go_term.aspect, go_term.is_obsolete from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? INNER JOIN go_ontology_tclosure ON gene_annotation.go_id=child and go_ontology_tclosure.date=edition.go_date LEFT JOIN go_term on edition.go_date=go_term.date and go_term.id=go_ontology_tclosure.parent  where edition.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`, parent";
-    private static final String SQL_TRACK = "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, gene_annotation.go_id, gt1.name, gt1.aspect, gt2.is_obsolete "
+
+    /* OLD QUERIES KEPT FOR METHOD REFERENCE */
+    private static final String SQL_TRACK_OLD = "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, gene_annotation.go_id, gt1.name, gt1.aspect, gt2.is_obsolete "
             + "from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? "
             + "LEFT JOIN go_term gt1 on edition.go_edition_id_fk=gt1.go_edition_id_fk and gt1.go_id=gene_annotation.go_id "
             + "LEFT JOIN go_term gt2 on gt2.go_id=gene_annotation.go_id AND gt2.go_edition_id_fk = ? "
             + "where gene_annotation.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`, gene_annotation.go_id ORDER BY NULL";
-    private static final String SQL_TRACK_PROPAGATED = "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, go_ontology_tclosure.parent as go_id, gt1.name, gt1.aspect, gt2.is_obsolete "
+    private static final String SQL_TRACK_PROPAGATED_OLD = "select edition.date, gene_annotation.edition, CASE %s ELSE accession END as `primary`, go_ontology_tclosure.parent as go_id, gt1.name, gt1.aspect, gt2.is_obsolete "
             + "from gene_annotation INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? "
             + "INNER JOIN go_ontology_tclosure ON gene_annotation.go_id=child and go_ontology_tclosure.go_edition_id_fk=edition.go_edition_id_fk "
             + "LEFT JOIN go_term gt1 on edition.go_edition_id_fk=gt1.go_edition_id_fk and gt1.go_id=go_ontology_tclosure.parent "
             + "LEFT JOIN go_term gt2 on gt2.go_id=go_ontology_tclosure.parent AND gt2.go_edition_id_fk = ? "
             + "where gene_annotation.species_id=? and accession IN (%s) GROUP BY gene_annotation.edition, `primary`, parent ORDER BY NULL";
     private static final String SQL_TRACK_WHEN_THEN = "WHEN accession IN (%s) THEN ? ";
-    private static final String SQL_FIND_UNIQUE_GO_IN_EDITION = "SELECT distinct go_id, evidence, reference from gene_annotation where accession in (%s) and edition = ? and species_id = ?";
-    private static final String SQL_FIND_UNIQUE_GO = "SELECT distinct go_id from gene_annotation where accession in (%s) and species_id = ?";
-    private static final String SQL_ACCESSION_TO_GO = "SELECT DISTINCT accession as `primary`, go_id FROM gene_annotation WHERE species_id=? AND edition=? AND accession IS NOT NULL";
-    private static final String SQL_SYMBOL_TO_GO = "SELECT DISTINCT symbol as `primary`, go_id FROM gene_annotation WHERE species_id=? AND edition=? AND symbol IS NOT NULL";
 
-    // tests for new queries
-    // symbol,edition,species,species,go_edition,species
-    private static final String SQL_TRACK2 = "select edition.date, gene_annotation.edition, temp.accession as `primary`, gene_annotation.go_id, gt1.name, gt1.aspect, gt2.is_obsolete from (select distinct accession from gene_annotation WHERE symbol=? AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term gt1 on edition.go_edition_id_fk=gt1.go_edition_id_fk and gt1.go_id=gene_annotation.go_id LEFT JOIN go_term gt2 on gt2.go_id=gene_annotation.go_id AND gt2.go_edition_id_fk = ? where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.accession, gene_annotation.go_id ORDER BY NULL";
-    private static final String SQL_TRACK_PROPAGATED2 = "select edition.date, gene_annotation.edition, temp.accession as `primary`, parent as `go_id`, gt1.name, gt1.aspect, gt2.is_obsolete from (select distinct accession from gene_annotation WHERE symbol=? AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? INNER JOIN go_ontology_tclosure ON gene_annotation.go_id=child and go_ontology_tclosure.go_edition_id_fk=edition.go_edition_id_fk LEFT JOIN go_term gt1 on edition.go_edition_id_fk=gt1.go_edition_id_fk and gt1.go_id=go_ontology_tclosure.parent LEFT JOIN go_term gt2 on gt2.go_id=go_ontology_tclosure.parent AND gt2.go_edition_id_fk = ? where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.accession, parent ORDER BY NULL";
+    /* CURRENT QUERIES */
 
     // symbol, edition, species, species, species
     private static final String SQL_TRACK3 = "select edition.date, gene_annotation.edition, edition.go_edition_id_fk, temp.accession as `primary`, gene_annotation.go_id, go_term.name, go_term.aspect, gene_annotation.evidence, gene_annotation.reference, evidence_categories.category from (select distinct accession from gene_annotation WHERE symbol=? AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN evidence_categories on gene_annotation.evidence=evidence_categories.evidence INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.accession, gene_annotation.go_id, evidence, reference ORDER BY NULL";
-    private static final String SQL_TRACK_PROPAGATED3 = "select edition.date, gene_annotation.edition, edition.go_edition_id_fk, temp.accession as `primary`, parent as `go_id` from (select distinct accession from gene_annotation WHERE symbol=? AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? INNER JOIN go_ontology_tclosure ON gene_annotation.go_id=child and go_ontology_tclosure.go_edition_id_fk=edition.go_edition_id_fk where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.accession, parent ORDER BY NULL";
-
-    // species, species, symbol
-    private static final String SQL_TRACK_BY_SYMBOL_ONLY = "select edition.date, gene_annotation.edition, edition.go_edition_id_fk, gene_annotation.accession as `primary`, symbol, gene_annotation.go_id, go_term.name, go_term.aspect, gene_annotation.evidence, gene_annotation.reference, evidence_categories.category from gene_annotation INNER JOIN evidence_categories on gene_annotation.evidence=evidence_categories.evidence INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk where gene_annotation.species_id = ? and gene_annotation.symbol=? GROUP BY gene_annotation.edition, gene_annotation.accession, gene_annotation.go_id, evidence, reference ORDER BY NULL";
 
     // symbol edition, species, species, species
     private static final String SQL_ENRICHMENT_GENE_DATA = "select edition.date, gene_annotation.edition, edition.go_edition_id_fk, temp.symbol, gene_annotation.go_id, go_term.name, go_term.aspect from (select distinct symbol, accession from gene_annotation WHERE symbol IN (%s) AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = gene_annotation.species_id LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.symbol, gene_annotation.go_id ORDER BY NULL";
@@ -119,67 +100,9 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     // Actions ------------------------------------------------------------------------------------
 
+    @Deprecated
     @Override
-    public Map<String, Collection<String>> geneToGoSet( Integer speciesId, Integer edition, Boolean useSymbols )
-            throws DAOException {
-        List<Object> params = new ArrayList<Object>();
-        params.add( speciesId );
-        params.add( edition );
-
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-
-        Map<String, Collection<String>> results = new LinkedHashMap<String, Collection<String>>();
-        String sql = useSymbols ? SQL_SYMBOL_TO_GO : SQL_ACCESSION_TO_GO;
-
-        log.debug( sql );
-
-        try {
-
-            long startTime = System.currentTimeMillis();
-            connection = daoFactory.getConnection();
-            long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
-
-            statement = connection.prepareStatement( sql );
-            DAOUtil.setValues( statement, params.toArray() );
-            log.debug( statement );
-
-            startTime = System.currentTimeMillis();
-            resultSet = statement.executeQuery();
-            endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
-
-            startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
-
-                String gene = resultSet.getString( "primary" );
-                String go = resultSet.getString( "go_id" );
-
-                Collection<String> goSet = results.get( gene );
-                if ( goSet == null ) {
-                    goSet = new HashSet<String>();
-                    results.put( gene, goSet );
-                }
-
-                goSet.add( go );
-
-            }
-            endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, statement, resultSet );
-        }
-
-        return results;
-
-    }
-
-    @Override
-    public Map<String, Map<Edition, Set<Annotation>>> track( Integer species,
+    public Map<String, Map<Edition, Set<Annotation>>> trackOld( Integer species,
             Map<String, Collection<String>> primaryToSecondary, Integer goEditionId, boolean ancestorsOnly )
             throws DAOException {
 
@@ -215,7 +138,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         ResultSet resultSet = null;
         // List<TrackValue> tvs = new ArrayList<TrackValue>();
         Map<String, Map<Edition, Set<Annotation>>> allSeries = new HashMap<String, Map<Edition, Set<Annotation>>>();
-        String sql = String.format( ancestorsOnly ? SQL_TRACK_PROPAGATED : SQL_TRACK, sql_when,
+        String sql = String.format( ancestorsOnly ? SQL_TRACK_PROPAGATED_OLD : SQL_TRACK_OLD, sql_when,
                 DAOUtil.preparePlaceHolders( allAccessions.size() ) );
 
         log.debug( sql );
@@ -280,90 +203,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public Map<String, Map<Edition, Set<Annotation>>> track2( Integer species, String symbol, Integer edition,
-            Integer goEditionId, boolean ancestorsOnly ) throws DAOException {
-
-        List<Object> params = new ArrayList<Object>();
-
-        // symbol,edition,species,species,go_edition,species
-        params.add( symbol );
-        params.add( edition );
-        params.add( species );
-        params.add( species );
-        params.add( goEditionId );
-        params.add( species );
-
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-        // List<TrackValue> tvs = new ArrayList<TrackValue>();
-        Map<String, Map<Edition, Set<Annotation>>> allSeries = new HashMap<String, Map<Edition, Set<Annotation>>>();
-        String sql = ancestorsOnly ? SQL_TRACK_PROPAGATED2 : SQL_TRACK2;
-
-        log.debug( sql );
-
-        try {
-
-            long startTime = System.currentTimeMillis();
-            connection = daoFactory.getConnection();
-            long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
-
-            statement = connection.prepareStatement( sql );
-            DAOUtil.setValues( statement, params.toArray() );
-            log.debug( statement );
-
-            startTime = System.currentTimeMillis();
-            resultSet = statement.executeQuery();
-            endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
-
-            startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
-                // Integer edition = resultSet.getInt( "edition" );
-                String primary = resultSet.getString( "primary" );
-                // TODO fill rest of Edition properties
-                Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ) );
-                Annotation term = new Annotation();
-                term.setGoId( resultSet.getString( "go_id" ) );
-                term.setName( resultSet.getString( "name" ) );
-                term.setAspect( resultSet.getString( "aspect" ) );
-                Byte b = resultSet.getByte( "is_obsolete" );
-                if ( b == null ) {
-                    term.setObsolete( null );
-                } else {
-                    term.setObsolete( b.intValue() == 0 ? false : true );
-                }
-
-                Map<Edition, Set<Annotation>> series = allSeries.get( primary );
-                if ( series == null ) {
-                    series = new HashMap<Edition, Set<Annotation>>();
-                    allSeries.put( primary, series );
-                }
-
-                Set<Annotation> dataTerms = series.get( ed );
-                if ( dataTerms == null ) {
-                    dataTerms = new HashSet<Annotation>();
-                    series.put( ed, dataTerms );
-                }
-
-                dataTerms.add( term );
-
-            }
-            endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, statement, resultSet );
-        }
-
-        return allSeries;
-    }
-
-    @Override
-    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track3( Integer species,
-            String symbol, Integer edition, Integer goEditionId, boolean ancestorsOnly ) throws DAOException {
+    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
+            String symbol, Integer edition, Integer goEditionId ) throws DAOException {
 
         List<Object> params = new ArrayList<Object>();
 
@@ -380,7 +221,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
         // Map<String, Map<Edition, Map<String, Set<Annotation>>>> allSeries = new HashMap<>();
         Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allSeries = new HashMap<>();
-        String sql = ancestorsOnly ? SQL_TRACK_PROPAGATED3 : SQL_TRACK3;
+        String sql = SQL_TRACK3;
 
         log.debug( sql );
 
@@ -402,116 +243,6 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
             startTime = System.currentTimeMillis();
             while ( resultSet.next() ) {
-                // String primary = resultSet.getString( "primary" );
-                // Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
-                // resultSet.getInt( "go_edition_id_fk" ) );
-                // Annotation annot = new Annotation();
-                // annot.setGoId( resultSet.getString( "go_id" ) );
-                // annot.setName( resultSet.getString( "name" ) );
-                // annot.setAspect( resultSet.getString( "aspect" ) );
-                // annot.setEvidence( resultSet.getString( "evidence" ) );
-                // annot.setReference( resultSet.getString( "reference" ) );
-                //
-                // Map<Edition, Map<String, Set<Annotation>>> series = allSeries.get( primary );
-                // if ( series == null ) {
-                // series = new HashMap<>();
-                // allSeries.put( primary, series );
-                // }
-                //
-                // Map<String, Set<Annotation>> goIdMap = series.get( ed );
-                // if ( goIdMap == null ) {
-                // goIdMap = new HashMap<>();
-                // series.put( ed, goIdMap );
-                // }
-                //
-                // Set<Annotation> annotations = goIdMap.get( annot.getGoId() );
-                // if ( annotations == null ) {
-                // annotations = new HashSet<>();
-                // goIdMap.put( annot.getGoId(), annotations );
-                // }
-                //
-                // annotations.add( annot );
-
-                String primary = resultSet.getString( "primary" );
-                Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
-                        resultSet.getInt( "go_edition_id_fk" ) );
-                GeneOntologyTerm go = new GeneOntologyTerm( resultSet.getString( "go_id" ),
-                        resultSet.getString( "name" ), resultSet.getString( "aspect" ) );
-                EvidenceReference er = new EvidenceReference( resultSet.getString( "evidence" ),
-                        resultSet.getString( "reference" ), resultSet.getString( "category" ) );
-
-                Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = allSeries.get( primary );
-                if ( series == null ) {
-                    series = new HashMap<>();
-                    allSeries.put( primary, series );
-                }
-
-                Map<GeneOntologyTerm, Set<EvidenceReference>> goIdMap = series.get( ed );
-                if ( goIdMap == null ) {
-                    goIdMap = new HashMap<>();
-                    series.put( ed, goIdMap );
-                }
-
-                Set<EvidenceReference> evidence = goIdMap.get( go );
-                if ( evidence == null ) {
-                    evidence = new HashSet<>();
-                    goIdMap.put( go, evidence );
-                }
-
-                evidence.add( er );
-
-            }
-            endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, statement, resultSet );
-        }
-
-        return allSeries;
-    }
-
-    @Override
-    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> trackBySymbolOnly( Integer species,
-            String symbol ) throws DAOException {
-
-        List<Object> params = new ArrayList<Object>();
-
-        // species, species, symbol
-        params.add( species );
-        params.add( species );
-        params.add( symbol );
-
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-
-        // Map<String, Map<Edition, Map<String, Set<Annotation>>>> allSeries = new HashMap<>();
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allSeries = new HashMap<>();
-        String sql = SQL_TRACK_BY_SYMBOL_ONLY;
-
-        log.debug( sql );
-
-        try {
-
-            long startTime = System.currentTimeMillis();
-            connection = daoFactory.getConnection();
-            long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
-
-            statement = connection.prepareStatement( sql );
-            DAOUtil.setValues( statement, params.toArray() );
-            log.debug( statement );
-
-            startTime = System.currentTimeMillis();
-            resultSet = statement.executeQuery();
-            endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
-
-            startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
-
                 String primary = resultSet.getString( "primary" );
                 Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
                         resultSet.getInt( "go_edition_id_fk" ) );
@@ -697,77 +428,6 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         }
 
         return annotationDetaileds;
-
-    }
-
-    @Override
-    public Collection<Annotation> findUniqueGOInEdition( List<String> accessions, Integer edition, Integer species )
-            throws DAOException {
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-        Collection<Annotation> goTerms = new HashSet<Annotation>();
-        String sql = String.format( SQL_FIND_UNIQUE_GO_IN_EDITION, DAOUtil.preparePlaceHolders( accessions.size() ) );
-        log.debug( sql );
-        List<Object> params = new ArrayList<Object>();
-
-        for ( String acc : accessions ) {
-            params.add( acc );
-        }
-        params.add( edition );
-        params.add( species );
-
-        try {
-            connection = daoFactory.getConnection();
-            statement = connection.prepareStatement( sql );
-            DAOUtil.setValues( statement, params.toArray() );
-            log.debug( statement );
-            resultSet = statement.executeQuery();
-            while ( resultSet.next() ) {
-                goTerms.add( new Annotation( resultSet.getString( "go_id" ), resultSet.getString( "evidence" ),
-                        resultSet.getString( "reference" ) ) );
-            }
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, statement, resultSet );
-        }
-
-        return goTerms;
-
-    }
-
-    @Override
-    public Collection<String> findUniqueGO( List<String> accessions, Integer species ) throws DAOException {
-        Connection connection = null;
-        PreparedStatement statement = null;
-        ResultSet resultSet = null;
-        Collection<String> goIds = new HashSet<String>();
-        String sql = String.format( SQL_FIND_UNIQUE_GO, DAOUtil.preparePlaceHolders( accessions.size() ) );
-        log.debug( sql );
-        List<Object> params = new ArrayList<Object>();
-
-        for ( String acc : accessions ) {
-            params.add( acc );
-        }
-        params.add( species );
-
-        try {
-            connection = daoFactory.getConnection();
-            statement = connection.prepareStatement( sql );
-            DAOUtil.setValues( statement, params.toArray() );
-            log.debug( statement );
-            resultSet = statement.executeQuery();
-            while ( resultSet.next() ) {
-                goIds.add( resultSet.getString( "go_id" ) );
-            }
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, statement, resultSet );
-        }
-
-        return goIds;
 
     }
 

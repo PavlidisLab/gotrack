@@ -21,7 +21,6 @@ package ubc.pavlab.gotrack.model;
 
 import java.util.Collection;
 import java.util.HashSet;
-import java.util.List;
 
 /**
  * TODO Document Me
@@ -33,7 +32,6 @@ public class Accession {
 
     private String accession;
     private String symbol;
-    private List<String> synonyms;
     private Collection<String> secondary = new HashSet<String>();
 
     /**
@@ -47,11 +45,10 @@ public class Accession {
         this.accession = accession;
     }
 
-    public Accession( String accession, String symbol, List<String> synonyms ) {
+    public Accession( String accession, String symbol ) {
         super();
         this.accession = accession;
         this.symbol = symbol;
-        this.synonyms = synonyms;
     }
 
     public String getAccession() {
@@ -68,14 +65,6 @@ public class Accession {
 
     public void setSymbol( String symbol ) {
         this.symbol = symbol;
-    }
-
-    public List<String> getSynonyms() {
-        return synonyms;
-    }
-
-    public void setSynonyms( List<String> synonyms ) {
-        this.synonyms = synonyms;
     }
 
     public Collection<String> getSecondary() {

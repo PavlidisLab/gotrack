@@ -80,26 +80,12 @@ public interface AnnotationDAO {
      */
     public boolean existSymbol( String symbol ) throws DAOException;
 
-    public Collection<Annotation> findUniqueGOInEdition( List<String> accessions, Integer edition, Integer species )
-            throws DAOException;
-
-    public Collection<String> findUniqueGO( List<String> accessions, Integer species ) throws DAOException;
-
-    public Map<String, Map<Edition, Set<Annotation>>> track( Integer species,
+    public Map<String, Map<Edition, Set<Annotation>>> trackOld( Integer species,
             Map<String, Collection<String>> primaryToSecondary, Integer goEditionId, boolean propagate )
             throws DAOException;
 
-    public Map<String, Map<Edition, Set<Annotation>>> track2( Integer species, String symbol, Integer edition,
-            Integer goEditionId, boolean ancestorsOnly ) throws DAOException;
-
-    public Map<String, Collection<String>> geneToGoSet( Integer speciesId, Integer edition, Boolean useSymbols )
-            throws DAOException;
-
-    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track3( Integer species,
-            String symbol, Integer edition, Integer goEditionId, boolean ancestorsOnly ) throws DAOException;
-
-    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> trackBySymbolOnly( Integer species,
-            String symbol ) throws DAOException;
+    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
+            String symbol, Integer edition, Integer goEditionId ) throws DAOException;
 
     public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentData( Integer species, Set<Gene> genes,
             Integer currentEdition ) throws DAOException;

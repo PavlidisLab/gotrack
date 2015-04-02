@@ -25,8 +25,8 @@ import java.util.Map;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.go.GeneOntology;
-import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Relationship;
 import ubc.pavlab.gotrack.model.StatsEntry;
 
@@ -40,28 +40,15 @@ public interface CacheDAO {
 
     public Map<Integer, Edition> getCurrentEditions() throws DAOException;
 
-    public Map<String, Accession> getAccessions( Integer species, Integer edition ) throws DAOException;
-
-    public Collection<String> getUniqueGeneSymbols( Integer species, Integer edition ) throws DAOException;
-
-    public Map<Integer, Map<Edition, Double>> getSpeciesAverages() throws DAOException;
-
     /**
      * @return Map of species to ordered linkedlist of editions
      * @throws DAOException
      */
     public Map<Integer, List<Edition>> getAllEditions() throws DAOException;
 
-    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes( Integer speciesId, int minimum )
-            throws DAOException;
-
-    public Map<Integer, Integer> getAccessionSizes( Integer speciesId ) throws DAOException;
-
-    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizesFromPrecompute() throws DAOException;
+    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes() throws DAOException;
 
     public Map<Integer, Map<Edition, StatsEntry>> getAggregates() throws DAOException;
-
-    public Set<Relationship> getAdjacencyList( int go_edition_id_fk ) throws DAOException;
 
     public Set<Integer> getGOEditions() throws DAOException;
 
@@ -72,5 +59,7 @@ public interface CacheDAO {
     public Map<String, String> getEvidenceCategories() throws DAOException;
 
     public Map<Integer, Map<Edition, Integer>> getPopulations() throws DAOException;
+
+    public Map<Integer, Map<String, Gene>> getCurrentGenes() throws DAOException;
 
 }

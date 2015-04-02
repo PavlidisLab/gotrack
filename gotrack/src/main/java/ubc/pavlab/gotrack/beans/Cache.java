@@ -43,17 +43,14 @@ import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
 import ubc.pavlab.gotrack.go.GeneOntology;
-import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.Relationship;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.StatsEntry;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -156,7 +153,7 @@ public class Cache implements Serializable {
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        goSetSizes = cacheDAO.getGOSizesFromPrecompute();
+        goSetSizes = cacheDAO.getGOSizes();
 
         log.info( "GO Set sizes successfully obtained" );
 
@@ -165,28 +162,28 @@ public class Cache implements Serializable {
                 / 1000000 + " MB" );
 
         List<Integer> eds = new ArrayList<Integer>( cacheDAO.getGOEditions() );
-        List<List<Integer>> edPartitions = Lists.partition( eds, 20 );
-        int cnt = 0;
-        for ( List<Integer> list : edPartitions ) {
-            Map<Integer, Set<Relationship>> tmp = cacheDAO.getOntologies( list );
-            log.info( "GO Ontologies Retrieved: " + tmp.size() );
-            for ( Entry<Integer, Set<Relationship>> relsEntry : tmp.entrySet() ) {
-                ontologies.put( relsEntry.getKey(), new GeneOntology( relsEntry.getValue() ) );
-                cnt++;
-                relsEntry.getValue().clear();
+        // List<List<Integer>> edPartitions = Lists.partition( eds, 20 );
+        // int cnt = 0;
+        // for ( List<Integer> list : edPartitions ) {
+        // Map<Integer, Set<Relationship>> tmp = cacheDAO.getOntologies( list );
+        // log.info( "GO Ontologies Retrieved: " + tmp.size() );
+        // for ( Entry<Integer, Set<Relationship>> relsEntry : tmp.entrySet() ) {
+        // ontologies.put( relsEntry.getKey(), new GeneOntology( relsEntry.getValue() ) );
+        // cnt++;
+        // relsEntry.getValue().clear();
+        //
+        // }
+        // // System.gc();
+        // log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
+        // log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+        // / 1000000 + " MB" );
+        //
+        // }
 
-            }
-            // System.gc();
-            log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
-            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                    / 1000000 + " MB" );
+        ontologies = cacheDAO.getOntologies();
 
-        }
-
-        // ontologies = cacheDAO.getOntologies();
-
-        // System.gc();
-        log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
+        System.gc();
+        log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() + "/" + eds.size() );
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
@@ -236,37 +233,47 @@ public class Cache implements Serializable {
             currentEditions.put( species, ed );
         }
 
-        log.info( "Loading accession to geneSymbol cache..." );
+        // log.info( "Loading accession to geneSymbol cache..." );
+        // for ( Species species : speciesList ) {
+        // Integer speciesId = species.getId();
+        // Edition currEd = currentEditions.get( speciesId );
+        //
+        // if ( currEd == null ) continue;
+        // log.debug( species.getCommonName() + ": " + currEd.toString() );
+        // // get current accessions
+        // Map<String, Accession> currAccMap = cacheDAO.getAccessions( speciesId, currEd.getEdition() );
+        //
+        // // Create Map of current genes
+        // Map<String, Gene> currentGenes = new HashMap<>();
+        //
+        // for ( Accession acc : currAccMap.values() ) {
+        // String symbol = acc.getSymbol();
+        // Gene gene = currentGenes.get( symbol.toUpperCase() );
+        // if ( gene == null ) {
+        // gene = new Gene( symbol );
+        // currentGenes.put( symbol.toUpperCase(), gene );
+        // }
+        // gene.getAccessions().add( acc );
+        // gene.getSynonyms().addAll( acc.getSynonyms() );
+        //
+        // }
+        //
+        // speciesToCurrentGenes.put( speciesId, currentGenes );
+        //
+        // log.info( "Done loading accession to geneSymbol for species (" + speciesId + "), size: "
+        // + currAccMap.size() + " unique symbols: " + currentGenes.size() );
+        // }
+        // log.info( "Done loading accession to geneSymbol cache..." );
+
+        speciesToCurrentGenes = cacheDAO.getCurrentGenes();
+        log.info( "Done loading current genes..." );
+
         for ( Species species : speciesList ) {
-            Integer speciesId = species.getId();
-            Edition currEd = currentEditions.get( speciesId );
-
-            if ( currEd == null ) continue;
-            log.debug( species.getCommonName() + ": " + currEd.toString() );
-            // get current accessions
-            Map<String, Accession> currAccMap = cacheDAO.getAccessions( speciesId, currEd.getEdition() );
-
-            // Create Map of current genes
-            Map<String, Gene> currentGenes = new HashMap<>();
-
-            for ( Accession acc : currAccMap.values() ) {
-                String symbol = acc.getSymbol();
-                Gene gene = currentGenes.get( symbol.toUpperCase() );
-                if ( gene == null ) {
-                    gene = new Gene( symbol );
-                    currentGenes.put( symbol.toUpperCase(), gene );
-                }
-                gene.getAccessions().add( acc );
-                gene.getSynonyms().addAll( acc.getSynonyms() );
-
+            if ( speciesToCurrentGenes.keySet().contains( species.getId() ) ) {
+                log.info( "Current gene size for species (" + species + "): "
+                        + speciesToCurrentGenes.get( species.getId() ).size() );
             }
-
-            speciesToCurrentGenes.put( speciesId, currentGenes );
-
-            log.info( "Done loading accession to geneSymbol for species (" + speciesId + "), size: "
-                    + currAccMap.size() + " unique symbols: " + currentGenes.size() );
         }
-        log.info( "Done loading accession to geneSymbol cache..." );
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
