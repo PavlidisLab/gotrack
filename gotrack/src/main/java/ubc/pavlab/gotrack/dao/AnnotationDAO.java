@@ -84,10 +84,16 @@ public interface AnnotationDAO {
             Map<String, Collection<String>> primaryToSecondary, Integer goEditionId, boolean propagate )
             throws DAOException;
 
-    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
+    public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentData( Integer species, Set<Gene> genes )
+            throws DAOException;
+
+    public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentDataOld( Integer species, Set<Gene> genes,
+            Integer currentEdition ) throws DAOException;
+
+    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> trackOld2( Integer species,
             String symbol, Integer edition, Integer goEditionId ) throws DAOException;
 
-    public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentData( Integer species, Set<Gene> genes,
-            Integer currentEdition ) throws DAOException;
+    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
+            String symbol ) throws DAOException;
 
 }

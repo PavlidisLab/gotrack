@@ -103,7 +103,7 @@ public class EnrichmentView implements Serializable {
     private boolean bonferroniCorrection = true;
     private double pThreshold = 0.05;
     private boolean propagate = false;
-    private int minAnnotatedPopulation = 0;
+    private int minAnnotatedPopulation = 5;
 
     // Chart Filters
     private List<String> filterAspect;
@@ -159,7 +159,6 @@ public class EnrichmentView implements Serializable {
         Set<Gene> genes = new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) );
         log.info( "Current species: " + currentSpeciesId );
         log.info( "Geneset: " + genes );
-        log.info( "Current edition: " + currentEdition );
 
         if ( genes != null && !genes.isEmpty() ) {
 
@@ -174,7 +173,8 @@ public class EnrichmentView implements Serializable {
 
             if ( geneGOMap == null ) {
 
-                geneGOMap = annotationDAO.enrichmentData( currentSpeciesId, genes, currentEdition.getEdition() );
+                geneGOMap = annotationDAO.enrichmentData( currentSpeciesId, genes );
+                // geneGOMap = annotationDAO.enrichmentDataOld( currentSpeciesId, genes, currentEdition.getEdition() );
 
                 // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
 
@@ -249,6 +249,12 @@ public class EnrichmentView implements Serializable {
             int k = data.keySet().size();
 
             Set<GeneOntologyTerm> termsInEdition = allTerms.get( ed );
+
+            // // TODO Multiple tests correction lowered because we're testing less terms?
+            // if ( !firstRun ) {
+            // termsInEdition = new HashSet<>( termsInEdition );
+            // termsInEdition.retainAll( termsToEnrich );
+            // }
 
             Map<GeneOntologyTerm, Double> enrich = enrichmentData.get( ed );
 
@@ -370,7 +376,7 @@ public class EnrichmentView implements Serializable {
             String xLabel, String yLabel ) {
 
         LineChartModel dateModel = new LineChartModel();
-
+        Double minVal = 1.0;
         Map<GeneOntologyTerm, LineChartSeries> allSeries = new HashMap<>();
         if ( enrichmentData != null ) {
             List<Edition> eds = new ArrayList<Edition>( enrichmentData.keySet() );
@@ -389,6 +395,7 @@ public class EnrichmentView implements Serializable {
                         allSeries.put( term, s );
                     }
                     Double pValue = dataPoint.getValue();
+                    if ( pValue < minVal ) minVal = pValue;
                     s.set( date, pValue );
                 }
             }
@@ -406,7 +413,8 @@ public class EnrichmentView implements Serializable {
         dateModel.setLegendRows( 8 );
         dateModel.setMouseoverHighlight( true );
         dateModel.setExtender( "chartExtender" );
-
+        dateModel.getAxis( AxisType.Y ).setMax( 1.0 );
+        dateModel.getAxis( AxisType.Y ).setMin( Math.min( minVal, 0.1 ) );
         dateModel.getAxis( AxisType.Y ).setLabel( yLabel );
 
         DateAxis axis = new DateAxis( xLabel );

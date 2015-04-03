@@ -256,8 +256,7 @@ public class TrackView {
 
         if ( data == null ) {
 
-            data = annotationDAO.track( currentSpeciesId, query, currentEdition.getEdition(),
-                    currentEdition.getGoEditionId() );
+            data = annotationDAO.track( currentSpeciesId, query );
 
             // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
 

@@ -71,8 +71,12 @@ var hideLoadingSpinner = function() {
    }
   
   function drawThreshold(t) {
+     try {
 	  PrimeFaces.widgets.chart.plot.plugins.canvasOverlay.objects[0].options.y=t;
 	  PrimeFaces.widgets.chart.plot.plugins.canvasOverlay.draw(PrimeFaces.widgets.chart.plot);
+     } catch (e) {
+        
+     }
   }
   
   function escDialog() {
