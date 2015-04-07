@@ -22,9 +22,13 @@ package ubc.pavlab.gotrack.beans;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
 
@@ -50,6 +54,8 @@ public class Stats implements Serializable {
 
     private static final Logger log = Logger.getLogger( Stats.class );
 
+    private Map<String, Integer> hits = new HashMap<>();
+
     private List<String> popularGenes = new ArrayList<String>();
     private List<String> topMultifunc = new ArrayList<String>();
 
@@ -72,6 +78,29 @@ public class Stats implements Serializable {
         popularGenes.addAll( Arrays.asList( new String[] { "spades", "hearts", "diamonds", "clubs" } ) );
         topMultifunc.addAll( Arrays.asList( new String[] { "One", "Two", "Three", "Four" } ) );
 
+    }
+
+    @PreDestroy
+    public void destroyed() {
+        // You can do here your initialization thing based on managed properties, if necessary.
+        log.info( "Stats destroyed" );
+        log.info( "Hits Map: " + hits );
+
+    }
+
+    public void countHit( String key ) {
+        synchronized ( hits ) {
+            Integer cnt = hits.get( key.toUpperCase() );
+            if ( cnt == null ) {
+                cnt = 0;
+            }
+            hits.put( key.toUpperCase(), ++cnt );
+        }
+        log.info( hits );
+    }
+
+    public Map<String, Integer> getHits() {
+        return Collections.unmodifiableMap( hits );
     }
 
     public List<String> getPopularGenes() {

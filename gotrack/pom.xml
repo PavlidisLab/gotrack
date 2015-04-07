@@ -38,6 +38,11 @@
 			<version>3.3.2</version>
 		</dependency>
 		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-math3</artifactId>
+			<version>3.4.1</version>
+		</dependency>
+		<dependency>
 			<groupId>com.sun.jersey</groupId>
 			<artifactId>jersey-bundle</artifactId>
 			<version>1.13</version>
@@ -192,12 +197,12 @@
 		
 		<!-- ErmineJ -->
 		
-		<dependency>
+<!-- 		<dependency>
             <groupId>ermineJ</groupId>
             <artifactId>ermineJ</artifactId>
             <version>3.0.3-SNAPSHOT</version>
             <type>jar</type>
-        </dependency>
+        </dependency> -->
         
         <!-- Guava -->
         
@@ -206,6 +211,23 @@
 			<artifactId>guava</artifactId>
 			<version>18.0</version>
 		</dependency>
+		
+		<!-- Trove -->
+		
+		<dependency>
+			<groupId>net.sf.trove4j</groupId>
+			<artifactId>trove4j</artifactId>
+			<version>3.0.3</version>
+		</dependency>
+		
+				
+		<!-- BCrypt -->
+		<dependency>
+			<groupId>org.mindrot</groupId>
+			<artifactId>jbcrypt</artifactId>
+			<version>0.3m</version>
+		</dependency>
+		
         
 
 	</dependencies>

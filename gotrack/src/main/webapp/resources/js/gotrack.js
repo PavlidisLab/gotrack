@@ -35,11 +35,11 @@ function centerResize() {
    PrimeFaces.widgets.funcTable.render();
 }
 
-var changeGraphScale =  function() {
+function changeGraphScale() {
    var renderer;
    var scale = $("#leftForm\\:scaleSelect div.ui-state-active > input").val();
-   var options = plot.options;
-   var data = plot.data;
+   var options = PrimeFaces.widgets.chart.plot.options;
+   var data = PrimeFaces.widgets.chart.plot.data;
    
    if (scale == "log") {
       renderer = $.jqplot.LogAxisRenderer;              
@@ -56,110 +56,99 @@ var changeGraphScale =  function() {
 }
 
 
-function timelineSelect() {
-   var obj = PF('timelineWdgt').getSelectedEvent();
+function timelineSelect(timelineIndex) {
+   var obj = PF('timelineWidget-'+timelineIndex).getSelectedEvent();
    //console.log( obj ); 
    var str = obj.className;
    var patt = new RegExp("true");
    var exists = patt.test(str);
-   
-   $('#timelineSelectMsgTerm').html('<b>Term:</b> '+ obj.group);
-   $('#timelineSelectMsgDate').html('<b>Date:</b> '+ obj.content);
-   $('#timelineSelectMsgExists').html('<b>Annotated:</b> ' + exists);
+   var tags = obj.content.split("(|)");
+   $('#timelineSelectMsgTerm').html('<b>Evidence:</b> '+ tags[1]);
+   $('#timelineSelectMsgDate').html('<b>Date:</b> '+ obj.start.toLocaleDateString());
+   $('#timelineSelectMsgReference').html('<b>Reference:</b> ' + tags[0]);
 }
 
 function cleanMsg() {
    $('#timelineSelectMsgTerm').html('');
    $('#timelineSelectMsgDate').html('');
-   $('#timelineSelectMsgExists').html('');
+   $('#timelineSelectMsgReference').html('');
 }
 
-function hideSeries(sidx, replot) {
-   if ( utility.isUndefined(sidx) ) return;
-   if ( utility.isUndefined(replot) ) replot=false;
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   var s = my_plot.series[sidx ];
-   if (!s.canvas._elem.is(':hidden') || s.show) {
-
-      my_plot.legend._elem.find('td').eq(sidx * 2).addClass('jqplot-series-hidden');
-      my_plot.legend._elem.find('td').eq((sidx * 2) + 1).addClass('jqplot-series-hidden');
-      
-      s.toggleDisplay({data:{}});
-      s.canvas._elem.hide();
-      s.show = false;
-      
-      if ( replot ) {
-         PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
-      } 
-      
-   
-      //my_plot.legend._elem.find('td').eq(sidx * 2).click()
-   }
-      
+function setTimelineInitialRange() {
+	   var timelines = PrimeFaces.widgets.timelineDataGridWidget.content.find('tr').length
+	   var minDate = PF('timelineWidget-0').getVisibleRange().start;
+	   var maxDate = PF('timelineWidget-0').getVisibleRange().end;
+	   for (var int = 0; int < timelines; int++) {
+	         var a = PF('timelineWidget-'+int).getVisibleRange(); 
+	         if ( a.start < minDate ) {
+	        	 minDate = a.start;
+	         }
+	         
+	         if ( a.end < maxDate ) {
+	        	 maxDate = a.end;
+	         }
+	   }
+	
+	   for (var int = 0; int < timelines; int++) {
+		   PF('timelineWidget-'+int).setVisibleRange(minDate, maxDate);
+	   }
+	   
 }
 
-function showSeries(sidx, replot) {
-   if ( utility.isUndefined(sidx) ) return;
-   if ( utility.isUndefined(replot) ) replot=false;
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   var s = my_plot.series[sidx ];
-   if (s.canvas._elem.is(':hidden') || !s.show) {
-
-   
-      my_plot.legend._elem.find('td').eq(sidx * 2).removeClass('jqplot-series-hidden');
-      my_plot.legend._elem.find('td').eq((sidx * 2) + 1).removeClass('jqplot-series-hidden');
-      
-      s.toggleDisplay({data:{}});
-      s.canvas._elem.show();
-      s.show = true;
-      
-      if ( replot ) {
-         PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
-      }
-   
-   
-      //my_plot.legend._elem.find('td').eq(sidx * 2).click()
+function onTimelineRangeChange(timelineIndex) {
+   var range = PF('timelineWidget-'+timelineIndex).getVisibleRange(); 
+   var timelines = PrimeFaces.widgets.timelineDataGridWidget.content.find('tr').length
+   for (var int = 0; int < timelines; int++) {
+      if ( timelineIndex !== int ) {
+         PF('timelineWidget-'+int).setVisibleRange(range.start, range.end); 
+      }       
    }
-}
-
-function isolateSeries(sidx) {
-   if ( utility.isUndefined(sidx) ) return;
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   for (var i = 0; i < my_plot.series.length; i++) {
-      if (i == sidx) {
-        showSeries(i, false);
-      } else {
-         hideSeries(i, false);
-      }
-      
-   }
-   PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
    
 }
 
-function isolateSeriesFromSwatch(el) {
-   if ( utility.isUndefined(el) ) return;
-   
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   var sidx = $(el).closest('table').find('td').index($(el).closest('td'))/2;
-   isolateSeries(sidx);
-   
-/*      for (var i = 0; i < my_plot.series.length; i++) {
-      if (i == sidx) {
-        showSeries(i, false);
-      } else {
-         hideSeries(i, false);
-      }*/
-      
-   }
-
-function showAllSeries() {
-   var my_plot = PrimeFaces.widgets.chart.plot;
-   for (var i = 0; i < my_plot.series.length; i++) {
-      showSeries(i, false);
-   }
-   PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
+function test() {
+   console.log('test');
 }
+
+function showTerminal() {
+   PF('terminalDialogWdg').show();
+   PF('terminalWdg').focus();
+}
+
+function chartExtender() {
+    // this = chart widget instance        
+    // this.cfg = options 
+    this.cfg.legend = {
+       renderer : $.jqplot.EnhancedLegendRenderer,
+       show : true,
+       location : 's',
+       placement : 'outside',
+       marginTop : '100px',
+       rendererOptions : {
+          numberRows : 0,
+          numberColumns : 10,
+          seriesToggle: true,
+          seriesToggleReplot : {resetAxes: true}
+       }
+    }
+    this.cfg.highlighter = {
+       show : true,
+       tooltipLocation : 'sw',
+       useAxesFormatters : true,
+       tooltipAxes : 'xy',
+       yvalues : 1,
+       formatString : 'Date: %s ~ Count: %s',
+       tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
+          return plot.series[seriesIndex].label + ": " + str;
+       },
+       bringSeriesToFront : true
+
+    }
+    //console.log(this.cfg.axes);
+    //this.cfg.axes.yaxis.label = "Per Capita Expenditure (local currency)";
+    this.cfg.axes.yaxis.renderer = $.jqplot.LinearAxisRenderer;
+    //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
+ }
 
 $(document).ready(function() {
    //calling remoteCommands

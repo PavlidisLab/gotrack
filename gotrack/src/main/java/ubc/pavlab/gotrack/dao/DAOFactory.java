@@ -86,6 +86,18 @@ public abstract class DAOFactory {
 
     // Actions ------------------------------------------------------------------------------------
 
+    public static DAOFactory getInstance( String name ) throws DAOConfigurationException {
+        if ( name == null ) {
+            throw new DAOConfigurationException( "Database name is null." );
+        }
+        DAOProperties properties = new DAOProperties( name );
+        String url = properties.getProperty( PROPERTY_URL, true );
+        String driverClassName = properties.getProperty( PROPERTY_DRIVER, false );
+        String password = properties.getProperty( PROPERTY_PASSWORD, false );
+        String username = properties.getProperty( PROPERTY_USERNAME, password != null );
+        return getInstance( url, driverClassName, password, username );
+    }
+
     /**
      * Returns a new DAOFactory instance for the given database name.
      * 
@@ -95,16 +107,9 @@ public abstract class DAOFactory {
      *         classpath or cannot be loaded, or if a required property is missing in the properties file, or if either
      *         the driver cannot be loaded or the datasource cannot be found.
      */
-    public static DAOFactory getInstance( String name ) throws DAOConfigurationException {
-        if ( name == null ) {
-            throw new DAOConfigurationException( "Database name is null." );
-        }
+    public static DAOFactory getInstance( String url, String driverClassName, String password, String username )
+            throws DAOConfigurationException {
 
-        DAOProperties properties = new DAOProperties( name );
-        String url = properties.getProperty( PROPERTY_URL, true );
-        String driverClassName = properties.getProperty( PROPERTY_DRIVER, false );
-        String password = properties.getProperty( PROPERTY_PASSWORD, false );
-        String username = properties.getProperty( PROPERTY_USERNAME, password != null );
         DAOFactory instance;
 
         // If driver is specified, then load it to let it register itself with DriverManager.

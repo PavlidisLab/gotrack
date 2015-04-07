@@ -41,27 +41,26 @@ import org.apache.log4j.Logger;
  */
 @ManagedBean
 @ViewScoped
-public class IndexView implements Serializable {
+public class GeneSearchView implements Serializable {
 
     /**
      * 
      */
     private static final long serialVersionUID = -3038133837848883737L;
 
-    private static final Logger log = Logger.getLogger( IndexView.class );
+    private static final Logger log = Logger.getLogger( GeneSearchView.class );
     private static final Integer MAX_RESULTS = 10;
 
-    private Integer currentSpeciesId = 1;
+    private Integer speciesId = 7;
     private String query;
 
     @ManagedProperty("#{cache}")
     private Cache cache;
 
-    /**
-     * private Integer currentSpeciesId; private String query; /**
-     */
-    public IndexView() {
-        log.info( "IndexView created" );
+    public GeneSearchView() {
+        log.info( "GeneSearchView created" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                / 1000000 + " MB" );
     }
 
     public void validateQuery( ComponentSystemEvent event ) {
@@ -76,7 +75,7 @@ public class IndexView implements Serializable {
         String speciesId = uiInputSpecies.getClientId();
 
         // get confirm password
-        UIInput uiInputQuery = ( UIInput ) components.findComponent( "userinp" );
+        UIInput uiInputQuery = ( UIInput ) components.findComponent( "geneInput" );
         String currentQuery = uiInputQuery.getLocalValue() == null ? "" : uiInputQuery.getLocalValue().toString();
         String queryId = uiInputQuery.getClientId();
 
@@ -95,7 +94,7 @@ public class IndexView implements Serializable {
             return;
         }
 
-        if ( cache.currentSymbolExists( selectspecies, currentQuery ) ) {
+        if ( !cache.currentSymbolExists( selectspecies, currentQuery ) ) {
 
             FacesMessage msg = new FacesMessage( "The selected gene symbol could not be found." );
             msg.setSeverity( FacesMessage.SEVERITY_ERROR );
@@ -106,17 +105,17 @@ public class IndexView implements Serializable {
 
     }
 
-    public Integer getCurrentSpeciesId() {
-        return currentSpeciesId;
+    public Integer getSpeciesId() {
+        return speciesId;
     }
 
-    public void setCurrentSpeciesId( Integer currentSpeciesId ) {
-        this.currentSpeciesId = currentSpeciesId;
+    public void setSpeciesId( Integer speciesId ) {
+        this.speciesId = speciesId;
     }
 
     public String go() {
         // return "track?faces-redirect=true&includeViewParams=true";
-        return "track?faces-redirect=true&query=" + query + "&currentSpeciesId=" + currentSpeciesId;
+        return "track?faces-redirect=true&query=" + query + "&currentSpeciesId=" + speciesId;
     }
 
     public String getQuery() {
@@ -128,7 +127,7 @@ public class IndexView implements Serializable {
     }
 
     public List<String> complete( String query ) {
-        return this.cache.complete( query, currentSpeciesId, MAX_RESULTS );
+        return this.cache.complete( query, speciesId, MAX_RESULTS );
     }
 
     public void setCache( Cache cache ) {

@@ -22,9 +22,12 @@ package ubc.pavlab.gotrack.dao;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.go.GeneOntology;
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.Relationship;
 import ubc.pavlab.gotrack.model.StatsEntry;
 
 /**
@@ -37,25 +40,26 @@ public interface CacheDAO {
 
     public Map<Integer, Edition> getCurrentEditions() throws DAOException;
 
-    public Map<String, Accession> getAccessions( Integer species, Integer edition ) throws DAOException;
-
-    public Collection<String> getUniqueGeneSymbols( Integer species, Integer edition ) throws DAOException;
-
-    public Map<Integer, Map<Edition, Double>> getSpeciesAverages() throws DAOException;
-
     /**
      * @return Map of species to ordered linkedlist of editions
      * @throws DAOException
      */
     public Map<Integer, List<Edition>> getAllEditions() throws DAOException;
 
-    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes( Integer speciesId, int minimum )
-            throws DAOException;
-
-    public Map<Integer, Integer> getAccessionSizes( Integer speciesId ) throws DAOException;
-
-    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizesFromPrecompute() throws DAOException;
+    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes() throws DAOException;
 
     public Map<Integer, Map<Edition, StatsEntry>> getAggregates() throws DAOException;
+
+    public Set<Integer> getGOEditions() throws DAOException;
+
+    public Map<Integer, GeneOntology> getOntologies() throws DAOException;
+
+    public Map<Integer, Set<Relationship>> getOntologies( Collection<Integer> range ) throws DAOException;
+
+    public Map<String, String> getEvidenceCategories() throws DAOException;
+
+    public Map<Integer, Map<Edition, Integer>> getPopulations() throws DAOException;
+
+    public Map<Integer, Map<String, Gene>> getCurrentGenes() throws DAOException;
 
 }
