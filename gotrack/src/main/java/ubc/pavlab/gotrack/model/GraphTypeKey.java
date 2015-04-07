@@ -31,12 +31,9 @@ public class GraphTypeKey {
         annotation, jaccard, multifunctionality, lossgain
     };
 
-    private GraphType graphType;
-    private Boolean split;
-    private Boolean propagate;
-
-    public GraphTypeKey( GraphType graphType ) {
-    };
+    private final GraphType graphType;
+    private final Boolean split;
+    private final Boolean propagate;
 
     public GraphTypeKey( GraphType graphType, Boolean split, Boolean propagate ) {
         super();
@@ -49,24 +46,12 @@ public class GraphTypeKey {
         return graphType;
     }
 
-    public void setGraphType( GraphType graphType ) {
-        this.graphType = graphType;
-    }
-
     public Boolean getSplit() {
         return split;
     }
 
-    public void setSplit( Boolean split ) {
-        this.split = split;
-    }
-
     public Boolean getPropagate() {
         return propagate;
-    }
-
-    public void setPropagate( Boolean propagate ) {
-        this.propagate = propagate;
     }
 
     @Override

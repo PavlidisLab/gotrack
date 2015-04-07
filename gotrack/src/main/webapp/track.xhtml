@@ -6,7 +6,8 @@
 	xmlns:ui="http://java.sun.com/jsf/facelets"
 	xmlns:p="http://primefaces.org/ui"
 	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
-	xmlns:pe="http://primefaces.org/ui/extensions">
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:of="http://omnifaces.org/functions">
 
 <f:view contentType="text/html">
 	<f:metadata>
@@ -36,50 +37,15 @@
 		
 		<h:outputScript library="js" name="utility.js" />
 		<h:outputScript library="js" name="gotrack.js" />
+		<h:outputScript library="js" name="chartExtendedFunctionality.js" />
 		<h:outputScript library="js" name="jqplot.logAxisRenderer.js" />
-		
-		<script>
-		//$.jqplot.postDrawHooks.push(function() {console.log('thjsiasfjnad od')});
-      function chartExtender() {
-         // this = chart widget instance        
-         // this.cfg = options 
-         this.cfg.legend = {
-            renderer : $.jqplot.EnhancedLegendRenderer,
-            show : true,
-            location : 's',
-            placement : 'outsideGrid',
-            rendererOptions : {
-               numberRows : 0,
-               numberColumns : 10,
-               seriesToggle: true,
-               seriesToggleReplot : {resetAxes: true}
-            }
-         }
-         this.cfg.highlighter = {
-            show : true,
-            tooltipLocation : 'sw',
-            useAxesFormatters : true,
-            tooltipAxes : 'xy',
-            yvalues : 1,
-            formatString : 'Date: %s ~ Count: %s',
-            tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
-               return plot.series[seriesIndex].label + ": " + str;
-            },
-            bringSeriesToFront : true
-
-         }
-         //console.log(this.cfg.axes);
-         //this.cfg.axes.yaxis.label = "Per Capita Expenditure (local currency)";
-         this.cfg.axes.yaxis.renderer = $.jqplot.LinearAxisRenderer;
-         //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
-      }
-   </script>
 
 	</h:head>
 
 	<h:body id="body">
 
 		<p:layout fullPage="true" onResize="centerResize()">
+		<p:growl globalOnly="true"/>
 			<p:layoutUnit id="top" position="north" size="50">
 
 				<h:form>
@@ -97,22 +63,21 @@
 						<p:menuitem value="&nbsp; Resources" url="resources.xhtml"
 							icon="fa fa-info-circle" styleClass="right-border" />
 						<f:facet name="options">
+							<p:commandButton type="button" icon="fa fa-terminal" onclick="showTerminal()" rendered="#{facesContext.application.projectStage != 'Production'}"/>
 							<p:selectOneMenu id="selectspecies"
-								value="#{indexView.currentSpeciesId}" style="margin-right:5px;">
-								<p:ajax event="change" update="selectspecies" />
+								value="#{geneSearchView.speciesId}" style="margin-right:5px;">
+								<p:ajax event="change" process="@this"/>
 								<f:selectItems value="#{cache.speciesList}" var="spec"
 									itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
 							</p:selectOneMenu>
-							<p:autoComplete id="userinp" value="#{indexView.query}"
-								completeMethod="#{indexView.complete}" queryDelay="600"
+							<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
+								completeMethod="#{geneSearchView.complete}" queryDelay="600"
 								minQueryLength="2" forceSelection="true" maxResults="10"
 								label="ID"
-								emptyMessage="No gene suggestions available,  please try again."
-								style="margin-right:8px;">
-								<p:ajax event="focus" update="selectspecies" />
-							</p:autoComplete>
+								emptyMessage="No gene suggestions available, please try again."
+								style="margin-right:8px;"/>
 							<p:commandButton type="submit" value="Go"
-								action="#{indexView.go}" />
+								action="#{geneSearchView.go}" />
 						</f:facet>
 					</p:menubar>
 				</h:form>
@@ -125,15 +90,15 @@
 				</p>
 			</p:layoutUnit>
 
-			<p:layoutUnit id="left" position="west" size="250" resizable="true"
-				collapsible="true" header="Options" minSize="250">
+			<p:layoutUnit id="left" position="west" size="275" resizable="true"
+				collapsible="true" header="Options" minSize="275">
 				<h:form id="leftForm">
 					<h3 class="center">Graph</h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
 						<h:outputText value="Type: " />
 				        <p:selectOneMenu value="#{trackView.graphType}" disabled="#{!(trackView.chartsReady)}">
 							<p:ajax listener="#{trackView.reloadGraph}"
-								update=":chartForm:chart1" />
+								update=":chartForm:chart1,:leftForm" oncomplete="changeGraphScale()"/>
 				            <f:selectItem itemLabel="Annotation" itemValue="annotation" />
 				            <f:selectItem itemLabel="Jaccard" itemValue="jaccard" />
 				            <f:selectItem itemLabel="Multifunctionality" itemValue="multifunctionality" />
@@ -146,15 +111,15 @@
 					<h3 class="center">Data</h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
 						<h:outputText value="Propagate Annotations: " />
-						<p:inputSwitch value="#{trackView.propagate}" disabled="#{!(trackView.chartsReady)}">
+						<p:inputSwitch value="#{trackView.propagate}" disabled="#{!(trackView.chartsReady) || !(trackView.dataEnabled)}">
 							<p:ajax listener="#{trackView.reloadGraph}"
-								update=":chartForm:chart1" />
+								update=":chartForm:chart1" oncomplete="changeGraphScale()"/>
 						</p:inputSwitch>
 
 						<h:outputText value="Split Accessions: " />
-						<p:inputSwitch value="#{trackView.splitAccessions}" disabled="#{!(trackView.chartsReady)}">
+						<p:inputSwitch value="#{trackView.splitAccessions}" disabled="#{!(trackView.chartsReady) || !(trackView.dataEnabled)}">
 							<p:ajax listener="#{trackView.reloadGraph}"
-								update=":chartForm:chart1" />
+								update=":chartForm:chart1" oncomplete="changeGraphScale()"/>
 						</p:inputSwitch>
 
 
@@ -163,14 +128,45 @@
 					<h3 class="center">Display</h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
 						<h:outputText value="Scale: " />
-						<p:selectOneButton id="scaleSelect" value="#{trackView.scale}"
-							onchange="changeGraphScale()" disabled="#{!(trackView.chartsReady)}">
+						<p:selectOneButton id="scaleSelect" value="#{trackView.scale}" onchange="changeGraphScale()" disabled="#{!(trackView.chartsReady)}">
 							<f:selectItem itemLabel="Linear" itemValue="linear" />
 							<f:selectItem itemLabel="Log" itemValue="log" />
 						</p:selectOneButton>
 
 
 					</h:panelGrid>
+					
+					<p:separator style="max-width:200px" />
+					<h3 class="center">Filter <p:commandButton actionListener="#{trackView.clearOptionFilters()}" icon="fa fa-trash" update=":chartForm:chart1, :leftForm" oncomplete="changeGraphScale()" styleClass="icon-only" disabled="#{!(trackView.chartsReady) || !(trackView.filterEnabled)}"/></h3>
+					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+						<h:outputText value="Aspect: " />
+						<p:selectManyButton id="optionFilterAspect" value="#{trackView.filterAspect}" disabled="#{!(trackView.chartsReady) || !(trackView.filterEnabled)}">
+							<p:ajax listener="#{trackView.reloadGraph}"
+								update=":chartForm:chart1" oncomplete="changeGraphScale()"/>
+								<f:selectItem itemLabel="BP" itemValue="BP" />
+								<f:selectItem itemLabel="MF" itemValue="MF" />
+								<f:selectItem itemLabel="CC" itemValue="CC" />
+							
+						</p:selectManyButton>
+						
+						<h:outputText value="Id: " />
+						<p:autoComplete id="optionFilterId" value="#{trackView.filterId}"
+								completeMethod="#{trackView.completeId}" queryDelay="600"
+								minQueryLength="1" forceSelection="true" maxResults="10"
+								label="ID"
+								emptyMessage="No term suggestions available."
+								disabled="#{!(trackView.chartsReady) || !(trackView.filterEnabled)}">
+								<p:ajax event="itemSelect" listener="#{trackView.reloadGraph}" update=":chartForm:chart1" oncomplete="changeGraphScale()"/>
+						</p:autoComplete>
+						
+						<h:outputText value="Name: " />
+						<p:inputText id="optionFilterName" value="#{trackView.filterName}" disabled="#{!(trackView.chartsReady) || !(trackView.filterEnabled)}">
+								<p:ajax event="change" listener="#{trackView.reloadGraph}" update=":chartForm:chart1" oncomplete="changeGraphScale()"/>
+						</p:inputText>
+						
+
+					</h:panelGrid>
+					
 					<p:separator style="max-width:200px; height:5px;" />
 					<div align="center" style="margin-top: 20px;">
 						<p:commandButton value="&nbsp; Reset" onclick="showAllSeries()" type="button" icon="fa fa-refresh" />
@@ -228,9 +224,6 @@
 								oncomplete="PF('timelineDialog').show()" />
 						</f:facet>
 					</p:dataTable>
-					<p:remoteCommand actionListener="#{trackView.fetchAllTerms()}"
-						name="loadAllTerms" update="funcTable">
-					</p:remoteCommand>
 					
 					<p:remoteCommand actionListener="#{trackView.fetchTimelineFromPanel()}"
 						name="fetchTimelineFromPanel" update=":timelineForm">
@@ -240,9 +233,10 @@
 			</p:layoutUnit>
 
 			<p:layoutUnit id="center" position="center">
+			<p:messages for="betaMessage" closable="true" />
 
 				<div id="page-title">
-					<h1>#{trackView.query} -
+					<h1>#{trackView.currentGene.symbol} -
 						#{trackView.currentSpecies.scientificName}</h1>
 					<h:form>
 						<p>
@@ -263,7 +257,7 @@
 							<div id="loading-spinner" class="loading"></div>
 							<p:chart id='chart1' type="line"
 								model="#{trackView.currentChart}" style="height:500px;"
-								widgetVar="chart" rendered="#{trackView.firstChartReady}">
+								widgetVar="chart" rendered="#{trackView.chartsReady}">
 								<p:ajax event="itemSelect" listener="#{trackView.itemSelect}"
 									oncomplete="openAnnotationDialog()"/>
 							</p:chart>
@@ -271,26 +265,9 @@
 						</p:outputPanel>
 					</div>
 					<p:remoteCommand name="fetchCharts"
-						actionListener="#{trackView.fetchDirectChart()}"
-						update="allCharts"
-						oncomplete="hideLoadingSpinner(), loadAllTerms(), loadJaccard(),loadLossGain(),loadMulti(), loadPropagated()">
-					</p:remoteCommand>
-					<p:remoteCommand
-						actionListener="#{trackView.fetchJaccardChart()}"
-						name="loadJaccard">
-					</p:remoteCommand>
-					<p:remoteCommand
-						actionListener="#{trackView.fetchLossGainChart()}"
-						name="loadLossGain">
-					</p:remoteCommand>
-					<p:remoteCommand
-						actionListener="#{trackView.fetchMultiChart()}"
-						name="loadMulti">
-					</p:remoteCommand>
-					<p:remoteCommand
-						actionListener="#{trackView.fetchPropagatedChart()}"
-						name="loadPropagated"
-						update=":leftForm">
+						actionListener="#{trackView.fetchAll()}"
+						update="allCharts,:leftForm,:funcForm:funcTable"
+						oncomplete="hideLoadingSpinner()">
 					</p:remoteCommand>
 					<p:remoteCommand
 						oncomplete = "PF('itemSelectDialog').show();"
@@ -302,7 +279,7 @@
 
 					<!-- End of the FUNCTIONALITY CONTENT -->
 				</h:form>
-
+				
 			</p:layoutUnit>
 
 		</p:layout>
@@ -312,29 +289,44 @@
 		</p:dialog>
 		<p:dialog id="timelineDialog" header="Selected Terms"
 			widgetVar="timelineDialog" modal="true" showEffect="fade"
-			hideEffect="fade" resizable="false" width="800" style="max-height:500px; overflow-y:auto;text-align:center;" onHide="cleanMsg()">
-			<h:outputText id="timelineSelectMsgTerm"/>
+			hideEffect="fade" resizable="false" width="800" max-height="600"
+			style="text-align:center;"
+			onHide="cleanMsg()" onShow="setTimelineInitialRange()">
+			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm" />
+			<p:scrollPanel id="timeline-scrollpanel" mode="native" style="max-height:500px">
+			<h:outputText id="timelineSelectMsgDate" />
 			<p:spacer width="30" height="16" />
-			<h:outputText id="timelineSelectMsgDate"/>
+			<h:outputText id="timelineSelectMsgTerm" />
 			<p:spacer width="30" height="16" />
-			<h:outputText id="timelineSelectMsgExists"/>
-			<p:ajax event="close" listener="#{trackView.cleanTimeline}" update=":timelineForm"/>
-				<h:form id="timelineForm">
-				<pe:timeline id="timeline" widgetVar="timelineWdgt" value="#{trackView.timelineModel}" varGroup="group" selectable="true" eventMargin="10" eventMarginAxis="0" stackEvents="false" themable="false" showCurrentTime="false">
-				<pe:javascript event="select" execute="timelineSelect()"/>
-			    <f:facet name="group">  
-			        <h:outputText value="#{group.goId}" title="#{group.name}"/>  
-			    </f:facet> 
-				</pe:timeline>
-				</h:form>
-				<pe:tooltip global="true" myPosition="top, right" atPosition="left center"/> 
+			<h:outputText id="timelineSelectMsgReference" />
+
+
+			<h:form id="timelineForm">
+				<p:dataGrid id="timelineDataGrid" var="tl"
+					value="#{trackView.timelines}" columns="1" style="border:none;" rowIndexVar="rowIndex" widgetVar="timelineDataGridWidget">
+					<p:panel style="text-align:center">
+			        <f:facet name="header">
+			        	<h:outputText value="#{tl.title.goId} - #{of:abbreviate(tl.title.name, 50)}" title="#{tl.title.name}"/>  
+			        </f:facet>
+					<pe:timeline id="timeline-#{rowIndex}" widgetVar="timelineWidget-#{rowIndex}" value="#{tl}" varGroup="group" selectable="true"
+						eventMargin="10" eventMarginAxis="0" stackEvents="false"
+						themable="false" showCurrentTime="false" groupsWidth="125px">
+						<pe:javascript event="select" execute="timelineSelect('#{rowIndex}')" />
+						<pe:javascript event="rangechange" execute="onTimelineRangeChange('#{rowIndex}')"/>
+
+					</pe:timeline>
+					</p:panel>
+				</p:dataGrid>
+			</h:form>
+			<pe:tooltip global="true" myPosition="center left" atPosition="top right"/>
+			</p:scrollPanel>
 		</p:dialog>
 		<p:dialog id="itemSelectDialog" header="Annotations" widgetVar="itemSelectDialog"
 			modal="false" width="700px">
 			<p:ajax event="close" listener="#{trackView.cleanFilteredTerms}" update=":itemSelectForm:itemSelectData"/>
 			<h:form id="itemSelectForm" >
 			<h:outputText id="itemSelectMsg"
-				value="Date: #{trackView.selectedDate}, Count: #{trackView.chartValue}" />
+				value="Date: #{trackView.selectedDate}, Count: #{trackView.itemSelectValue}" />
 			<p:dataTable 	id="itemSelectData" 
 							widgetVar="annotationsTable"
 							var="chartTerm" 
@@ -384,6 +376,17 @@
 			<p:remoteCommand actionListener="#{trackView.fetchTimelineFromDialog()}"
 				name="fetchTimelineFromDialog" update=":timelineForm">
 			</p:remoteCommand>
+			</h:form>
+		</p:dialog>
+		<p:dialog id="terminalDialog" header="Terminal"
+			widgetVar="terminalDialogWdg" modal="false" showEffect="fade"
+			hideEffect="fade" resizable="false" width="800px">
+			<h:form id="terminalForm">
+			    <p:focus for="terminal" />
+			 
+			    <p:terminal id="terminal" widgetVar="terminalWdg" commandHandler="#{trackView.handleCommand}"
+			                welcomeMessage="Welcome to the administrative console, how are you today?" prompt="$" width="100%" height="100%"/>
+			
 			</h:form>
 		</p:dialog>
 		

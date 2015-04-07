@@ -40,6 +40,15 @@ public final class DAOUtil {
 
     // Actions ------------------------------------------------------------------------------------
 
+    public static String preparePlaceHolders( int length ) {
+        StringBuilder builder = new StringBuilder( length * 2 - 1 );
+        for ( int i = 0; i < length; i++ ) {
+            if ( i > 0 ) builder.append( ',' );
+            builder.append( '?' );
+        }
+        return builder.toString();
+    }
+
     /**
      * Returns a PreparedStatement of the given connection, set with the given SQL query and the given parameter values.
      * 

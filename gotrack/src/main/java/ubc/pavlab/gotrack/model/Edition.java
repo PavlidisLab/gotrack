@@ -49,6 +49,10 @@ public class Edition implements Comparable<Edition> {
         this( edition, date, null, null );
     }
 
+    public Edition( Integer edition, Date date, Integer goEditionId ) {
+        this( edition, date, null, goEditionId );
+    }
+
     public Edition( Integer edition, Date date, Date goDate, Integer goEditionId ) {
         super();
         this.edition = edition;
