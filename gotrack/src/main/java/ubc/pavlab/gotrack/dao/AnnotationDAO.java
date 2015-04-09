@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.AnnotationDetailed;
 import ubc.pavlab.gotrack.model.Edition;
@@ -93,7 +94,7 @@ public interface AnnotationDAO {
     public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> trackOld2( Integer species,
             String symbol, Integer edition, Integer goEditionId ) throws DAOException;
 
-    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
+    public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
             String symbol ) throws DAOException;
 
 }

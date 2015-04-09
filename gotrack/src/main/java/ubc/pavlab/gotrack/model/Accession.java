@@ -31,7 +31,7 @@ import java.util.HashSet;
 public class Accession {
 
     private String accession;
-    private String symbol;
+    private String swissProtEntry;
     private Collection<String> secondary = new HashSet<String>();
 
     /**
@@ -45,10 +45,10 @@ public class Accession {
         this.accession = accession;
     }
 
-    public Accession( String accession, String symbol ) {
+    public Accession( String accession, String swissProtEntry ) {
         super();
         this.accession = accession;
-        this.symbol = symbol;
+        this.swissProtEntry = swissProtEntry;
     }
 
     public String getAccession() {
@@ -59,12 +59,12 @@ public class Accession {
         this.accession = accession;
     }
 
-    public String getSymbol() {
-        return symbol;
+    public String getSwissProtEntry() {
+        return swissProtEntry;
     }
 
-    public void setSymbol( String symbol ) {
-        this.symbol = symbol;
+    public void setSwissProtEntry( String swissProtEntry ) {
+        this.swissProtEntry = swissProtEntry;
     }
 
     public Collection<String> getSecondary() {
@@ -81,7 +81,7 @@ public class Accession {
 
     @Override
     public String toString() {
-        return "GeneSymbol [accession=" + accession + ", symbol=" + symbol + "]";
+        return accession;
     }
 
     @Override

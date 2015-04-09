@@ -38,6 +38,7 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.AnnotationDetailed;
 import ubc.pavlab.gotrack.model.Edition;
@@ -80,7 +81,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_TRACK3 = "select edition.date, gene_annotation.edition, edition.go_edition_id_fk, temp.accession as `primary`, gene_annotation.go_id, go_term.name, go_term.aspect, gene_annotation.evidence, gene_annotation.reference, evidence_categories.category from (select distinct accession from gene_annotation WHERE symbol=? AND edition=? and species_id=?) as temp LEFT JOIN sec_ac ON ac=accession INNER JOIN gene_annotation ON temp.accession=gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN evidence_categories on gene_annotation.evidence=evidence_categories.evidence INNER JOIN edition on edition.edition=gene_annotation.edition AND edition.species_id = ? LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk where gene_annotation.species_id = ? GROUP BY gene_annotation.edition, temp.accession, gene_annotation.go_id, evidence, reference ORDER BY NULL";
 
     // species, symbol,species
-    private static final String SQL_TRACK = "select edition.date, edition.edition, edition.go_edition_id_fk, current_genes.accession as `primary`, gene_annotation.go_id, go_term.name, go_term.aspect, gene_annotation.evidence, gene_annotation.reference, evidence_categories.category from current_genes  left join sec_ac on ac=current_genes.accession  inner join gene_annotation PARTITION (p?) IGNORE INDEX (ed_go_acc_spec, ed_acc_spec) on current_genes.accession = gene_annotation.accession OR sec=gene_annotation.accession  INNER JOIN evidence_categories on gene_annotation.evidence=evidence_categories.evidence INNER JOIN edition on edition.edition=gene_annotation.edition and edition.species_id =gene_annotation.species_id  LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk  WHERE current_genes.symbol = ? and current_genes.species_id=? GROUP BY gene_annotation.edition, current_genes.accession, gene_annotation.go_id, evidence, reference ORDER BY NULL";
+    private static final String SQL_TRACK = "select edition.date, edition.edition, edition.go_edition_id_fk, current_genes.accession as `primary`, gene_annotation.go_id, go_term.name, go_term.aspect, gene_annotation.evidence, gene_annotation.reference, evidence_categories.category, acindex.symbol as sp_gene from current_genes left join acindex using (accession) left join sec_ac on ac=current_genes.accession  inner join gene_annotation PARTITION (p?) IGNORE INDEX (ed_go_acc_spec, ed_acc_spec) on current_genes.accession = gene_annotation.accession OR sec=gene_annotation.accession  INNER JOIN evidence_categories on gene_annotation.evidence=evidence_categories.evidence INNER JOIN edition on edition.edition=gene_annotation.edition and edition.species_id =gene_annotation.species_id  LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk  WHERE current_genes.symbol = ? and current_genes.species_id=? GROUP BY gene_annotation.edition, current_genes.accession, gene_annotation.go_id, evidence, reference ORDER BY NULL";
 
     // species, symbols, species
     private static final String SQL_ENRICHMENT_GENE_DATA = "select edition.date, edition.edition, edition.go_edition_id_fk, current_genes.symbol, gene_annotation.go_id, go_term.name, go_term.aspect from current_genes left join sec_ac on ac=current_genes.accession inner join gene_annotation PARTITION (p?) IGNORE INDEX (ed_go_acc_spec, ed_acc_spec) on current_genes.accession = gene_annotation.accession OR sec=gene_annotation.accession INNER JOIN edition on edition.edition=gene_annotation.edition and edition.species_id =gene_annotation.species_id LEFT JOIN go_term on go_term.go_id=gene_annotation.go_id and go_term.go_edition_id_fk=edition.go_edition_id_fk WHERE current_genes.symbol in (%s) and current_genes.species_id=? GROUP BY gene_annotation.edition, current_genes.symbol, gene_annotation.go_id ORDER BY NULL";
@@ -207,7 +208,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
+    public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
             String symbol ) throws DAOException {
 
         List<Object> params = new ArrayList<Object>();
@@ -222,7 +223,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         ResultSet resultSet = null;
 
         // Map<String, Map<Edition, Map<String, Set<Annotation>>>> allSeries = new HashMap<>();
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allSeries = new HashMap<>();
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allSeries = new HashMap<>();
         String sql = SQL_TRACK;
 
         log.debug( sql );
@@ -245,7 +246,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
             startTime = System.currentTimeMillis();
             while ( resultSet.next() ) {
-                String primary = resultSet.getString( "primary" );
+                Accession primary = new Accession( resultSet.getString( "primary" ), resultSet.getString( "sp_gene" ) );
                 Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
                         resultSet.getInt( "go_edition_id_fk" ) );
                 GeneOntologyTerm go = new GeneOntologyTerm( resultSet.getString( "go_id" ),

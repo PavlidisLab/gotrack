@@ -492,7 +492,7 @@ public class CacheDAOImpl implements CacheDAO {
                 Accession acc = currentAccessions.get( accession );
 
                 if ( acc == null ) {
-                    acc = new Accession( accession, symbol );
+                    acc = new Accession( accession );
                     currentAccessions.put( accession, acc );
                 }
 

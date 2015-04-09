@@ -43,6 +43,7 @@ import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
 import ubc.pavlab.gotrack.go.GeneOntology;
+import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
@@ -99,12 +100,12 @@ public class Cache implements Serializable {
     // Static
     private Map<String, String> evidenceCodeCategories = new HashMap<>();
 
-    private Map<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> applicationLevelDataCache = new LinkedHashMap<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>>(
+    private Map<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> applicationLevelDataCache = new LinkedHashMap<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>>(
             MAX_DATA_ENTRIES + 1, 0.75F, true ) {
         // This method is called just after a new entry has been added
         @Override
         public boolean removeEldestEntry(
-                Map.Entry<Gene, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> eldest ) {
+                Map.Entry<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> eldest ) {
             return size() > MAX_DATA_ENTRIES;
         }
     };
@@ -463,14 +464,14 @@ public class Cache implements Serializable {
         return null;
     }
 
-    public Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> getData( Gene g ) {
+    public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> getData( Gene g ) {
         // TODO not sure if necessary, not a big deal either way
         synchronized ( applicationLevelDataCache ) {
             return applicationLevelDataCache.get( g );
         }
     }
 
-    public void addData( Gene g, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
+    public void addData( Gene g, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
         synchronized ( applicationLevelDataCache ) {
             applicationLevelDataCache.put( g, data );
         }
