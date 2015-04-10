@@ -252,7 +252,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 GeneOntologyTerm go = new GeneOntologyTerm( resultSet.getString( "go_id" ),
                         resultSet.getString( "name" ), resultSet.getString( "aspect" ) );
                 EvidenceReference er = new EvidenceReference( resultSet.getString( "evidence" ),
-                        resultSet.getString( "reference" ), resultSet.getString( "category" ) );
+                        resultSet.getString( "reference" ), resultSet.getString( "category" ), primary.getDataset() );
 
                 Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = allSeries.get( primary );
                 if ( series == null ) {

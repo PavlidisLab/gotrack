@@ -36,6 +36,7 @@ function centerResize() {
 }
 
 function changeGraphScale() {
+//   try {
    var renderer;
    var scale = $("#leftForm\\:scaleSelect div.ui-state-active > input").val();
    var options = PrimeFaces.widgets.chart.plot.options;
@@ -52,7 +53,19 @@ function changeGraphScale() {
    PrimeFaces.widgets.chart.plot = $.jqplot('chartForm\\:chart1', data, options);
 
    PrimeFaces.widgets.chart.plot.replot({resetAxes:true});
+//   } catch (e) {
+//      
+//   }
    
+}
+
+function postRenderChart(args) {
+   if(args.chartEmpty) {
+//      $('#chartForm\\:allCharts').hide();
+    } else {
+       changeGraphScale();
+//       $('#chartForm\\:allCharts').show();
+    }
 }
 
 
@@ -152,6 +165,7 @@ function chartExtender() {
 
 $(document).ready(function() {
    //calling remoteCommands
+   $('#loading-spinner').show();
    fetchCharts();
    
    $('body').on('click', function(e) {

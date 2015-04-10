@@ -32,6 +32,7 @@ public class Accession {
 
     private String accession;
     private String swissProtEntry;
+    private Dataset dataset;
     private Collection<String> secondary = new HashSet<String>();
 
     /**
@@ -49,6 +50,11 @@ public class Accession {
         super();
         this.accession = accession;
         this.swissProtEntry = swissProtEntry;
+        if ( swissProtEntry != null && swissProtEntry != "" ) {
+            this.setDataset( Dataset.SwissProt );
+        } else {
+            this.setDataset( Dataset.TrEMBL );
+        }
     }
 
     public String getAccession() {
@@ -102,6 +108,14 @@ public class Accession {
             if ( other.accession != null ) return false;
         } else if ( !accession.equals( other.accession ) ) return false;
         return true;
+    }
+
+    public Dataset getDataset() {
+        return dataset;
+    }
+
+    public void setDataset( Dataset dataset ) {
+        this.dataset = dataset;
     }
 
 }

@@ -41,6 +41,7 @@ public class GoChart<X> {
     private final String yLabel;
     private final Double min;
     private final Double max;
+    private final boolean empty;
 
     private final Map<X, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allDetailedSeries = new HashMap<>();
     private final Map<String, LinkedHashMap<Edition, ? extends Number>> allStaticSeries = new HashMap<>();
@@ -68,6 +69,7 @@ public class GoChart<X> {
         this.yLabel = yLabel;
         this.min = min;
         this.max = max;
+        boolean empty = true;
         if ( ds != null ) {
             for ( Entry<X, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> sEntry : ds.entrySet() ) {
                 Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> s = sEntry.getValue();
@@ -78,6 +80,7 @@ public class GoChart<X> {
                     LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> orderedMap = new LinkedHashMap<>();
                     for ( Edition e : editions ) {
                         orderedMap.put( e, s.get( e ) );
+                        empty = false;
                     }
                     allDetailedSeries.put( label, orderedMap );
                 }
@@ -94,11 +97,14 @@ public class GoChart<X> {
                     LinkedHashMap<Edition, Number> orderedMap = new LinkedHashMap<>();
                     for ( Edition e : editions ) {
                         orderedMap.put( e, s.get( e ) );
+                        empty = false;
                     }
                     allStaticSeries.put( label, orderedMap );
                 }
             }
         }
+
+        this.empty = empty;
 
     }
 
@@ -152,6 +158,10 @@ public class GoChart<X> {
 
     public Double getMax() {
         return max;
+    }
+
+    public boolean isEmpty() {
+        return empty;
     }
 
 }

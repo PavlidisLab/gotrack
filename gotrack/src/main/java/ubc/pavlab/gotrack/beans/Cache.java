@@ -44,6 +44,7 @@ import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
 import ubc.pavlab.gotrack.go.GeneOntology;
 import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
@@ -124,6 +125,12 @@ public class Cache implements Serializable {
      */
     public Cache() {
         log.info( "Cache created" );
+    }
+
+    /* Getters for View Static */
+
+    public Dataset[] getDatasets() {
+        return Dataset.values();
     }
 
     @PostConstruct

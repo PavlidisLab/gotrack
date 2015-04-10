@@ -47,6 +47,7 @@ import javax.faces.context.FacesContext;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.primefaces.context.RequestContext;
 import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.extensions.model.timeline.TimelineEvent;
 import org.primefaces.extensions.model.timeline.TimelineGroup;
@@ -60,6 +61,7 @@ import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.CustomTimelineModel;
+import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
@@ -137,7 +139,9 @@ public class TrackView {
     private String graphType = "annotation";
     private String scale;
     private boolean chartsReady = false;
+    private boolean chartEmpty = false;
     private List<String> filterAspect;
+    private List<Dataset> filterDataset;
     private String filterId;
     private String filterName;
     private boolean filterEnabled = true;
@@ -145,6 +149,7 @@ public class TrackView {
     // private boolean firstChartReady = false;
 
     // Static
+
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
     private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
     private static final List<GraphType> filterEnabledGraphs = Arrays.asList( GraphType.annotation );
@@ -162,6 +167,8 @@ public class TrackView {
     @PostConstruct
     public void postConstruct() {
         filterAspect = new ArrayList<>( aspects );
+        // Silly jsf quibbles require me to double wrap this collection
+        filterDataset = new ArrayList<>( Arrays.asList( Dataset.values() ) );
         scale = "linear";
     }
 
@@ -968,27 +975,56 @@ public class TrackView {
 
     }
 
-    private void filter( GraphTypeKey gtk, boolean idBypass, boolean nameBypass, boolean filterBypass ) {
-        log.info( "Filter: " + gtk + ", ID: " + filterId + " Name: " + filterName + " Aspects: " + filterAspect );
+    private void filter( GraphTypeKey gtk, boolean idBypass, boolean nameBypass, boolean aspectBypass,
+            boolean datasetBypass ) {
+        log.info( "Filter: " + gtk + ", ID: " + filterId + " Name: " + filterName + " Aspects: " + filterAspect
+                + " Datasets: " + filterDataset );
+
         GoChart<Accession> goChart = goChartMap.get( gtk );
         Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = new HashMap<>();
         for ( Entry<Accession, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : goChart
                 .getAllDetailedSeries().entrySet() ) {
+            Accession acc = seriesEntry.getKey();
             Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionMap = new HashMap<>();
-            data.put( seriesEntry.getKey(), editionMap );
+            boolean emptySeries = true;
             for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : seriesEntry.getValue()
                     .entrySet() ) {
                 Map<GeneOntologyTerm, Set<EvidenceReference>> termMap = new HashMap<>();
                 editionMap.put( editionEntry.getKey(), termMap );
                 for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> termEntry : editionEntry.getValue().entrySet() ) {
-                    if ( ( filterBypass || filterAspect.contains( termEntry.getKey().getAspect() ) )
-                            && ( idBypass || termEntry.getKey().getGoId().equals( filterId ) )
-                            && ( nameBypass || StringUtils
-                                    .containsIgnoreCase( termEntry.getKey().getName(), filterName ) ) ) {
-                        termMap.put( termEntry.getKey(), termEntry.getValue() );
+                    GeneOntologyTerm t = termEntry.getKey();
+
+                    if ( ( aspectBypass || filterAspect.contains( t.getAspect() ) )
+                            && ( idBypass || t.getGoId().equals( filterId ) )
+                            && ( nameBypass || StringUtils.containsIgnoreCase( t.getName(), filterName ) ) ) {
+
+                        Set<EvidenceReference> evidenceSet = new HashSet<>();
+
+                        if ( !datasetBypass ) {
+                            for ( EvidenceReference er : termEntry.getValue() ) {
+                                if ( filterDataset.contains( er.getDataset() ) ) {
+                                    evidenceSet.add( er );
+                                }
+
+                            }
+
+                        } else {
+                            evidenceSet = termEntry.getValue();
+                        }
+
+                        if ( !evidenceSet.isEmpty() ) {
+                            emptySeries = false;
+                            termMap.put( t, evidenceSet );
+                        }
+
                     }
                 }
+
             }
+            if ( !emptySeries ) {
+                data.put( acc, editionMap );
+            }
+
         }
 
         GoChart<Accession> newChart = new GoChart<>( "Filtered " + goChart.getTitle(), goChart.getxLabel(),
@@ -1003,6 +1039,7 @@ public class TrackView {
     public void clearOptionFilters() {
         log.info( "Option Filters Cleared." );
         filterAspect = new ArrayList<>( aspects );
+        filterDataset = new ArrayList<>( Arrays.asList( Dataset.values() ) );
         filterId = null;
         filterName = null;
         reloadGraph();
@@ -1070,12 +1107,21 @@ public class TrackView {
         // log.info( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
         boolean idBypass = StringUtils.isEmpty( filterId );
         boolean nameBypass = StringUtils.isEmpty( filterName );
-        boolean filterBypass = filterAspect.containsAll( aspects );
-        if ( filterEnabled && ( !idBypass || !nameBypass || !filterBypass ) ) {
-            filter( gtk, idBypass, nameBypass, filterBypass );
+        boolean aspectBypass = filterAspect.containsAll( aspects );
+        boolean datasetBypass = filterDataset.containsAll( Arrays.asList( Dataset.values() ) );
+        if ( filterEnabled && ( !idBypass || !nameBypass || !aspectBypass || !datasetBypass ) ) {
+            filter( gtk, idBypass, nameBypass, aspectBypass, datasetBypass );
         } else {
             currentChart = lineChartModelMap.get( gtk );
             currentGoChart = goChartMap.get( gtk );
+        }
+
+        if ( currentGoChart.isEmpty() ) {
+            log.info( "Empty Chart" );
+            chartEmpty = true;
+            RequestContext.getCurrentInstance().addCallbackParam( "chartEmpty", true );
+        } else {
+            chartEmpty = false;
         }
 
         // if ( scale.equals( "log" ) ) {
@@ -1107,6 +1153,14 @@ public class TrackView {
 
     public void setFilterAspect( List<String> filterAspect ) {
         this.filterAspect = filterAspect;
+    }
+
+    public List<Dataset> getFilterDataset() {
+        return filterDataset;
+    }
+
+    public void setFilterDataset( List<Dataset> filterDataset ) {
+        this.filterDataset = filterDataset;
     }
 
     public String getFilterId() {
@@ -1271,6 +1325,10 @@ public class TrackView {
 
     public boolean isChartsReady() {
         return chartsReady;
+    }
+
+    public boolean isChartEmpty() {
+        return chartEmpty;
     }
 
     public void setStats( Stats stats ) {
