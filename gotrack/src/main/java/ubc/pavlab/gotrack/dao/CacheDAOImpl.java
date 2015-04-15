@@ -64,14 +64,13 @@ public class CacheDAOImpl implements CacheDAO {
             + "as temp group by species_id";
     private static final String SQL_ALL_EDITIONS = "select species_id, edition, edition.date, go_edition.date as go_date, go_edition_id_fk "
             + "from edition left join go_edition on edition.go_edition_id_fk=go_edition.id order by edition";
-    private static final String SQL_ALL_GO_SIZES = "select species_id, edition, go_id, unique_accessions from gene_annotation_go_aggregate";
-    private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, date, avg_direct, unique_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id";
+    private static final String SQL_ALL_GO_SIZES = "select species_id, edition, go_id, annotation_count from goa_go_aggregate";
+    private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, edition.date, edition.go_edition_id_fk, go_edition.date go_date, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id";
     private static final String SQL_GO_EDITIONS = "SELECT distinct id from go_edition";
     private static final String SQL_GO_ADJACENCIES = "select go_adjacency.go_edition_id_fk, child, parent, relationship, name as child_name, aspect as child_aspect, is_obsolete as child_is_obsolete from go_adjacency inner join go_term on go_term.go_id=go_adjacency.child and go_term.go_edition_id_fk=go_adjacency.go_edition_id_fk";
     private static final String SQL_GO_ADJACENCIES_BY_RANGE = "select go_adjacency.go_edition_id_fk, child, parent, relationship, name as child_name, aspect as child_aspect, is_obsolete as child_is_obsolete from go_adjacency inner join go_term on go_term.go_id=go_adjacency.child and go_term.go_edition_id_fk=go_adjacency.go_edition_id_fk where go_adjacency.go_edition_id_fk IN (%s)";
     private static final String SQL_EVIDENCE_CATEGORIES = "select evidence, category from evidence_categories";
 
-    private static final String SQL_GENE_POPULATIONS = "select gene_populations.species_id, edition, date, population from gene_populations inner join edition using(edition)";
     private static final String SQL_CURRENT_GENES = "select species_id, symbol, accession, synonyms, sec from current_genes LEFT JOIN sec_ac on accession=ac";
     // Vars ---------------------------------------------------------------------------------------
 
@@ -107,7 +106,7 @@ public class CacheDAOImpl implements CacheDAO {
                 Integer speciesId = resultSet.getInt( "species_id" );
                 Integer ed = resultSet.getInt( "edition" );
                 String goid = resultSet.getString( "go_id" );
-                Integer count = resultSet.getInt( "unique_accessions" );
+                Integer count = resultSet.getInt( "annotation_count" );
 
                 Map<Integer, Map<String, Integer>> a = goSetSizes.get( speciesId );
                 if ( a == null ) {
@@ -219,9 +218,11 @@ public class CacheDAOImpl implements CacheDAO {
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 Integer speciesId = resultSet.getInt( "species_id" );
-                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ) );
-                StatsEntry se = new StatsEntry( resultSet.getInt( "unique_accessions" ),
-                        resultSet.getDouble( "avg_direct" ) );
+                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
+                        resultSet.getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) );
+                StatsEntry se = new StatsEntry( resultSet.getInt( "count_accessions" ),
+                        resultSet.getDouble( "avg_directs_by_accession" ), resultSet.getInt( "count_genes" ),
+                        resultSet.getDouble( "avg_directs_by_gene" ) );
 
                 Map<Edition, StatsEntry> speciesMap = aggregates.get( speciesId );
 
@@ -412,43 +413,6 @@ public class CacheDAOImpl implements CacheDAO {
         }
 
         return results;
-    }
-
-    @Override
-    public Map<Integer, Map<Edition, Integer>> getPopulations() throws DAOException {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        Map<Integer, Map<Edition, Integer>> pops = new HashMap<>();
-
-        try {
-            connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_GENE_POPULATIONS );
-            log.debug( preparedStatement );
-            resultSet = preparedStatement.executeQuery();
-            while ( resultSet.next() ) {
-                Integer speciesId = resultSet.getInt( "species_id" );
-                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ) );
-                Integer population = resultSet.getInt( "population" );
-
-                Map<Edition, Integer> speciesMap = pops.get( speciesId );
-
-                if ( speciesMap == null ) {
-                    speciesMap = new HashMap<>();
-                    pops.put( speciesId, speciesMap );
-                }
-
-                speciesMap.put( edition, population );
-
-            }
-
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, preparedStatement, resultSet );
-        }
-
-        return pops;
     }
 
     @Override

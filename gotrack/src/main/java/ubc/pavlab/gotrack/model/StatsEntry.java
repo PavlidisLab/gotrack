@@ -27,26 +27,40 @@ package ubc.pavlab.gotrack.model;
  */
 public class StatsEntry {
 
-    private final Integer uniqueAccesions;
-    private final Double averageDirects;
+    private final Integer accessionCount;
+    private final Double avgDirectByAccession;
 
-    public StatsEntry( Integer uniqueAccesions, Double averageDirects ) {
+    private final Integer geneCount;
+    private final Double avgDirectByGene;
+
+    public StatsEntry( Integer accessionCount, Double avgDirectByAccession, Integer geneCount, Double avgDirectByGene ) {
         super();
-        this.uniqueAccesions = uniqueAccesions;
-        this.averageDirects = averageDirects;
+        this.accessionCount = accessionCount;
+        this.avgDirectByAccession = avgDirectByAccession;
+        this.geneCount = geneCount;
+        this.avgDirectByGene = avgDirectByGene;
     }
 
-    public Integer getUniqueAccesions() {
-        return uniqueAccesions;
+    public Integer getAccessionCount() {
+        return accessionCount;
     }
 
-    public Double getAverageDirects() {
-        return averageDirects;
+    public Double getAvgDirectByAccession() {
+        return avgDirectByAccession;
+    }
+
+    public Integer getGeneCount() {
+        return geneCount;
+    }
+
+    public Double getAvgDirectByGene() {
+        return avgDirectByGene;
     }
 
     @Override
     public String toString() {
-        return "StatsEntry [uniqueAccesions=" + uniqueAccesions + ", averageDirects=" + averageDirects + "]";
+        return "StatsEntry [accessionCount=" + accessionCount + ", avgDirectByAccession=" + avgDirectByAccession
+                + ", geneCount=" + geneCount + ", avgDirectByGene=" + avgDirectByGene + "]";
     }
 
 }

@@ -69,6 +69,7 @@ public class EnrichmentView implements Serializable {
      * 
      */
     private static final long serialVersionUID = 166880636358923147L;
+    private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
 
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
     private static final Integer MAX_RESULTS = 10;
@@ -83,6 +84,9 @@ public class EnrichmentView implements Serializable {
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
 
+    // Application settings
+    private boolean ontologyInMemory = false;
+
     // DAO
     private AnnotationDAO annotationDAO;
 
@@ -96,13 +100,12 @@ public class EnrichmentView implements Serializable {
 
     // Chart stuff
     private LineChartModel enrichmentChart;
-    private Map<Edition, Set<GeneOntologyTerm>> currentGoSets;
-    private Set<GeneOntologyTerm> currentAllTerms;
+    private Map<Edition, Set<GeneOntologyTerm>> currentRunGoSets;
+    private Set<GeneOntologyTerm> currentRunTerms;
     Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData;
     private boolean chartReady = false;
     private boolean bonferroniCorrection = true;
     private double pThreshold = 0.05;
-    private boolean propagate = false;
     private int minAnnotatedPopulation = 5;
 
     // Chart Filters
@@ -147,6 +150,7 @@ public class EnrichmentView implements Serializable {
         }
 
         annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
+        ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
         return null;
     }
 
@@ -154,7 +158,7 @@ public class EnrichmentView implements Serializable {
         clearOptionFilters( false );
         chartReady = false;
         allEditions = cache.getAllEditions( currentSpeciesId );
-        currentAllTerms = new HashSet<>();
+        currentRunTerms = new HashSet<>();
         Edition currentEdition = cache.getCurrentEditions( currentSpeciesId );
         Set<Gene> genes = new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) );
         log.info( "Current species: " + currentSpeciesId );
@@ -173,7 +177,12 @@ public class EnrichmentView implements Serializable {
 
             if ( geneGOMap == null ) {
 
-                geneGOMap = annotationDAO.enrichmentData( currentSpeciesId, genes );
+                if ( ontologyInMemory ) {
+                    geneGOMap = propagate( annotationDAO.enrichmentData( currentSpeciesId, genes ) );
+
+                } else {
+                    geneGOMap = annotationDAO.enrichmentDataPropagate( currentSpeciesId, genes );
+                }
                 // geneGOMap = annotationDAO.enrichmentDataOld( currentSpeciesId, genes, currentEdition.getEdition() );
 
                 // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
@@ -185,49 +194,44 @@ public class EnrichmentView implements Serializable {
 
             }
 
-            currentGoSets = new HashMap<>();
+            currentRunGoSets = new HashMap<>();
+            currentRunTerms = new HashSet<>();
 
-            if ( propagate ) {
-                Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> propagatedGeneGOMap = new HashMap<>();
-                for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
-                    Edition ed = editionEntry.getKey();
-                    Set<GeneOntologyTerm> goSet = new HashSet<>();
-                    currentGoSets.put( ed, goSet );
+            // get gene-collapsed data as well as completely flattened
+            for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
+                Edition ed = editionEntry.getKey();
+                Set<GeneOntologyTerm> goSet = new HashSet<>();
+                currentRunGoSets.put( ed, goSet );
 
-                    HashMap<Gene, Set<GeneOntologyTerm>> propagatedGenes = new HashMap<>();
-                    propagatedGeneGOMap.put( ed, propagatedGenes );
+                for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
 
-                    for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
-
-                        Set<GeneOntologyTerm> propagatedSet = cache.propagate( geneEntry.getValue(),
-                                ed.getGoEditionId() );
-                        propagatedGenes.put( geneEntry.getKey(), propagatedSet );
-
-                        goSet.addAll( propagatedSet );
-                        currentAllTerms.addAll( propagatedSet );
-                    }
+                    goSet.addAll( geneEntry.getValue() );
+                    currentRunTerms.addAll( geneEntry.getValue() );
                 }
-
-                enrichmentAnalysis( propagatedGeneGOMap, currentGoSets, minAnnotatedPopulation );
-            } else {
-                for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
-                    Edition ed = editionEntry.getKey();
-                    Set<GeneOntologyTerm> goSet = new HashSet<>();
-                    currentGoSets.put( ed, goSet );
-
-                    for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
-
-                        goSet.addAll( geneEntry.getValue() );
-                        currentAllTerms.addAll( geneEntry.getValue() );
-                    }
-                }
-
-                enrichmentAnalysis( geneGOMap, currentGoSets, minAnnotatedPopulation );
             }
+
+            enrichmentAnalysis( geneGOMap, currentRunGoSets, minAnnotatedPopulation );
 
         } else {
             log.info( "Empty geneset" );
         }
+    }
+
+    private Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> propagate(
+            Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> geneGOMap ) {
+        Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> propagatedGeneGOMap = new HashMap<>();
+        for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            HashMap<Gene, Set<GeneOntologyTerm>> propagatedGenes = new HashMap<>();
+            propagatedGeneGOMap.put( ed, propagatedGenes );
+
+            for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
+
+                Set<GeneOntologyTerm> propagatedSet = cache.propagate( geneEntry.getValue(), ed.getGoEditionId() );
+                propagatedGenes.put( geneEntry.getKey(), propagatedSet );
+            }
+        }
+        return propagatedGeneGOMap;
     }
 
     private void enrichmentAnalysis( Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> geneGOMap,
@@ -245,7 +249,7 @@ public class EnrichmentView implements Serializable {
 
             Map<Gene, Set<GeneOntologyTerm>> data = geneGOMap.get( ed );
 
-            int populationSize = cache.getGenePopulation( currentSpeciesId, ed );
+            int populationSize = cache.getGeneCount( currentSpeciesId, ed );
             int k = data.keySet().size();
 
             Set<GeneOntologyTerm> termsInEdition = allTerms.get( ed );
@@ -328,6 +332,13 @@ public class EnrichmentView implements Serializable {
 
     }
 
+    /**
+     * @param r successes in sample
+     * @param k sample size
+     * @param M successes in population
+     * @param N failures in population
+     * @return
+     */
     private double hypergeometric( int r, int k, int M, int N ) {
         double res = 0;
         for ( int i = r; i <= k; i++ ) {
@@ -413,8 +424,8 @@ public class EnrichmentView implements Serializable {
         dateModel.setLegendRows( 8 );
         dateModel.setMouseoverHighlight( true );
         dateModel.setExtender( "chartExtender" );
-        dateModel.getAxis( AxisType.Y ).setMax( 1.0 );
-        dateModel.getAxis( AxisType.Y ).setMin( Math.min( minVal, 0.1 ) );
+        // dateModel.getAxis( AxisType.Y ).setMax( 1.0 );
+        // dateModel.getAxis( AxisType.Y ).setMin( Math.min( minVal, 0.1 ) );
         dateModel.getAxis( AxisType.Y ).setLabel( yLabel );
 
         DateAxis axis = new DateAxis( xLabel );
@@ -457,7 +468,7 @@ public class EnrichmentView implements Serializable {
                 log.warn( "Found more than one edition for date (" + date + ")" );
 
             }
-            for ( GeneOntologyTerm term : currentGoSets.get( selectedEdition ) ) {
+            for ( GeneOntologyTerm term : currentRunGoSets.get( selectedEdition ) ) {
                 if ( term.getGoId().equals( label ) ) {
                     selectedTerm = term;
                 }
@@ -555,7 +566,7 @@ public class EnrichmentView implements Serializable {
 
         Collection<String> exact = new HashSet<String>();
         Collection<String> possible = new HashSet<String>();
-        for ( GeneOntologyTerm term : currentAllTerms ) {
+        for ( GeneOntologyTerm term : currentRunTerms ) {
             if ( queryUpper.equals( term.getGoId().toUpperCase() ) ) {
                 exact.add( term.getGoId() );
                 continue;
@@ -677,14 +688,6 @@ public class EnrichmentView implements Serializable {
 
     public void setpThreshold( double pThreshold ) {
         this.pThreshold = pThreshold;
-    }
-
-    public boolean isPropagate() {
-        return propagate;
-    }
-
-    public void setPropagate( boolean propagate ) {
-        this.propagate = propagate;
     }
 
     public LineChartModel getEnrichmentChart() {

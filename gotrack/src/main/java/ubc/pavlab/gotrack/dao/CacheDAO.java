@@ -58,8 +58,6 @@ public interface CacheDAO {
 
     public Map<String, String> getEvidenceCategories() throws DAOException;
 
-    public Map<Integer, Map<Edition, Integer>> getPopulations() throws DAOException;
-
     public Map<Integer, Map<String, Gene>> getCurrentGenes() throws DAOException;
 
 }

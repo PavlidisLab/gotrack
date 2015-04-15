@@ -19,8 +19,6 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -50,7 +48,6 @@ import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.extensions.model.timeline.TimelineEvent;
-import org.primefaces.extensions.model.timeline.TimelineGroup;
 import org.primefaces.extensions.model.timeline.TimelineModel;
 import org.primefaces.model.chart.AxisType;
 import org.primefaces.model.chart.DateAxis;
@@ -70,6 +67,7 @@ import ubc.pavlab.gotrack.model.GoChart;
 import ubc.pavlab.gotrack.model.GraphTypeKey;
 import ubc.pavlab.gotrack.model.GraphTypeKey.GraphType;
 import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.StatsEntry;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
@@ -82,6 +80,15 @@ import ubc.pavlab.gotrack.utilities.Jaccard;
 @ViewScoped
 public class TrackView {
 
+    // Static
+    private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
+    private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
+    private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
+    private static final List<GraphType> filterEnabledGraphs = Arrays.asList( GraphType.annotation );
+    private static final List<GraphType> dataEnabledGraphs = Arrays.asList( GraphType.annotation, GraphType.lossgain,
+            GraphType.multifunctionality, GraphType.jaccard );
+    private static final String COMBINED_TITLE = "All Accessions";
+
     @ManagedProperty("#{cache}")
     private Cache cache;
 
@@ -91,10 +98,16 @@ public class TrackView {
     @ManagedProperty("#{sessionManager}")
     private SessionManager sessionManager;
 
+    @ManagedProperty("#{settingsCache}")
+    private SettingsCache settingsCache;
+
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
 
     private static final Logger log = Logger.getLogger( TrackView.class );
+
+    // Application settings
+    private boolean ontologyInMemory = false;
 
     // DAO
     private AnnotationDAO annotationDAO;
@@ -146,16 +159,8 @@ public class TrackView {
     private String filterName;
     private boolean filterEnabled = true;
     private boolean dataEnabled = true;
+
     // private boolean firstChartReady = false;
-
-    // Static
-
-    private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
-    private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
-    private static final List<GraphType> filterEnabledGraphs = Arrays.asList( GraphType.annotation );
-    private static final List<GraphType> dataEnabledGraphs = Arrays.asList( GraphType.annotation, GraphType.lossgain,
-            GraphType.multifunctionality, GraphType.jaccard );
-    private static final String COMBINED_TITLE = "All Accessions";
 
     public TrackView() {
         log.info( "TrackView created" );
@@ -211,6 +216,9 @@ public class TrackView {
             currentEdition = cache.getCurrentEditions( currentSpeciesId );
             // allEditions = cache.getAllEditions( currentSpeciesId );
             allEditions = cache.getAllEditions( currentSpeciesId );
+
+            ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
+
             for ( Species s : cache.getSpeciesList() ) {
                 if ( s.getId().equals( currentSpeciesId ) ) {
                     currentSpecies = s;
@@ -263,7 +271,11 @@ public class TrackView {
 
         if ( data == null ) {
 
-            data = annotationDAO.track( currentSpeciesId, query );
+            if ( ontologyInMemory ) {
+                data = annotationDAO.track( currentSpeciesId, query );
+            } else {
+                data = annotationDAO.trackPropagate( currentSpeciesId, query );
+            }
 
             // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
 
@@ -274,10 +286,22 @@ public class TrackView {
 
         }
 
-        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData = propagate( data );
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> directData = new HashMap<>();
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData = new HashMap<>();
+
+        if ( ontologyInMemory ) {
+            directData = data;
+            propagatedData = propagate( data );
+        } else {
+
+            propagatedData = data;
+            directData = directs( data );
+
+        }
+
         log.info( "Annotation Data fetched" );
-        createDirectCharts( data, "Direct Annotations vs Time", "Dates", "Direct Annotations" );
-        createAllTerms( data );
+        createDirectCharts( directData, "Direct Annotations vs Time", "Dates", "Direct Annotations" );
+        createAllTerms( directData );
         createPropagatedChart( propagatedData, "Propagated Annotations vs Time", "Dates", "Propagated Annotations" );
         createJaccardChart( "Jaccard Similarity vs Time", "Dates", "Jaccard Similarity" );
         createMultiChart( "Multifunctionality vs Time", "Dates", "Multifunctionality" );
@@ -300,7 +324,18 @@ public class TrackView {
         log.info( "Creating Direct Chart" );
 
         Map<String, Map<Edition, Double>> staticData = new HashMap<>();
-        staticData.put( "Species Avg", cache.getSpeciesAverage( currentSpeciesId ) );
+
+        Map<Edition, Double> geneAvg = new HashMap<>();
+        Map<Edition, Double> accessionAvg = new HashMap<>();
+
+        for ( Entry<Edition, StatsEntry> editionEntry : cache.getAggregates( currentSpeciesId ).entrySet() ) {
+            Edition edition = editionEntry.getKey();
+            StatsEntry se = editionEntry.getValue();
+            geneAvg.put( edition, se.getAvgDirectByGene() );
+            accessionAvg.put( edition, se.getAvgDirectByAccession() );
+        }
+
+        staticData.put( "Species Avg", accessionAvg );
         GoChart<Accession> goChart = new GoChart<>( title, xLabel, yLabel, data, staticData );
 
         GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
@@ -309,11 +344,13 @@ public class TrackView {
         initChart( gtk, goChart );
 
         // Combined Chart
-        // TODO add static data
         GraphTypeKey combinedGtk = new GraphTypeKey( GraphType.annotation, false, false );
         Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> combinedData = new HashMap<>();
         combinedData.put( new Accession( COMBINED_TITLE ), combineDataByEdition( data ) );
-        GoChart<Accession> combinedGOChart = new GoChart<>( title, xLabel, yLabel, combinedData );
+
+        staticData = new HashMap<>();
+        staticData.put( "Species Avg", geneAvg );
+        GoChart<Accession> combinedGOChart = new GoChart<>( title, xLabel, yLabel, combinedData, staticData );
         initChart( combinedGtk, combinedGOChart );
 
         log.info( "Direct Chart Created" );
@@ -374,6 +411,52 @@ public class TrackView {
 
         }
         return propagatedData;
+    }
+
+    private Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> directs(
+            Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> directData = new HashMap<>();
+
+        // Filter through propagated data and pick out directs
+        for ( Entry<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> accessionEntry : data
+                .entrySet() ) {
+            Accession acc = accessionEntry.getKey();
+            Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> directEditionMap = new HashMap<>();
+
+            for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : accessionEntry
+                    .getValue().entrySet() ) {
+                Edition ed = editionEntry.getKey();
+                Map<GeneOntologyTerm, Set<EvidenceReference>> directTermMap = new HashMap<>();
+
+                for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> termEntry : editionEntry.getValue().entrySet() ) {
+                    GeneOntologyTerm term = termEntry.getKey();
+                    Set<EvidenceReference> directEvidence = new HashSet<>();
+
+                    for ( EvidenceReference er : termEntry.getValue() ) {
+                        if ( er.isDirect() ) {
+                            directEvidence.add( er );
+                        }
+                    }
+
+                    if ( !directEvidence.isEmpty() ) {
+                        directTermMap.put( term, directEvidence );
+                    }
+
+                }
+
+                if ( !directTermMap.isEmpty() ) {
+                    directEditionMap.put( ed, directTermMap );
+                }
+
+            }
+
+            if ( !directEditionMap.isEmpty() ) {
+                directData.put( acc, directEditionMap );
+            }
+
+        }
+
+        return directData;
     }
 
     private void createPropagatedChart(
@@ -494,7 +577,7 @@ public class TrackView {
 
                 Double multi = 0.0;
                 Edition ed = editionEntry.getKey();
-                Integer total = cache.getGenePopulation( currentSpeciesId, ed );
+                Integer total = cache.getGeneCount( currentSpeciesId, ed );
                 // Integer total = cache.getAccessionSize( currentSpeciesId, ed );
                 Set<GeneOntologyTerm> goSet = editionEntry.getValue().keySet();
                 if ( total != null ) {
@@ -900,81 +983,6 @@ public class TrackView {
 
     }
 
-    /**
-     * create timeline based on data
-     * 
-     * @param timelineData timeline data, map of terms to map of date to boolean representing whether the term existed
-     *        on that date
-     * @param timelineGroups
-     * @return
-     */
-    private List<CustomTimelineModel<GeneOntologyTerm>> createTimelines(
-            Map<GeneOntologyTerm, Map<Date, Set<String>>> timelineData,
-            Map<GeneOntologyTerm, Set<String>> timelineGroups ) {
-        List<CustomTimelineModel<GeneOntologyTerm>> timelines = new ArrayList<>();
-        DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
-        Calendar cal = Calendar.getInstance();
-
-        // Categories
-
-        for ( Entry<GeneOntologyTerm, Map<Date, Set<String>>> esTermData : timelineData.entrySet() ) {
-
-            GeneOntologyTerm term = esTermData.getKey();
-
-            CustomTimelineModel<GeneOntologyTerm> model = new CustomTimelineModel<>( term );
-
-            Map<Date, Set<String>> data = esTermData.getValue();
-            Set<String> setGroups = timelineGroups.get( term );
-
-            List<TimelineGroup> groups = new ArrayList<TimelineGroup>();
-            List<TimelineEvent> events = new ArrayList<TimelineEvent>();
-
-            for ( String grp : setGroups ) {
-                groups.add( new TimelineGroup( grp, grp ) );
-            }
-
-            SortedSet<Date> dates = new TreeSet<Date>( data.keySet() );
-            Date prevDate = null;
-            for ( Date date : dates ) {
-                if ( prevDate != null ) {
-
-                    for ( String grp : setGroups ) {
-                        boolean exists = data.get( prevDate ).contains( grp );
-                        TimelineEvent event = new TimelineEvent( df.format( prevDate ), prevDate, date, false, grp,
-                                exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                        // model.add( event );
-                        events.add( event );
-                    }
-
-                }
-
-                prevDate = date;
-            }
-
-            // give the last edition a span of 1 month
-            if ( dates.size() > 1 ) {
-                for ( String grp : setGroups ) {
-                    boolean exists = data.get( prevDate ).contains( grp );
-                    cal.setTime( prevDate );
-                    cal.add( Calendar.MONTH, 1 );
-                    TimelineEvent event = new TimelineEvent( df.format( prevDate ), prevDate, cal.getTime(), false,
-                            grp, exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                    // model.add( event );
-                    events.add( event );
-                }
-            }
-
-            model.setGroups( groups );
-            model.addAll( events );
-
-            timelines.add( model );
-
-        }
-
-        return timelines;
-
-    }
-
     private void filter( GraphTypeKey gtk, boolean idBypass, boolean nameBypass, boolean aspectBypass,
             boolean datasetBypass ) {
         log.info( "Filter: " + gtk + ", ID: " + filterId + " Name: " + filterName + " Aspects: " + filterAspect
@@ -1337,6 +1345,10 @@ public class TrackView {
 
     public void setSessionManager( SessionManager sessionManager ) {
         this.sessionManager = sessionManager;
+    }
+
+    public void setSettingsCache( SettingsCache settingsCache ) {
+        this.settingsCache = settingsCache;
     }
 
 }
