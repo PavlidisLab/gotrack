@@ -17,7 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.go;
 
 /**
  * Immutable representation of a relationship between two Gene Ontology Terms
@@ -27,21 +27,14 @@ package ubc.pavlab.gotrack.model;
  */
 public class Relationship {
     private final int childId;
-    private final Integer parentId;
+    private final int parentId;
     private final RelationshipType type;
-    private final String childName;
-    private final Aspect childAspect;
-    private final boolean childObsolete;
 
-    public Relationship( int childId, Integer parentId, RelationshipType type, String childName, Aspect childAspect,
-            boolean childObsolete ) {
+    public Relationship( int childId, int parentId, RelationshipType type ) {
         super();
         this.childId = childId;
         this.parentId = parentId;
         this.type = type;
-        this.childName = childName;
-        this.childAspect = childAspect;
-        this.childObsolete = childObsolete;
     }
 
     public int getChildId() {
@@ -56,18 +49,6 @@ public class Relationship {
         return type;
     }
 
-    public String getChildName() {
-        return childName;
-    }
-
-    public Aspect getChildAspect() {
-        return childAspect;
-    }
-
-    public boolean isChildObsolete() {
-        return childObsolete;
-    }
-
     @Override
     public String toString() {
         return "Relationship [childId=" + childId + ", parentId=" + parentId + ", type=" + type + "]";
@@ -78,7 +59,7 @@ public class Relationship {
         final int prime = 31;
         int result = 1;
         result = prime * result + childId;
-        result = prime * result + ( ( parentId == null ) ? 0 : parentId.hashCode() );
+        result = prime * result + parentId;
         result = prime * result + ( ( type == null ) ? 0 : type.hashCode() );
         return result;
     }
@@ -90,9 +71,7 @@ public class Relationship {
         if ( getClass() != obj.getClass() ) return false;
         Relationship other = ( Relationship ) obj;
         if ( childId != other.childId ) return false;
-        if ( parentId == null ) {
-            if ( other.parentId != null ) return false;
-        } else if ( !parentId.equals( other.parentId ) ) return false;
+        if ( parentId != other.parentId ) return false;
         if ( type != other.type ) return false;
         return true;
     }

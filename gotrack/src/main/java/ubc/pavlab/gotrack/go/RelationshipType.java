@@ -17,7 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.go;
 
 /**
  * TODO Document Me

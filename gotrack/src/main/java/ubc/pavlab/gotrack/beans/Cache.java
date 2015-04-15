@@ -42,6 +42,8 @@ import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
 import ubc.pavlab.gotrack.go.GeneOntology;
+import ubc.pavlab.gotrack.go.Relationship;
+import ubc.pavlab.gotrack.go.Term;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
@@ -172,25 +174,33 @@ public class Cache implements Serializable {
         if ( settingsCache.getProperty( "gotrack.ontologyInMemory" ).equals( "true" ) ) {
 
             List<Integer> eds = new ArrayList<Integer>( cacheDAO.getGOEditions() );
-            // List<List<Integer>> edPartitions = Lists.partition( eds, 20 );
-            // int cnt = 0;
-            // for ( List<Integer> list : edPartitions ) {
-            // Map<Integer, Set<Relationship>> tmp = cacheDAO.getOntologies( list );
-            // log.info( "GO Ontologies Retrieved: " + tmp.size() );
-            // for ( Entry<Integer, Set<Relationship>> relsEntry : tmp.entrySet() ) {
-            // ontologies.put( relsEntry.getKey(), new GeneOntology( relsEntry.getValue() ) );
-            // cnt++;
-            // relsEntry.getValue().clear();
+
+            // for ( Integer goEd : eds ) {
+            // Set<Term> goTerms = cacheDAO.getGoTerms( goEd );
+            // Set<Relationship> goAdjacency = cacheDAO.getAdjacencies( goEd );
+            // ontologies.put( goEd, new GeneOntology( goTerms, goAdjacency ) );
             //
-            // }
-            // // System.gc();
-            // log.info( "GO Ontologies Loaded: " + cnt + "/" + eds.size() );
+            // System.gc();
+            // log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() + "/" + eds.size() );
             // log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
             // / 1000000 + " MB" );
             //
             // }
 
-            ontologies = cacheDAO.getOntologies();
+            Map<Integer, Set<Term>> goTerms = cacheDAO.getGoTerms();
+            Map<Integer, Set<Relationship>> goAdjacency = cacheDAO.getAdjacencies();
+
+            for ( Integer goEd : goTerms.keySet() ) {
+                ontologies.put( goEd, new GeneOntology( goTerms.get( goEd ), goAdjacency.get( goEd ) ) );
+                goTerms.get( goEd ).clear();
+                goAdjacency.get( goEd ).clear();
+
+                // System.gc();
+                log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() + "/" + eds.size() );
+                log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                        / 1000000 + " MB" );
+
+            }
 
             System.gc();
             log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() + "/" + eds.size() );

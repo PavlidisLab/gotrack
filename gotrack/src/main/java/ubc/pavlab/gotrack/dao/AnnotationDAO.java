@@ -19,13 +19,10 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Accession;
-import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.AnnotationDetailed;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
@@ -40,56 +37,8 @@ public interface AnnotationDAO {
 
     // Actions ------------------------------------------------------------------------------------
 
-    /**
-     * Returns the annotation from the database matching the given ID, otherwise null.
-     * 
-     * @param id The ID of the annotation to be returned.
-     * @return The annotation from the database matching the given ID, otherwise null.
-     * @throws DAOException If something fails at database level.
-     */
-    public AnnotationDetailed find( Long id ) throws DAOException;
-
-    /**
-     * Returns the annotations from the database matching the given accession, edition and species, otherwise null.
-     * 
-     * @param accession The accession of the annotations to be returned.
-     * @param edition The edition of the annotations to be returned.
-     * @param species The species of the annotations to be returned.
-     * @return The annotations from the database matching the given email and password, otherwise null.
-     * @throws DAOException If something fails at database level.
-     */
-    public List<AnnotationDetailed> find( String accession, Integer edition, Integer species ) throws DAOException;
-
-    /**
-     * Returns the annotations from the database matching the given accessions, edition and species, otherwise null.
-     * 
-     * @param accession The accession of the annotations to be returned.
-     * @param edition The edition of the annotations to be returned.
-     * @param species The species of the annotations to be returned.
-     * @return The annotations from the database matching the given email and password, otherwise null.
-     * @throws DAOException If something fails at database level.
-     */
-    public List<AnnotationDetailed> find( List<String> accession, Integer edition, Integer species )
-            throws DAOException;
-
-    /**
-     * Returns true if the given symbol exists in the database.
-     * 
-     * @param symbol The symbol which is to be checked in the database.
-     * @return True if the given symbol exists in the database.
-     * @throws DAOException If something fails at database level.
-     */
-    public boolean existSymbol( String symbol ) throws DAOException;
-
-    public Map<String, Map<Edition, Set<Annotation>>> trackOld( Integer species,
-            Map<String, Collection<String>> primaryToSecondary, Integer goEditionId, boolean propagate )
-            throws DAOException;
-
     public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentData( Integer species, Set<Gene> genes )
             throws DAOException;
-
-    public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentDataOld( Integer species, Set<Gene> genes,
-            Integer currentEdition ) throws DAOException;
 
     public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
             String symbol ) throws DAOException;
