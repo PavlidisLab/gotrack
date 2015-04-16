@@ -45,13 +45,17 @@ var hideLoadingSpinner = function() {
             seriesToggleReplot : {resetAxes: true}
          }
       }
+      this.cfg.axes.yaxis.tickOptions = {
+                                         formatString: "%.2p"
+                                     };
+      
       this.cfg.highlighter = {
          show : true,
          tooltipLocation : 'sw',
          useAxesFormatters : true,
          tooltipAxes : 'xy',
          yvalues : 1,
-         formatString : 'Date: %s ~ P-Value: %f',
+         formatString : 'Date: %s ~ P-Value: %.2p',
          tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
             return plot.series[seriesIndex].label + ": " + str;
          },
