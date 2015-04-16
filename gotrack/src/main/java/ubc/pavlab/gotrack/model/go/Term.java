@@ -17,7 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.go;
+package ubc.pavlab.gotrack.model.go;
 
 import gnu.trove.set.hash.THashSet;
 

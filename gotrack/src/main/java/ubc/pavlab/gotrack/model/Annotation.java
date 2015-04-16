@@ -19,7 +19,7 @@
 
 package ubc.pavlab.gotrack.model;
 
-import ubc.pavlab.gotrack.go.Term;
+import ubc.pavlab.gotrack.model.go.Term;
 
 /**
  * TODO Document Me

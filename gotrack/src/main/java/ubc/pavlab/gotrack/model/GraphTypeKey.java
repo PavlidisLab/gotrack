@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.model;
 
+
 /**
  * Represents a key for a map to a type of graph under specific options
  * 
@@ -26,10 +27,6 @@ package ubc.pavlab.gotrack.model;
  * @version $Id$
  */
 public class GraphTypeKey {
-
-    public enum GraphType {
-        annotation, jaccard, multifunctionality, lossgain
-    };
 
     private final GraphType graphType;
     private final Boolean split;

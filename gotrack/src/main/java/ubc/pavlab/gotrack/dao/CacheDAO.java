@@ -23,11 +23,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ubc.pavlab.gotrack.go.Relationship;
-import ubc.pavlab.gotrack.go.Term;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.StatsEntry;
+import ubc.pavlab.gotrack.model.go.Relationship;
+import ubc.pavlab.gotrack.model.go.Term;
 
 /**
  * Holds methods for retrieving data that is meant to be cached

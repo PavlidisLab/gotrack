@@ -41,9 +41,6 @@ import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.dao.SpeciesDAO;
-import ubc.pavlab.gotrack.go.GeneOntology;
-import ubc.pavlab.gotrack.go.Relationship;
-import ubc.pavlab.gotrack.go.Term;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
@@ -52,6 +49,9 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.StatsEntry;
+import ubc.pavlab.gotrack.model.go.GeneOntology;
+import ubc.pavlab.gotrack.model.go.Relationship;
+import ubc.pavlab.gotrack.model.go.Term;
 
 import com.google.common.collect.Iterables;
 
