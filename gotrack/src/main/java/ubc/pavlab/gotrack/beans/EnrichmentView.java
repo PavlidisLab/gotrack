@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -73,7 +74,7 @@ public class EnrichmentView implements Serializable {
 
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
     private static final Integer MAX_RESULTS = 10;
-    private static final int MAX_GENESET_SIZE = 100;
+    private static final int MAX_GENESET_SIZE = 200;
 
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
@@ -173,19 +174,11 @@ public class EnrichmentView implements Serializable {
 
             log.info( "retreiving gene data..." );
 
-            Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> geneGOMap = cache.getEnrichmentData( genes );
+            Map<Edition, Map<GeneOntologyTerm, Integer>> geneGOMap = cache.getEnrichmentData( genes );
 
             if ( geneGOMap == null ) {
 
-                if ( ontologyInMemory ) {
-                    geneGOMap = propagate( annotationDAO.enrichmentData( currentSpeciesId, genes ) );
-
-                } else {
-                    geneGOMap = annotationDAO.enrichmentDataPropagate( currentSpeciesId, genes );
-                }
-                // geneGOMap = annotationDAO.enrichmentDataOld( currentSpeciesId, genes, currentEdition.getEdition() );
-
-                // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
+                geneGOMap = annotationDAO.enrichmentDataPropagateCountsOnly( currentSpeciesId, genes );
 
                 cache.addEnrichmentData( genes, geneGOMap );
                 log.info( "Retrieved data from db" );
@@ -194,29 +187,28 @@ public class EnrichmentView implements Serializable {
 
             }
 
+            Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
+
             currentRunGoSets = new HashMap<>();
             currentRunTerms = new HashSet<>();
 
             // get gene-collapsed data as well as completely flattened
-            for ( Entry<Edition, Map<Gene, Set<GeneOntologyTerm>>> editionEntry : geneGOMap.entrySet() ) {
+            for ( Entry<Edition, Map<GeneOntologyTerm, Integer>> editionEntry : geneGOMap.entrySet() ) {
                 Edition ed = editionEntry.getKey();
-                Set<GeneOntologyTerm> goSet = new HashSet<>();
+                Set<GeneOntologyTerm> goSet = editionEntry.getValue().keySet();
                 currentRunGoSets.put( ed, goSet );
+                currentRunTerms.addAll( goSet );
 
-                for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : editionEntry.getValue().entrySet() ) {
-
-                    goSet.addAll( geneEntry.getValue() );
-                    currentRunTerms.addAll( geneEntry.getValue() );
-                }
             }
 
-            enrichmentAnalysis( geneGOMap, currentRunGoSets, minAnnotatedPopulation );
+            enrichmentAnalysis( geneGOMap, sampleSizes, minAnnotatedPopulation );
 
         } else {
             log.info( "Empty geneset" );
         }
     }
 
+    @Deprecated
     private Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> propagate(
             Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> geneGOMap ) {
         Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> propagatedGeneGOMap = new HashMap<>();
@@ -234,101 +226,95 @@ public class EnrichmentView implements Serializable {
         return propagatedGeneGOMap;
     }
 
-    private void enrichmentAnalysis( Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> geneGOMap,
-            Map<Edition, Set<GeneOntologyTerm>> allTerms, int minAnnotedPopulation ) {
-
+    private void enrichmentAnalysis( Map<Edition, Map<GeneOntologyTerm, Integer>> geneGOMap,
+            Map<Edition, Integer> sampleSizes, int minAnnotedPopulation ) {
         enrichmentData = new HashMap<>();
-        boolean emptyChart = true;
 
-        List<Edition> eds = new ArrayList<Edition>( geneGOMap.keySet() );
-        Collections.sort( eds, Collections.reverseOrder() );
-        boolean firstRun = true;
-        Set<GeneOntologyTerm> termsToEnrich = new HashSet<>();
+        Map<Edition, Map<GeneOntologyTerm, Double>> results = new HashMap<>();
 
-        for ( Edition ed : eds ) {
+        for ( Entry<Edition, Map<GeneOntologyTerm, Integer>> editionEntry : geneGOMap.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            Map<GeneOntologyTerm, Integer> data = editionEntry.getValue();
 
-            Map<Gene, Set<GeneOntologyTerm>> data = geneGOMap.get( ed );
+            Map<GeneOntologyTerm, Double> pvalues = new HashMap<>();
+            results.put( ed, pvalues );
 
             int populationSize = cache.getGeneCount( currentSpeciesId, ed );
-            int k = data.keySet().size();
+            int sampleSize = sampleSizes.get( ed );
+            int countTests = 0;
 
-            Set<GeneOntologyTerm> termsInEdition = allTerms.get( ed );
+            for ( Entry<GeneOntologyTerm, Integer> termEntry : data.entrySet() ) {
+                GeneOntologyTerm term = termEntry.getKey();
+                Integer sampleAnnotated = termEntry.getValue();
 
-            // // TODO Multiple tests correction lowered because we're testing less terms?
-            // if ( !firstRun ) {
-            // termsInEdition = new HashSet<>( termsInEdition );
-            // termsInEdition.retainAll( termsToEnrich );
-            // }
+                Integer populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(), term.getGoId() );
 
-            Map<GeneOntologyTerm, Double> enrich = enrichmentData.get( ed );
+                if ( populationAnnotated != null && populationAnnotated >= minAnnotedPopulation ) {
+                    countTests++;
 
-            if ( enrich == null ) {
-                enrich = new HashMap<>();
-                enrichmentData.put( ed, enrich );
+                    HypergeometricDistribution hyper = new HypergeometricDistribution( populationSize,
+                            populationAnnotated, sampleSize );
+                    Double res = hyper.upperCumulativeProbability( sampleAnnotated );
+                    pvalues.put( term, res );
+
+                }
+
             }
 
-            if ( termsInEdition != null ) {
-                int bcorr = termsInEdition.size();
-                for ( GeneOntologyTerm term : termsInEdition ) {
+            if ( bonferroniCorrection ) {
 
-                    if ( !firstRun && !termsToEnrich.contains( term ) ) {
-                        // Term is part of this edition however did not pass the threshold in the current edition
-                        continue;
-                    }
-
-                    Integer populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(),
-                            term.getGoId() );
-
-                    if ( populationAnnotated != null && populationAnnotated >= minAnnotedPopulation ) {
-                        HypergeometricDistribution hyper = new HypergeometricDistribution( populationSize,
-                                populationAnnotated, k );
-
-                        int r = 0;
-
-                        for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : data.entrySet() ) {
-                            if ( geneEntry.getValue().contains( term ) ) {
-                                r++;
-                            }
-                        }
-
-                        // log.info( Arrays.asList( populationSize, populationAnnotated, k, r ) );
-                        Double res = hyper.upperCumulativeProbability( r );
-
-                        if ( bonferroniCorrection ) {
-                            res = bcorr * res;
-                        }
-
-                        res = Math.min( res, 1 );
-
-                        if ( !firstRun || res <= pThreshold ) {
-                            enrich.put( term, res );
-                            emptyChart = false;
-                            if ( firstRun ) {
-                                termsToEnrich.add( term );
-                            }
-                        } else {
-                            // log.info( term + " skipped; p-value not in range" );
-                        }
-
-                        // log.info( "Edition: (" + ed.getEdition() + ") " + hyper.upperCumulativeProbability( r ) );
-
-                    } else {
-                        // log.info( term + " skipped; too small or isn't annotated" );
-                    }
+                // Apply Bonferonni Correction
+                for ( Entry<GeneOntologyTerm, Double> termEntry : pvalues.entrySet() ) {
+                    Double correctedPValue = Math.min( termEntry.getValue() * countTests, 1 );
+                    termEntry.setValue( correctedPValue );
                 }
             }
-            firstRun = false;
 
         }
 
-        if ( !emptyChart ) {
-            enrichmentChart = createChart( enrichmentData, "Enrichment Stability", "Date", "p-value" );
-            chartReady = true;
-            log.info( "Chart created" );
-        } else {
+        // Filter view based on current positive terms under threshold
+
+        Edition currentEdition = cache.getCurrentEditions( currentSpeciesId );
+        Map<GeneOntologyTerm, Double> currentPValues = results.get( currentEdition );
+
+        for ( Iterator<Entry<GeneOntologyTerm, Double>> iterator = currentPValues.entrySet().iterator(); iterator
+                .hasNext(); ) {
+            Entry<GeneOntologyTerm, Double> termEntry = iterator.next();
+
+            if ( termEntry.getValue() > pThreshold ) {
+                iterator.remove();
+            }
+
+        }
+
+        if ( currentPValues.isEmpty() ) {
+            // Nothing matched the criteria in the current edition
             chartReady = false;
             log.info( "Chart Empty" );
+            return;
         }
+
+        Set<GeneOntologyTerm> TermsToView = currentPValues.keySet();
+
+        for ( Entry<Edition, Map<GeneOntologyTerm, Double>> editionEntry : results.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+
+            Map<GeneOntologyTerm, Double> enrich = new HashMap<>();
+            enrichmentData.put( ed, enrich );
+
+            for ( Entry<GeneOntologyTerm, Double> termEntry : editionEntry.getValue().entrySet() ) {
+                GeneOntologyTerm term = termEntry.getKey();
+                Double correctedPValue = termEntry.getValue();
+                if ( TermsToView.contains( term ) ) {
+                    enrich.put( term, correctedPValue );
+                }
+            }
+
+        }
+
+        enrichmentChart = createChart( enrichmentData, "Enrichment Stability", "Date", "p-value" );
+        chartReady = true;
+        log.info( "Chart created" );
 
     }
 
@@ -492,7 +478,11 @@ public class EnrichmentView implements Serializable {
         return results;
     }
 
-    public void clearOptionFilters( boolean reload ) {
+    public void clearOptionFilters() {
+        clearOptionFilters( true );
+    }
+
+    private void clearOptionFilters( boolean reload ) {
         log.info( "Option Filters Cleared." );
         filterAspect = new ArrayList<>( aspects );
         filterId = null;
@@ -593,6 +583,13 @@ public class EnrichmentView implements Serializable {
         orderedResults.addAll( p );
         return orderedResults;
 
+    }
+
+    public void removeAllGenes( ActionEvent actionEvent ) {
+        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
+        if ( selectGenes != null ) {
+            selectGenes.clear();
+        }
     }
 
     public void addGene( ActionEvent actionEvent ) {

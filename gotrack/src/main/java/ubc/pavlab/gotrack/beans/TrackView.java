@@ -312,6 +312,7 @@ public class TrackView {
 
         currentGoChart = goChartMap.get( gtk );
         currentChart = lineChartModelMap.get( gtk );
+        currentChart.setAnimate( true );
 
         log.info( "size: " + currentGoChart );
 

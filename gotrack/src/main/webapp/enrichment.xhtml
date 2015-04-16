@@ -117,7 +117,7 @@
 						oncomplete = "drawThreshold(#{enrichmentView.pThreshold})"
 						name="setThreshold"/>
 					<p:separator style="max-width:200px;margin-top:20px" />
-					<h3 class="center">Filter <p:commandButton actionListener="#{enrichmentView.clearOptionFilters('true')}" icon="fa fa-trash" update=":formEnrich:chartPanel, :formSelect" styleClass="icon-only" disabled="#{!(enrichmentView.chartReady)}"/></h3>
+					<h3 class="center">Filter <p:commandButton actionListener="#{enrichmentView.clearOptionFilters()}" icon="fa fa-trash" update=":formEnrich:chartPanel, :formSelect" styleClass="icon-only" disabled="#{!(enrichmentView.chartReady)}"/></h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
 						<h:outputText value="Aspect: " />
 						<p:selectManyButton id="optionFilterAspect" value="#{enrichmentView.filterAspect}" disabled="#{!(enrichmentView.chartReady)}">
@@ -190,6 +190,9 @@
 						<f:facet name="footer">
 							<p:commandButton process="tableGenes" icon="fa fa-plus"
 								value="Add" oncomplete="PF('addGenesDlg').show()" />
+							<p:commandButton value="Remove All"
+						actionListener="#{enrichmentView.removeAllGenes}" icon="fa fa-trash"
+						update=":formGenes:tableGenes" />
 						</f:facet>
 					</p:dataTable>
 

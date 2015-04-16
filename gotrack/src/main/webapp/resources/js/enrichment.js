@@ -51,7 +51,7 @@ var hideLoadingSpinner = function() {
          useAxesFormatters : true,
          tooltipAxes : 'xy',
          yvalues : 1,
-         formatString : 'Date: %s ~ Count: %s',
+         formatString : 'Date: %s ~ P-Value: %f',
          tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
             return plot.series[seriesIndex].label + ": " + str;
          },

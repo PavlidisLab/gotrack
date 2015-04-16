@@ -49,4 +49,9 @@ public interface AnnotationDAO {
     public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentDataPropagate( Integer species, Set<Gene> genes )
             throws DAOException;
 
+    public Map<Edition, Map<GeneOntologyTerm, Integer>> enrichmentDataPropagateCountsOnly( Integer species,
+            Set<Gene> genes ) throws DAOException;
+
+    public Map<Edition, Integer> enrichmentSampleSizes( Integer species, Set<Gene> genes ) throws DAOException;
+
 }

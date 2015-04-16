@@ -87,12 +87,7 @@ public class Cache implements Serializable {
     private Map<Integer, List<Edition>> allEditions = new HashMap<>();
     private Map<Integer, Map<String, Gene>> speciesToCurrentGenes = new HashMap<>();
 
-    // TODO not necessary atm since gene populations are not stored on the aggregate table
     private Map<Integer, Map<Edition, StatsEntry>> aggregates = new HashMap<>();
-    // view of aggregates for Map<species, Map<edition, avg_direct>>
-    private Map<Integer, Map<Edition, Double>> speciesAverage = new HashMap<>();
-
-    private Map<Integer, Map<Edition, Integer>> genePopulations = new HashMap<>();
 
     // Map<species, Map<edition, Map<go_id, count>>>
     private Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
@@ -112,11 +107,11 @@ public class Cache implements Serializable {
         }
     };
 
-    private Map<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>> applicationLevelEnrichmentCache = new LinkedHashMap<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>>(
+    private Map<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Integer>>> applicationLevelEnrichmentCache = new LinkedHashMap<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Integer>>>(
             MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true ) {
         // This method is called just after a new entry has been added
         @Override
-        public boolean removeEldestEntry( Map.Entry<Set<Gene>, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>>> eldest ) {
+        public boolean removeEldestEntry( Map.Entry<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Integer>>> eldest ) {
             return size() > MAX_ENRICHMENT_ENTRIES;
         }
     };
@@ -454,14 +449,14 @@ public class Cache implements Serializable {
         }
     }
 
-    public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> getEnrichmentData( Set<Gene> genes ) {
+    public Map<Edition, Map<GeneOntologyTerm, Integer>> getEnrichmentData( Set<Gene> genes ) {
         // TODO not sure if necessary, not a big deal either way
         synchronized ( applicationLevelEnrichmentCache ) {
             return applicationLevelEnrichmentCache.get( genes );
         }
     }
 
-    public void addEnrichmentData( Set<Gene> genes, Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> data ) {
+    public void addEnrichmentData( Set<Gene> genes, Map<Edition, Map<GeneOntologyTerm, Integer>> data ) {
         synchronized ( applicationLevelEnrichmentCache ) {
             // New HashSet because: The behavior of a map is not specified if the value of an object is changed in a
             // manner that affects equals comparisons while the object is a key in the map
