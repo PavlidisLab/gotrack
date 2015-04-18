@@ -110,19 +110,19 @@
 					<div align="center" style="margin-top: 20px;">
 						<p:commandButton value="Run Enrichment"
 							actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
-							update=":formEnrich:chartPanel, :formSelect" onclick="showLoadingSpinner()"
+							update=":formEnrich, :formSelect" onclick="showLoadingSpinner()"
 							oncomplete="hideLoadingSpinner(), setThreshold()" />
 					</div>
 					<p:remoteCommand
 						oncomplete = "drawThreshold(#{enrichmentView.pThreshold})"
 						name="setThreshold"/>
 					<p:separator style="max-width:200px;margin-top:20px" />
-					<h3 class="center">Filter <p:commandButton actionListener="#{enrichmentView.clearOptionFilters()}" icon="fa fa-trash" update=":formEnrich:chartPanel, :formSelect" styleClass="icon-only" disabled="#{!(enrichmentView.chartReady)}"/></h3>
+					<h3 class="center">Filter <p:commandButton actionListener="#{enrichmentView.clearOptionFilters()}" icon="fa fa-trash" update=":formEnrich, :formSelect" styleClass="icon-only" disabled="#{!(enrichmentView.chartReady)}"/></h3>
 					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
 						<h:outputText value="Aspect: " />
 						<p:selectManyButton id="optionFilterAspect" value="#{enrichmentView.filterAspect}" disabled="#{!(enrichmentView.chartReady)}">
 							<p:ajax listener="#{enrichmentView.reloadGraph}"
-								update=":formEnrich:chartPanel"/>
+								update=":formEnrich"/>
 								<f:selectItem itemLabel="BP" itemValue="BP" />
 								<f:selectItem itemLabel="MF" itemValue="MF" />
 								<f:selectItem itemLabel="CC" itemValue="CC" />
@@ -136,12 +136,12 @@
 								label="ID"
 								emptyMessage="No term suggestions available."
 								disabled="#{!(enrichmentView.chartReady)}">
-								<p:ajax event="itemSelect" listener="#{enrichmentView.reloadGraph}" update=":formEnrich:chartPanel"/>
+								<p:ajax event="itemSelect" listener="#{enrichmentView.reloadGraph}" update=":formEnrich"/>
 						</p:autoComplete>
 						
 						<h:outputText value="Name: " />
 						<p:inputText id="optionFilterName" value="#{enrichmentView.filterName}" disabled="#{!(enrichmentView.chartReady)}">
-								<p:ajax event="change" listener="#{enrichmentView.reloadGraph}" update=":formEnrich:chartPanel"/>
+								<p:ajax event="change" listener="#{enrichmentView.reloadGraph}" update=":formEnrich"/>
 						</p:inputText>
 						
 
@@ -203,21 +203,133 @@
 			<p:layoutUnit id="center" position="center">
 				<p:messages for="betaMessage" closable="true" />
 				<h:form id="formEnrich">
+					<p:tabView id="tabEnrich" dynamic="true" cache="false">
+						<p:tab title="Enrichment Results">
+						<p:outputPanel id="tablePanel">
+							<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+							<p:outputLabel for="editionSelect" value="Edition:" />
+							<p:selectOneMenu id="editionSelect" style="width:275px"
+								value="#{enrichmentView.enrichmentTableEdition}">
+								<p:ajax event="change" listener="#{enrichmentView.loadEnrichmentTableData()}" update=":formEnrich"/>
+								<f:selectItems value="#{enrichmentView.enrichmentTableAllEditions}" var="ed"
+									itemLabel="Edition: #{ed.edition} - Date: #{ed.date}" itemValue="#{ed.edition}" />
+							</p:selectOneMenu>
+							</h:panelGrid>
+							<p:separator/>
+							<p:dataTable id="tableEnrichment" widgetVar="tableEnrichmentWdg"
+								var="entry" value="#{enrichmentView.enrichmentTableData}"
+								scrollable="true" scrollHeight="250px" sortMode="multiple"
+								style="margin-bottom:0"
+								emptyMessage="No enrichment data found for selected edition"
+								filteredValue="#{enrichmentView.filteredEnrichmentTableData}"
+								rowStyleClass="#{entry.value ge enrichmentView.pThreshold ? 'not-significant' : 'significant'}">
+								<p:column filterBy="#{entry.key.goId}" filterMatchMode="contains" sortBy="#{entry.key.goId}"
+									headerText="Id" style="width:120px;">
+									<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.key.goId}"
+										target="_blank"><i class="fa fa-external-link fa-sm"
+										style="font-size: 0.7em;" /> #{entry.key.goId}</a>
+								</p:column>
+								<p:column filterBy="#{entry.key.aspect}" filterMatchMode="in" sortBy="#{entry.key.aspect}"
+									headerText="Aspect" style="width:200px;">
+									<f:facet name="filter">
+										<p:selectManyButton
+											onchange="PF('tableEnrichmentWdg').filter()"
+											panelStyle="width:200px">
+											<f:selectItem itemLabel="BP" itemValue="BP" />
+											<f:selectItem itemLabel="MF" itemValue="MF" />
+											<f:selectItem itemLabel="CC" itemValue="CC" />
+										</p:selectManyButton>
+									</f:facet>
+									<h:outputText value="Biological Process"
+										rendered="#{entry.key.aspect == 'BP'}" />
+									<h:outputText value="Molecular Function"
+										rendered="#{entry.key.aspect == 'MF'}" />
+									<h:outputText value="Cellular Component"
+										rendered="#{entry.key.aspect == 'CC'}" />
+								</p:column>
+								<p:column filterBy="#{entry.key.name}" filterMatchMode="contains" sortBy="#{entry.key.name}"
+									headerText="Name" >
+									<h:outputText value="#{entry.key.name}" />
+								</p:column>
+								
+						        <p:column filterBy="#{entry.value}" headerText="P-Value" sortBy="#{entry.value}" 
+						        	filterFunction="#{enrichmentView.filterByPValue}" style="width:200px;">						            
+								    <h:outputText value="#{entry.value}">
+								        <f:convertNumber type="number" pattern="#.##E0"/>
+								    </h:outputText>
+						        </p:column>
 
-					<p:outputPanel id="chartPanel">
-						<div id="loading-spinner" class="loading" style="display: none;"></div>
-						<p:chart id='enrichmentChart' type="line"
-							model="#{enrichmentView.enrichmentChart}" style="height:500px;"
-							widgetVar="chart" rendered="#{(enrichmentView.chartReady and !(enrichmentView.chartEmpty))}">
-							<p:ajax event="itemSelect" listener="#{enrichmentView.itemSelect}" oncomplete="openItemSelectDlg()"/>
-						</p:chart>
-						<h:outputText value="There's Nothing Here!" rendered="#{enrichmentView.chartEmpty}"/>
-					</p:outputPanel>
-					<p:remoteCommand
-						oncomplete = "PF('itemSelectDlg').show();"
-						update=":termDetail"
-						name="openItemSelectDlg"/>
+							</p:dataTable>
+							</p:outputPanel>
+
+						</p:tab>
+						<p:tab title="Enrichment Chart">
+							<p:outputPanel id="chartPanel">
+								<div id="loading-spinner" class="loading" style="display: none;"></div>
+								<p:chart id='enrichmentChart' type="line"
+									model="#{enrichmentView.enrichmentChart}" style="height:500px;"
+									widgetVar="chart"
+									rendered="#{(enrichmentView.chartReady and !(enrichmentView.chartEmpty))}">
+									<p:ajax event="itemSelect"
+										listener="#{enrichmentView.itemSelect}"
+										oncomplete="openItemSelectDlg()" />
+								</p:chart>
+								<h:outputText value="There's Nothing Here!"
+									rendered="#{enrichmentView.chartEmpty}" />
+							</p:outputPanel>
+
+							<p:remoteCommand oncomplete="PF('itemSelectDlg').show();"
+								update=":termDetail" name="openItemSelectDlg" />
+
+						</p:tab>
+						<p:tab title="Stability Results">
+						<p:outputPanel id="tableStabilityPanel">
+
+							<p:dataTable id="tableStability" widgetVar="tableStabilityWdg"
+								var="entry" value="#{enrichmentView.stabilityTableData}"
+								scrollable="true" scrollHeight="250px" sortMode="multiple"
+								style="margin-bottom:0"
+								emptyMessage="No stability data found for selected edition"
+								filteredValue="#{enrichmentView.filteredStabilityTableData}" >
+								<p:column filterBy="#{entry.key.date}" filterMatchMode="contains" sortBy="#{entry.key.date}"
+									headerText="Date" style="width:120px;">
+									<h:outputText value="#{entry.key.date}" />
+								</p:column>
+								<p:column filterBy="#{entry.key.edition}" filterMatchMode="contains" sortBy="#{entry.key.edition}"
+									headerText="Edition" style="width:120px;">
+									<h:outputText value="#{entry.key.edition}" />
+								</p:column>
+								<p:column filterBy="#{entry.value.completeTermJaccard}" filterMatchMode="contains" sortBy="#{entry.value.completeTermJaccard}"
+									headerText="completeTermJaccard Score" >
+								    <h:outputText value="#{entry.value.completeTermJaccard}">
+								        <f:convertNumber type="number" pattern="#.##"/>
+								    </h:outputText>
+								</p:column>
+								
+						        <p:column filterBy="#{entry.value.topTermJaccard}" headerText="topTermJaccard Score" sortBy="#{entry.value.topTermJaccard}" style="width:200px;">						            
+								    <h:outputText value="#{entry.value.topTermJaccard}">
+								        <f:convertNumber type="number" pattern="#.##"/>
+								    </h:outputText>
+						        </p:column>
+
+							</p:dataTable>
+							</p:outputPanel>
+						</p:tab>
+						<p:tab title="Stability Chart">
+							<p:outputPanel id="stabilityChartPanel">
+								<div class="loading-spinner loading" style="display: none;"></div>
+								<p:chart id='stabilityChart' type="line"
+									model="#{enrichmentView.stabilityChart}" style="height:500px;"
+									widgetVar="stabilityChartWdg"
+									rendered="#{(enrichmentView.chartReady and !(enrichmentView.chartEmpty))}">
+								</p:chart>
+								<h:outputText value="There's Nothing Here!"
+									rendered="#{enrichmentView.chartEmpty}" />
+							</p:outputPanel>
+						</p:tab>
+					</p:tabView>
 				</h:form>
+
 			</p:layoutUnit>
 
 		</p:layout>
@@ -271,59 +383,65 @@
 						styleClass="sqlDialogText" />
 				</p:panelGrid>
 			</p:outputPanel>
-		</p:dialog>
-		
-		
-<h:form id="formAddGenes">
-		<p:dialog header="Add Genes" widgetVar="addGenesDlg" modal="false"
-			showEffect="fade" hideEffect="fade" resizable="false">
-				<p:panelGrid style="margin-bottom:10px" cellpadding="5" styleClass="no-border">
+		</p:dialog>	
+
+		<h:form id="formAddGenes">
+			<p:dialog header="Add Genes" widgetVar="addGenesDlg" modal="false"
+				showEffect="fade" hideEffect="fade" resizable="false">
+				<p:panelGrid style="margin-bottom:10px" cellpadding="5"
+					styleClass="no-border">
 					<p:row>
 						<p:column>
 							<h:outputText value="Single Gene: " />
 						</p:column>
 						<p:column>
 							<p:autoComplete id="geneInput" value="#{enrichmentView.query}"
-							completeMethod="#{enrichmentView.complete}" minQueryLength="2"
-							forceSelection="true" maxResults="10" label="ID"
-							emptyMessage="No gene suggestions available,  please try again." placeholder="BRCA1">
+								completeMethod="#{enrichmentView.complete}" minQueryLength="2"
+								forceSelection="true" maxResults="10" label="ID"
+								emptyMessage="No gene suggestions available,  please try again."
+								placeholder="BRCA1">
 								<p:ajax event="itemSelect" process="@this" />
 							</p:autoComplete>
 						</p:column>
 					</p:row>
-					
+
 					<p:row>
-					<p:column colspan="2">
-						<p:separator />
-					</p:column>
+						<p:column colspan="2">
+							<p:separator />
+						</p:column>
 					</p:row>
-					
+
 					<p:row>
 						<p:column>
 							<h:outputText value="Bulk Genes: " />
 						</p:column>
-						
+
 						<p:column>
-							<p:inputTextarea id="inputBulkGene" value="#{enrichmentView.bulkQuery}" rows="10" cols="50" completeMethod="#{enrichmentView.complete}" queryDelay="750" minQueryLength="2" placeholder="BRCA1 GRIN1 RB1" title="whitespace or newline delimited"/>
-							
+							<p:inputTextarea id="inputBulkGene"
+								value="#{enrichmentView.bulkQuery}" rows="10" cols="50"
+								completeMethod="#{enrichmentView.complete}" queryDelay="750"
+								minQueryLength="2" placeholder="BRCA1 GRIN1 RB1"
+								title="whitespace or newline delimited" />
+
 						</p:column>
 					</p:row>
 				</p:panelGrid>
 
 
-			
-						<f:facet name="footer">
+
+				<f:facet name="footer">
 					<p:commandButton value="&nbsp; Add Single"
 						actionListener="#{enrichmentView.addGene}" icon="fa fa-plus"
 						update=":formGenes:tableGenes, :globalGrowl" />
 					<p:commandButton value="&nbsp; Add Bulk"
-						actionListener="#{enrichmentView.addBulkGenes}" icon="fa fa-plus-circle"
+						actionListener="#{enrichmentView.addBulkGenes}"
+						icon="fa fa-plus-circle"
 						update=":formGenes:tableGenes, :globalGrowl" />
-						</f:facet>
+				</f:facet>
 
-		</p:dialog>
-		
-</h:form>
+			</p:dialog>
+
+		</h:form>
 
 	</h:body>
 

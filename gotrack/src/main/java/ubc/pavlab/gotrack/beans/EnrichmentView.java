@@ -24,10 +24,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -56,6 +60,9 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.StabilityScore;
+
+import com.google.common.collect.Iterables;
 
 /**
  * TODO Document Me
@@ -70,7 +77,7 @@ public class EnrichmentView implements Serializable {
      * 
      */
     private static final long serialVersionUID = 166880636358923147L;
-    private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
+    // private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
 
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
     private static final Integer MAX_RESULTS = 10;
@@ -86,7 +93,7 @@ public class EnrichmentView implements Serializable {
     private DAOFactoryBean daoFactoryBean;
 
     // Application settings
-    private boolean ontologyInMemory = false;
+    // private boolean ontologyInMemory = false;
 
     // DAO
     private AnnotationDAO annotationDAO;
@@ -99,6 +106,13 @@ public class EnrichmentView implements Serializable {
     private Gene geneToRemove;
     private Gene viewGene;
 
+    // Stability Stuff
+    private static final int TOP_N_JACCARD = 5;
+    private Map<Edition, StabilityScore> stabilityScores = new HashMap<>();
+    List<Entry<Edition, StabilityScore>> stabilityTableData = new ArrayList<>();
+    List<Entry<Edition, StabilityScore>> filteredStabilityTableData;
+    LineChartModel stabilityChart;
+
     // Chart stuff
     private LineChartModel enrichmentChart;
     private Map<Edition, Set<GeneOntologyTerm>> currentRunGoSets;
@@ -108,6 +122,12 @@ public class EnrichmentView implements Serializable {
     private boolean bonferroniCorrection = true;
     private double pThreshold = 0.05;
     private int minAnnotatedPopulation = 5;
+
+    // Table stuff
+    private List<Entry<GeneOntologyTerm, Double>> enrichmentTableData = new ArrayList<>();
+    private List<Entry<GeneOntologyTerm, Double>> filteredEnrichmentTableData;
+    private Integer enrichmentTableEdition;
+    private Map<Integer, Edition> enrichmentTableAllEditions = new HashMap<>();
 
     // Chart Filters
     private List<String> filterAspect;
@@ -151,7 +171,8 @@ public class EnrichmentView implements Serializable {
         }
 
         annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-        ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
+        enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
+        // ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
         return null;
     }
 
@@ -160,7 +181,6 @@ public class EnrichmentView implements Serializable {
         chartReady = false;
         allEditions = cache.getAllEditions( currentSpeciesId );
         currentRunTerms = new HashSet<>();
-        Edition currentEdition = cache.getCurrentEditions( currentSpeciesId );
         Set<Gene> genes = new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) );
         log.info( "Current species: " + currentSpeciesId );
         log.info( "Geneset: " + genes );
@@ -208,6 +228,7 @@ public class EnrichmentView implements Serializable {
         }
     }
 
+    @SuppressWarnings("unused")
     @Deprecated
     private Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> propagate(
             Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> geneGOMap ) {
@@ -241,7 +262,6 @@ public class EnrichmentView implements Serializable {
 
             int populationSize = cache.getGeneCount( currentSpeciesId, ed );
             int sampleSize = sampleSizes.get( ed );
-            int countTests = 0;
 
             for ( Entry<GeneOntologyTerm, Integer> termEntry : data.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
@@ -250,7 +270,6 @@ public class EnrichmentView implements Serializable {
                 Integer populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(), term.getGoId() );
 
                 if ( populationAnnotated != null && populationAnnotated >= minAnnotedPopulation ) {
-                    countTests++;
 
                     HypergeometricDistribution hyper = new HypergeometricDistribution( populationSize,
                             populationAnnotated, sampleSize );
@@ -265,7 +284,7 @@ public class EnrichmentView implements Serializable {
 
                 // Apply Bonferonni Correction
                 for ( Entry<GeneOntologyTerm, Double> termEntry : pvalues.entrySet() ) {
-                    Double correctedPValue = Math.min( termEntry.getValue() * countTests, 1 );
+                    Double correctedPValue = Math.min( termEntry.getValue() * pvalues.keySet().size(), 1 );
                     termEntry.setValue( correctedPValue );
                 }
             }
@@ -312,9 +331,86 @@ public class EnrichmentView implements Serializable {
 
         }
 
-        enrichmentChart = createChart( enrichmentData, "Enrichment Stability", "Date", "p-value" );
+        enrichmentChart = createEnrichmentChart( enrichmentData, "Enrichment Chart", "Date", "p-value" );
+        enrichmentTableEdition = currentEdition.getEdition();
+        enrichmentTableAllEditions = new LinkedHashMap<>();
+        ArrayList<Edition> eds = new ArrayList<>( enrichmentData.keySet() );
+        Collections.sort( eds, Collections.reverseOrder() );
+        for ( Edition ed : eds ) {
+            enrichmentTableAllEditions.put( ed.getEdition(), ed );
+        }
+
+        loadEnrichmentTableData();
+
+        // Calculate stabilities and load stability tables / charts
+
+        stabilityScores = calculateStabilityScores( enrichmentData );
+        stabilityTableData = new ArrayList<>( stabilityScores.entrySet() );
+
+        Collections.sort( stabilityTableData, new Comparator<Entry<Edition, StabilityScore>>() {
+            public int compare( Entry<Edition, StabilityScore> e1, Entry<Edition, StabilityScore> e2 ) {
+                return -e1.getKey().compareTo( e2.getKey() );
+            }
+        } );
+
+        stabilityChart = createStabilityChart( stabilityScores, "Enrichment Stability", "Date", "Score" );
+
         chartReady = true;
         log.info( "Chart created" );
+
+    }
+
+    /**
+     * Calculates scores which attempt to explore the impact that annotation stability has on the performance of gene
+     * set enrichment analyses. The methods of exploration are as follows: completeTermJaccard: Looks at how consistent
+     * the enriched GO terms were; previous annotations for each gene set were compared to what would be the 'current'
+     * state. topGeneJaccard: Focused on how consistent the genes supporting the top 5 results were across editions.
+     * topTermJaccard: Aimed to explore how semantically similar the top 5 results were across editions.
+     * 
+     * @param enrichmentData
+     * @return
+     */
+    private Map<Edition, StabilityScore> calculateStabilityScores(
+            Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData ) {
+
+        Map<Edition, StabilityScore> stabilityScores = new LinkedHashMap<>();
+
+        List<Edition> orderedEditions = new ArrayList<>( enrichmentData.keySet() );
+        Collections.sort( orderedEditions );
+        Edition currentEdition = Iterables.getLast( orderedEditions, null );
+        LinkedHashSet<GeneOntologyTerm> currentSortedTerms = getSortedKeySetByValue( enrichmentData
+                .get( currentEdition ) );
+
+        // completeTermJaccard
+
+        for ( Entry<Edition, Map<GeneOntologyTerm, Double>> editionEntry : enrichmentData.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            LinkedHashSet<GeneOntologyTerm> sortedTerms = getSortedKeySetByValue( editionEntry.getValue() );
+
+            stabilityScores.put( ed, new StabilityScore( sortedTerms, currentSortedTerms, TOP_N_JACCARD ) );
+
+        }
+
+        return stabilityScores;
+
+    }
+
+    private LinkedHashSet<GeneOntologyTerm> getSortedKeySetByValue( Map<GeneOntologyTerm, Double> data ) {
+        LinkedHashSet<GeneOntologyTerm> results = new LinkedHashSet<>();
+
+        List<Entry<GeneOntologyTerm, Double>> entryList = new ArrayList<>( data.entrySet() );
+
+        Collections.sort( entryList, new Comparator<Entry<GeneOntologyTerm, Double>>() {
+            public int compare( Entry<GeneOntologyTerm, Double> e1, Entry<GeneOntologyTerm, Double> e2 ) {
+                return e1.getValue().compareTo( e2.getValue() );
+            }
+        } );
+
+        for ( Entry<GeneOntologyTerm, Double> entry : entryList ) {
+            results.add( entry.getKey() );
+        }
+
+        return results;
 
     }
 
@@ -325,6 +421,8 @@ public class EnrichmentView implements Serializable {
      * @param N failures in population
      * @return
      */
+    @SuppressWarnings("unused")
+    @Deprecated
     private double hypergeometric( int r, int k, int M, int N ) {
         double res = 0;
         for ( int i = r; i <= k; i++ ) {
@@ -335,6 +433,8 @@ public class EnrichmentView implements Serializable {
         return res;
     }
 
+    @SuppressWarnings("unused")
+    @Deprecated
     private static Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> combineDataByEdition(
             String seriesLabel, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
         Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> combinedSeries = new HashMap<>();
@@ -369,8 +469,8 @@ public class EnrichmentView implements Serializable {
         return combinedData;
     }
 
-    private LineChartModel createChart( Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData, String title,
-            String xLabel, String yLabel ) {
+    private LineChartModel createEnrichmentChart( Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData,
+            String title, String xLabel, String yLabel ) {
 
         LineChartModel dateModel = new LineChartModel();
         Double minVal = 1.0;
@@ -409,7 +509,58 @@ public class EnrichmentView implements Serializable {
         // dateModel.setAnimate( true );
         dateModel.setLegendRows( 8 );
         dateModel.setMouseoverHighlight( true );
-        dateModel.setExtender( "chartExtender" );
+        dateModel.setExtender( "enrichmentChartExtender" );
+        // dateModel.getAxis( AxisType.Y ).setMax( 1.0 );
+        // dateModel.getAxis( AxisType.Y ).setMin( Math.min( minVal, 0.1 ) );
+        dateModel.getAxis( AxisType.Y ).setLabel( yLabel );
+
+        DateAxis axis = new DateAxis( xLabel );
+        axis.setTickAngle( -50 );
+        axis.setTickFormat( "%b %#d, %y" );
+
+        dateModel.getAxes().put( AxisType.X, axis );
+        return dateModel;
+
+    }
+
+    private LineChartModel createStabilityChart( Map<Edition, StabilityScore> stabilityData, String title,
+            String xLabel, String yLabel ) {
+
+        LineChartModel dateModel = new LineChartModel();
+
+        LineChartSeries completeTermSeries = new LineChartSeries();
+        LineChartSeries topTermSeries = new LineChartSeries();
+
+        completeTermSeries.setLabel( "completeTermJaccard" );
+        completeTermSeries.setMarkerStyle( "filledDiamond" );
+
+        topTermSeries.setLabel( "topTermJaccard" );
+        topTermSeries.setMarkerStyle( "filledDiamond" );
+
+        if ( stabilityData != null ) {
+            List<Edition> eds = new ArrayList<Edition>( stabilityData.keySet() );
+            Collections.sort( eds );
+
+            for ( Edition edition : eds ) {
+                String date = edition.getDate().toString();
+                StabilityScore score = stabilityData.get( edition );
+                completeTermSeries.set( date, score.getCompleteTermJaccard() );
+                topTermSeries.set( date, score.getTopTermJaccard() );
+
+            }
+
+            dateModel.addSeries( completeTermSeries );
+            dateModel.addSeries( topTermSeries );
+        }
+
+        dateModel.setTitle( title );
+        dateModel.setZoom( true );
+
+        dateModel.setLegendPosition( "nw" );
+        // dateModel.setAnimate( true );
+        dateModel.setLegendRows( 8 );
+        dateModel.setMouseoverHighlight( true );
+        dateModel.setExtender( "stabilityChartExtender" );
         // dateModel.getAxis( AxisType.Y ).setMax( 1.0 );
         // dateModel.getAxis( AxisType.Y ).setMin( Math.min( minVal, 0.1 ) );
         dateModel.getAxis( AxisType.Y ).setLabel( yLabel );
@@ -439,8 +590,6 @@ public class EnrichmentView implements Serializable {
         selectedValue = es.get( event.getItemIndex() ).getValue();
 
         String label = enrichmentChart.getSeries().get( event.getSeriesIndex() ).getLabel();
-
-        String selectedDate = date;
 
         Collection<Edition> eds = getGoEditionsFromDate( date );
 
@@ -501,7 +650,7 @@ public class EnrichmentView implements Serializable {
         if ( !idBypass || !nameBypass || !aspectBypass ) {
             filter( idBypass, nameBypass, aspectBypass );
         } else {
-            enrichmentChart = createChart( enrichmentData, "Enrichment Stability", "Date", "p-value" );
+            enrichmentChart = createEnrichmentChart( enrichmentData, "Enrichment Stability", "Date", "p-value" );
             chartReady = true;
             chartEmpty = false;
         }
@@ -531,7 +680,7 @@ public class EnrichmentView implements Serializable {
         }
 
         if ( !emptyChart ) {
-            enrichmentChart = createChart( filteredData, "Filtered Enrichment Stability", "Date", "p-value" );
+            enrichmentChart = createEnrichmentChart( filteredData, "Filtered Enrichment Stability", "Date", "p-value" );
             chartEmpty = false;
             log.info( "Chart filtered" );
         } else {
@@ -664,6 +813,36 @@ public class EnrichmentView implements Serializable {
         }
         selectGenes.remove( geneToRemove );
         addMessage( "Gene (" + geneToRemove.getSymbol() + ") successfully removed.", FacesMessage.SEVERITY_INFO );
+    }
+
+    // Enrichment Table ---------------------------------------------------------------------------------------
+
+    public void loadEnrichmentTableData() {
+        filteredEnrichmentTableData = null;
+        enrichmentTableData = new ArrayList<>();
+        Edition ed = enrichmentTableAllEditions.get( enrichmentTableEdition );
+        if ( ed != null ) {
+            enrichmentTableData = new ArrayList<>( enrichmentData.get( ed ).entrySet() );
+            Collections.sort( enrichmentTableData, new Comparator<Entry<GeneOntologyTerm, Double>>() {
+                public int compare( Entry<GeneOntologyTerm, Double> e1, Entry<GeneOntologyTerm, Double> e2 ) {
+                    return e1.getValue().compareTo( e2.getValue() );
+                }
+            } );
+        }
+
+    }
+
+    public boolean filterByPValue( Object value, Object filter, Locale locale ) {
+        String filterText = ( filter == null ) ? null : filter.toString().trim();
+        if ( filterText == null || filterText.equals( "" ) ) {
+            return true;
+        }
+
+        if ( value == null ) {
+            return false;
+        }
+
+        return ( ( Double ) value ).compareTo( Double.valueOf( filterText ) ) < 0;
     }
 
     private void addMessage( String summary, FacesMessage.Severity severity ) {
@@ -802,6 +981,50 @@ public class EnrichmentView implements Serializable {
 
     public void setMinAnnotatedPopulation( int minAnnotatedPopulation ) {
         this.minAnnotatedPopulation = minAnnotatedPopulation;
+    }
+
+    public List<Entry<GeneOntologyTerm, Double>> getFilteredEnrichmentTableData() {
+        return filteredEnrichmentTableData;
+    }
+
+    public void setFilteredEnrichmentTableData( List<Entry<GeneOntologyTerm, Double>> filteredEnrichmentTableData ) {
+        this.filteredEnrichmentTableData = filteredEnrichmentTableData;
+    }
+
+    public List<Entry<GeneOntologyTerm, Double>> getEnrichmentTableData() {
+        return enrichmentTableData;
+    }
+
+    public Integer getEnrichmentTableEdition() {
+        return enrichmentTableEdition;
+    }
+
+    public void setEnrichmentTableEdition( Integer enrichmentTableEdition ) {
+        this.enrichmentTableEdition = enrichmentTableEdition;
+    }
+
+    public Collection<Edition> getEnrichmentTableAllEditions() {
+        return enrichmentTableAllEditions.values();
+    }
+
+    public Map<Edition, StabilityScore> getStabilityScores() {
+        return stabilityScores;
+    }
+
+    public List<Entry<Edition, StabilityScore>> getStabilityTableData() {
+        return stabilityTableData;
+    }
+
+    public List<Entry<Edition, StabilityScore>> getFilteredStabilityTableData() {
+        return filteredStabilityTableData;
+    }
+
+    public void setFilteredStabilityTableData( List<Entry<Edition, StabilityScore>> filteredStabilityTableData ) {
+        this.filteredStabilityTableData = filteredStabilityTableData;
+    }
+
+    public LineChartModel getStabilityChart() {
+        return stabilityChart;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

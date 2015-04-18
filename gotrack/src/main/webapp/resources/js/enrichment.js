@@ -5,13 +5,15 @@ function onLoad() {
 
 var hideLoadingSpinner = function() {
    $('#formEnrich\\:enrichmentChart').show();
-   $('#loading-spinner').hide();   
+   $('#formEnrich\\:stabilityChart').show();
+   $('.loading-spinner').hide();   
  };
 
  
  var showLoadingSpinner = function() {
     $('#formEnrich\\:enrichmentChart').hide();
-    $('#loading-spinner').show();   
+    $('#formEnrich\\:stabilityChart').hide();
+    $('.loading-spinner').show();   
   };
   
 //  $(window).load(function(){  // should be  $(window).load to load widget
@@ -29,7 +31,7 @@ var hideLoadingSpinner = function() {
 	   PrimeFaces.widgets.tableGenesWdg.render();
 	}
   
-  function chartExtender() {
+  function enrichmentChartExtender() {
       // this = chart widget instance        
       // this.cfg = options 
       this.cfg.legend = {
@@ -73,6 +75,43 @@ var hideLoadingSpinner = function() {
       this.cfg.axes.yaxis.renderer = $.jqplot.LogAxisRenderer;
       //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
    }
+  
+  function stabilityChartExtender() {
+     // this = chart widget instance        
+     // this.cfg = options 
+     this.cfg.legend = {
+        renderer : $.jqplot.EnhancedLegendRenderer,
+        show : true,
+        location : 's',
+        placement : 'outside',
+        marginTop : '100px',
+        rendererOptions : {
+           numberRows : 0,
+           numberColumns : 10,
+           seriesToggle: true,
+           seriesToggleReplot : {resetAxes: true}
+        }
+     }    
+     this.cfg.highlighter = {
+        show : true,
+        tooltipLocation : 'sw',
+        useAxesFormatters : true,
+        tooltipAxes : 'xy',
+        yvalues : 1,
+        formatString : 'Date: %s ~ P-Value: %.2f',
+        tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
+           return plot.series[seriesIndex].label + ": " + str;
+        },
+        bringSeriesToFront : true
+
+     }
+     this.cfg.canvasOverlay = {
+             show:true,
+             objects: [{
+                dashedHorizontalLine: { color: 'rgb(89, 198, 154)', y: 0.05, lineWidth: 2,shadow:false}
+              }]
+     }
+  }
   
   function drawThreshold(t) {
      try {
