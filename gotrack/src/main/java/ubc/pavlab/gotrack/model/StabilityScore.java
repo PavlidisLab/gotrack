@@ -19,6 +19,9 @@
 
 package ubc.pavlab.gotrack.model;
 
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -44,17 +47,32 @@ public class StabilityScore {
         this.topGeneJaccard = topGeneJaccard;
     }
 
-    public StabilityScore( LinkedHashSet<GeneOntologyTerm> testingEdition,
-            LinkedHashSet<GeneOntologyTerm> currentEdition, int n ) {
+    public StabilityScore( LinkedHashMap<GeneOntologyTerm, Set<Gene>> testingEdition,
+            LinkedHashMap<GeneOntologyTerm, Set<Gene>> currentEdition, int n ) {
 
-        completeTermJaccard = Jaccard.similarity( testingEdition, currentEdition );
-        topTermJaccard = Jaccard.similarity( getTopNTerms( testingEdition, n ), getTopNTerms( currentEdition, n ) );
+        completeTermJaccard = Jaccard.similarity( testingEdition.keySet(), currentEdition.keySet() );
+        Set<GeneOntologyTerm> testingTopTerms = getTopNTerms( testingEdition.keySet(), n );
+        Set<GeneOntologyTerm> currentTopTerms = getTopNTerms( currentEdition.keySet(), n );
+        topTermJaccard = Jaccard.similarity( testingTopTerms, currentTopTerms );
         // TODO figure out how to calculate topGeneJaccard
-        topGeneJaccard = null;
+
+        Set<Gene> testingTopGenes = new HashSet<>();
+
+        for ( GeneOntologyTerm term : testingTopTerms ) {
+            testingTopGenes.addAll( testingEdition.get( term ) );
+        }
+
+        Set<Gene> currentTopGenes = new HashSet<>();
+
+        for ( GeneOntologyTerm term : currentTopTerms ) {
+            currentTopGenes.addAll( currentEdition.get( term ) );
+        }
+
+        topGeneJaccard = Jaccard.similarity( testingTopGenes, currentTopGenes );
 
     }
 
-    private static Set<GeneOntologyTerm> getTopNTerms( LinkedHashSet<GeneOntologyTerm> set, int n ) {
+    private static Set<GeneOntologyTerm> getTopNTerms( Collection<GeneOntologyTerm> set, int n ) {
         int cnt = 0;
         Set<GeneOntologyTerm> results = new LinkedHashSet<>();
         for ( GeneOntologyTerm geneOntologyTerm : set ) {

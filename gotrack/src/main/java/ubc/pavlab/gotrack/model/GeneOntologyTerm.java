@@ -28,9 +28,16 @@ package ubc.pavlab.gotrack.model;
 public class GeneOntologyTerm {
 
     private final String goId;
-    private final String name;
-    private final String aspect;
-    private final boolean obsolete = false;
+    private String name;
+    private String aspect;
+    private boolean obsolete = false;
+
+    public GeneOntologyTerm( String goId ) {
+        super();
+        this.goId = goId;
+        this.name = null;
+        this.aspect = null;
+    }
 
     public GeneOntologyTerm( String goId, String name, String aspect ) {
         super();
@@ -49,6 +56,18 @@ public class GeneOntologyTerm {
 
     public String getAspect() {
         return aspect;
+    }
+
+    public void setName( String name ) {
+        this.name = name;
+    }
+
+    public void setAspect( String aspect ) {
+        this.aspect = aspect;
+    }
+
+    public void setObsolete( boolean obsolete ) {
+        this.obsolete = obsolete;
     }
 
     @Override

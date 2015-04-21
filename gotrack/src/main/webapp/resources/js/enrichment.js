@@ -92,6 +92,9 @@ var hideLoadingSpinner = function() {
            seriesToggleReplot : {resetAxes: true}
         }
      }    
+     this.cfg.axes.yaxis.tickOptions = {
+                                        formatString: "%.2f"
+                                    };
      this.cfg.highlighter = {
         show : true,
         tooltipLocation : 'sw',
@@ -104,12 +107,6 @@ var hideLoadingSpinner = function() {
         },
         bringSeriesToFront : true
 
-     }
-     this.cfg.canvasOverlay = {
-             show:true,
-             objects: [{
-                dashedHorizontalLine: { color: 'rgb(89, 198, 154)', y: 0.05, lineWidth: 2,shadow:false}
-              }]
      }
   }
   

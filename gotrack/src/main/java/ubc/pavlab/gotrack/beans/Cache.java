@@ -107,11 +107,11 @@ public class Cache implements Serializable {
         }
     };
 
-    private Map<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Integer>>> applicationLevelEnrichmentCache = new LinkedHashMap<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Integer>>>(
+    private Map<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Set<Gene>>>> applicationLevelEnrichmentCache = new LinkedHashMap<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Set<Gene>>>>(
             MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true ) {
         // This method is called just after a new entry has been added
         @Override
-        public boolean removeEldestEntry( Map.Entry<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Integer>>> eldest ) {
+        public boolean removeEldestEntry( Map.Entry<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Set<Gene>>>> eldest ) {
             return size() > MAX_ENRICHMENT_ENTRIES;
         }
     };
@@ -449,14 +449,14 @@ public class Cache implements Serializable {
         }
     }
 
-    public Map<Edition, Map<GeneOntologyTerm, Integer>> getEnrichmentData( Set<Gene> genes ) {
+    public Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> getEnrichmentData( Set<Gene> genes ) {
         // TODO not sure if necessary, not a big deal either way
         synchronized ( applicationLevelEnrichmentCache ) {
             return applicationLevelEnrichmentCache.get( genes );
         }
     }
 
-    public void addEnrichmentData( Set<Gene> genes, Map<Edition, Map<GeneOntologyTerm, Integer>> data ) {
+    public void addEnrichmentData( Set<Gene> genes, Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data ) {
         synchronized ( applicationLevelEnrichmentCache ) {
             // New HashSet because: The behavior of a map is not specified if the value of an object is changed in a
             // manner that affects equals comparisons while the object is a key in the map

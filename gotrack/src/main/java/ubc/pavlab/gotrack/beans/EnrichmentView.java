@@ -56,6 +56,7 @@ import org.primefaces.model.chart.LineChartModel;
 import org.primefaces.model.chart.LineChartSeries;
 
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
+import ubc.pavlab.gotrack.dao.GeneOntologyDAO;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
@@ -97,6 +98,7 @@ public class EnrichmentView implements Serializable {
 
     // DAO
     private AnnotationDAO annotationDAO;
+    private GeneOntologyDAO geneOntologyDAO;
 
     private Integer currentSpeciesId = 7;
     private String query;
@@ -115,7 +117,7 @@ public class EnrichmentView implements Serializable {
 
     // Chart stuff
     private LineChartModel enrichmentChart;
-    private Map<Edition, Set<GeneOntologyTerm>> currentRunGoSets;
+    private Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> currentRunRawData;
     private Set<GeneOntologyTerm> currentRunTerms;
     Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData;
     private boolean chartReady = false;
@@ -133,7 +135,7 @@ public class EnrichmentView implements Serializable {
     private List<String> filterAspect;
     private String filterId;
     private String filterName;
-    private boolean chartEmpty = false;
+    private boolean noEnrichmentData = false;
 
     // Select Data Point functionality
     private Edition selectedEdition;
@@ -171,6 +173,7 @@ public class EnrichmentView implements Serializable {
         }
 
         annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
+        geneOntologyDAO = daoFactoryBean.getGotrack().getGeneOntologyDAO();
         enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
         // ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
         return null;
@@ -194,11 +197,11 @@ public class EnrichmentView implements Serializable {
 
             log.info( "retreiving gene data..." );
 
-            Map<Edition, Map<GeneOntologyTerm, Integer>> geneGOMap = cache.getEnrichmentData( genes );
+            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = cache.getEnrichmentData( genes );
 
             if ( geneGOMap == null ) {
 
-                geneGOMap = annotationDAO.enrichmentDataPropagateCountsOnly( currentSpeciesId, genes );
+                geneGOMap = annotationDAO.enrichmentDataPropagateNoTermInfo( currentSpeciesId, genes );
 
                 cache.addEnrichmentData( genes, geneGOMap );
                 log.info( "Retrieved data from db" );
@@ -209,23 +212,58 @@ public class EnrichmentView implements Serializable {
 
             Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
 
-            currentRunGoSets = new HashMap<>();
+            currentRunRawData = new HashMap<>();
             currentRunTerms = new HashSet<>();
 
             // get gene-collapsed data as well as completely flattened
-            for ( Entry<Edition, Map<GeneOntologyTerm, Integer>> editionEntry : geneGOMap.entrySet() ) {
+            for ( Entry<Edition, Map<GeneOntologyTerm, Set<Gene>>> editionEntry : geneGOMap.entrySet() ) {
                 Edition ed = editionEntry.getKey();
-                Set<GeneOntologyTerm> goSet = editionEntry.getValue().keySet();
-                currentRunGoSets.put( ed, goSet );
-                currentRunTerms.addAll( goSet );
+                Map<GeneOntologyTerm, Set<Gene>> goSet = editionEntry.getValue();
+                currentRunRawData.put( ed, goSet );
+                currentRunTerms.addAll( goSet.keySet() );
 
             }
 
-            enrichmentAnalysis( geneGOMap, sampleSizes, minAnnotatedPopulation );
+            Map<Edition, Map<GeneOntologyTerm, Double>> results = enrichmentAnalysis( geneGOMap, sampleSizes,
+                    minAnnotatedPopulation );
+            results = postProcessEnrichment( results );
+            boolean success = calculateTablesAndCharts( results );
+
+            if ( success ) {
+                chartReady = true;
+                log.info( "Charts created" );
+            } else {
+                clearAllEnrichmentRunData();
+                chartReady = false;
+                log.info( "Chart Empty" );
+            }
 
         } else {
             log.info( "Empty geneset" );
         }
+    }
+
+    @SuppressWarnings("unused")
+    @Deprecated
+    private Map<Edition, Map<GeneOntologyTerm, Integer>> collapseEnrichmentData(
+            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMapDetailed ) {
+
+        Map<Edition, Map<GeneOntologyTerm, Integer>> results = new HashMap<>();
+
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Gene>>> editionEntry : geneGOMapDetailed.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            Map<GeneOntologyTerm, Integer> termMap = new HashMap<>();
+            results.put( ed, termMap );
+            for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : editionEntry.getValue().entrySet() ) {
+                GeneOntologyTerm term = termEntry.getKey();
+
+                termMap.put( term, termEntry.getValue().size() );
+
+            }
+
+        }
+
+        return results;
     }
 
     @SuppressWarnings("unused")
@@ -247,15 +285,15 @@ public class EnrichmentView implements Serializable {
         return propagatedGeneGOMap;
     }
 
-    private void enrichmentAnalysis( Map<Edition, Map<GeneOntologyTerm, Integer>> geneGOMap,
-            Map<Edition, Integer> sampleSizes, int minAnnotedPopulation ) {
-        enrichmentData = new HashMap<>();
+    private Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentAnalysis(
+            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap, Map<Edition, Integer> sampleSizes,
+            int minAnnotedPopulation ) {
 
         Map<Edition, Map<GeneOntologyTerm, Double>> results = new HashMap<>();
 
-        for ( Entry<Edition, Map<GeneOntologyTerm, Integer>> editionEntry : geneGOMap.entrySet() ) {
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Gene>>> editionEntry : geneGOMap.entrySet() ) {
             Edition ed = editionEntry.getKey();
-            Map<GeneOntologyTerm, Integer> data = editionEntry.getValue();
+            Map<GeneOntologyTerm, Set<Gene>> data = editionEntry.getValue();
 
             Map<GeneOntologyTerm, Double> pvalues = new HashMap<>();
             results.put( ed, pvalues );
@@ -263,9 +301,9 @@ public class EnrichmentView implements Serializable {
             int populationSize = cache.getGeneCount( currentSpeciesId, ed );
             int sampleSize = sampleSizes.get( ed );
 
-            for ( Entry<GeneOntologyTerm, Integer> termEntry : data.entrySet() ) {
+            for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : data.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
-                Integer sampleAnnotated = termEntry.getValue();
+                Integer sampleAnnotated = termEntry.getValue().size();
 
                 Integer populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(), term.getGoId() );
 
@@ -291,9 +329,19 @@ public class EnrichmentView implements Serializable {
 
         }
 
-        // Filter view based on current positive terms under threshold
+        return results;
 
-        Edition currentEdition = cache.getCurrentEditions( currentSpeciesId );
+    }
+
+    private Map<Edition, Map<GeneOntologyTerm, Double>> postProcessEnrichment(
+            Map<Edition, Map<GeneOntologyTerm, Double>> results ) {
+
+        // Filter view based on current positive terms under threshold
+        Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData = new HashMap<>();
+
+        Edition currentEdition = Collections.max( results.keySet() );
+        // Edition currentEdition = cache.getCurrentEditions( currentSpeciesId );
+
         Map<GeneOntologyTerm, Double> currentPValues = results.get( currentEdition );
 
         for ( Iterator<Entry<GeneOntologyTerm, Double>> iterator = currentPValues.entrySet().iterator(); iterator
@@ -306,11 +354,8 @@ public class EnrichmentView implements Serializable {
 
         }
 
-        if ( currentPValues.isEmpty() ) {
-            // Nothing matched the criteria in the current edition
-            chartReady = false;
-            log.info( "Chart Empty" );
-            return;
+        if ( currentPValues == null || currentPValues.isEmpty() ) {
+            return new HashMap<>();
         }
 
         Set<GeneOntologyTerm> TermsToView = currentPValues.keySet();
@@ -331,8 +376,16 @@ public class EnrichmentView implements Serializable {
 
         }
 
+        return enrichmentData;
+    }
+
+    private boolean calculateTablesAndCharts( Map<Edition, Map<GeneOntologyTerm, Double>> results ) {
+        if ( results.isEmpty() ) {
+            return false;
+        }
+        enrichmentData = results;
         enrichmentChart = createEnrichmentChart( enrichmentData, "Enrichment Chart", "Date", "p-value" );
-        enrichmentTableEdition = currentEdition.getEdition();
+        enrichmentTableEdition = Collections.max( results.keySet() ).getEdition();
         enrichmentTableAllEditions = new LinkedHashMap<>();
         ArrayList<Edition> eds = new ArrayList<>( enrichmentData.keySet() );
         Collections.sort( eds, Collections.reverseOrder() );
@@ -355,9 +408,7 @@ public class EnrichmentView implements Serializable {
 
         stabilityChart = createStabilityChart( stabilityScores, "Enrichment Stability", "Date", "Score" );
 
-        chartReady = true;
-        log.info( "Chart created" );
-
+        return true;
     }
 
     /**
@@ -381,13 +432,25 @@ public class EnrichmentView implements Serializable {
         LinkedHashSet<GeneOntologyTerm> currentSortedTerms = getSortedKeySetByValue( enrichmentData
                 .get( currentEdition ) );
 
+        LinkedHashMap<GeneOntologyTerm, Set<Gene>> currentSortedTermsMap = new LinkedHashMap<>();
+
+        for ( GeneOntologyTerm term : currentSortedTerms ) {
+            currentSortedTermsMap.put( term, currentRunRawData.get( currentEdition ).get( term ) );
+        }
+
         // completeTermJaccard
 
         for ( Entry<Edition, Map<GeneOntologyTerm, Double>> editionEntry : enrichmentData.entrySet() ) {
             Edition ed = editionEntry.getKey();
             LinkedHashSet<GeneOntologyTerm> sortedTerms = getSortedKeySetByValue( editionEntry.getValue() );
 
-            stabilityScores.put( ed, new StabilityScore( sortedTerms, currentSortedTerms, TOP_N_JACCARD ) );
+            LinkedHashMap<GeneOntologyTerm, Set<Gene>> sortedTermsMap = new LinkedHashMap<>();
+
+            for ( GeneOntologyTerm term : sortedTerms ) {
+                sortedTermsMap.put( term, currentRunRawData.get( ed ).get( term ) );
+            }
+
+            stabilityScores.put( ed, new StabilityScore( sortedTermsMap, currentSortedTermsMap, TOP_N_JACCARD ) );
 
         }
 
@@ -530,12 +593,16 @@ public class EnrichmentView implements Serializable {
 
         LineChartSeries completeTermSeries = new LineChartSeries();
         LineChartSeries topTermSeries = new LineChartSeries();
+        LineChartSeries topGeneSeries = new LineChartSeries();
 
         completeTermSeries.setLabel( "completeTermJaccard" );
         completeTermSeries.setMarkerStyle( "filledDiamond" );
 
         topTermSeries.setLabel( "topTermJaccard" );
         topTermSeries.setMarkerStyle( "filledDiamond" );
+
+        topGeneSeries.setLabel( "topGeneJaccard" );
+        topGeneSeries.setMarkerStyle( "filledDiamond" );
 
         if ( stabilityData != null ) {
             List<Edition> eds = new ArrayList<Edition>( stabilityData.keySet() );
@@ -546,11 +613,13 @@ public class EnrichmentView implements Serializable {
                 StabilityScore score = stabilityData.get( edition );
                 completeTermSeries.set( date, score.getCompleteTermJaccard() );
                 topTermSeries.set( date, score.getTopTermJaccard() );
+                topGeneSeries.set( date, score.getTopGeneJaccard() );
 
             }
 
             dateModel.addSeries( completeTermSeries );
             dateModel.addSeries( topTermSeries );
+            dateModel.addSeries( topGeneSeries );
         }
 
         dateModel.setTitle( title );
@@ -603,9 +672,10 @@ public class EnrichmentView implements Serializable {
                 log.warn( "Found more than one edition for date (" + date + ")" );
 
             }
-            for ( GeneOntologyTerm term : currentRunGoSets.get( selectedEdition ) ) {
+            for ( GeneOntologyTerm term : currentRunRawData.get( selectedEdition ).keySet() ) {
                 if ( term.getGoId().equals( label ) ) {
                     selectedTerm = term;
+                    geneOntologyDAO.loadTermInfo( selectedEdition.getGoEditionId(), selectedTerm );
                 }
             }
             if ( selectedTerm == null ) {
@@ -642,6 +712,19 @@ public class EnrichmentView implements Serializable {
 
     }
 
+    private void clearAllEnrichmentRunData() {
+        enrichmentChart = null;
+        enrichmentData = new HashMap<>();
+        enrichmentTableEdition = null;
+        enrichmentTableAllEditions = new HashMap<>();
+        enrichmentTableData = new ArrayList<>();
+        filteredEnrichmentTableData = null;
+        stabilityChart = null;
+        stabilityScores = new HashMap<>();
+        stabilityTableData = new ArrayList<>();
+        filteredStabilityTableData = null;
+    }
+
     public void reloadGraph() {
         log.info( "reload" );
         boolean idBypass = StringUtils.isEmpty( filterId );
@@ -652,7 +735,7 @@ public class EnrichmentView implements Serializable {
         } else {
             enrichmentChart = createEnrichmentChart( enrichmentData, "Enrichment Stability", "Date", "p-value" );
             chartReady = true;
-            chartEmpty = false;
+            noEnrichmentData = false;
         }
 
     }
@@ -681,10 +764,10 @@ public class EnrichmentView implements Serializable {
 
         if ( !emptyChart ) {
             enrichmentChart = createEnrichmentChart( filteredData, "Filtered Enrichment Stability", "Date", "p-value" );
-            chartEmpty = false;
+            noEnrichmentData = false;
             log.info( "Chart filtered" );
         } else {
-            chartEmpty = true;
+            noEnrichmentData = true;
             log.info( "Chart Empty" );
             enrichmentChart = null;
         }
@@ -822,6 +905,13 @@ public class EnrichmentView implements Serializable {
         enrichmentTableData = new ArrayList<>();
         Edition ed = enrichmentTableAllEditions.get( enrichmentTableEdition );
         if ( ed != null ) {
+
+            // If this edition of terms has not been lazy loaded then lazy load their term info.
+
+            if ( geneOntologyDAO.loadTermInfo( ed.getGoEditionId(), enrichmentData.get( ed ).keySet() ) ) {
+                log.info( "Loazy loading Term Info for Edition: (" + ed + ")." );
+            }
+
             enrichmentTableData = new ArrayList<>( enrichmentData.get( ed ).entrySet() );
             Collections.sort( enrichmentTableData, new Comparator<Entry<GeneOntologyTerm, Double>>() {
                 public int compare( Entry<GeneOntologyTerm, Double> e1, Entry<GeneOntologyTerm, Double> e2 ) {
@@ -971,8 +1061,8 @@ public class EnrichmentView implements Serializable {
         this.filterName = filterName;
     }
 
-    public boolean isChartEmpty() {
-        return chartEmpty;
+    public boolean isNoEnrichmentData() {
+        return noEnrichmentData;
     }
 
     public int getMinAnnotatedPopulation() {

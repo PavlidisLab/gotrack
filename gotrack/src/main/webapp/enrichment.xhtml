@@ -260,22 +260,23 @@
 						        </p:column>
 
 							</p:dataTable>
+							<div class="loading-spinner loading" style="display: none;"></div>
 							</p:outputPanel>
 
 						</p:tab>
 						<p:tab title="Enrichment Chart">
 							<p:outputPanel id="chartPanel">
-								<div id="loading-spinner" class="loading" style="display: none;"></div>
+								<div class="loading-spinner loading" style="display: none;"></div>
 								<p:chart id='enrichmentChart' type="line"
 									model="#{enrichmentView.enrichmentChart}" style="height:500px;"
 									widgetVar="chart"
-									rendered="#{(enrichmentView.chartReady and !(enrichmentView.chartEmpty))}">
+									rendered="#{(enrichmentView.chartReady and !(enrichmentView.noEnrichmentData))}">
 									<p:ajax event="itemSelect"
 										listener="#{enrichmentView.itemSelect}"
 										oncomplete="openItemSelectDlg()" />
 								</p:chart>
 								<h:outputText value="There's Nothing Here!"
-									rendered="#{enrichmentView.chartEmpty}" />
+									rendered="#{enrichmentView.noEnrichmentData}" />
 							</p:outputPanel>
 
 							<p:remoteCommand oncomplete="PF('itemSelectDlg').show();"
@@ -311,8 +312,15 @@
 								        <f:convertNumber type="number" pattern="#.##"/>
 								    </h:outputText>
 						        </p:column>
+						        
+						        <p:column filterBy="#{entry.value.topGeneJaccard}" headerText="topGeneJaccard Score" sortBy="#{entry.value.topGeneJaccard}" style="width:200px;">						            
+								    <h:outputText value="#{entry.value.topGeneJaccard}">
+								        <f:convertNumber type="number" pattern="#.##"/>
+								    </h:outputText>
+						        </p:column>
 
 							</p:dataTable>
+							<div class="loading-spinner loading" style="display: none;"></div>
 							</p:outputPanel>
 						</p:tab>
 						<p:tab title="Stability Chart">
@@ -321,10 +329,10 @@
 								<p:chart id='stabilityChart' type="line"
 									model="#{enrichmentView.stabilityChart}" style="height:500px;"
 									widgetVar="stabilityChartWdg"
-									rendered="#{(enrichmentView.chartReady and !(enrichmentView.chartEmpty))}">
+									rendered="#{(enrichmentView.chartReady and !(enrichmentView.noEnrichmentData))}">
 								</p:chart>
 								<h:outputText value="There's Nothing Here!"
-									rendered="#{enrichmentView.chartEmpty}" />
+									rendered="#{enrichmentView.noEnrichmentData}" />
 							</p:outputPanel>
 						</p:tab>
 					</p:tabView>
