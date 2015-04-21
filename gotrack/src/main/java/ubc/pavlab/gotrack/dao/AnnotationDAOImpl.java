@@ -255,7 +255,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> enrichmentDataPropagate( Integer species, Set<Gene> genes )
+    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataPropagate( Integer species, Set<Gene> genes )
             throws DAOException {
         List<Object> params = new ArrayList<Object>();
 
@@ -274,7 +274,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data = new HashMap<>();
+        Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> data = new HashMap<>();
 
         log.debug( sql );
 
@@ -313,19 +313,19 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                     log.warn( "Could not find (" + go.getGoId() + ") in go_edition: " + ed.getGoEditionId() );
                 }
 
-                Map<GeneOntologyTerm, Set<Gene>> edEntry = data.get( ed );
-                if ( edEntry == null ) {
-                    edEntry = new HashMap<>();
-                    data.put( ed, edEntry );
+                Map<Edition, Set<GeneOntologyTerm>> geneEntry = data.get( g );
+                if ( geneEntry == null ) {
+                    geneEntry = new HashMap<>();
+                    data.put( g, geneEntry );
                 }
 
-                Set<Gene> geneSet = edEntry.get( go );
-                if ( geneSet == null ) {
-                    geneSet = new HashSet<>();
-                    edEntry.put( go, geneSet );
+                Set<GeneOntologyTerm> goSet = geneEntry.get( ed );
+                if ( goSet == null ) {
+                    goSet = new HashSet<>();
+                    geneEntry.put( ed, goSet );
                 }
 
-                geneSet.add( g );
+                goSet.add( go );
 
             }
             endTime = System.currentTimeMillis();
@@ -340,7 +340,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> enrichmentDataPropagateNoTermInfo( Integer species,
+    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataPropagateNoTermInfo( Integer species,
             Set<Gene> genes ) throws DAOException {
         List<Object> params = new ArrayList<Object>();
 
@@ -359,7 +359,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data = new HashMap<>();
+        Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> data = new HashMap<>();
 
         log.debug( sql );
 
@@ -397,19 +397,19 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 // log.warn( "Could not find (" + go.getGoId() + ") in go_edition: " + ed.getGoEditionId() );
                 // }
 
-                Map<GeneOntologyTerm, Set<Gene>> edEntry = data.get( ed );
-                if ( edEntry == null ) {
-                    edEntry = new HashMap<>();
-                    data.put( ed, edEntry );
+                Map<Edition, Set<GeneOntologyTerm>> geneEntry = data.get( g );
+                if ( geneEntry == null ) {
+                    geneEntry = new HashMap<>();
+                    data.put( g, geneEntry );
                 }
 
-                Set<Gene> geneSet = edEntry.get( go );
-                if ( geneSet == null ) {
-                    geneSet = new HashSet<>();
-                    edEntry.put( go, geneSet );
+                Set<GeneOntologyTerm> goSet = geneEntry.get( ed );
+                if ( goSet == null ) {
+                    goSet = new HashSet<>();
+                    geneEntry.put( ed, goSet );
                 }
 
-                geneSet.add( g );
+                goSet.add( go );
 
             }
             endTime = System.currentTimeMillis();

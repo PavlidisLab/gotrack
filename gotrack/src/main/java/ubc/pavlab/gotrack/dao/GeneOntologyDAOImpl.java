@@ -116,21 +116,14 @@ public class GeneOntologyDAOImpl implements GeneOntologyDAO {
 
         try {
 
-            long startTime = System.currentTimeMillis();
             connection = daoFactory.getConnection();
-            long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
 
             statement = connection.prepareStatement( sql );
             DAOUtil.setValues( statement, params.toArray() );
             log.debug( statement );
 
-            startTime = System.currentTimeMillis();
             resultSet = statement.executeQuery();
-            endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
 
-            startTime = System.currentTimeMillis();
             while ( resultSet.next() ) {
 
                 String goId = resultSet.getString( "go_id" );
@@ -146,8 +139,6 @@ public class GeneOntologyDAOImpl implements GeneOntologyDAO {
                 }
 
             }
-            endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
         } catch ( SQLException e ) {
             throw new DAOException( e );
         } finally {

@@ -74,7 +74,7 @@ public class Cache implements Serializable {
     private static final Logger log = Logger.getLogger( Cache.class );
 
     private final int MAX_DATA_ENTRIES = 20;
-    private final int MAX_ENRICHMENT_ENTRIES = 5;
+    private final int MAX_ENRICHMENT_ENTRIES = 500;
 
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
@@ -107,11 +107,12 @@ public class Cache implements Serializable {
         }
     };
 
-    private Map<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Set<Gene>>>> applicationLevelEnrichmentCache = new LinkedHashMap<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Set<Gene>>>>(
+    // TODO This should be changed to an LFU cache instead of LRU
+    private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> applicationLevelEnrichmentCache = new LinkedHashMap<Gene, Map<Edition, Set<GeneOntologyTerm>>>(
             MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true ) {
         // This method is called just after a new entry has been added
         @Override
-        public boolean removeEldestEntry( Map.Entry<Set<Gene>, Map<Edition, Map<GeneOntologyTerm, Set<Gene>>>> eldest ) {
+        public boolean removeEldestEntry( Map.Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> eldest ) {
             return size() > MAX_ENRICHMENT_ENTRIES;
         }
     };
@@ -449,18 +450,16 @@ public class Cache implements Serializable {
         }
     }
 
-    public Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> getEnrichmentData( Set<Gene> genes ) {
+    public Map<Edition, Set<GeneOntologyTerm>> getEnrichmentData( Gene gene ) {
         // TODO not sure if necessary, not a big deal either way
         synchronized ( applicationLevelEnrichmentCache ) {
-            return applicationLevelEnrichmentCache.get( genes );
+            return applicationLevelEnrichmentCache.get( gene );
         }
     }
 
-    public void addEnrichmentData( Set<Gene> genes, Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data ) {
+    public void addEnrichmentData( Gene gene, Map<Edition, Set<GeneOntologyTerm>> data ) {
         synchronized ( applicationLevelEnrichmentCache ) {
-            // New HashSet because: The behavior of a map is not specified if the value of an object is changed in a
-            // manner that affects equals comparisons while the object is a key in the map
-            applicationLevelEnrichmentCache.put( new HashSet<>( genes ), data );
+            applicationLevelEnrichmentCache.put( gene, data );
         }
     }
 

@@ -46,7 +46,7 @@ public interface AnnotationDAO {
     public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> trackPropagate( Integer species,
             String symbol ) throws DAOException;
 
-    public Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> enrichmentDataPropagate( Integer species, Set<Gene> genes )
+    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataPropagate( Integer species, Set<Gene> genes )
             throws DAOException;
 
     public Map<Edition, Map<GeneOntologyTerm, Integer>> enrichmentDataPropagateCountsOnly( Integer species,
@@ -54,7 +54,7 @@ public interface AnnotationDAO {
 
     public Map<Edition, Integer> enrichmentSampleSizes( Integer species, Set<Gene> genes ) throws DAOException;
 
-    public Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> enrichmentDataPropagateNoTermInfo( Integer species,
+    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataPropagateNoTermInfo( Integer species,
             Set<Gene> genes ) throws DAOException;
 
 }

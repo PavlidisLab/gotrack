@@ -83,6 +83,8 @@ public class EnrichmentView implements Serializable {
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
     private static final Integer MAX_RESULTS = 10;
     private static final int MAX_GENESET_SIZE = 200;
+    // True if Terms should be lazy-loaded as required, false if all terms should be loaded on enrichment run
+    private static final boolean LAZY_LOADING = false;
 
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
@@ -197,16 +199,31 @@ public class EnrichmentView implements Serializable {
 
             log.info( "retreiving gene data..." );
 
-            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = cache.getEnrichmentData( genes );
+            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = new HashMap<>();
+            Set<Gene> genesToLoad = new HashSet<>();
+            for ( Gene gene : genes ) {
+                Map<Edition, Set<GeneOntologyTerm>> cachedGeneData = cache.getEnrichmentData( gene );
+                if ( cachedGeneData != null ) {
+                    addGeneData( gene, cachedGeneData, geneGOMap );
+                } else {
+                    genesToLoad.add( gene );
+                }
+            }
 
-            if ( geneGOMap == null ) {
+            if ( !genesToLoad.isEmpty() ) {
 
-                geneGOMap = annotationDAO.enrichmentDataPropagateNoTermInfo( currentSpeciesId, genes );
+                Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB = annotationDAO
+                        .enrichmentDataPropagateNoTermInfo( currentSpeciesId, genesToLoad );
 
-                cache.addEnrichmentData( genes, geneGOMap );
-                log.info( "Retrieved data from db" );
+                for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
+                    addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
+                    cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
+                }
+
+                log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
+                        + ( genes.size() - genesToLoad.size() ) + ") from cache" );
             } else {
-                log.info( "Retrieved data from cache" );
+                log.info( "Retrieved all (" + genes.size() + ") genes from cache" );
 
             }
 
@@ -264,6 +281,36 @@ public class EnrichmentView implements Serializable {
         }
 
         return results;
+    }
+
+    private void addGeneData( Gene g, Map<Edition, Set<GeneOntologyTerm>> cachedGeneData,
+            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data ) {
+
+        for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : cachedGeneData.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+
+            Map<GeneOntologyTerm, Set<Gene>> m1 = data.get( ed );
+
+            if ( m1 == null ) {
+                // Previously had no data for this edition
+                m1 = new HashMap<>();
+                data.put( ed, m1 );
+            }
+
+            for ( GeneOntologyTerm term : editionEntry.getValue() ) {
+                Set<Gene> geneSet = m1.get( term );
+
+                if ( geneSet == null ) {
+                    // Previously had no genes for this term in this edition
+                    geneSet = new HashSet<>();
+                    m1.put( term, geneSet );
+                }
+
+                geneSet.add( g );
+
+            }
+
+        }
     }
 
     @SuppressWarnings("unused")
@@ -407,6 +454,14 @@ public class EnrichmentView implements Serializable {
         } );
 
         stabilityChart = createStabilityChart( stabilityScores, "Enrichment Stability", "Date", "Score" );
+
+        if ( !LAZY_LOADING ) {
+            log.info( "Loading Term Info for All Editions" );
+            for ( Entry<Edition, Map<GeneOntologyTerm, Double>> editionEntry : enrichmentData.entrySet() ) {
+                geneOntologyDAO.loadTermInfo( editionEntry.getKey().getGoEditionId(), editionEntry.getValue().keySet() );
+            }
+            log.info( "Loading Complete." );
+        }
 
         return true;
     }
@@ -675,7 +730,14 @@ public class EnrichmentView implements Serializable {
             for ( GeneOntologyTerm term : currentRunRawData.get( selectedEdition ).keySet() ) {
                 if ( term.getGoId().equals( label ) ) {
                     selectedTerm = term;
-                    geneOntologyDAO.loadTermInfo( selectedEdition.getGoEditionId(), selectedTerm );
+                    if ( LAZY_LOADING ) {
+                        geneOntologyDAO.loadTermInfo( selectedEdition.getGoEditionId(), selectedTerm );
+                    }
+
+                    if ( LAZY_LOADING && geneOntologyDAO.loadTermInfo( selectedEdition.getGoEditionId(), selectedTerm ) ) {
+                        log.info( "Lazy loading Term Info for Edition: (" + selectedEdition + ")." );
+                    }
+
                 }
             }
             if ( selectedTerm == null ) {
@@ -748,6 +810,10 @@ public class EnrichmentView implements Serializable {
             Edition ed = editionEntry.getKey();
             Map<GeneOntologyTerm, Double> termsInEdition = new HashMap<>();
             filteredData.put( ed, termsInEdition );
+
+            if ( LAZY_LOADING && geneOntologyDAO.loadTermInfo( ed.getGoEditionId(), editionEntry.getValue().keySet() ) ) {
+                log.info( "Lazy loading Term Info for Edition: (" + ed + ")." );
+            }
 
             for ( Entry<GeneOntologyTerm, Double> termsEntry : editionEntry.getValue().entrySet() ) {
                 GeneOntologyTerm term = termsEntry.getKey();
@@ -908,8 +974,8 @@ public class EnrichmentView implements Serializable {
 
             // If this edition of terms has not been lazy loaded then lazy load their term info.
 
-            if ( geneOntologyDAO.loadTermInfo( ed.getGoEditionId(), enrichmentData.get( ed ).keySet() ) ) {
-                log.info( "Loazy loading Term Info for Edition: (" + ed + ")." );
+            if ( LAZY_LOADING && geneOntologyDAO.loadTermInfo( ed.getGoEditionId(), enrichmentData.get( ed ).keySet() ) ) {
+                log.info( "Lazy loading Term Info for Edition: (" + ed + ")." );
             }
 
             enrichmentTableData = new ArrayList<>( enrichmentData.get( ed ).entrySet() );
