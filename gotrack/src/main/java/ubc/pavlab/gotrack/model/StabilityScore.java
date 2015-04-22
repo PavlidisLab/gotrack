@@ -54,7 +54,6 @@ public class StabilityScore {
         Set<GeneOntologyTerm> testingTopTerms = getTopNTerms( testingEdition.keySet(), n );
         Set<GeneOntologyTerm> currentTopTerms = getTopNTerms( currentEdition.keySet(), n );
         topTermJaccard = Jaccard.similarity( testingTopTerms, currentTopTerms );
-        // TODO figure out how to calculate topGeneJaccard
 
         Set<Gene> testingTopGenes = new HashSet<>();
 

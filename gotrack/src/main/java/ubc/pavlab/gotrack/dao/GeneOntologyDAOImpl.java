@@ -87,7 +87,7 @@ public class GeneOntologyDAOImpl implements GeneOntologyDAO {
             }
 
             if ( termsToLoad.isEmpty() ) {
-                log.info( "Terms already loaded." );
+                log.debug( "Terms already loaded." );
                 return false;
             }
 
@@ -156,7 +156,7 @@ public class GeneOntologyDAOImpl implements GeneOntologyDAO {
     public boolean loadTermInfo( int goEdition, GeneOntologyTerm term, boolean force ) throws DAOException {
 
         if ( !force && term.getName() != null && term.getAspect() != null ) {
-            log.info( "Term already loaded." );
+            log.debug( "Term already loaded." );
             return false;
         }
 
