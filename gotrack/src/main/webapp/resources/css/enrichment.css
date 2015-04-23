@@ -14,3 +14,15 @@ table.no-border, table.no-border tr, table.no-border td {
 li.ui-datalist-item {
 	margin-bottom:5px;
 }
+
+#formSelect\:geneList_content {
+	min-height:135px;
+}
+
+div.forceRight > a {
+	float:right;
+}
+
+div.ui-table-footer-align-right > div.ui-datatable-footer {
+	text-align:right;
+}

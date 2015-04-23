@@ -129,6 +129,21 @@
 			<artifactId>primefaces-extensions</artifactId>
 			<version>3.0.0</version>
 		</dependency>
+		
+		<!-- PDF Exporting -->
+		<dependency>
+			<groupId>com.lowagie</groupId>
+			<artifactId>itext</artifactId>
+			<version>4.2.1</version>
+		</dependency>
+
+		<!-- XLS Exporting -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi</artifactId>
+			<version>3.11</version>
+		</dependency>
+
 
 		
 		<!-- Omnifaces -->

@@ -23,6 +23,7 @@ var hideLoadingSpinner = function() {
 // });
   
   function centerResize() {
+     //updateCenterPanel();
 	  try {
 	   PrimeFaces.widgets.chart.plot.replot( {resetAxes:true} );
 	  } catch (e) {
@@ -57,9 +58,9 @@ var hideLoadingSpinner = function() {
          useAxesFormatters : true,
          tooltipAxes : 'xy',
          yvalues : 1,
-         formatString : 'Date: %s ~ P-Value: %.2p',
+         formatString : 'Date: %s <br /> P-Value: %.2p',
          tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
-            return plot.series[seriesIndex].label + ": " + str;
+            return plot.series[seriesIndex].label + "<br />" + str;
          },
          bringSeriesToFront : true
 
@@ -101,9 +102,9 @@ var hideLoadingSpinner = function() {
         useAxesFormatters : true,
         tooltipAxes : 'xy',
         yvalues : 1,
-        formatString : 'Date: %s ~ P-Value: %.2f',
+        formatString : 'Date: %s <br /> Jaccard: %.2f',
         tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
-           return plot.series[seriesIndex].label + ": " + str;
+           return plot.series[seriesIndex].label + "<br />" + str;
         },
         bringSeriesToFront : true
 

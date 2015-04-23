@@ -20,6 +20,7 @@
 package ubc.pavlab.gotrack.model;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -39,12 +40,16 @@ public class StabilityScore {
     private final Double completeTermJaccard;
     private final Double topTermJaccard;
     private final Double topGeneJaccard;
+    private final Set<GeneOntologyTerm> topTerms;
+    private final Set<Gene> topGenes;
 
     public StabilityScore( Double completeTermJaccard, Double topTermJaccard, Double topGeneJaccard ) {
         super();
         this.completeTermJaccard = completeTermJaccard;
         this.topTermJaccard = topTermJaccard;
         this.topGeneJaccard = topGeneJaccard;
+        this.topTerms = null;
+        this.topGenes = null;
     }
 
     public StabilityScore( LinkedHashMap<GeneOntologyTerm, Set<Gene>> testingEdition,
@@ -69,17 +74,20 @@ public class StabilityScore {
 
         topGeneJaccard = Jaccard.similarity( testingTopGenes, currentTopGenes );
 
+        this.topTerms = Collections.unmodifiableSet( testingTopTerms );
+        this.topGenes = Collections.unmodifiableSet( testingTopGenes );
+
     }
 
     private static Set<GeneOntologyTerm> getTopNTerms( Collection<GeneOntologyTerm> set, int n ) {
         int cnt = 0;
         Set<GeneOntologyTerm> results = new LinkedHashSet<>();
         for ( GeneOntologyTerm geneOntologyTerm : set ) {
-            results.add( geneOntologyTerm );
             cnt++;
             if ( cnt > n ) {
                 break;
             }
+            results.add( geneOntologyTerm );
         }
         return results;
     }
@@ -94,6 +102,14 @@ public class StabilityScore {
 
     public Double getTopGeneJaccard() {
         return topGeneJaccard;
+    }
+
+    public Set<GeneOntologyTerm> getTopTerms() {
+        return topTerms;
+    }
+
+    public Set<Gene> getTopGenes() {
+        return topGenes;
     }
 
 }

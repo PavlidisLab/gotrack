@@ -86,7 +86,10 @@
 					</p:selectOneMenu>
 					</h:panelGrid>
 					
-				    <p:dataList id="geneList" value="#{enrichmentView.selectedGenes}" var="gene" type="unordered" itemType="none" paginator="true" rows="5" styleClass="paginated" paginatorTemplate="{FirstPageLink} {PreviousPageLink} {CurrentPageReport} {NextPageLink} {LastPageLink}" paginatorPosition="top">
+				    <p:dataList id="geneList" value="#{enrichmentView.selectedGenes}" var="gene" type="unordered" 
+				    			itemType="none" paginator="true" rows="5" 
+				    			paginatorTemplate="{FirstPageLink} {PreviousPageLink} {CurrentPageReport} {NextPageLink} {LastPageLink}" 
+				    			paginatorPosition="top" style="min-height:200px">
 				        <p:commandLink update=":geneDetail" oncomplete="PF('geneDialog').show()" title="View Detail" styleClass="ui-icon ui-icon-search" style="float:left;margin-right:10px">
 				            <f:setPropertyActionListener value="#{gene}" target="#{enrichmentView.viewGene}" />
 				            <h:outputText value="#{gene.symbol}" />
@@ -147,132 +150,162 @@
 				</f:facet>
 			</p:layoutUnit>
 
-			<p:layoutUnit id="right" position="east" size="300" minSize="250"
-				header="Selected Genes" resizable="true" collapsible="true"
-				style="text-align:center">
-
-
-			</p:layoutUnit>
-
 			<p:layoutUnit id="center" position="center">
 				<p:messages for="betaMessage" closable="true" />
+				
 				<h:form id="formEnrich">
-					<p:tabView id="tabEnrich" dynamic="true" cache="false">
-						<p:tab title="Enrichment Results">
-						<p:outputPanel id="tablePanel">
-							<div class="loading-spinner loading" style="display: none;"></div>
-							<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
-							<p:outputLabel for="editionSelect" value="Edition:" />
-							<p:selectOneMenu id="editionSelect" style="width:275px"
-								value="#{enrichmentView.enrichmentTableEdition}">
-								<p:ajax event="change" listener="#{enrichmentView.loadEnrichmentTableData()}" update=":formEnrich"/>
-								<f:selectItems value="#{enrichmentView.enrichmentTableAllEditions}" var="ed"
-									itemLabel="Edition: #{ed.edition} - Date: #{ed.date}" itemValue="#{ed.edition}" />
-							</p:selectOneMenu>
-							</h:panelGrid>
-							<p:separator/>
-							<p:dataTable id="tableEnrichment" widgetVar="tableEnrichmentWdg"
-								var="entry" value="#{enrichmentView.enrichmentTableData}"
-								scrollable="true" scrollHeight="250px" sortMode="multiple"
-								style="margin-bottom:0"
-								emptyMessage="No enrichment data found for selected edition"
-								filteredValue="#{enrichmentView.filteredEnrichmentTableData}"
-								rowStyleClass="#{entry.value ge enrichmentView.pThreshold ? 'not-significant' : 'significant'}">
-								<p:column filterBy="#{entry.key.goId}" filterMatchMode="contains" sortBy="#{entry.key.goId}"
-									headerText="Id" style="width:120px;">
-									<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.key.goId}"
-										target="_blank"><i class="fa fa-external-link fa-sm"
-										style="font-size: 0.7em;" /> #{entry.key.goId}</a>
-								</p:column>
-								<p:column filterBy="#{entry.key.aspect}" filterMatchMode="in" sortBy="#{entry.key.aspect}"
-									headerText="Aspect" style="width:200px;">
-									<f:facet name="filter">
-										<p:selectManyButton
-											onchange="PF('tableEnrichmentWdg').filter()"
-											panelStyle="width:200px">
-											<f:selectItem itemLabel="BP" itemValue="BP" />
-											<f:selectItem itemLabel="MF" itemValue="MF" />
-											<f:selectItem itemLabel="CC" itemValue="CC" />
-										</p:selectManyButton>
-									</f:facet>
-									<h:outputText value="Biological Process"
-										rendered="#{entry.key.aspect == 'BP'}" />
-									<h:outputText value="Molecular Function"
-										rendered="#{entry.key.aspect == 'MF'}" />
-									<h:outputText value="Cellular Component"
-										rendered="#{entry.key.aspect == 'CC'}" />
-								</p:column>
-								<p:column filterBy="#{entry.key.name}" filterMatchMode="contains" sortBy="#{entry.key.name}"
-									headerText="Name" >
-									<h:outputText value="#{entry.key.name}" />
-								</p:column>
-								
-						        <p:column filterBy="#{entry.value}" headerText="P-Value" sortBy="#{entry.value}" 
-						        	filterFunction="#{enrichmentView.filterByPValue}" style="width:200px;">						            
-								    <h:outputText value="#{entry.value}">
-								        <f:convertNumber type="number" pattern="#.##E0"/>
-								    </h:outputText>
-						        </p:column>
-
-							</p:dataTable>
-							
-							</p:outputPanel>
-
-						</p:tab>
-						<p:tab title="Enrichment Chart">
-							<p:outputPanel id="chartPanel">
-								<div class="loading-spinner loading" style="display: none;"></div>
-								
-								<h:panelGrid columns="8" style="margin-bottom:10px" cellpadding="5" rendered="#{enrichmentView.chartReady}">
-								<h:outputText value="Aspect: " />
-								<p:selectManyButton id="optionFilterAspect" value="#{enrichmentView.filterAspect}" disabled="#{!(enrichmentView.chartReady)}">
-										<f:selectItem itemLabel="BP" itemValue="BP" />
-										<f:selectItem itemLabel="MF" itemValue="MF" />
-										<f:selectItem itemLabel="CC" itemValue="CC" />
+					<p:remoteCommand name="updateCenterPanel" update=":formEnrich" />
+					<h:outputText value="There's Nothing Here!" rendered="#{!enrichmentView.enrichmentSuccess}" />
+					<p:tabView id="tabEnrich" rendered="#{enrichmentView.enrichmentSuccess}">
+						<p:tab title="Enrichment">
+							<p:tabView dynamic="true" cache="false">
+								<p:tab title="Results">
+								<p:outputPanel id="tablePanel">
+									<div class="loading-spinner loading" style="display: none;"></div>
+									<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+									<p:outputLabel for="editionSelect" value="Edition:" />
+									<p:selectOneMenu id="editionSelect" style="width:275px"
+										value="#{enrichmentView.enrichmentTableEdition}">
+										<p:ajax event="change" listener="#{enrichmentView.loadEnrichmentTableData()}" update=":formEnrich"/>
+										<f:selectItems value="#{enrichmentView.enrichmentTableAllEditions}" var="ed"
+											itemLabel="Edition: #{ed.edition} - Date: #{ed.date}" itemValue="#{ed.edition}" />
+									</p:selectOneMenu>
+									</h:panelGrid>
+									<p:separator/>
+									<p:dataTable id="tableEnrichment" widgetVar="tableEnrichmentWdg"
+										var="entry" value="#{enrichmentView.enrichmentTableData}"
+										scrollable="true" scrollHeight="250px" sortMode="multiple"
+										style="margin-bottom:0"
+										emptyMessage="No enrichment data found for selected edition"
+										filteredValue="#{enrichmentView.filteredEnrichmentTableData}"
+										rowStyleClass="#{entry.value ge enrichmentView.pThreshold ? 'not-significant' : 'significant'}"
+										styleClass="ui-table-footer-align-right">
+										<p:column filterBy="#{entry.key.goId}" filterMatchMode="contains" sortBy="#{entry.key.goId}"
+											headerText="Id" style="width:120px;">
+											<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.key.goId}"
+												target="_blank"><i class="fa fa-external-link fa-sm"
+												style="font-size: 0.7em;" /> #{entry.key.goId}</a>
+										</p:column>
+										<p:column filterBy="#{entry.key.aspect}" filterMatchMode="in" sortBy="#{entry.key.aspect}"
+											headerText="Aspect" style="width:200px;">
+											<f:facet name="filter">
+												<p:selectManyButton
+													onchange="PF('tableEnrichmentWdg').filter()"
+													panelStyle="width:200px">
+													<f:selectItem itemLabel="BP" itemValue="BP" />
+													<f:selectItem itemLabel="MF" itemValue="MF" />
+													<f:selectItem itemLabel="CC" itemValue="CC" />
+												</p:selectManyButton>
+											</f:facet>
+											<h:outputText value="Biological Process"
+												rendered="#{entry.key.aspect == 'BP'}" />
+											<h:outputText value="Molecular Function"
+												rendered="#{entry.key.aspect == 'MF'}" />
+											<h:outputText value="Cellular Component"
+												rendered="#{entry.key.aspect == 'CC'}" />
+										</p:column>
+										<p:column filterBy="#{entry.key.name}" filterMatchMode="contains" sortBy="#{entry.key.name}"
+											headerText="Name" >
+											<h:outputText value="#{entry.key.name}" />
+										</p:column>
+										
+								        <p:column filterBy="#{entry.value}" headerText="P-Value" sortBy="#{entry.value}" 
+								        	filterFunction="#{enrichmentView.filterByPValue}" style="width:200px;">						            
+										    <h:outputText value="#{entry.value}">
+										        <f:convertNumber type="number" pattern="#.##E0"/>
+										    </h:outputText>
+								        </p:column>
+		
+								        <f:facet name="footer">
+								        
+										    <h:commandLink>
+										    	<h:graphicImage library="img" name="excel.png" />
+										        <p:dataExporter type="xls" target="tableEnrichment" fileName="enrichment" />
+										    </h:commandLink>
+										 
+										    <h:commandLink>
+										       <h:graphicImage library="img" name="pdf.png" />
+										        <p:dataExporter type="pdf" target="tableEnrichment" fileName="enrichment" />
+										    </h:commandLink>
+										 
+										    <h:commandLink>
+										        <h:graphicImage library="img" name="csv.png" />
+										        <p:dataExporter type="csv" target="tableEnrichment" fileName="enrichment" />
+										    </h:commandLink>
+										 
+										    <h:commandLink>
+										        <h:graphicImage library="img" name="xml.png" />
+										        <p:dataExporter type="xml" target="tableEnrichment" fileName="enrichment" />
+										    </h:commandLink>
+								        
+								        </f:facet>
+		
+									</p:dataTable>
 									
-								</p:selectManyButton>
-								
-								<h:outputText value="Id: " />
-								<p:autoComplete id="optionFilterId" value="#{enrichmentView.filterId}"
-										completeMethod="#{enrichmentView.completeId}" queryDelay="600"
-										minQueryLength="1" forceSelection="true" maxResults="10"
-										label="ID"
-										emptyMessage="No term suggestions available."
-										disabled="#{!(enrichmentView.chartReady)}"/>
-								
-								<h:outputText value="Name: " />
-								<p:inputText id="optionFilterName" value="#{enrichmentView.filterName}" disabled="#{!(enrichmentView.chartReady)}"/>
-								
-								<p:commandButton actionListener="#{enrichmentView.reloadGraph}" icon="fa fa-filter" update="enrichmentChart"/>
-								<p:commandButton actionListener="#{enrichmentView.clearOptionFilters()}" onclick="showAllSeries()" icon="fa fa-trash" update=":formEnrich"/>
-								
-								</h:panelGrid>
-								
-								<p:chart id='enrichmentChart' type="line"
-									model="#{enrichmentView.enrichmentChart}" style="height:500px;"
-									widgetVar="chart"
-									rendered="#{(enrichmentView.chartReady and !(enrichmentView.noEnrichmentData))}">
-									<p:ajax event="itemSelect"
-										listener="#{enrichmentView.itemSelect}"
-										oncomplete="openItemSelectDlg()" />
-								</p:chart>
-								<h:outputText value="There's Nothing Here!"
-									rendered="#{enrichmentView.noEnrichmentData}" />
-							</p:outputPanel>
-
-							<p:remoteCommand oncomplete="PF('itemSelectDlg').show();"
-								update=":termDetail" name="openItemSelectDlg" />
-
+									</p:outputPanel>
+		
+								</p:tab>
+								<p:tab title="Chart">
+									
+										<div class="loading-spinner loading" style="display: none;"></div>
+										
+										<h:panelGrid columns="8" style="margin-bottom:10px" cellpadding="5">
+										<h:outputText value="Aspect: " />
+										<p:selectManyButton id="optionFilterAspect" value="#{enrichmentView.filterAspect}">
+												<f:selectItem itemLabel="BP" itemValue="BP" />
+												<f:selectItem itemLabel="MF" itemValue="MF" />
+												<f:selectItem itemLabel="CC" itemValue="CC" />
+											
+										</p:selectManyButton>
+										
+										<h:outputText value="Id: " />
+										<p:autoComplete id="optionFilterId" value="#{enrichmentView.filterId}"
+												completeMethod="#{enrichmentView.completeId}" queryDelay="600"
+												minQueryLength="1" forceSelection="true" maxResults="10"
+												label="ID"
+												emptyMessage="No term suggestions available."/>
+										
+										<h:outputText value="Name: " />
+										<p:inputText id="optionFilterName" value="#{enrichmentView.filterName}"/>
+										
+										<p:commandButton actionListener="#{enrichmentView.reloadGraph}" icon="fa fa-filter" update="enrichmentChart"/>
+										<p:commandButton actionListener="#{enrichmentView.clearOptionFilters()}" onclick="showAllSeries()" icon="fa fa-trash" update=":formEnrich"/>
+										
+										</h:panelGrid>
+									<p:outputPanel id="chartPanel">
+										<p:chart id='enrichmentChart' type="line"
+											model="#{enrichmentView.enrichmentChart}" style="height:500px;"
+											widgetVar="chart" >
+											<p:ajax event="itemSelect"
+												listener="#{enrichmentView.itemSelectEnrichment}"
+												oncomplete="openitemSelectEnrichmentDlg()" />
+										</p:chart>
+									</p:outputPanel>
+		
+									<p:remoteCommand oncomplete="PF('itemSelectEnrichmentDlg').show();"
+										update=":termDetail" name="openitemSelectEnrichmentDlg" />
+		
+								</p:tab>
+							
+							</p:tabView>
 						</p:tab>
-						<p:tab title="Stability Results">
+						<p:tab title="Stability">
+						<p:tabView dynamic="true" cache="false" >
+						
+						<p:tab title="Results">
 						<p:outputPanel id="tableStabilityPanel">
 							<div class="loading-spinner loading" style="display: none;"></div>
+
 							<p:dataTable id="tableStability" widgetVar="tableStabilityWdg"
 								var="entry" value="#{enrichmentView.stabilityTableData}"
 								scrollable="true" scrollHeight="250px" sortMode="multiple"
-								style="margin-bottom:0"
+								tableStyle="margin-bottom:0;width:100%"
 								emptyMessage="No stability data found for selected edition"
-								filteredValue="#{enrichmentView.filteredStabilityTableData}" >
+								filteredValue="#{enrichmentView.filteredStabilityTableData}" styleClass="ui-table-footer-align-right">
+								
+						        <p:column style="width:16px" exportable="false">
+						            <p:rowToggler />
+						        </p:column>
 								<p:column filterBy="#{entry.key.date}" filterMatchMode="contains" sortBy="#{entry.key.date}"
 									headerText="Date" style="width:120px;">
 									<h:outputText value="#{entry.key.date}" />
@@ -299,22 +332,70 @@
 								        <f:convertNumber type="number" pattern="#.##"/>
 								    </h:outputText>
 						        </p:column>
+						        
+						        <p:rowExpansion>
+						            <p:dataGrid  var="term" value="#{entry.value.topTerms}" columns="2" layout="grid" style="width:300px">
+						            	<p:panel header="#{term.goId}">
+           									<p:panelGrid>
+												
+										        <p:row>
+										            <p:column style="width:50px"><h:outputText value="Aspect" /></p:column>
+										            <p:column><h:outputText value="#{term.aspect}" styleClass="sqlDialogText" /></p:column>
+										        </p:row>
+							
+										        <p:row>
+										            <p:column style="width:50px"><h:outputText value="Name" /></p:column>
+										            <p:column><h:outputText value="#{term.name}" styleClass="sqlDialogText" /></p:column>
+										        </p:row>
+
+											</p:panelGrid>
+										</p:panel>
+						            </p:dataGrid>
+						        </p:rowExpansion>
+						        
+						        <f:facet name="footer">
+						        
+								    <h:commandLink>
+								    	<h:graphicImage library="img" name="excel.png" />
+								        <p:dataExporter type="xls" target="tableStability" fileName="stability" />
+								    </h:commandLink>
+								 
+								    <h:commandLink>
+								       <h:graphicImage library="img" name="pdf.png" />
+								        <p:dataExporter type="pdf" target="tableStability" fileName="stability" />
+								    </h:commandLink>
+								 
+								    <h:commandLink>
+								        <h:graphicImage library="img" name="csv.png" />
+								        <p:dataExporter type="csv" target="tableStability" fileName="stability" />
+								    </h:commandLink>
+								 
+								    <h:commandLink>
+								        <h:graphicImage library="img" name="xml.png" />
+								        <p:dataExporter type="xml" target="tableStability" fileName="stability" />
+								    </h:commandLink>
+						        
+						        </f:facet>
 
 							</p:dataTable>
-							
+													
 							</p:outputPanel>
 						</p:tab>
-						<p:tab title="Stability Chart">
+						<p:tab title="Chart">
 							<p:outputPanel id="stabilityChartPanel">
 								<div class="loading-spinner loading" style="display: none;"></div>
 								<p:chart id='stabilityChart' type="line"
 									model="#{enrichmentView.stabilityChart}" style="height:500px;"
-									widgetVar="stabilityChartWdg"
-									rendered="#{(enrichmentView.chartReady and !(enrichmentView.noEnrichmentData))}">
+									widgetVar="stabilityChartWdg">
 								</p:chart>
-								<h:outputText value="There's Nothing Here!"
-									rendered="#{enrichmentView.noEnrichmentData}" />
+					
+								<p:remoteCommand oncomplete="PF('itemSelectStabilityDlg').show();"
+									update=":termDetail" name="openitemSelectStabilityDlg" />
 							</p:outputPanel>
+						</p:tab>
+						
+						</p:tabView>
+						
 						</p:tab>
 					</p:tabView>
 				</h:form>
@@ -342,7 +423,7 @@
 			</p:outputPanel>
 		</p:dialog>
 		
-		<p:dialog header="Term Info" widgetVar="itemSelectDlg" modal="false"
+		<p:dialog header="Term Info" widgetVar="itemSelectEnrichmentDlg" modal="false"
 			showEffect="fade" hideEffect="fade" resizable="false">
 			<p:outputPanel id="termDetail" style="text-align:center;">
 				<p:panelGrid columns="2">
@@ -372,8 +453,8 @@
 						styleClass="sqlDialogText" />
 				</p:panelGrid>
 			</p:outputPanel>
-		</p:dialog>	
-
+		</p:dialog>
+		
 		<h:form id="formAddGenes">
 			<p:dialog header="Add Genes" widgetVar="addGenesDlg" modal="false"
 				showEffect="fade" hideEffect="fade" resizable="false">
@@ -407,9 +488,7 @@
 
 						<p:column>
 							<p:inputTextarea id="inputBulkGene"
-								value="#{enrichmentView.bulkQuery}" rows="10" cols="50"
-								completeMethod="#{enrichmentView.complete}" queryDelay="750"
-								minQueryLength="2" placeholder="BRCA1 GRIN1 RB1"
+								value="#{enrichmentView.bulkQuery}" rows="10" cols="50" placeholder="BRCA1 GRIN1 RB1"
 								title="whitespace or newline delimited" autoResize="false"/>
 
 						</p:column>

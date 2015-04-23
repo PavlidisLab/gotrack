@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -128,7 +129,7 @@ public class EnrichmentView implements Serializable {
     // Chart stuff
     private LineChartModel enrichmentChart;
     private Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentChartData;
-    private boolean chartReady = false;
+    private boolean enrichmentSuccess = false;
 
     // Table stuff
     private List<Entry<GeneOntologyTerm, Double>> enrichmentTableData = new ArrayList<>();
@@ -140,7 +141,6 @@ public class EnrichmentView implements Serializable {
     private List<String> filterAspect;
     private String filterId;
     private String filterName;
-    private boolean noEnrichmentData = false;
 
     // Select Data Point functionality
     private Edition selectedEdition;
@@ -186,7 +186,7 @@ public class EnrichmentView implements Serializable {
 
     public void enrich() {
         clearOptionFilters( false );
-        chartReady = false;
+        enrichmentSuccess = false;
         allEditions = cache.getAllEditions( currentSpeciesId );
         currentRunTerms = new HashSet<>();
         Set<Gene> genes = new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) );
@@ -249,11 +249,11 @@ public class EnrichmentView implements Serializable {
             boolean success = calculateTablesAndCharts();
 
             if ( success ) {
-                chartReady = true;
+                enrichmentSuccess = true;
                 log.info( "Charts created" );
             } else {
                 clearAllEnrichmentRunData();
-                chartReady = false;
+                enrichmentSuccess = false;
                 log.info( "Chart Empty" );
             }
 
@@ -392,7 +392,6 @@ public class EnrichmentView implements Serializable {
     private void postProcessEnrichment() {
 
         // Filter view based on current positive terms under threshold
-        Map<Edition, Map<GeneOntologyTerm, Double>> enrichmentData = new HashMap<>();
 
         Edition currentEdition = Collections.max( enrichmentResults.keySet() );
         // Edition currentEdition = cache.getCurrentEditions( currentSpeciesId );
@@ -423,7 +422,6 @@ public class EnrichmentView implements Serializable {
             Edition ed = editionEntry.getKey();
 
             Map<GeneOntologyTerm, Double> enrich = new HashMap<>();
-            enrichmentChartData.put( ed, enrich );
 
             for ( Iterator<Entry<GeneOntologyTerm, Double>> iterator = editionEntry.getValue().entrySet().iterator(); iterator
                     .hasNext(); ) {
@@ -441,7 +439,11 @@ public class EnrichmentView implements Serializable {
                 }
             }
 
-            currentRunTerms.addAll( enrich.keySet() );
+            if ( !enrich.isEmpty() ) {
+                enrichmentChartData.put( ed, enrich );
+
+                currentRunTerms.addAll( enrich.keySet() );
+            }
 
         }
     }
@@ -612,6 +614,7 @@ public class EnrichmentView implements Serializable {
         LineChartModel dateModel = new LineChartModel();
         Double minVal = 1.0;
         Map<GeneOntologyTerm, LineChartSeries> allSeries = new HashMap<>();
+        boolean empty = true;
         if ( enrichmentData != null ) {
             List<Edition> eds = new ArrayList<Edition>( enrichmentData.keySet() );
             Collections.sort( eds );
@@ -631,6 +634,7 @@ public class EnrichmentView implements Serializable {
                     Double pValue = dataPoint.getValue();
                     if ( pValue < minVal ) minVal = pValue;
                     s.set( date, pValue );
+                    empty = false;
                 }
             }
 
@@ -639,23 +643,35 @@ public class EnrichmentView implements Serializable {
             }
         }
 
-        dateModel.setTitle( title );
-        dateModel.setZoom( true );
+        if ( empty ) {
+            // The reason we do this is because Primefaces does not handle empty charts or conditional rendering of
+            // empty charts well...
+            log.info( "Chart Empty" );
+            LineChartSeries s = new LineChartSeries();
+            s.setShowLine( false );
+            s.setLabel( "NO DATA" );
+            s.set( ( new Date() ).toString(), 0 );
+            dateModel.addSeries( s );
+        } else {
+            dateModel.setTitle( title );
+            dateModel.setZoom( true );
 
-        dateModel.setLegendPosition( "nw" );
-        // dateModel.setAnimate( true );
-        dateModel.setLegendRows( 8 );
-        dateModel.setMouseoverHighlight( true );
-        dateModel.setExtender( "enrichmentChartExtender" );
-        // dateModel.getAxis( AxisType.Y ).setMax( 1.0 );
-        // dateModel.getAxis( AxisType.Y ).setMin( Math.min( minVal, 0.1 ) );
-        dateModel.getAxis( AxisType.Y ).setLabel( yLabel );
+            dateModel.setLegendPosition( "nw" );
+            // dateModel.setAnimate( true );
+            dateModel.setLegendRows( 8 );
+            dateModel.setMouseoverHighlight( true );
+            dateModel.setExtender( "enrichmentChartExtender" );
+            // dateModel.getAxis( AxisType.Y ).setMax( 1.0 );
+            // dateModel.getAxis( AxisType.Y ).setMin( Math.min( minVal, 0.1 ) );
+            dateModel.getAxis( AxisType.Y ).setLabel( yLabel );
 
-        DateAxis axis = new DateAxis( xLabel );
-        axis.setTickAngle( -50 );
-        axis.setTickFormat( "%b %#d, %y" );
+            DateAxis axis = new DateAxis( xLabel );
+            axis.setTickAngle( -50 );
+            axis.setTickFormat( "%b %#d, %y" );
 
-        dateModel.getAxes().put( AxisType.X, axis );
+            dateModel.getAxes().put( AxisType.X, axis );
+        }
+
         return dateModel;
 
     }
@@ -717,7 +733,7 @@ public class EnrichmentView implements Serializable {
 
     }
 
-    public void itemSelect( ItemSelectEvent event ) {
+    public void itemSelectEnrichment( ItemSelectEvent event ) {
 
         // dateModel.getSeries().get( event.getSeriesIndex() ).getData().get( key );
         List<Entry<Object, Number>> es = new ArrayList<Entry<Object, Number>>( enrichmentChart.getSeries()
@@ -794,7 +810,7 @@ public class EnrichmentView implements Serializable {
     }
 
     private void clearAllEnrichmentRunData() {
-        enrichmentChart = null;
+        enrichmentChart = new LineChartModel();
         enrichmentChartData = new HashMap<>();
         enrichmentTableEdition = null;
         enrichmentTableAllEditions = new HashMap<>();
@@ -815,8 +831,6 @@ public class EnrichmentView implements Serializable {
             filter( idBypass, nameBypass, aspectBypass );
         } else {
             enrichmentChart = createEnrichmentChart( enrichmentChartData, "Enrichment Chart", "Date", "p-value" );
-            chartReady = true;
-            noEnrichmentData = false;
         }
 
     }
@@ -824,7 +838,6 @@ public class EnrichmentView implements Serializable {
     private void filter( boolean idBypass, boolean nameBypass, boolean aspectBypass ) {
         log.info( "Filter: ID: " + filterId + " Name: " + filterName + " Aspects: " + filterAspect );
         Map<Edition, Map<GeneOntologyTerm, Double>> filteredData = new HashMap<>();
-        boolean emptyChart = true;
         for ( Entry<Edition, Map<GeneOntologyTerm, Double>> editionEntry : enrichmentChartData.entrySet() ) {
             Edition ed = editionEntry.getKey();
             Map<GeneOntologyTerm, Double> termsInEdition = new HashMap<>();
@@ -842,20 +855,12 @@ public class EnrichmentView implements Serializable {
                         && ( idBypass || term.getGoId().equals( filterId ) )
                         && ( nameBypass || StringUtils.containsIgnoreCase( term.getName(), filterName ) ) ) {
                     termsInEdition.put( term, pvalue );
-                    emptyChart = false;
                 }
             }
         }
 
-        if ( !emptyChart ) {
-            enrichmentChart = createEnrichmentChart( filteredData, "Filtered Enrichment Stability", "Date", "p-value" );
-            noEnrichmentData = false;
-            log.info( "Chart filtered" );
-        } else {
-            noEnrichmentData = true;
-            log.info( "Chart Empty" );
-            enrichmentChart = null;
-        }
+        enrichmentChart = createEnrichmentChart( filteredData, "Filtered Enrichment Stability", "Date", "p-value" );
+        log.info( "Chart filtered" );
 
     }
 
@@ -1046,8 +1051,8 @@ public class EnrichmentView implements Serializable {
         return enrichmentChart;
     }
 
-    public boolean isChartReady() {
-        return chartReady;
+    public boolean isEnrichmentSuccess() {
+        return enrichmentSuccess;
     }
 
     public Integer getCurrentSpeciesId() {
@@ -1145,10 +1150,6 @@ public class EnrichmentView implements Serializable {
 
     public void setFilterName( String filterName ) {
         this.filterName = filterName;
-    }
-
-    public boolean isNoEnrichmentData() {
-        return noEnrichmentData;
     }
 
     public int getMinAnnotatedPopulation() {
