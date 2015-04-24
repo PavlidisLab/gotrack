@@ -1,18 +1,15 @@
 function onLoad() {
    $("#left-toggler").append('<span class="vertical toggled-header">Options</span>');
-   $("#right-toggler").append('<span class="vertical toggled-header">Selected Genes</span>');
 }
 
 var hideLoadingSpinner = function() {
-   $('#formEnrich\\:enrichmentChart').show();
-   $('#formEnrich\\:stabilityChart').show();
+   PrimeFaces.widgets.stabilityChartWdg.jq.show()
    $('.loading-spinner').hide();   
  };
 
  
  var showLoadingSpinner = function() {
-    $('#formEnrich\\:enrichmentChart').hide();
-    $('#formEnrich\\:stabilityChart').hide();
+    PrimeFaces.widgets.stabilityChartWdg.jq.hide()
     $('.loading-spinner').show();   
   };
   
@@ -25,12 +22,19 @@ var hideLoadingSpinner = function() {
   function centerResize() {
      //updateCenterPanel();
 	  try {
-	   PrimeFaces.widgets.chart.plot.replot( {resetAxes:true} );
+	   PrimeFaces.widgets.stabilityChartWdg.plot.replot( {resetAxes:true} );
 	  } catch (e) {
 		  
 	  }
-	   PrimeFaces.widgets.tableGenesWdg.render();
 	}
+  
+  function enrichmentChartDlgResize() {
+     try {
+        PrimeFaces.widgets.chart.plot.replot( {resetAxes:true} );
+       } catch (e) {
+          
+       }
+  }
   
   function enrichmentChartExtender() {
       // this = chart widget instance        
