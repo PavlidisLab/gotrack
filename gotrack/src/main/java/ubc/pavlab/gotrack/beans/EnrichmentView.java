@@ -49,8 +49,10 @@ import javax.faces.event.ActionEvent;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.apache.log4j.Logger;
+import org.primefaces.context.RequestContext;
 import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.model.chart.AxisType;
+import org.primefaces.model.chart.ChartSeries;
 import org.primefaces.model.chart.DateAxis;
 import org.primefaces.model.chart.LineChartModel;
 import org.primefaces.model.chart.LineChartSeries;
@@ -63,6 +65,8 @@ import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.StabilityScore;
+import ubc.pavlab.gotrack.model.chart.ChartValues;
+import ubc.pavlab.gotrack.model.chart.Series;
 
 import com.google.common.collect.Iterables;
 
@@ -75,6 +79,7 @@ import com.google.common.collect.Iterables;
 @ManagedBean
 @ViewScoped
 public class EnrichmentView implements Serializable {
+
     /**
      * 
      */
@@ -451,6 +456,12 @@ public class EnrichmentView implements Serializable {
             }
 
         }
+
+        // Calculate sampleAnnotatedError, populationAnnotatedError, sampleSizeError, populationSizeError
+        // We attempt to model the four underlying values that govern the p-value as it varies in time.
+        // populationAnnotated: Appears to follow a highly linear model infrequent jumps ( R^2 ~ 0.9 )
+        // TODO
+
     }
 
     private boolean calculateTablesAndCharts() {
@@ -727,9 +738,10 @@ public class EnrichmentView implements Serializable {
         dateModel.setLegendRows( 8 );
         dateModel.setMouseoverHighlight( true );
         dateModel.setExtender( "stabilityChartExtender" );
-        // dateModel.getAxis( AxisType.Y ).setMax( 1.0 );
-        // dateModel.getAxis( AxisType.Y ).setMin( Math.min( minVal, 0.1 ) );
+        // dateModel.getAxis( AxisType.Y ).setMax( 1.1 );
+        dateModel.getAxis( AxisType.Y ).setMin( 0.0 );
         dateModel.getAxis( AxisType.Y ).setLabel( yLabel );
+        // dateModel.getAxis( AxisType.Y ).setTickCount( 12 );
 
         DateAxis axis = new DateAxis( xLabel );
         axis.setTickAngle( -50 );
@@ -890,6 +902,18 @@ public class EnrichmentView implements Serializable {
         }
 
         enrichmentChart = createEnrichmentChart( data, "Enrichment Chart", "Date", "p-value" );
+        ChartValues cv = new ChartValues();
+        for ( ChartSeries s : enrichmentChart.getSeries() ) {
+            Series series = cv.addSeries( s.getLabel(), s.getData() );
+            series.setDescription( "test" );
+        }
+
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_threshold", pThreshold );
+
+        if ( enrichmentChart.getSeries().size() == 1 ) {
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_errors", cv );
+        }
 
     }
 
