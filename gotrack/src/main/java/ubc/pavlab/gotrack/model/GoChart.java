@@ -22,7 +22,6 @@ package ubc.pavlab.gotrack.model;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,186 +29,139 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 /**
- * TODO Document Me
+ * X Should be some series identifier (like Accession)
  * 
  * @author mjacobson
  * @version $Id$
  */
-public class GoChart<X extends Comparable<X>, Y> {
+public class GoChart<X> {
 
-    private String title = "title";
-    private String xLabel = "x";
-    private String yLabel = "y";
-    private Map<String, LinkedHashMap<X, Y>> series = new HashMap<String, LinkedHashMap<X, Y>>();
-    private Integer min;
-    private Integer max;
+    private final String title;
+    private final String xLabel;
+    private final String yLabel;
+    private final Double min;
+    private final Double max;
+    private final boolean empty;
 
-    public GoChart() {
-        super();
+    private final Map<X, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allDetailedSeries = new HashMap<>();
+    private final Map<String, LinkedHashMap<Edition, ? extends Number>> allStaticSeries = new HashMap<>();
+
+    public GoChart( Map<X, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allDetailedSeries ) {
+        this( "title", "x", "y", null, null, allDetailedSeries, null );
     }
 
-    public GoChart( Map<String, Map<X, Y>> sMap ) {
-        this( null, null, null, sMap );
+    public GoChart( String title, String xLabel, String yLabel,
+            Map<X, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allDetailedSeries ) {
+        this( title, xLabel, yLabel, null, null, allDetailedSeries, null );
     }
 
-    public GoChart( String title ) {
-        this( title, null, null, null );
+    public <T extends Number> GoChart( String title, String xLabel, String yLabel,
+            Map<X, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allDetailedSeries,
+            Map<String, Map<Edition, T>> allStaticSeries ) {
+        this( title, xLabel, yLabel, null, null, allDetailedSeries, allStaticSeries );
     }
 
-    public GoChart( String title, String xLabel, String yLabel ) {
-        this( title, xLabel, yLabel, null );
-    }
-
-    public GoChart( String title, String xLabel, String yLabel, Map<String, Map<X, Y>> sMap ) {
+    public <T extends Number> GoChart( String title, String xLabel, String yLabel, Double min, Double max,
+            Map<X, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> ds, Map<String, Map<Edition, T>> ss ) {
         super();
         this.title = title;
         this.xLabel = xLabel;
         this.yLabel = yLabel;
-        if ( sMap != null ) {
-            for ( Entry<String, Map<X, Y>> sEntry : sMap.entrySet() ) {
-                Map<X, Y> s = sEntry.getValue();
+        this.min = min;
+        this.max = max;
+        boolean empty = true;
+        if ( ds != null ) {
+            for ( Entry<X, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> sEntry : ds.entrySet() ) {
+                Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> s = sEntry.getValue();
                 if ( s != null ) {
-                    String label = sEntry.getKey();
-                    List<X> editions = new ArrayList<X>( s.keySet() );
+                    X label = sEntry.getKey();
+                    List<Edition> editions = new ArrayList<Edition>( s.keySet() );
                     Collections.sort( editions );
-                    LinkedHashMap<X, Y> orderedMap = new LinkedHashMap<X, Y>();
-                    for ( X x : editions ) {
-                        orderedMap.put( x, s.get( x ) );
+                    LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> orderedMap = new LinkedHashMap<>();
+                    for ( Edition e : editions ) {
+                        orderedMap.put( e, s.get( e ) );
+                        empty = false;
                     }
-                    series.put( label, orderedMap );
+                    allDetailedSeries.put( label, orderedMap );
                 }
             }
         }
 
+        if ( ss != null ) {
+            for ( Entry<String, Map<Edition, T>> sEntry : ss.entrySet() ) {
+                Map<Edition, T> s = sEntry.getValue();
+                if ( s != null ) {
+                    String label = sEntry.getKey();
+                    List<Edition> editions = new ArrayList<Edition>( s.keySet() );
+                    Collections.sort( editions );
+                    LinkedHashMap<Edition, Number> orderedMap = new LinkedHashMap<>();
+                    for ( Edition e : editions ) {
+                        orderedMap.put( e, s.get( e ) );
+                        empty = false;
+                    }
+                    allStaticSeries.put( label, orderedMap );
+                }
+            }
+        }
+
+        this.empty = empty;
+
     }
 
-    public Map<X, Y> get( String label ) {
-        LinkedHashMap<X, Y> a = series.get( label );
+    public Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> getDetailedSeries( X label ) {
+        LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> a = allDetailedSeries.get( label );
         if ( a != null ) {
-            return Collections.unmodifiableMap( series.get( label ) );
+            return Collections.unmodifiableMap( a );
         } else {
             return null;
         }
     }
 
-    public Map<X, Y> put( String label, Map<X, Y> s ) {
-        List<X> editions = new ArrayList<X>( s.keySet() );
-        Collections.sort( editions );
-        LinkedHashMap<X, Y> orderedMap = new LinkedHashMap<X, Y>();
-        for ( X x : editions ) {
-            orderedMap.put( x, s.get( x ) );
-        }
-        return series.put( label, orderedMap );
-    }
-
-    public void putAll( Map<String, Map<X, Y>> sMap ) {
-        for ( Entry<String, Map<X, Y>> sEntry : sMap.entrySet() ) {
-            Map<X, Y> s = sEntry.getValue();
-            String label = sEntry.getKey();
-            List<X> editions = new ArrayList<X>( s.keySet() );
-            Collections.sort( editions );
-            LinkedHashMap<X, Y> orderedMap = new LinkedHashMap<X, Y>();
-            for ( X x : editions ) {
-                orderedMap.put( x, s.get( x ) );
-            }
-            series.put( label, orderedMap );
+    public Map<Edition, Number> getStaticSeries( String label ) {
+        LinkedHashMap<Edition, ? extends Number> a = allStaticSeries.get( label );
+        if ( a != null ) {
+            return Collections.unmodifiableMap( a );
+        } else {
+            return null;
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public static <U extends Comparable<U>, V extends Set> GoChart<U, V> combineSeries( String title, String xLabel,
-            String yLabel, String seriesLabel, GoChart<U, V> goChart ) {
-        LinkedHashMap<U, V> combinedSeries = new LinkedHashMap<U, V>();
-        for ( LinkedHashMap<U, V> s : goChart.getSeries().values() ) {
-            for ( Entry<U, V> dataPoint : s.entrySet() ) {
-                U x = dataPoint.getKey();
-                V details = dataPoint.getValue();
-
-                V combinedDataPoint = combinedSeries.get( x );
-
-                if ( combinedDataPoint == null ) {
-                    combinedDataPoint = ( V ) new HashSet<Object>();
-                    combinedSeries.put( x, combinedDataPoint );
-                }
-
-                combinedDataPoint.addAll( details );
-
-            }
-        }
-
-        GoChart<U, V> newGoChart = new GoChart<U, V>( title, xLabel, yLabel );
-        newGoChart.put( seriesLabel, combinedSeries );
-
-        return newGoChart;
-
+    public Map<X, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> getAllDetailedSeries() {
+        return Collections.unmodifiableMap( allDetailedSeries );
     }
 
-    @SuppressWarnings("rawtypes")
-    public static <U extends Comparable<U>, V extends Set> GoChart<U, V> combineSeries( String title,
-            String seriesLabel, GoChart<U, V> goChart ) {
-        return combineSeries( title, goChart.getxLabel(), goChart.getyLabel(), seriesLabel, goChart );
-
-    }
-
-    @SuppressWarnings("rawtypes")
-    public static <U extends Comparable<U>, V extends Set> GoChart<U, V> combineSeries( String seriesLabel,
-            GoChart<U, V> goChart ) {
-        return combineSeries( goChart.getTitle(), goChart.getxLabel(), goChart.getyLabel(), seriesLabel, goChart );
-
+    public Map<String, LinkedHashMap<Edition, ? extends Number>> getAllStaticSeries() {
+        return Collections.unmodifiableMap( allStaticSeries );
     }
 
     public String getTitle() {
         return title;
     }
 
-    public void setTitle( String title ) {
-        this.title = title;
+    @Override
+    public String toString() {
+        return "GoChart [title=" + title + ", xLabel=" + xLabel + ", yLabel=" + yLabel + ", allDetailedSeriesSize="
+                + allDetailedSeries.size() + ", allStaticSeriesSize=" + allStaticSeries.size() + "]";
     }
 
     public String getxLabel() {
         return xLabel;
     }
 
-    public void setxLabel( String xLabel ) {
-        this.xLabel = xLabel;
-    }
-
     public String getyLabel() {
         return yLabel;
     }
 
-    public void setyLabel( String yLabel ) {
-        this.yLabel = yLabel;
-    }
-
-    public Map<String, LinkedHashMap<X, Y>> getSeries() {
-        return series;
-    }
-
-    public void setSeries( Map<String, LinkedHashMap<X, Y>> series ) {
-        this.series = series;
-    }
-
-    public Integer getMin() {
+    public Double getMin() {
         return min;
     }
 
-    public void setMin( Integer min ) {
-        this.min = min;
-    }
-
-    public Integer getMax() {
+    public Double getMax() {
         return max;
     }
 
-    public void setMax( Integer max ) {
-        this.max = max;
-    }
-
-    @Override
-    public String toString() {
-        return "GoChart [title=" + title + ", xLabel=" + xLabel + ", yLabel=" + yLabel + ", seriesCount="
-                + series.size() + "]";
+    public boolean isEmpty() {
+        return empty;
     }
 
 }

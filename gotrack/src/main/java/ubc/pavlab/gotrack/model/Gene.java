@@ -26,7 +26,7 @@ import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
 
 /**
- * TODO Document Me
+ * TODO I really wish this was immutable...
  * 
  * @author mjacobson
  * @version $Id$

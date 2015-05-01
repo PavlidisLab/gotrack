@@ -20,7 +20,8 @@
 package ubc.pavlab.gotrack.model;
 
 /**
- * TODO Document Me
+ * The instances of this class may be shared between threads (sessions) and lazy-loaded at any time hence the
+ * synchronization
  * 
  * @author mjacobson
  * @version $Id$
@@ -28,9 +29,16 @@ package ubc.pavlab.gotrack.model;
 public class GeneOntologyTerm {
 
     private final String goId;
-    private final String name;
-    private final String aspect;
-    private final boolean obsolete = false;
+    private String name;
+    private String aspect;
+    private boolean obsolete = false;
+
+    public GeneOntologyTerm( String goId ) {
+        super();
+        this.goId = goId;
+        this.name = null;
+        this.aspect = null;
+    }
 
     public GeneOntologyTerm( String goId, String name, String aspect ) {
         super();
@@ -40,15 +48,28 @@ public class GeneOntologyTerm {
     }
 
     public String getGoId() {
+        // No need to synchronize as the field is final
         return goId;
     }
 
-    public String getName() {
+    public synchronized String getName() {
         return name;
     }
 
-    public String getAspect() {
+    public synchronized String getAspect() {
         return aspect;
+    }
+
+    public synchronized void setName( String name ) {
+        this.name = name;
+    }
+
+    public synchronized void setAspect( String aspect ) {
+        this.aspect = aspect;
+    }
+
+    public synchronized void setObsolete( boolean obsolete ) {
+        this.obsolete = obsolete;
     }
 
     @Override
@@ -76,7 +97,7 @@ public class GeneOntologyTerm {
         return true;
     }
 
-    public boolean isObsolete() {
+    public synchronized boolean isObsolete() {
         return obsolete;
     }
 

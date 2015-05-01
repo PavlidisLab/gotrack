@@ -25,6 +25,19 @@ package ubc.pavlab.gotrack.model;
  * @author mjacobson
  * @version $Id$
  */
-public enum RelationshipType {
-    IS_A, PART_OF
-};
+
+public enum Dataset {
+
+    SwissProt("SP"), TrEMBL("TrEMBL");
+
+    private String label;
+
+    private Dataset( String label ) {
+        this.label = label;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+}

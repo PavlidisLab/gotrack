@@ -17,7 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.go;
+package ubc.pavlab.gotrack.model.go;
 
 import gnu.trove.set.hash.THashSet;
 
@@ -38,7 +38,7 @@ public class Term {
     private Aspect aspect;
     private boolean obsolete;
     // private Set<Term> parents = new HashSet<>();
-    private THashSet<Term> parents = new THashSet<>();
+    private THashSet<Link> parents = new THashSet<>();
 
     public Term() {
 
@@ -64,7 +64,7 @@ public class Term {
         this.obsolete = obsolete;
     }
 
-    public Term( int id, String name, Aspect aspect, boolean obsolete, THashSet<Term> parents ) {
+    public Term( int id, String name, Aspect aspect, boolean obsolete, THashSet<Link> parents ) {
         super();
         this.id = id;
         this.name = name;
@@ -105,15 +105,15 @@ public class Term {
         this.obsolete = obsolete;
     }
 
-    public Set<Term> getParents() {
+    public Set<Link> getParents() {
         return parents;
     }
 
-    public void setParents( THashSet<Term> parents ) {
+    public void setParents( THashSet<Link> parents ) {
         this.parents = parents;
     }
 
-    public boolean addParent( Term parent ) {
+    public boolean addParent( Link parent ) {
         return parents.add( parent );
     }
 

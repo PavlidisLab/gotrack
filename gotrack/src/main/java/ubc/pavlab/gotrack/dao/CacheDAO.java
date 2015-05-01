@@ -19,16 +19,15 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import ubc.pavlab.gotrack.go.GeneOntology;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Relationship;
 import ubc.pavlab.gotrack.model.StatsEntry;
+import ubc.pavlab.gotrack.model.go.Relationship;
+import ubc.pavlab.gotrack.model.go.Term;
 
 /**
  * Holds methods for retrieving data that is meant to be cached
@@ -52,14 +51,16 @@ public interface CacheDAO {
 
     public Set<Integer> getGOEditions() throws DAOException;
 
-    public Map<Integer, GeneOntology> getOntologies() throws DAOException;
-
-    public Map<Integer, Set<Relationship>> getOntologies( Collection<Integer> range ) throws DAOException;
-
     public Map<String, String> getEvidenceCategories() throws DAOException;
 
-    public Map<Integer, Map<Edition, Integer>> getPopulations() throws DAOException;
-
     public Map<Integer, Map<String, Gene>> getCurrentGenes() throws DAOException;
+
+    public Map<Integer, Set<Term>> getGoTerms() throws DAOException;
+
+    public Set<Term> getGoTerms( int goEdition ) throws DAOException;
+
+    public Map<Integer, Set<Relationship>> getAdjacencies() throws DAOException;
+
+    public Set<Relationship> getAdjacencies( int goEdition ) throws DAOException;
 
 }

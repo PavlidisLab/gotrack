@@ -266,7 +266,9 @@
             }
 
             var to, t, val, tt1, spread, interval;
-            for (var i=0; i<numberTicks; i++){
+            
+            var incr = (numberTicks > 50) ? 5 : 1;
+            for (var i=0; i<numberTicks; i+=incr){
                 tt = Math.pow(this.base, i - numberTicks + 1) * this.max;
 
                 t = new this.tickRenderer(this.tickOptions);

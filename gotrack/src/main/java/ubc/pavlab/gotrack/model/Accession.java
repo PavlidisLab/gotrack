@@ -31,7 +31,8 @@ import java.util.HashSet;
 public class Accession {
 
     private String accession;
-    private String symbol;
+    private String swissProtEntry;
+    private Dataset dataset;
     private Collection<String> secondary = new HashSet<String>();
 
     /**
@@ -45,10 +46,15 @@ public class Accession {
         this.accession = accession;
     }
 
-    public Accession( String accession, String symbol ) {
+    public Accession( String accession, String swissProtEntry ) {
         super();
         this.accession = accession;
-        this.symbol = symbol;
+        this.swissProtEntry = swissProtEntry;
+        if ( swissProtEntry != null && swissProtEntry != "" ) {
+            this.setDataset( Dataset.SwissProt );
+        } else {
+            this.setDataset( Dataset.TrEMBL );
+        }
     }
 
     public String getAccession() {
@@ -59,12 +65,12 @@ public class Accession {
         this.accession = accession;
     }
 
-    public String getSymbol() {
-        return symbol;
+    public String getSwissProtEntry() {
+        return swissProtEntry;
     }
 
-    public void setSymbol( String symbol ) {
-        this.symbol = symbol;
+    public void setSwissProtEntry( String swissProtEntry ) {
+        this.swissProtEntry = swissProtEntry;
     }
 
     public Collection<String> getSecondary() {
@@ -81,7 +87,7 @@ public class Accession {
 
     @Override
     public String toString() {
-        return "GeneSymbol [accession=" + accession + ", symbol=" + symbol + "]";
+        return accession;
     }
 
     @Override
@@ -102,6 +108,14 @@ public class Accession {
             if ( other.accession != null ) return false;
         } else if ( !accession.equals( other.accession ) ) return false;
         return true;
+    }
+
+    public Dataset getDataset() {
+        return dataset;
+    }
+
+    public void setDataset( Dataset dataset ) {
+        this.dataset = dataset;
     }
 
 }

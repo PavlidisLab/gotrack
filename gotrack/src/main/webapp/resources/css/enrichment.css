@@ -2,7 +2,7 @@
 	width:50px;
 }
 
-#formSelect\:annotatedPopulationInput_input {
+#formSelect input.ui-spinner-input {
 	width:50px;
 }
 
@@ -10,3 +10,46 @@ table.no-border, table.no-border tr, table.no-border td {
  border:none !important;
   border-style: none !important;
  }
+ 
+li.ui-datalist-item {
+	margin-bottom:5px;
+}
+
+#formSelect\:geneList_content {
+	height: 135px;
+  	overflow-y: auto;
+}
+
+div.forceRight > a {
+	float:right;
+}
+
+div.ui-table-footer-align-right > div.ui-datatable-footer {
+	text-align:right;
+}
+
+div.ui-table-exporter-align-right > div.ui-paginator > a {
+	float:right;
+}
+
+div.ui-table-graph-align-left > div.ui-paginator > button {
+	left: 50px;
+  	position: absolute;
+  	height: 26px;
+}
+
+tbody > tr.ui-widget-content.ui-state-highlight {
+	background:#f7e9b0;
+	
+}
+tbody > tr.ui-widget-content.ui-state-highlight > td {
+	color:#4F4F4F;
+}
+
+i.fa.fa-external-link.fa-sm:hover {
+	color:blue;
+}
+
+span.filter-spinner input {
+	width:75px;
+}

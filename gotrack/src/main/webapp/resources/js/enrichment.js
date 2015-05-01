@@ -1,17 +1,16 @@
 function onLoad() {
    $("#left-toggler").append('<span class="vertical toggled-header">Options</span>');
-   $("#right-toggler").append('<span class="vertical toggled-header">Selected Genes</span>');
 }
 
 var hideLoadingSpinner = function() {
-   $('#formEnrich\\:enrichmentChart').show();
-   $('#loading-spinner').hide();   
+   PrimeFaces.widgets.stabilityChartWdg.jq.show()
+   $('.loading-spinner').hide();   
  };
 
  
  var showLoadingSpinner = function() {
-    $('#formEnrich\\:enrichmentChart').hide();
-    $('#loading-spinner').show();   
+    PrimeFaces.widgets.stabilityChartWdg.jq.hide()
+    $('.loading-spinner').show();   
   };
   
 //  $(window).load(function(){  // should be  $(window).load to load widget
@@ -21,15 +20,23 @@ var hideLoadingSpinner = function() {
 // });
   
   function centerResize() {
+     //updateCenterPanel();
 	  try {
-	   PrimeFaces.widgets.chart.plot.replot( {resetAxes:true} );
+	   PrimeFaces.widgets.stabilityChartWdg.plot.replot( {resetAxes:true} );
 	  } catch (e) {
 		  
 	  }
-	   PrimeFaces.widgets.tableGenesWdg.render();
 	}
   
-  function chartExtender() {
+  function enrichmentChartDlgResize() {
+     try {
+        PrimeFaces.widgets.chart.plot.replot( {resetAxes:true} );
+       } catch (e) {
+          
+       }
+  }
+  
+  function enrichmentChartExtender() {
       // this = chart widget instance        
       // this.cfg = options 
       this.cfg.legend = {
@@ -45,15 +52,19 @@ var hideLoadingSpinner = function() {
             seriesToggleReplot : {resetAxes: true}
          }
       }
+      this.cfg.axes.yaxis.tickOptions = {
+                                         formatString: "%.2p"
+                                     };
+      
       this.cfg.highlighter = {
          show : true,
          tooltipLocation : 'sw',
          useAxesFormatters : true,
          tooltipAxes : 'xy',
          yvalues : 1,
-         formatString : 'Date: %s ~ Count: %s',
+         formatString : 'Date: %s <br /> P-Value: %.2p',
          tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
-            return plot.series[seriesIndex].label + ": " + str;
+            return plot.series[seriesIndex].label + "<br />" + str;
          },
          bringSeriesToFront : true
 
@@ -69,6 +80,40 @@ var hideLoadingSpinner = function() {
       this.cfg.axes.yaxis.renderer = $.jqplot.LogAxisRenderer;
       //this.cfg.axes.yaxis.ticks = [1,10, 100, 1000];
    }
+  
+  function stabilityChartExtender() {
+     // this = chart widget instance        
+     // this.cfg = options 
+     this.cfg.legend = {
+        renderer : $.jqplot.EnhancedLegendRenderer,
+        show : true,
+        location : 's',
+        placement : 'outside',
+        marginTop : '100px',
+        rendererOptions : {
+           numberRows : 0,
+           numberColumns : 10,
+           seriesToggle: true,
+           seriesToggleReplot : {resetAxes: true}
+        }
+     }    
+     this.cfg.axes.yaxis.tickOptions = {
+                                        formatString: "%.2f"
+                                    };
+     this.cfg.highlighter = {
+        show : true,
+        tooltipLocation : 'sw',
+        useAxesFormatters : true,
+        tooltipAxes : 'xy',
+        yvalues : 1,
+        formatString : 'Date: %s <br /> Jaccard: %.2f',
+        tooltipContentEditor : function(str, seriesIndex, pointIndex, plot) {
+           return plot.series[seriesIndex].label + "<br />" + str;
+        },
+        bringSeriesToFront : true
+
+     }
+  }
   
   function drawThreshold(t) {
      try {
