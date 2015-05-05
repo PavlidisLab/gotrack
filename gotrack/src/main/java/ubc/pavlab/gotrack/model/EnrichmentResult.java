@@ -22,18 +22,18 @@ package ubc.pavlab.gotrack.model;
 import org.apache.commons.math3.distribution.HypergeometricDistribution;
 
 /**
- * TODO Document Me
+ * Immutable result of GO enrichment analysis for a single term
  * 
  * @author mjacobson
  * @version $Id$
  */
 public class EnrichmentResult {
 
-    private double pvalue;
-    private int sampleAnnotated;
-    private int populationAnnotated;
-    private int sampleSize;
-    private int populationSize;
+    private final double pvalue;
+    private final int sampleAnnotated;
+    private final int populationAnnotated;
+    private final int sampleSize;
+    private final int populationSize;
 
     public EnrichmentResult( double pvalue, int sampleAnnotated, int populationAnnotated, int sampleSize,
             int populationSize ) {
@@ -58,6 +58,27 @@ public class EnrichmentResult {
 
     }
 
+    /**
+     * @param sampleAnnotated
+     * @param populationAnnotated
+     * @param sampleSize
+     * @param populationSize
+     * @param testSetSize Used for applying Bonferroni Multiple Tests Correction
+     */
+    public EnrichmentResult( int sampleAnnotated, int populationAnnotated, int sampleSize, int populationSize,
+            int testSetSize ) {
+        super();
+        this.sampleAnnotated = sampleAnnotated;
+        this.populationAnnotated = populationAnnotated;
+        this.sampleSize = sampleSize;
+        this.populationSize = populationSize;
+
+        HypergeometricDistribution hyper = new HypergeometricDistribution( populationSize, populationAnnotated,
+                sampleSize );
+        this.pvalue = Math.min( hyper.upperCumulativeProbability( sampleAnnotated ) * testSetSize, 1 );
+
+    }
+
     public double getExpected() {
         return sampleSize * ( ( double ) populationAnnotated ) / populationSize;
     }
@@ -66,40 +87,20 @@ public class EnrichmentResult {
         return pvalue;
     }
 
-    public void setPvalue( double pvalue ) {
-        this.pvalue = pvalue;
-    }
-
     public int getSampleAnnotated() {
         return sampleAnnotated;
-    }
-
-    public void setSampleAnnotated( int sampleAnnotated ) {
-        this.sampleAnnotated = sampleAnnotated;
     }
 
     public int getPopulationAnnotated() {
         return populationAnnotated;
     }
 
-    public void setPopulationAnnotated( int populationAnnotated ) {
-        this.populationAnnotated = populationAnnotated;
-    }
-
     public int getSampleSize() {
         return sampleSize;
     }
 
-    public void setSampleSize( int sampleSize ) {
-        this.sampleSize = sampleSize;
-    }
-
     public int getPopulationSize() {
         return populationSize;
-    }
-
-    public void setPopulationSize( int populationSize ) {
-        this.populationSize = populationSize;
     }
 
 }

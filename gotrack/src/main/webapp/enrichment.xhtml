@@ -34,10 +34,8 @@
 
 		<h:outputScript library="js" name="utility.js" />
 		<!-- <h:outputScript library="js" name="gotrack.js" /> -->
-		<h:outputScript library="js" name="jqplot.logAxisRenderer.js" />
-		<h:outputScript library="js" name="jqplot.canvasOverlay.min.js" />
 		<h:outputScript library="js" name="enrichment.js" />
-		<h:outputScript library="js" name="chartExtendedFunctionality.js" />
+
 		<!-- Highcharts stuff -->
 		<h:outputScript library="js" name="highcharts.js" />
 		<h:outputScript library="js" name="exporting.js" />
@@ -144,7 +142,7 @@
 						<p:commandButton value="Run Enrichment"
 							actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
 							update=":formEnrich, :formSelect" onclick="showLoadingSpinner()"
-							oncomplete="hideLoadingSpinner()" disabled="#{fn:length(enrichmentView.selectedGenes) == 0}"/>
+							oncomplete="hideLoadingSpinner();handleEnrichmentComplete(xhr, status, args);" disabled="#{fn:length(enrichmentView.selectedGenes) == 0}"/>
 					</div>
 
 					<pe:tooltip global="true" />
@@ -169,10 +167,7 @@
 						<p:tab title="Stability">
 							<p:outputPanel id="stabilityChartPanel">
 								<div class="loading-spinner loading" style="display: none;"></div>
-								<p:chart id='stabilityChart' type="line"
-									model="#{enrichmentView.stabilityChart}" style="height:500px;"
-									widgetVar="stabilityChartWdg">
-								</p:chart>
+								<div id="hc_stability_container" style="width:100%; height:600px;"></div>
 					
 								<p:remoteCommand oncomplete="PF('itemSelectStabilityDlg').show();"
 									update=":termDetail" name="openitemSelectStabilityDlg" />
@@ -185,7 +180,7 @@
 									<p:outputLabel for="editionSelect" value="Edition:" />
 									<p:selectOneMenu id="editionSelect" style="width:275px"
 										value="#{enrichmentView.enrichmentTableEdition}">
-										<p:ajax event="change" listener="#{enrichmentView.loadEnrichmentTableData()}" update=":formEnrich"/>
+										<p:ajax event="change" listener="#{enrichmentView.loadEnrichmentTableData()}" update=":formEnrich:tabEnrich:tableEnrichment"/>
 										<f:selectItems value="#{enrichmentView.enrichmentTableAllEditions}" var="ed"
 											itemLabel="Edition: #{ed.edition} - Date: #{ed.date}" itemValue="#{ed.edition}" />
 									</p:selectOneMenu>
@@ -193,8 +188,7 @@
 									</h:panelGrid>
 									<p:separator/>
 									<p:dataTable id="tableEnrichment" widgetVar="tableEnrichmentWdg"
-										var="entry" value="#{enrichmentView.enrichmentTableData}"
-										scrollable="true" scrollHeight="250px" sortMode="multiple"
+										var="entry" value="#{enrichmentView.enrichmentTableData}" sortMode="multiple"
 										style="margin-bottom:0"
 										emptyMessage="No enrichment data found for selected edition"
 										filteredValue="#{enrichmentView.filteredEnrichmentTableData}"
@@ -324,7 +318,7 @@
 		</p:dialog>
 		
 		<p:dialog header="Term Info" widgetVar="itemSelectEnrichmentDlg" modal="false"
-			showEffect="fade" hideEffect="fade" resizable="false">
+			showEffect="fade" hideEffect="fade" resizable="false" dynamic="true">
 			<p:outputPanel id="termDetail" style="text-align:center;">
 				<p:panelGrid columns="2">
 				
@@ -359,7 +353,7 @@
 			<!-- return false so that the ajax request is not executed. -->
 			<p:ajax event="maximize" onstart="enrichmentChartDlgResize();return false;"/>
 			<p:ajax event="minimize" onstart="enrichmentChartDlgResize();return false;"/>
-			<div id="hc_container" style="width:100%; height:100%;"></div>
+			<div id="hc_enrichment_container" style="width:100%; height:100%;"></div>
 			
 		</p:dialog>
 		

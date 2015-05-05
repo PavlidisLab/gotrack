@@ -47,12 +47,12 @@ public class Series {
         return this.data.add( new Point( x, y ) );
     }
 
-    public void addDataPoint( Map<Object, Number> vals ) {
+    public void addDataPoint( Map<String, Number> vals ) {
         Collection<Point> ps = new ArrayList<>();
-        for ( Entry<Object, Number> entry : vals.entrySet() ) {
+        for ( Entry<String, Number> entry : vals.entrySet() ) {
             SimpleDateFormat sdf = new SimpleDateFormat( "yyyy-MM-dd" );
             try {
-                long timeInMillisSinceEpoch = sdf.parse( ( String ) entry.getKey() ).getTime();
+                long timeInMillisSinceEpoch = sdf.parse( entry.getKey() ).getTime();
                 ps.add( new Point( timeInMillisSinceEpoch, entry.getValue() ) );
             } catch ( ParseException e ) {
                 // TODO Auto-generated catch block

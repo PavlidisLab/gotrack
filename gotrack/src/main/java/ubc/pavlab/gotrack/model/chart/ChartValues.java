@@ -37,7 +37,7 @@ public class ChartValues {
         super();
     }
 
-    public Series addSeries( String name, Map<Object, Number> vals ) {
+    public Series addSeries( String name, Map<String, Number> vals ) {
         Series s = new Series( name );
         s.addDataPoint( vals );
         series.add( s );
