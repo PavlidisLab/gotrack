@@ -38,6 +38,17 @@ div.ui-table-graph-align-left > div.ui-paginator > button {
   	height: 26px;
 }
 
+div.ui-table-graph-float-left > div.ui-paginator > button {
+	float:left;
+	height: 26px;
+}
+
+div.ui-table-graph-float-left > div.ui-paginator > div.ui-selectonemenu {
+	float:left;
+	height: 26px;
+	width: 90px;
+}
+
 tbody > tr.ui-widget-content.ui-state-highlight {
 	background:#f7e9b0;
 	
@@ -52,4 +63,8 @@ i.fa.fa-external-link.fa-sm:hover {
 
 span.filter-spinner input {
 	width:75px;
+}
+
+body .ui-selectonemenu .ui-selectonemenu-label {
+	width:auto;
 }

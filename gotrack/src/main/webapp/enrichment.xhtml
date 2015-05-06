@@ -141,8 +141,8 @@
 					<div align="center" style="margin-top: 20px;">
 						<p:commandButton value="Run Enrichment"
 							actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
-							update=":formEnrich, :formSelect" onclick="showLoadingSpinner()"
-							oncomplete="hideLoadingSpinner();handleEnrichmentComplete(xhr, status, args);" disabled="#{fn:length(enrichmentView.selectedGenes) == 0}"/>
+							update=":formEnrich, :formSelect"
+							oncomplete="handleEnrichmentComplete(xhr, status, args);PF('tableEnrichmentWdg').filter()" disabled="#{fn:length(enrichmentView.selectedGenes) == 0}"/>
 					</div>
 
 					<pe:tooltip global="true" />
@@ -166,7 +166,6 @@
 					
 						<p:tab title="Stability">
 							<p:outputPanel id="stabilityChartPanel">
-								<div class="loading-spinner loading" style="display: none;"></div>
 								<div id="hc_stability_container" style="width:100%; height:600px;"></div>
 					
 								<p:remoteCommand oncomplete="PF('itemSelectStabilityDlg').show();"
@@ -175,32 +174,39 @@
 						</p:tab>
 						<p:tab title="Enrichment">
 								<p:outputPanel id="tablePanel">
-									<div class="loading-spinner loading" style="display: none;"></div>
-									<h:panelGrid columns="3" style="margin-bottom:10px" cellpadding="5">
-									<p:outputLabel for="editionSelect" value="Edition:" />
-									<p:selectOneMenu id="editionSelect" style="width:275px"
-										value="#{enrichmentView.enrichmentTableEdition}">
-										<p:ajax event="change" listener="#{enrichmentView.loadEnrichmentTableData()}" update=":formEnrich:tabEnrich:tableEnrichment"/>
-										<f:selectItems value="#{enrichmentView.enrichmentTableAllEditions}" var="ed"
-											itemLabel="Edition: #{ed.edition} - Date: #{ed.date}" itemValue="#{ed.edition}" />
-									</p:selectOneMenu>
-									
-									</h:panelGrid>
-									<p:separator/>
 									<p:dataTable id="tableEnrichment" widgetVar="tableEnrichmentWdg"
-										var="entry" value="#{enrichmentView.enrichmentTableData}" sortMode="multiple"
+										var="entry" value="#{enrichmentView.enrichmentTableValues}" sortMode="multiple"
 										style="margin-bottom:0"
 										emptyMessage="No enrichment data found for selected edition"
-										filteredValue="#{enrichmentView.filteredEnrichmentTableData}"
-										rowStyleClass="#{entry.value.pvalue ge enrichmentView.pThreshold ? 'not-significant' : 'significant'}"
-										styleClass="ui-table-exporter-align-right ui-table-graph-align-left"
+										filteredValue="#{enrichmentView.filteredEnrichmentTableValues}"
+										rowStyleClass="#{entry.result.pvalue ge enrichmentView.pThreshold ? 'not-significant' : 'significant'}"
+										styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
 										paginatorTemplate="{Graph} {CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {Exporters}"
                  						paginator="true" paginatorPosition="bottom" rows="20"
-                 						selectionMode="multiple" selection="#{enrichmentView.selectedEnrichmentTableData}" rowKey="#{entry.key.goId}">
+                 						selectionMode="multiple" selection="#{enrichmentView.selectedEnrichmentTableValues}" rowKey="#{entry.term.goId}">
+                 						<p:ajax event="filter" oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))"/>
+                 						<f:facet name="header">
+											<h:panelGrid columns="2" style="width:500px" cellpadding="5" styleClass="no-border" >
+											<p:outputLabel for="editionSelect" value="Edition:"/>
+											<p:selectOneMenu id="editionSelect" style="width:200px" panelStyle="width:200px"
+												value="#{enrichmentView.enrichmentTableEdition}">
+												<p:ajax event="change" listener="#{enrichmentView.loadEnrichmentTableData()}" update=":formEnrich:tabEnrich:tableEnrichment"
+													onstart="$('#edition-load-spinner').show();" oncomplete="$('#edition-load-spinner').hide();"/>
+												<f:selectItems value="#{enrichmentView.enrichmentTableAllEditions}" var="ed"
+													itemLabel="#{ed.edition} : #{ed.date}" itemValue="#{ed.edition}" />
+											</p:selectOneMenu>
+											
+											
+											</h:panelGrid>
+                 						</f:facet>
 										<f:facet name="{Graph}">
 										
 											<p:commandButton value="Graph Selected" actionListener="#{enrichmentView.createChartFromSelected()}" icon="fa fa-line-chart" oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();"/>
-
+											<p:commandButton value="Graph Top 5" actionListener="#{enrichmentView.createChartFromTop()}" icon="fa fa-line-chart" oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();"/>
+											<p:selectOneMenu value="#{enrichmentView.enrichmentChartMeasureScale}">
+									            <f:selectItem itemLabel="Rank" itemValue="rank" />
+            									<f:selectItem itemLabel="P-Value" itemValue="pvalue" />
+            								</p:selectOneMenu>
 										</f:facet>
 										
 										<f:facet name="{Exporters}">
@@ -228,15 +234,15 @@
 								        </f:facet>
 						
 										<p:column style="width:10px;" exportable="false">
-											<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.key.goId}"
+											<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.term.goId}"
 												target="_blank"><i class="fa fa-external-link fa-sm"
 												style="font-size: 0.7em;" /> </a>
-										</p:column>			
-										<p:column filterBy="#{entry.key.goId}" filterMatchMode="contains" sortBy="#{entry.key.goId}"
+										</p:column>		
+										<p:column filterBy="#{entry.term.goId}" filterMatchMode="contains" sortBy="#{entry.term.goId}"
 											headerText="Id" style="width:120px;">
-											<h:outputText value="#{entry.key.goId}" />
+											<h:outputText value="#{entry.term.goId}" />
 										</p:column>
-										<p:column filterBy="#{entry.key.aspect}" filterMatchMode="in" sortBy="#{entry.key.aspect}"
+										<p:column filterBy="#{entry.term.aspect}" filterMatchMode="in" sortBy="#{entry.term.aspect}"
 											headerText="Aspect" style="width:150px;">
 											<f:facet name="filter">
 												<p:selectManyButton
@@ -248,40 +254,40 @@
 												</p:selectManyButton>
 											</f:facet>
 											<h:outputText value="Biological Process"
-												rendered="#{entry.key.aspect == 'BP'}" />
+												rendered="#{entry.term.aspect == 'BP'}" />
 											<h:outputText value="Molecular Function"
-												rendered="#{entry.key.aspect == 'MF'}" />
+												rendered="#{entry.term.aspect == 'MF'}" />
 											<h:outputText value="Cellular Component"
-												rendered="#{entry.key.aspect == 'CC'}" />
+												rendered="#{entry.term.aspect == 'CC'}" />
 										</p:column>
-										<p:column filterBy="#{entry.key.name}" filterMatchMode="contains" sortBy="#{entry.key.name}"
+										<p:column filterBy="#{entry.term.name}" filterMatchMode="contains" sortBy="#{entry.term.name}"
 											headerText="Name" >
-											<h:outputText value="#{entry.key.name}" />
+											<h:outputText value="#{entry.term.name}" />
 										</p:column>
 										
-								        <p:column filterBy="#{entry.value.populationAnnotated}" headerText="Population" sortBy="#{entry.value.populationAnnotated}" 
+								        <p:column filterBy="#{entry.result.populationAnnotated}" headerText="Population" sortBy="#{entry.result.populationAnnotated}" 
 								        	filterFunction="#{enrichmentView.filterByNumberLT}" style="width:120px;">						            
-										    <h:outputText value="#{entry.value.populationAnnotated}">
+										    <h:outputText value="#{entry.result.populationAnnotated}">
 										        <f:convertNumber type="number"/>
 										    </h:outputText>
 								        </p:column>
 								        
-								        <p:column filterBy="#{entry.value.sampleAnnotated}" headerText="Sample" sortBy="#{entry.value.sampleAnnotated}" 
+								        <p:column filterBy="#{entry.result.sampleAnnotated}" headerText="Sample" sortBy="#{entry.result.sampleAnnotated}" 
 								        	filterFunction="#{enrichmentView.filterByNumberLT}" style="width:120px;">						            
-										    <h:outputText value="#{entry.value.sampleAnnotated}">
+										    <h:outputText value="#{entry.result.sampleAnnotated}">
 										        <f:convertNumber type="number"/>
 										    </h:outputText>
 								        </p:column>
 								        
-								        <p:column headerText="Expected" sortBy="#{entry.value.expected}" style="width:120px;">
-										    <h:outputText value="#{entry.value.expected}">
+								        <p:column headerText="Expected" sortBy="#{entry.result.expected}" style="width:120px;">
+										    <h:outputText value="#{entry.result.expected}">
 										        <f:convertNumber type="number" pattern="#.##E0"/>
 										    </h:outputText>
 								        </p:column>
 										
-								        <p:column filterBy="#{entry.value.pvalue}" headerText="P-Value" sortBy="#{entry.value.pvalue}" 
+								        <p:column filterBy="#{entry.result.pvalue}" headerText="P-Value" sortBy="#{entry.result.pvalue}" 
 								        	filterFunction="#{enrichmentView.filterByNumberLT}" style="width:120px;">						            
-										    <h:outputText value="#{entry.value.pvalue}">
+										    <h:outputText value="#{entry.result.pvalue}">
 										        <f:convertNumber type="number" pattern="#.##E0"/>
 										    </h:outputText>
 								        </p:column>
@@ -412,6 +418,16 @@
 			</p:dialog>
 
 		</h:form>
+		
+		<p:ajaxStatus style="width:42px;height:42px;position:fixed;right:5px;bottom:9px">
+            <f:facet name="start">
+                <p:graphicImage library="img" name="spinner.gif" />
+            </f:facet>
+
+            <f:facet name="complete">
+                <h:outputText value="" />
+            </f:facet>
+        </p:ajaxStatus>
 
 	</h:body>
 

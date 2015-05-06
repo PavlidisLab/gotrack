@@ -45,6 +45,28 @@ function closeAllDialog() {
    }
 }
 
+function postAjaxSortTable(datatable) {
+   var selectedColumn = undefined;
+
+   // multisort support
+   if(datatable && datatable.cfg.multiSort) {
+      if(datatable.sortMeta.length > 0) {
+         var lastSort = datatable.sortMeta[datatable.sortMeta.length-1];
+         selectedColumn = $(document.getElementById(lastSort.col));
+      }
+   } else {
+      selectedColumn = datatable.jq.find('.ui-state-active');
+   }
+
+   // no sorting selected -> quit
+   if(!selectedColumn || selectedColumn.length <= 0) {
+      return;
+   }
+
+   var sortorder = selectedColumn.data('sortorder')||"DESCENDING";
+   datatable.sort(selectedColumn, sortorder, datatable.cfg.multiSort);
+}
+
 function tabChanged(index)
 {
    alert("Tab Changed:"+index);
@@ -235,132 +257,256 @@ function handleEnrichmentComplete(xhr, status, args) {
 
 function handleGraphSelected(xhr, status, args) {
    console.log(args.hc_data);
+   console.log(args.hc_data2);
+   
+   var options = {};
+   if ( args.hc_type == "pvalue") {
+      options = {
+                 chart: {
+                    renderTo: 'hc_enrichment_container',
+                    zoomType: 'x',
+                    resetZoomButton: {
+                       position: {
+                          // align: 'right', // by default
+                          // verticalAlign: 'top', // by default
+                          x: -10,
+                          y: -30
+                       }
+                    }
+                 },
+                 title: {
+                    text: args.hc_title
+                 },
 
-   var options = {
-                  chart: {
-                     renderTo: 'hc_enrichment_container',
-                     zoomType: 'x',
-                     resetZoomButton: {
-                        position: {
-                           // align: 'right', // by default
-                           // verticalAlign: 'top', // by default
-                           x: -10,
-                           y: -30
-                        }
-                     }
-                  },
-                  title: {
-                     text: args.hc_title
-                  },
+                 xAxis: {
+                    type: 'datetime',
+                    title: {
+                       text: args.hc_xlabel
+                    },
+                    minRange: 60 * 24 * 3600000 // fourteen days
+                 },
 
-                  xAxis: {
-                     type: 'datetime',
-                     title: {
-                        text: args.hc_xlabel
-                     },
-                     minRange: 60 * 24 * 3600000 // fourteen days
-                  },
+                 yAxis: {
+                    type: 'logarithmic',
+                    title: {
+                       text: args.hc_ylabel
+                    },
+                    max:1,
+                    minorTickInterval: 0.1,
+                    labels: {
+                       formatter: function () {
+                          return this.value;
+                       }
+                    },
+                    plotLines : [{
+                       value : args.hc_threshold,
+                       color : 'black',
+                       dashStyle : 'shortdash',
+                       width : 2,
+                       label : {
+                          text : 'Threshold'
+                       },
+                       zIndex: 5
+                    }]
+                 },
 
-                  yAxis: {
-                     type: 'logarithmic',
-                     title: {
-                        text: args.hc_ylabel
-                     },
-                     max:1,
-                     minorTickInterval: 0.1,
-                     labels: {
-                        formatter: function () {
-                           return this.value;
-                        }
-                     },
-                     plotLines : [{
-                        value : args.hc_threshold,
-                        color : 'black',
-                        dashStyle : 'shortdash',
-                        width : 2,
-                        label : {
-                           text : 'Threshold'
-                        },
-                        zIndex: 5
-                     }]
-                  },
+                 plotOptions : {
+                    series : {
+                       point: {
+                          events: {
+                             click: function () {
+                                alert('Term: ' + this.series.name + ', p-value: ' + this.y);
+                             }
+                          }
+                       },
+                       events: {
+                          legendItemClick: function(event) {
 
-                  plotOptions : {
-                     series : {
-                        point: {
-                           events: {
-                              click: function () {
-                                 alert('Term: ' + this.series.name + ', p-value: ' + this.y);
-                              }
-                           }
-                        },
-                        events: {
-                           legendItemClick: function(event) {
+                             var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
 
-                              var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
+                             if (!defaultBehaviour) {
 
-                              if (!defaultBehaviour) {
+                                var seriesIndex = this.index;
+                                var series = this.chart.series;
 
-                                 var seriesIndex = this.index;
-                                 var series = this.chart.series;
-
-                                 var reset = this.isolated;
+                                var reset = this.isolated;
 
 
-                                 for (var i = 0; i < series.length; i++)
-                                 {
-                                    if (series[i].index != seriesIndex)
-                                    {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(false, false)
-                                          series[i].isolated=false; 
-                                       }
+                                for (var i = 0; i < series.length; i++)
+                                {
+                                   if (series[i].index != seriesIndex)
+                                   {
+                                      if (reset) {
+                                         series[i].setVisible(true, false)
+                                         series[i].isolated=false;
+                                      } else {
+                                         series[i].setVisible(false, false)
+                                         series[i].isolated=false; 
+                                      }
 
-                                    } else {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=true;
-                                       }
-                                    }
-                                 }
-                                 this.chart.redraw();
+                                   } else {
+                                      if (reset) {
+                                         series[i].setVisible(true, false)
+                                         series[i].isolated=false;
+                                      } else {
+                                         series[i].setVisible(true, false)
+                                         series[i].isolated=true;
+                                      }
+                                   }
+                                }
+                                this.chart.redraw();
 
-                                 return false;
-                              }
-                           }
-                        }
-                     }
-                  },
+                                return false;
+                             }
+                          }
+                       }
+                    }
+                 },
 
-                  tooltip: {
-                     headerFormat: '<b>{series.name}</b><br />',
-                     pointFormat: 'x = {point.x}, y = {point.y}',
-                     formatter:function(){
-                        return '<b>'+this.series.name+'</b><br />' + new Date(this.x).toLocaleDateString() + "<br> p-value: " + this.y;
-                     }
-                  },
-                  legend : {
-                     align : 'right',
-                     verticalAlign: 'top',
-                     layout: 'vertical',
-                     y:20
-                  },
+                 tooltip: {
+                    headerFormat: '<b>{series.name}</b><br />',
+                    pointFormat: 'x = {point.x}, y = {point.y}',
+                    formatter:function(){
+                       return '<b>'+this.series.name+'</b><br />' + new Date(this.x).toLocaleDateString() + "<br> p-value: " + this.y;
+                    }
+                 },
+                 legend : {
+                    align : 'right',
+                    verticalAlign: 'top',
+                    layout: 'vertical',
+                    y:20
+                 },
 
-                  series: [],
+                 series: [],
 
-                  colors : MAXIMALLY_DISTINCT_COLORS,
+                 colors : MAXIMALLY_DISTINCT_COLORS,
 
-                  exporting: {
-                     csv: {
-                        dateFormat: '%Y-%m-%d'
-                     }
-                  }
+                 exporting: {
+                    csv: {
+                       dateFormat: '%Y-%m-%d'
+                    }
+                 }
+      }
+   } else {
+      // rank
+      var opacity = Math.min(10/args.hc_data.series.length+1/100,0.1);
+      options = {
+                 chart: {
+                    renderTo: 'hc_enrichment_container',
+                    zoomType: 'x',
+                    resetZoomButton: {
+                       position: {
+                          // align: 'right', // by default
+                          // verticalAlign: 'top', // by default
+                          x: -10,
+                          y: -30
+                       }
+                    }
+                 },
+                 title: {
+                    text: args.hc_title
+                 },
+
+                 xAxis: {
+                    type: 'datetime',
+                    title: {
+                       text: args.hc_xlabel
+                    },
+                    minRange: 60 * 24 * 3600000 // fourteen days
+                 },
+
+                 yAxis: {
+                    type: 'linear',
+                    min:0,
+                    title: {
+                       text: args.hc_ylabel
+                    },
+                    labels: {
+                       formatter: function () {
+                          return this.value;
+                       }
+                    }
+                 },
+
+                 plotOptions : {
+                    series : {
+                       shadow: {opacity:opacity},
+                       lineWidth:0,
+                       point: {
+                          events: {
+                             click: function () {
+                                alert('Term: ' + this.series.name + ', score: ' + this.y);
+                             }
+                          }
+                       },
+                       events: {
+                          legendItemClick: function(event) {
+
+                             var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
+
+                             if (!defaultBehaviour) {
+
+                                var seriesIndex = this.index;
+                                var series = this.chart.series;
+
+                                var reset = this.isolated;
+
+
+                                for (var i = 0; i < series.length; i++)
+                                {
+                                   if (series[i].index != seriesIndex)
+                                   {
+                                      if (reset) {
+                                         series[i].setVisible(true, false)
+                                         series[i].isolated=false;
+                                      } else {
+                                         series[i].setVisible(false, false)
+                                         series[i].isolated=false; 
+                                      }
+
+                                   } else {
+                                      if (reset) {
+                                         series[i].setVisible(true, false)
+                                         series[i].isolated=false;
+                                      } else {
+                                         series[i].setVisible(true, false)
+                                         series[i].isolated=true;
+                                      }
+                                   }
+                                }
+                                this.chart.redraw();
+
+                                return false;
+                             }
+                          }
+                       }
+                    }
+                 },
+
+                 tooltip: {
+                    headerFormat: '<b>{series.name}</b><br />',
+                    pointFormat: 'x = {point.x}, y = {point.y}',
+                    formatter:function(){
+                       return '<b>'+this.series.name+'</b><br />' + new Date(this.x).toLocaleDateString() + "<br> score: " + this.y;
+                    }
+                 },
+                 legend : {
+                    align : 'right',
+                    verticalAlign: 'top',
+                    layout: 'vertical',
+                    y:20
+                 },
+
+                 series: [],
+
+                 colors : MAXIMALLY_DISTINCT_COLORS,
+
+                 exporting: {
+                    csv: {
+                       dateFormat: '%Y-%m-%d'
+                    }
+                 }
+      }
    }
 
 
@@ -379,10 +525,11 @@ function handleGraphSelected(xhr, status, args) {
          data : data
       })
 
-   }   
-   
+   }
+
+
    HC.charts.enrichment.options = options;
-   HC.charts.enrichment.recreate();
+   HC.charts.enrichment.recreate();  
 
 }
 
