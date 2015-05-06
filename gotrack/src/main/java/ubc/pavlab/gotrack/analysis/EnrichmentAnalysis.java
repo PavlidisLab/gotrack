@@ -49,7 +49,7 @@ public class EnrichmentAnalysis {
     private final int minAnnotatedPopulation;
     private final int maxAnnotatedPopulation;
 
-    private Integer threshold = null;
+    private Double threshold = null;
 
     // Holds those unmodifiable results which met the population limits and had population data present in cache
     private final Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> rawResults;
@@ -159,7 +159,7 @@ public class EnrichmentAnalysis {
      * @param threshold
      * @return true if threshold was successfully applies else false
      */
-    public boolean applyThreshold( int threshold ) {
+    public boolean applyThreshold( double threshold ) {
         if ( threshold < 0 || threshold > 1 ) {
             log.warn( "Invalid threshold!" );
             return false;
@@ -317,7 +317,7 @@ public class EnrichmentAnalysis {
         return maxAnnotatedPopulation;
     }
 
-    public Integer getThreshold() {
+    public Double getThreshold() {
         return threshold;
     }
 

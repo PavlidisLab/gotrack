@@ -90,13 +90,21 @@ function HChart(id) {
          console.log('Chart already created');
       }
    }
-   this.recreate = function() {
+   this.reset = function() {
+      this.recreate(this.options);
+   }
+   this.recreate = function(options) {
       try {
+         if(typeof options === 'undefined'){
+            // options not supplied
+            options = this.options; //fallback incase chart is not made yet
+            options = this.chart.options;
+          }
          this.chart.destroy();
       } catch (e) {
          console.log(e);
       } finally {
-         this.chart = new Highcharts.Chart(this.options);
+         this.chart = new Highcharts.Chart(options);
       }
 
    }
@@ -251,7 +259,7 @@ function handleEnrichmentComplete(xhr, status, args) {
    }
 
    HC.charts.stability.options = options;
-   HC.charts.stability.recreate();
+   HC.charts.stability.recreate(options);
 
 }
 
@@ -418,6 +426,7 @@ function handleGraphSelected(xhr, status, args) {
                  yAxis: {
                     type: 'linear',
                     min:0,
+                    allowDecimals: false,
                     title: {
                        text: args.hc_ylabel
                     },
@@ -529,7 +538,7 @@ function handleGraphSelected(xhr, status, args) {
 
 
    HC.charts.enrichment.options = options;
-   HC.charts.enrichment.recreate();  
+   HC.charts.enrichment.recreate(options);  
 
 }
 

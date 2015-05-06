@@ -264,6 +264,7 @@ public class EnrichmentView implements Serializable {
         log.info( "Running enrichment analysis" );
         analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, minAnnotatedPopulation, maxAnnotatedPopulation,
                 bonferroniCorrection, cache, currentSpeciesId );
+        analysis.applyThreshold( pThreshold );
 
         enrichmentResults = analysis.getResults();
         enrichmentResultsStrict = analysis.getSignificantResults();
