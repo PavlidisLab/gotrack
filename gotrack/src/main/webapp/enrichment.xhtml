@@ -40,6 +40,7 @@
 		<h:outputScript library="js" name="highcharts.js" />
 		<h:outputScript library="js" name="exporting.js" />
 		<h:outputScript library="js" name="export-csv.js" />
+		<h:outputScript library="js" name="broken-axis.js" />
 
 	</h:head>
 
@@ -200,13 +201,18 @@
 											</h:panelGrid>
                  						</f:facet>
 										<f:facet name="{Graph}">
-										
+											<span class="footer-graph">
 											<p:commandButton value="Graph Selected" actionListener="#{enrichmentView.createChartFromSelected()}" icon="fa fa-line-chart" oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();"/>
-											<p:commandButton value="Graph Top 5" actionListener="#{enrichmentView.createChartFromTop()}" icon="fa fa-line-chart" oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();"/>
+											<span class="text-separator"><h:outputText value="OR" /></span>
+											<p:commandButton value="Graph" actionListener="#{enrichmentView.createChartFromTop()}" icon="fa fa-line-chart" oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();"/>
+											<span class="text"><h:outputText value="Top" /></span>
+											<p:spinner value="#{enrichmentView.enrichmentChartTopN}" min="0" max="100" />
+											<span class="text"><h:outputText value="Terms By" /></span>
 											<p:selectOneMenu value="#{enrichmentView.enrichmentChartMeasureScale}">
 									            <f:selectItem itemLabel="Rank" itemValue="rank" />
             									<f:selectItem itemLabel="P-Value" itemValue="pvalue" />
             								</p:selectOneMenu>
+            								</span>
 										</f:facet>
 										
 										<f:facet name="{Exporters}">
@@ -289,6 +295,13 @@
 								        	filterFunction="#{enrichmentView.filterByNumberLT}" style="width:120px;">						            
 										    <h:outputText value="#{entry.result.pvalue}">
 										        <f:convertNumber type="number" pattern="#.##E0"/>
+										    </h:outputText>
+								        </p:column>
+								        
+								        <p:column filterBy="#{entry.result.rank}" headerText="Rank" sortBy="#{entry.result.rank}" 
+								        	filterFunction="#{enrichmentView.filterByNumberLT}" style="width:120px;">						            
+										    <h:outputText value="#{entry.result.rank}">
+										        <f:convertNumber type="number"/>
 										    </h:outputText>
 								        </p:column>
 		

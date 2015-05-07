@@ -397,11 +397,33 @@ function handleGraphSelected(xhr, status, args) {
       }
    } else {
       // rank
+      
+      var maxRank = -1;
+      for (var i = 0; i < args.hc_data.series.length; i++) {
+         var series = args.hc_data.series[i];
+         for (var j = 0; j < series.data.length; j++) {
+            var point = series.data[j];
+            if (point.y > maxRank) {
+               maxRank = point.y;
+            }
+         }
+      }
       var opacity = Math.min(10/args.hc_data.series.length+1/100,0.1);
+      //var opacity = Math.min(10/maxRank+1/100,0.1);
+      var breakAt = args.hc_breakAt;
+      
+      var gap = Math.ceil((maxRank - breakAt)/5)
+      
+     var breaks = []
+      for (var i = breakAt ; i<maxRank;i+=gap) {
+          breaks.push({from:i,to:i+gap-0.01,breakSize:2})
+      }
+      console.log(breaks)
+      
       options = {
                  chart: {
                     renderTo: 'hc_enrichment_container',
-                    zoomType: 'x',
+                    zoomType: 'xy',
                     resetZoomButton: {
                        position: {
                           // align: 'right', // by default
@@ -425,7 +447,12 @@ function handleGraphSelected(xhr, status, args) {
 
                  yAxis: {
                     type: 'linear',
+                    lineColor: 'black',
+                    lineWidth: 2,
+                    offset: 10,
+                    tickInterval:1,
                     min:0,
+                    max:breaks[breaks.length - 1].to,
                     allowDecimals: false,
                     title: {
                        text: args.hc_ylabel
@@ -434,7 +461,8 @@ function handleGraphSelected(xhr, status, args) {
                        formatter: function () {
                           return this.value;
                        }
-                    }
+                    },
+                    breaks: breaks,
                  },
 
                  plotOptions : {
@@ -576,6 +604,32 @@ $(document).ready(function() {
          id = setTimeout(enrichmentChartDlgResize, 200);
       });
    })();
+   
+   /**
+    * Extend the Axis.getLinePath method in order to visualize breaks with two parallel
+    * slanted lines. For each break, the slanted lines are inserted into the line path.
+    */
+   Highcharts.wrap(Highcharts.Axis.prototype, 'getLinePath', function (proceed, lineWidth) {
+       var axis = this,
+           path = proceed.call(this, lineWidth),
+           x = path[1];
+       var breakArray = this.breakArray || [];
+      
+       if (breakArray.length) {
+          var brk = breakArray[0];
+          var from;
+          if (!axis.horiz) {
+              y = axis.toPixels(brk.from);
+              path.splice(3, 0, 
+                  'L', x, y - 4, // stop
+                  'M', x + 5, y - 9, 'L', x - 5, y + 1, // lower slanted line
+                  'M', x + 5, y - 1, 'L', x - 5, y + 9, // higher slanted line
+                  'M', x, y + 4
+              );
+          }
+       }
+       return path;
+   });
 
 
 

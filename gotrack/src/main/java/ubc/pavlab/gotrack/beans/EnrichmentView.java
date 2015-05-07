@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -131,6 +130,7 @@ public class EnrichmentView implements Serializable {
 
     // Enrichment Chart
     private String enrichmentChartMeasureScale = "rank";
+    private int enrichmentChartTopN = 5;
 
     // Select Data Point functionality
     private Edition selectedEdition;
@@ -337,14 +337,13 @@ public class EnrichmentView implements Serializable {
     }
 
     private void createChart( Set<GeneOntologyTerm> selectedTerms,
-            Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> data ) {
+            Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> data, Integer breakAt ) {
         // Make the series
-        Map<GeneOntologyTerm, Map<String, Number>> series = new HashMap<>();
-        Map<GeneOntologyTerm, Map<String, Number>> series2 = new HashMap<>();
         List<Edition> eds = new ArrayList<>( data.keySet() );
         Collections.sort( eds );
         ChartValues cv = null;
         if ( enrichmentChartMeasureScale.equals( "pvalue" ) ) {
+            Map<GeneOntologyTerm, Map<String, Number>> series = new HashMap<>();
             for ( Edition ed : eds ) {
                 for ( GeneOntologyTerm term : selectedTerms ) {
                     EnrichmentResult er = data.get( ed ).get( term );
@@ -368,35 +367,23 @@ public class EnrichmentView implements Serializable {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "P-Value" );
         } else {
             // rank
+            Map<GeneOntologyTerm, Map<String, Number>> series = new HashMap<>();
             for ( Edition ed : eds ) {
-                Map<GeneOntologyTerm, EnrichmentResult> allTerms = data.get( ed );
-                LinkedHashSet<GeneOntologyTerm> rankedTerms = StabilityAnalysis.getSortedKeySetByValue( allTerms );
-                int i = 0;
-                for ( GeneOntologyTerm term : rankedTerms ) {
-                    Map<String, Number> s = series2.get( term );
+                for ( GeneOntologyTerm term : selectedTerms ) {
+                    EnrichmentResult er = data.get( ed ).get( term );
+                    Map<String, Number> s = series.get( term );
                     if ( s == null ) {
                         s = new LinkedHashMap<>();
-                        series2.put( term, s );
+                        series.put( term, s );
                     }
-                    s.put( ed.getDate().toString(), i );
-                    i++;
+                    s.put( ed.getDate().toString(), er == null ? null : er.getRank() );
                 }
-                // Now add in null values for terms with missing edition
-                for ( GeneOntologyTerm term : selectedTerms ) {
-                    if ( !rankedTerms.contains( term ) ) {
-                        Map<String, Number> s = series2.get( term );
-                        if ( s == null ) {
-                            s = new LinkedHashMap<>();
-                            series2.put( term, s );
-                        }
-                        s.put( ed.getDate().toString(), null );
-                    }
-                }
+
             }
 
             cv = new ChartValues();
 
-            for ( Entry<GeneOntologyTerm, Map<String, Number>> termEntry : series2.entrySet() ) {
+            for ( Entry<GeneOntologyTerm, Map<String, Number>> termEntry : series.entrySet() ) {
                 cv.addSeries( termEntry.getKey().getGoId(), termEntry.getValue() );
             }
             RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Results by Rank" );
@@ -408,20 +395,21 @@ public class EnrichmentView implements Serializable {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_threshold", pThreshold );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
 
+        if ( breakAt != null ) {
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_breakAt", 2 * breakAt );
+        }
+
         if ( cv.getSeries().size() == 1 ) {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_errors", cv );
         }
     }
 
     public void createChartFromTop() {
-        Set<GeneOntologyTerm> selectedTerms = new HashSet<>();
-        for ( StabilityScore score : stabilityScores.values() ) {
-            selectedTerms.addAll( score.getTopTerms() );
-        }
+        Set<GeneOntologyTerm> selectedTerms = analysis.getTopNTerms( enrichmentChartTopN );
 
         Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> data = filter( selectedTerms );
 
-        createChart( selectedTerms, data );
+        createChart( selectedTerms, data, enrichmentChartTopN );
 
     }
 
@@ -444,7 +432,7 @@ public class EnrichmentView implements Serializable {
             log.info( "Chart filtered" );
         }
 
-        createChart( selectedTerms, data );
+        createChart( selectedTerms, data, null );
 
     }
 
@@ -771,6 +759,14 @@ public class EnrichmentView implements Serializable {
 
     public void setEnrichmentChartMeasureScale( String enrichmentChartMeasureScale ) {
         this.enrichmentChartMeasureScale = enrichmentChartMeasureScale;
+    }
+
+    public int getEnrichmentChartTopN() {
+        return enrichmentChartTopN;
+    }
+
+    public void setEnrichmentChartTopN( int enrichmentChartTopN ) {
+        this.enrichmentChartTopN = enrichmentChartTopN;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

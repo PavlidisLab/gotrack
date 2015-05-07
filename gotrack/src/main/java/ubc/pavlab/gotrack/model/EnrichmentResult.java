@@ -22,18 +22,19 @@ package ubc.pavlab.gotrack.model;
 import org.apache.commons.math3.distribution.HypergeometricDistribution;
 
 /**
- * Immutable result of GO enrichment analysis for a single term
+ * (Almost but not really) immutable result of GO enrichment analysis for a single term
  * 
  * @author mjacobson
  * @version $Id$
  */
 public class EnrichmentResult {
 
-    private final double pvalue;
+    private double pvalue;
     private final int sampleAnnotated;
     private final int populationAnnotated;
     private final int sampleSize;
     private final int populationSize;
+    private int rank;
 
     public EnrichmentResult( double pvalue, int sampleAnnotated, int populationAnnotated, int sampleSize,
             int populationSize ) {
@@ -58,33 +59,24 @@ public class EnrichmentResult {
 
     }
 
-    /**
-     * @param sampleAnnotated
-     * @param populationAnnotated
-     * @param sampleSize
-     * @param populationSize
-     * @param testSetSize Used for applying Bonferroni Multiple Tests Correction
-     */
-    public EnrichmentResult( int sampleAnnotated, int populationAnnotated, int sampleSize, int populationSize,
-            int testSetSize ) {
-        super();
-        this.sampleAnnotated = sampleAnnotated;
-        this.populationAnnotated = populationAnnotated;
-        this.sampleSize = sampleSize;
-        this.populationSize = populationSize;
-
-        HypergeometricDistribution hyper = new HypergeometricDistribution( populationSize, populationAnnotated,
-                sampleSize );
-        this.pvalue = Math.min( hyper.upperCumulativeProbability( sampleAnnotated ) * testSetSize, 1 );
-
-    }
-
     public double getExpected() {
         return sampleSize * ( ( double ) populationAnnotated ) / populationSize;
     }
 
     public double getPvalue() {
         return pvalue;
+    }
+
+    public void setPvalue( double pvalue ) {
+        this.pvalue = pvalue;
+    }
+
+    public int getRank() {
+        return rank;
+    }
+
+    public void setRank( int rank ) {
+        this.rank = rank;
     }
 
     public int getSampleAnnotated() {

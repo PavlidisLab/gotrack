@@ -19,9 +19,13 @@
 
 package ubc.pavlab.gotrack.analysis;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -91,7 +95,7 @@ public class EnrichmentAnalysis {
             Edition ed = editionEntry.getKey();
             Map<GeneOntologyTerm, Set<Gene>> data = editionEntry.getValue();
 
-            Map<GeneOntologyTerm, EnrichmentResult> pvalues = new HashMap<>();
+            Map<GeneOntologyTerm, EnrichmentResult> resultsInEdition = new HashMap<>();
 
             Set<GeneOntologyTerm> um = new HashSet<>();
             Set<GeneOntologyTerm> rj = new HashSet<>();
@@ -100,8 +104,8 @@ public class EnrichmentAnalysis {
             int populationSize = cache.getGeneCount( currentSpeciesId, ed );
             int sampleSize = sampleSizes.get( ed );
 
-            // Loop over to remove terms that don't fit population limits and to get test set size for bonferroni
-            Map<GeneOntologyTerm, Integer> acceptedTerms = new HashMap<>();
+            // pre loop to remove terms that don't fit population limits, to get test set size for bonferroni and to get
+            // ranks
 
             for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : data.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
@@ -109,8 +113,10 @@ public class EnrichmentAnalysis {
 
                 if ( populationAnnotated != null && populationAnnotated >= minAnnotatedPopulation
                         && populationAnnotated <= maxAnnotatedPopulation ) {
+                    Integer sampleAnnotated = termEntry.getValue().size();
+                    resultsInEdition.put( term, new EnrichmentResult( sampleAnnotated, populationAnnotated, sampleSize,
+                            populationSize ) );
 
-                    acceptedTerms.put( term, populationAnnotated );
                     // Everything starts out significant until we apply a threshold
                     termsSignificantInAnyEdition.add( term );
                     sig.add( term );
@@ -127,18 +133,22 @@ public class EnrichmentAnalysis {
                 }
             }
 
-            // Calculate Results
-            int testSetSize = acceptedTerms.keySet().size();
+            // Create EnrichmentResults
+            int testSetSize = resultsInEdition.keySet().size();
 
-            for ( Entry<GeneOntologyTerm, Integer> termEntry : acceptedTerms.entrySet() ) {
-                GeneOntologyTerm term = termEntry.getKey();
-                Integer sampleAnnotated = data.get( term ).size();
-                Integer populationAnnotated = termEntry.getValue();
-                pvalues.put( term, new EnrichmentResult( sampleAnnotated, populationAnnotated, sampleSize,
-                        populationSize, testSetSize ) );
+            LinkedHashSet<GeneOntologyTerm> termsSortedByRank = EnrichmentAnalysis
+                    .getSortedKeySetByValue( resultsInEdition );
+            int rank = 0;
+            for ( GeneOntologyTerm term : termsSortedByRank ) {
+                EnrichmentResult er = resultsInEdition.get( term );
+                if ( this.bonferroniCorrection ) {
+                    er.setPvalue( Math.min( er.getPvalue() * testSetSize, 1 ) );
+                }
+                er.setRank( rank );
+                rank++;
             }
 
-            rawResults.put( ed, Collections.unmodifiableMap( pvalues ) );
+            rawResults.put( ed, Collections.unmodifiableMap( resultsInEdition ) );
             unmappedTerms.put( ed, Collections.unmodifiableSet( um ) );
             rejectedTerms.put( ed, Collections.unmodifiableSet( rj ) );
             termsSignificant.put( ed, Collections.unmodifiableSet( sig ) );
@@ -193,6 +203,9 @@ public class EnrichmentAnalysis {
      * @return unmodifiable map containing only significant results for each edition
      */
     public Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> getSignificantResults() {
+        if ( this.threshold == null ) {
+            log.warn( "No Threshold has been applied to this analysis!" );
+        }
         Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> significantResultsOnly = new HashMap<>();
 
         for ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> editionEntry : rawResults.entrySet() ) {
@@ -222,6 +235,9 @@ public class EnrichmentAnalysis {
      * @return unmodifiable map containing only significant results for specific edition
      */
     public Map<GeneOntologyTerm, EnrichmentResult> getSignificantResults( Edition specificEdition ) {
+        if ( this.threshold == null ) {
+            log.warn( "No Threshold has been applied to this analysis!" );
+        }
 
         Map<GeneOntologyTerm, EnrichmentResult> data = rawResults.get( specificEdition );
         Map<GeneOntologyTerm, EnrichmentResult> significantData = new HashMap<>();
@@ -244,6 +260,9 @@ public class EnrichmentAnalysis {
      * @return unmodifiable map containing results significant in any edition
      */
     public Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> getResults() {
+        if ( this.threshold == null ) {
+            log.warn( "No Threshold has been applied to this analysis!" );
+        }
         Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> significantInAnyEdition = new HashMap<>();
 
         for ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> editionEntry : rawResults.entrySet() ) {
@@ -270,6 +289,9 @@ public class EnrichmentAnalysis {
      * @return unmodifiable map containing results significant in any edition for a specific edition
      */
     public Map<GeneOntologyTerm, EnrichmentResult> getResults( Edition specificEdition ) {
+        if ( this.threshold == null ) {
+            log.warn( "No Threshold has been applied to this analysis!" );
+        }
 
         Map<GeneOntologyTerm, EnrichmentResult> data = rawResults.get( specificEdition );
         Map<GeneOntologyTerm, EnrichmentResult> filteredData = new HashMap<>();
@@ -334,11 +356,52 @@ public class EnrichmentAnalysis {
     }
 
     public Set<GeneOntologyTerm> getTermsSignificantInAnyEdition() {
+        if ( this.threshold == null ) {
+            log.warn( "No Threshold has been applied to this analysis!" );
+        }
         return termsSignificantInAnyEdition;
     }
 
     public Map<Edition, Set<GeneOntologyTerm>> getTermsSignificant() {
+        if ( this.threshold == null ) {
+            log.warn( "No Threshold has been applied to this analysis!" );
+        }
         return termsSignificant;
+    }
+
+    public Set<GeneOntologyTerm> getTopNTerms( int n ) {
+        HashSet<GeneOntologyTerm> top = new HashSet<>();
+        for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : termsSignificant.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            for ( GeneOntologyTerm term : editionEntry.getValue() ) {
+                EnrichmentResult er = getResult( ed, term );
+                if ( er.getRank() < n ) {
+                    top.add( term );
+                }
+            }
+
+        }
+        return top;
+    }
+
+    public static LinkedHashSet<GeneOntologyTerm> getSortedKeySetByValue( Map<GeneOntologyTerm, EnrichmentResult> data ) {
+        LinkedHashSet<GeneOntologyTerm> results = new LinkedHashSet<>();
+
+        List<Entry<GeneOntologyTerm, EnrichmentResult>> entryList = new ArrayList<>( data.entrySet() );
+
+        Collections.sort( entryList, new Comparator<Entry<GeneOntologyTerm, EnrichmentResult>>() {
+            public int compare( Entry<GeneOntologyTerm, EnrichmentResult> e1,
+                    Entry<GeneOntologyTerm, EnrichmentResult> e2 ) {
+                return Double.compare( e1.getValue().getPvalue(), e2.getValue().getPvalue() );
+            }
+        } );
+
+        for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : entryList ) {
+            results.add( entry.getKey() );
+        }
+
+        return results;
+
     }
 
 }

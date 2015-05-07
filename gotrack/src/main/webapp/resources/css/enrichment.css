@@ -38,16 +38,43 @@ div.ui-table-graph-align-left > div.ui-paginator > button {
   	height: 26px;
 }
 
-div.ui-table-graph-float-left > div.ui-paginator > button {
+/* Footer Graph Left Align */
+
+div.ui-table-graph-float-left > div.ui-paginator > span.footer-graph > button {
 	float:left;
 	height: 26px;
 }
 
-div.ui-table-graph-float-left > div.ui-paginator > div.ui-selectonemenu {
+div.ui-table-graph-float-left > div.ui-paginator > span.footer-graph > div.ui-selectonemenu {
 	float:left;
 	height: 26px;
 	width: 90px;
 }
+
+div.ui-table-graph-float-left > div.ui-paginator > span.footer-graph > span.ui-spinner {
+	float:left;
+	height: 26px;
+}
+
+div.ui-table-graph-float-left > div.ui-paginator > span.footer-graph > span.ui-spinner > input.ui-spinner-input{
+	width:30px;
+}
+
+div.ui-table-graph-float-left > div.ui-paginator > span.footer-graph > span.text {
+	float:left;
+	line-height:26px;
+	margin-left:5px;
+	margin-right:5px;
+}
+
+div.ui-table-graph-float-left > div.ui-paginator > span.footer-graph > span.text-separator {
+	float:left;
+	line-height:26px;
+	margin-left:15px;
+	margin-right:15px;
+}
+
+/* ************************ */
 
 tbody > tr.ui-widget-content.ui-state-highlight {
 	background:#f7e9b0;
