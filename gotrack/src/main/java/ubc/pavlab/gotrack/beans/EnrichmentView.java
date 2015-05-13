@@ -20,10 +20,12 @@
 package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -55,7 +57,10 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.StabilityScore;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
+import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
+
+import com.google.gson.Gson;
 
 /**
  * TODO Document Me
@@ -94,7 +99,7 @@ public class EnrichmentView implements Serializable {
 
     // View parameters
     private String query;
-    private String bulkQuery;
+    private String bulkQuery = "MAOA DDC VTI1B   MAOB    STX12   COMT    SNAP25  SNAP23  SLC6A20 SLC6A2  TH  SLC6A3  SNAP29  PNMT    STX7    SLC18A1 VAMP1   SLC6A18 SLC6A19 SLC18A2 VAMP2   SLC6A15 SLC6A16 SLC6A17 DBH";
 
     private Map<Integer, List<Gene>> speciesToSelectedGenes = new HashMap<>();
     private Gene geneToRemove;
@@ -103,7 +108,7 @@ public class EnrichmentView implements Serializable {
     // Enrichment Settings
     private Integer currentSpeciesId = 7;
     private int minAnnotatedPopulation = 5;
-    private int maxAnnotatedPopulation = 0;
+    private int maxAnnotatedPopulation = 200;
     private boolean bonferroniCorrection = true;
     private double pThreshold = 0.05;
 
@@ -136,8 +141,10 @@ public class EnrichmentView implements Serializable {
     private Edition selectedEdition;
     private GeneOntologyTerm selectedTerm;
     private Number selectedValue;
+    private String selectedValueName;
 
-    private List<Edition> allEditions;
+    // Select Data Point functionality Enrichment Chart
+    private EnrichmentResult selectedEnrichmentResult;
 
     // Static final
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
@@ -247,7 +254,6 @@ public class EnrichmentView implements Serializable {
     }
 
     public void enrich() {
-        allEditions = cache.getAllEditions( currentSpeciesId );
         Set<Gene> genes = new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) );
 
         Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, currentSpeciesId );
@@ -286,21 +292,21 @@ public class EnrichmentView implements Serializable {
         // Create Stability Chart
         ChartValues cv = new ChartValues();
 
-        Map<String, Number> completeTermJaccard = new LinkedHashMap<>();
-        Map<String, Number> topTermJaccard = new LinkedHashMap<>();
-        Map<String, Number> topGeneJaccard = new LinkedHashMap<>();
+        Series completeTermJaccard = new Series( "All Terms" );
+        Series topTermJaccard = new Series( "Top " + TOP_N_JACCARD + " Terms" );
+        Series topGeneJaccard = new Series( "Genes Backing Top Terms" );
 
         for ( Entry<Edition, StabilityScore> editionEntry : stabilityScores.entrySet() ) {
             StabilityScore score = editionEntry.getValue();
-            String date = editionEntry.getKey().getDate().toString();
-            completeTermJaccard.put( date, score.getCompleteTermJaccard() );
-            topTermJaccard.put( date, score.getTopTermJaccard() );
-            topGeneJaccard.put( date, score.getTopGeneJaccard() );
+            Date date = editionEntry.getKey().getDate();
+            completeTermJaccard.addDataPoint( date, score.getCompleteTermJaccard() );
+            topTermJaccard.addDataPoint( date, score.getTopTermJaccard() );
+            topGeneJaccard.addDataPoint( date, score.getTopGeneJaccard() );
         }
 
-        cv.addSeries( "All Terms", completeTermJaccard );
-        cv.addSeries( "Top " + TOP_N_JACCARD + " Terms", topTermJaccard );
-        cv.addSeries( "Genes Backing Top Terms", topGeneJaccard );
+        cv.addSeries( completeTermJaccard );
+        cv.addSeries( topTermJaccard );
+        cv.addSeries( topGeneJaccard );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Stability" );
@@ -308,18 +314,6 @@ public class EnrichmentView implements Serializable {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
 
         enrichmentSuccess = true;
-
-    }
-
-    private void clearAllEnrichmentRunData() {
-        analysis = null;
-        enrichmentResults = null;
-        enrichmentResultsStrict = null;
-        enrichmentTableEdition = null;
-        enrichmentTableAllEditions = new HashMap<>();
-        enrichmentTableValues = new ArrayList<>();
-        filteredEnrichmentTableValues = null;
-        stabilityScores = new HashMap<>();
 
     }
 
@@ -336,58 +330,129 @@ public class EnrichmentView implements Serializable {
 
     }
 
+    // Enrichment Charts ---------------------------------------------------------------------------------------
+
     private void createChart( Set<GeneOntologyTerm> selectedTerms,
-            Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> data, Integer breakAt ) {
+            Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> data, Integer topN ) {
         // Make the series
         List<Edition> eds = new ArrayList<>( data.keySet() );
         Collections.sort( eds );
         ChartValues cv = null;
+        int maxRank = -1;
+        Map<Long, Integer> dateToEdition = new HashMap<>();
         if ( enrichmentChartMeasureScale.equals( "pvalue" ) ) {
-            Map<GeneOntologyTerm, Map<String, Number>> series = new HashMap<>();
+            Map<GeneOntologyTerm, Series> series = new HashMap<>();
             for ( Edition ed : eds ) {
+                dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
                 for ( GeneOntologyTerm term : selectedTerms ) {
                     EnrichmentResult er = data.get( ed ).get( term );
                     if ( er != null ) {
-                        Map<String, Number> s = series.get( term );
+                        Series s = series.get( term );
                         if ( s == null ) {
-                            s = new LinkedHashMap<>();
+                            s = new Series( term.getGoId() );
                             series.put( term, s );
                         }
-                        s.put( ed.getDate().toString(), er.getPvalue() );
+                        s.addDataPoint( ed.getDate(), er.getPvalue() );
                     }
                 }
 
             }
             cv = new ChartValues();
 
-            for ( Entry<GeneOntologyTerm, Map<String, Number>> termEntry : series.entrySet() ) {
-                cv.addSeries( termEntry.getKey().getGoId(), termEntry.getValue() );
+            for ( Series s : series.values() ) {
+                cv.addSeries( s );
             }
             RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Results" );
             RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "P-Value" );
         } else {
             // rank
-            Map<GeneOntologyTerm, Map<String, Number>> series = new HashMap<>();
+            Map<GeneOntologyTerm, Series> series = new HashMap<>();
+            Map<Long, Integer> dateToMaxSigRank = new HashMap<>();
+            maxRank = -1;
+            boolean outsideTopNCheck = false;
+            boolean insignificantCheck = false;
             for ( Edition ed : eds ) {
+                int maxSignificantRank = analysis.getTermsSignificant().get( ed ).size() - 1;
+
+                dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
+                Map<GeneOntologyTerm, EnrichmentResult> editionData = data.get( ed );
+                ArrayList<Entry<GeneOntologyTerm, EnrichmentResult>> sortedData = new ArrayList<>(
+                        editionData.entrySet() );
+
+                Collections.sort( sortedData, new Comparator<Entry<GeneOntologyTerm, EnrichmentResult>>() {
+                    public int compare( Entry<GeneOntologyTerm, EnrichmentResult> e1,
+                            Entry<GeneOntologyTerm, EnrichmentResult> e2 ) {
+                        return Integer.compare( e1.getValue().getRank(), e2.getValue().getRank() );
+                    }
+                } );
+
+                Map<GeneOntologyTerm, Integer> relativeRanks = new HashMap<>();
+                int r = 0;
+                for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : sortedData ) {
+                    relativeRanks.put( entry.getKey(), r++ );
+                }
+
+                int breakPoint = relativeRanks.size();
                 for ( GeneOntologyTerm term : selectedTerms ) {
-                    EnrichmentResult er = data.get( ed ).get( term );
-                    Map<String, Number> s = series.get( term );
+                    // for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : editionData ) {
+                    // GeneOntologyTerm term = entry.getKey();
+                    Series s = series.get( term );
                     if ( s == null ) {
-                        s = new LinkedHashMap<>();
+                        s = new Series( term.getGoId() );
                         series.put( term, s );
                     }
-                    s.put( ed.getDate().toString(), er == null ? null : er.getRank() );
+                    EnrichmentResult er = editionData.get( term );
+                    Integer relativeRank = relativeRanks.get( term );
+                    if ( er != null ) {
+                        int rank = er.getRank();
+                        // find smallest relative rank that is insignificant
+                        if ( rank > maxSignificantRank && relativeRank < breakPoint ) {
+                            insignificantCheck = true; // There are some insignificant points
+                            breakPoint = relativeRank;
+                        }
+
+                        if ( topN != null && rank > topN && rank <= maxSignificantRank ) {
+                            outsideTopNCheck = true;
+                        }
+
+                        if ( relativeRank > maxRank ) {
+                            maxRank = relativeRank;
+                        }
+
+                        s.addDataPoint( ed.getDate(), relativeRank );
+                    } else {
+                        s.addDataPoint( ed.getDate(), null );
+                    }
                 }
+
+                dateToMaxSigRank.put( ed.getDate().getTime(), breakPoint );
 
             }
 
             cv = new ChartValues();
 
-            for ( Entry<GeneOntologyTerm, Map<String, Number>> termEntry : series.entrySet() ) {
-                cv.addSeries( termEntry.getKey().getGoId(), termEntry.getValue() );
+            for ( Series s : series.values() ) {
+                cv.addSeries( s );
             }
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Results by Rank" );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Rank" );
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Results by Relative Rank" );
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Relative Rank" );
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_maxRank", maxRank );
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToMaxSigRank",
+                    new Gson().toJson( dateToMaxSigRank ) );
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_insignificantCheck", insignificantCheck );
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_outsideTopNCheck", outsideTopNCheck );
+            // if ( topN != null ) {
+            // if ( insigCheck ) {
+            // RequestContext.getCurrentInstance().addCallbackParam(
+            // "hc_breakAt",
+            // new Gson().toJson( Arrays.asList( Arrays.asList( topN + 1, maxRank + 1, 3 ),
+            // Arrays.asList( maxRank + 2, m, 0 ) ) ) );
+            // } else {
+            // RequestContext.getCurrentInstance().addCallbackParam( "hc_breakAt",
+            // new Gson().toJson( Arrays.asList( Arrays.asList( topN + 1, maxRank + 1, 3 ) ) ) );
+            // }
+            // }
+
         }
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
@@ -395,9 +460,7 @@ public class EnrichmentView implements Serializable {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_threshold", pThreshold );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
 
-        if ( breakAt != null ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_breakAt", 2 * breakAt );
-        }
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToEdition", new Gson().toJson( dateToEdition ) );
 
         if ( cv.getSeries().size() == 1 ) {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_errors", cv );
@@ -410,6 +473,8 @@ public class EnrichmentView implements Serializable {
         Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> data = filter( selectedTerms );
 
         createChart( selectedTerms, data, enrichmentChartTopN );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_topN", enrichmentChartTopN );
 
     }
 
@@ -463,48 +528,86 @@ public class EnrichmentView implements Serializable {
 
     }
 
-    public List<String> complete( String query ) {
-        if ( StringUtils.isEmpty( query.trim() ) || currentSpeciesId == null ) {
-            return new ArrayList<String>();
-        }
-        return this.cache.complete( query, currentSpeciesId, MAX_RESULTS );
-    }
+    public void fetchTermInformation() {
+        String termId = FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "termId" );
+        Integer edition = Integer.valueOf( FacesContext.getCurrentInstance().getExternalContext()
+                .getRequestParameterMap().get( "edition" ) );
 
-    public List<String> completeId( String query ) {
-        if ( query == null ) return new ArrayList<String>();
+        Edition ed = cache.getEdition( currentSpeciesId, edition );
+        selectedEdition = ed;
 
-        String queryUpper = query.toUpperCase();
+        Map<GeneOntologyTerm, EnrichmentResult> a = enrichmentResults.get( ed );
+        if ( a != null ) {
+            for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : a.entrySet() ) {
+                GeneOntologyTerm term = termEntry.getKey();
 
-        Collection<String> exact = new HashSet<String>();
-        Collection<String> possible = new HashSet<String>();
-        for ( GeneOntologyTerm term : analysis.getTermsSignificantInAnyEdition() ) {
-            if ( queryUpper.equals( term.getGoId().toUpperCase() ) ) {
-                exact.add( term.getGoId() );
-                continue;
+                if ( term.getGoId().equals( termId ) ) {
+                    EnrichmentResult er = termEntry.getValue();
+                    selectedTerm = term;
+                    selectedEnrichmentResult = er;
+                    if ( enrichmentChartMeasureScale.equals( "pvalue" ) ) {
+                        // selectedValue = er.getPvalue();
+                        selectedValueName = null;
+                    } else {
+                        // selectedValue = er.getRank();
+                        int value = Integer.valueOf( FacesContext.getCurrentInstance().getExternalContext()
+                                .getRequestParameterMap().get( "value" ) );
+                        selectedValueName = "Relative Rank";
+                        selectedValue = value;
+                    }
+                    // RequestContext.getCurrentInstance().addCallbackParam( "term", new Gson().toJson( term ) );
+                    // RequestContext.getCurrentInstance().addCallbackParam( "result", new Gson().toJson( er ) );
+                    return;
+                }
             }
 
-            String pattern = "(.*)" + queryUpper + "(.*)";
-            // Pattern r = Pattern.compile(pattern);
-            String m = term.getGoId().toUpperCase();
-            // Matcher m = r.matcher( term.getTerm() );
-            if ( m.matches( pattern ) ) {
-                possible.add( term.getGoId() );
-                continue;
-            }
+            selectedTerm = null;
 
         }
 
-        List<String> orderedResults = new ArrayList<>();
-
-        orderedResults.addAll( exact );
-
-        ArrayList<String> p = new ArrayList<String>( possible );
-        Collections.sort( p, new LevenshteinComparator( query ) );
-
-        orderedResults.addAll( p );
-        return orderedResults;
-
     }
+
+    // Enrichment Table ---------------------------------------------------------------------------------------
+
+    @SuppressWarnings("unused")
+    public void loadEnrichmentTableData() {
+        filteredEnrichmentTableValues = null;
+        enrichmentTableValues = new ArrayList<>();
+        Edition ed = enrichmentTableAllEditions.get( enrichmentTableEdition );
+        if ( ed != null ) {
+
+            // If this edition of terms has not been lazy loaded then lazy load their term info.
+
+            if ( LAZY_LOADING
+                    && geneOntologyDAO.loadTermInfo( ed.getGoEditionId(), enrichmentResults.get( ed ).keySet() ) ) {
+                log.info( "Lazy loading Term Info for Edition: (" + ed + ")." );
+            }
+
+            Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
+            for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
+                GeneOntologyTerm term = termEntry.getKey();
+                EnrichmentResult er = termEntry.getValue();
+                enrichmentTableValues.add( new EnrichmentTableValues( ed, term, er ) );
+            }
+            Collections.sort( enrichmentTableValues );
+
+        }
+    }
+
+    public boolean filterByNumberLT( Object value, Object filter, Locale locale ) {
+        String filterText = ( filter == null ) ? null : filter.toString().trim();
+        if ( filterText == null || filterText.equals( "" ) ) {
+            return true;
+        }
+
+        if ( value == null ) {
+            return false;
+        }
+
+        return Double.compare( ( ( Number ) value ).doubleValue(), Double.valueOf( filterText ) ) < 0;
+    }
+
+    // Gene List ---------------------------------------------------------------------------------------
 
     public void removeAllGenes( ActionEvent actionEvent ) {
         List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
@@ -587,50 +690,57 @@ public class EnrichmentView implements Serializable {
         addMessage( "Gene (" + geneToRemove.getSymbol() + ") successfully removed.", FacesMessage.SEVERITY_INFO );
     }
 
-    // Enrichment Table ---------------------------------------------------------------------------------------
-
-    @SuppressWarnings("unused")
-    public void loadEnrichmentTableData() {
-        filteredEnrichmentTableValues = null;
-        enrichmentTableValues = new ArrayList<>();
-        Edition ed = enrichmentTableAllEditions.get( enrichmentTableEdition );
-        if ( ed != null ) {
-
-            // If this edition of terms has not been lazy loaded then lazy load their term info.
-
-            if ( LAZY_LOADING
-                    && geneOntologyDAO.loadTermInfo( ed.getGoEditionId(), enrichmentResults.get( ed ).keySet() ) ) {
-                log.info( "Lazy loading Term Info for Edition: (" + ed + ")." );
-            }
-
-            Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
-            for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
-                GeneOntologyTerm term = termEntry.getKey();
-                EnrichmentResult er = termEntry.getValue();
-                enrichmentTableValues.add( new EnrichmentTableValues( ed, term, er ) );
-            }
-            Collections.sort( enrichmentTableValues );
-
-        }
-    }
-
-    public boolean filterByNumberLT( Object value, Object filter, Locale locale ) {
-        String filterText = ( filter == null ) ? null : filter.toString().trim();
-        if ( filterText == null || filterText.equals( "" ) ) {
-            return true;
-        }
-
-        if ( value == null ) {
-            return false;
-        }
-
-        return Double.compare( ( ( Number ) value ).doubleValue(), Double.valueOf( filterText ) ) < 0;
-    }
+    // General ---------------------------------------------------------------------------------------
 
     private void addMessage( String summary, FacesMessage.Severity severity ) {
         FacesMessage message = new FacesMessage( severity, summary, null );
         FacesContext.getCurrentInstance().addMessage( null, message );
     }
+
+    public List<String> complete( String query ) {
+        if ( StringUtils.isEmpty( query.trim() ) || currentSpeciesId == null ) {
+            return new ArrayList<String>();
+        }
+        return this.cache.complete( query, currentSpeciesId, MAX_RESULTS );
+    }
+
+    public List<String> completeId( String query ) {
+        if ( query == null ) return new ArrayList<String>();
+
+        String queryUpper = query.toUpperCase();
+
+        Collection<String> exact = new HashSet<String>();
+        Collection<String> possible = new HashSet<String>();
+        for ( GeneOntologyTerm term : analysis.getTermsSignificantInAnyEdition() ) {
+            if ( queryUpper.equals( term.getGoId().toUpperCase() ) ) {
+                exact.add( term.getGoId() );
+                continue;
+            }
+
+            String pattern = "(.*)" + queryUpper + "(.*)";
+            // Pattern r = Pattern.compile(pattern);
+            String m = term.getGoId().toUpperCase();
+            // Matcher m = r.matcher( term.getTerm() );
+            if ( m.matches( pattern ) ) {
+                possible.add( term.getGoId() );
+                continue;
+            }
+
+        }
+
+        List<String> orderedResults = new ArrayList<>();
+
+        orderedResults.addAll( exact );
+
+        ArrayList<String> p = new ArrayList<String>( possible );
+        Collections.sort( p, new LevenshteinComparator( query ) );
+
+        orderedResults.addAll( p );
+        return orderedResults;
+
+    }
+
+    // Getters / Setters ---------------------------------------------------------------------------------------
 
     public boolean isEnrichmentSuccess() {
         return enrichmentSuccess;
@@ -767,6 +877,26 @@ public class EnrichmentView implements Serializable {
 
     public void setEnrichmentChartTopN( int enrichmentChartTopN ) {
         this.enrichmentChartTopN = enrichmentChartTopN;
+    }
+
+    public Edition getSelectedEdition() {
+        return selectedEdition;
+    }
+
+    public GeneOntologyTerm getSelectedTerm() {
+        return selectedTerm;
+    }
+
+    public Number getSelectedValue() {
+        return selectedValue;
+    }
+
+    public String getSelectedValueName() {
+        return selectedValueName;
+    }
+
+    public EnrichmentResult getSelectedEnrichmentResult() {
+        return selectedEnrichmentResult;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

@@ -26,9 +26,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.annotation.PostConstruct;
@@ -52,8 +54,6 @@ import ubc.pavlab.gotrack.model.StatsEntry;
 import ubc.pavlab.gotrack.model.go.GeneOntology;
 import ubc.pavlab.gotrack.model.go.Relationship;
 import ubc.pavlab.gotrack.model.go.Term;
-
-import com.google.common.collect.Iterables;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -84,7 +84,7 @@ public class Cache implements Serializable {
 
     private List<Species> speciesList;
     private Map<Integer, Edition> currentEditions = new HashMap<>();
-    private Map<Integer, List<Edition>> allEditions = new HashMap<>();
+    private Map<Integer, Map<Integer, Edition>> allEditions = new HashMap<>();
     private Map<Integer, Map<String, Gene>> speciesToCurrentGenes = new HashMap<>();
 
     private Map<Integer, Map<Edition, StatsEntry>> aggregates = new HashMap<>();
@@ -212,16 +212,26 @@ public class Cache implements Serializable {
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        allEditions = cacheDAO.getAllEditions();
-        log.debug( "All Editions Size: " + allEditions.size() );
+        for ( Entry<Integer, List<Edition>> speciesEntry : cacheDAO.getAllEditions().entrySet() ) {
+            Integer species = speciesEntry.getKey();
 
-        for ( Integer species : allEditions.keySet() ) {
-            List<Edition> l = allEditions.get( species );
+            Map<Integer, Edition> eds = new HashMap<>();
+            allEditions.put( species, eds );
+
+            List<Edition> l = speciesEntry.getValue();
             Collections.sort( l );
-            Edition ed = Iterables.getLast( l, null );
-            log.debug( "Current edition for species_id (" + species + "): " + ed );
-            currentEditions.put( species, ed );
+            for ( Iterator<Edition> iterator = l.iterator(); iterator.hasNext(); ) {
+                Edition ed = iterator.next();
+                eds.put( ed.getEdition(), ed );
+                if ( !iterator.hasNext() ) {
+                    currentEditions.put( species, ed );
+                    log.debug( "Current edition for species_id (" + species + "): " + ed );
+                }
+            }
+
         }
+
+        log.debug( "All Editions Size: " + allEditions.size() );
 
         speciesToCurrentGenes = cacheDAO.getCurrentGenes();
         log.info( "Done loading current genes..." );
@@ -316,10 +326,22 @@ public class Cache implements Serializable {
         return currentEditions.get( speciesId );
     }
 
-    public List<Edition> getAllEditions( Integer speciesId ) {
-        List<Edition> tmp = allEditions.get( speciesId );
+    public Collection<Edition> getAllEditions( Integer speciesId ) {
+        Map<Integer, Edition> tmp = allEditions.get( speciesId );
         if ( tmp != null ) {
-            return Collections.unmodifiableList( tmp );
+            return Collections.unmodifiableCollection( tmp.values() );
+        } else {
+            return null;
+        }
+    }
+
+    public Edition getEdition( Integer speciesId, Integer edition ) {
+        if ( speciesId == null || edition == null ) {
+            return null;
+        }
+        Map<Integer, Edition> tmp = allEditions.get( speciesId );
+        if ( tmp != null ) {
+            return tmp.get( edition );
         } else {
             return null;
         }

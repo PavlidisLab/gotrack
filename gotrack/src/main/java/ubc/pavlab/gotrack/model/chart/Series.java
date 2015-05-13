@@ -19,15 +19,14 @@
 
 package ubc.pavlab.gotrack.model.chart;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Collections;
+import java.util.List;
 
 /**
- * TODO Document Me
+ * Represents a series in a chart, all methods that return the underlying data should make sure it is sorted first.
  * 
  * @author mjacobson
  * @version $Id$
@@ -35,8 +34,9 @@ import java.util.Map.Entry;
 public class Series {
 
     private String name;
-    private String description;
-    private Collection<Point> data = new ArrayList<>();
+    private Object extra;
+    private List<Point> data = new ArrayList<>();
+    private boolean sorted = true;
 
     public Series( String name ) {
         super();
@@ -44,21 +44,17 @@ public class Series {
     }
 
     public boolean addDataPoint( long x, Number y ) {
+        this.sorted = false;
         return this.data.add( new Point( x, y ) );
     }
 
-    public void addDataPoint( Map<String, Number> vals ) {
-        Collection<Point> ps = new ArrayList<>();
-        for ( Entry<String, Number> entry : vals.entrySet() ) {
-            SimpleDateFormat sdf = new SimpleDateFormat( "yyyy-MM-dd" );
-            try {
-                long timeInMillisSinceEpoch = sdf.parse( entry.getKey() ).getTime();
-                ps.add( new Point( timeInMillisSinceEpoch, entry.getValue() ) );
-            } catch ( ParseException e ) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-        }
+    public boolean addDataPoint( Date d, Number y ) {
+        this.sorted = false;
+        return this.data.add( new Point( d, y ) );
+    }
+
+    public void addDataPoint( List<Point> ps ) {
+        this.sorted = false;
         this.data.addAll( ps );
     }
 
@@ -71,19 +67,41 @@ public class Series {
     }
 
     public Collection<Point> getData() {
+        if ( !this.sorted ) {
+            Collections.sort( data );
+            this.sorted = true;
+        }
         return data;
     }
 
     public void setData( Collection<Point> data ) {
-        this.data = data;
+        this.sorted = false;
+        this.data = new ArrayList<>( data );
     }
 
-    public String getDescription() {
-        return description;
+    public Object getExtra() {
+        return extra;
     }
 
-    public void setDescription( String description ) {
-        this.description = description;
+    public void setExtra( Object extra ) {
+        this.extra = extra;
+    }
+
+    public Number maxY() {
+        // This does not cover the case where Number is a very large BigDecimal or BigInteger that cannot be expressed
+        // as a double. To cover these cases you'd need to do instanceOf checks too.
+        if ( data.size() > 0 ) {
+            Number max = data.iterator().next().getY();
+            for ( Point point : data ) {
+                Number y = point.getY();
+                if ( y.doubleValue() > max.doubleValue() ) {
+                    max = y;
+                }
+            }
+            return max;
+        } else {
+            return null;
+        }
     }
 
     @Override

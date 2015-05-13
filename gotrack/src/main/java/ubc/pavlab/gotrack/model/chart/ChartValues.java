@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model.chart;
 
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -37,9 +37,13 @@ public class ChartValues {
         super();
     }
 
-    public Series addSeries( String name, Map<String, Number> vals ) {
+    public boolean addSeries( Series s ) {
+        return series.add( s );
+    }
+
+    public Series addSeries( String name, List<Point> ps ) {
         Series s = new Series( name );
-        s.addDataPoint( vals );
+        s.addDataPoint( ps );
         series.add( s );
         return s;
     }

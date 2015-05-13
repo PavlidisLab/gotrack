@@ -120,7 +120,7 @@ public class TrackView {
     // View static data
     private Gene currentGene;
     private Edition currentEdition;
-    private List<Edition> allEditions = new ArrayList<>();
+    private Collection<Edition> allEditions = new ArrayList<>();
     private Map<GeneOntologyTerm, Set<EvidenceReference>> allAnnotations = new HashMap<>();
 
     // All charts
