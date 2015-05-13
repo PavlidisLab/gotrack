@@ -471,6 +471,7 @@ function handleGraphSelected(xhr, status, args) {
                        reversed: true,
                        lineColor: 'black',
                        lineWidth: 2,
+                       gridLineWidth : 0,
                        offset: 10,
                        tickInterval:1,
                        min:0,

@@ -78,8 +78,8 @@
 				</p>
 			</p:layoutUnit>
 
-			<p:layoutUnit id="left" position="west" size="275" resizable="true"
-				collapsible="true" header="Options" minSize="275">
+			<p:layoutUnit id="left" position="west" size="325" resizable="true"
+				collapsible="true" header="Options" minSize="325">
 				<h:form id="formSelect">
 				
 					<h3 class="center">Global Settings</h3>
@@ -119,30 +119,71 @@
 					
 				<p:separator style="max-width:200px" />
 					<h3 class="center">Enrichment Settings</h3>
-					<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
+					<p:panelGrid id = "enrichmentSettingsPanel" style="margin-bottom:10px" cellpadding="5" styleClass="no-border">
+					
+						<p:row>
+						<p:column>
 						<i class="fa fa-info-circle"
-							title="Apply Bonferroni multiple tests correction?">&nbsp;
-							Bonferroni:</i>
-						<p:inputSwitch value="#{enrichmentView.bonferroniCorrection}" />
-
+							title="Type of multiple tests correction to apply.">&nbsp;
+							Multiple Tests:</i>
+						</p:column>
+						<p:column>
+						<p:selectOneMenu value="#{enrichmentView.multipleTestCorrection}">
+							<p:ajax event="change" update=":formSelect:enrichmentSettingsPanel"/>
+							<f:selectItems value="#{cache.multipleTestCorrections}" var="test"
+							    itemValue="#{test}" itemLabel="#{test.label}" />
+						</p:selectOneMenu>
+						</p:column>
+						</p:row>
+						
+						<p:row rendered="#{enrichmentView.multipleTestCorrection == 'BONFERRONI'}">
+						<p:column>
 						<i class="fa fa-info-circle"
-							title="Select only those terms who are currently below this threshold">&nbsp;
+							title="Select only those terms who have ever been below this threshold">&nbsp;
 							P-value threshold:</i>
-						<pe:inputNumber id="pThresholdInput"
+						</p:column>
+						<p:column>
+						<pe:inputNumber value="#{enrichmentView.pThreshold}" emptyValue="zero"
+							decimalPlaces="4" style="max-width: 100px" />
+						</p:column>
+						</p:row>
+						
+						<p:row rendered="#{enrichmentView.multipleTestCorrection == 'BH'}">
+						<p:column>
+						<i class="fa fa-info-circle"
+							title="Control the FDR at this level">&nbsp;
+							FDR level:</i>
+						</p:column>
+						<p:column>
+						<pe:inputNumber
 							value="#{enrichmentView.pThreshold}" emptyValue="zero"
 							decimalPlaces="4" style="max-width: 100px" />
-							
+						</p:column>
+						</p:row>
+						
+						<p:row>
+						<p:column>						
 						<i class="fa fa-info-circle"
 							title="Select only those terms with at least this number of genes associated with them">&nbsp;
 							Geneset size min:</i>
+						</p:column>
+						<p:column>
 						<p:spinner id="annotatedPopulationMinInput" value="#{enrichmentView.minAnnotatedPopulation}" min="0"/>
+						</p:column>
+						</p:row>
 						
+						<p:row>
+						<p:column>					
 						<i class="fa fa-info-circle"
 							title="Select only those terms with at most this number of genes associated with them (0 for disabled)">&nbsp;
 							Geneset size max:</i>
+						</p:column>
+						<p:column>
 						<p:spinner id="annotatedPopulationMaxInput" value="#{enrichmentView.maxAnnotatedPopulation}" min="0"/>
-
-					</h:panelGrid>
+						</p:column>
+						</p:row>
+						
+					</p:panelGrid>
 					<p:separator style="max-width:200px; height:5px;" />
 					<div align="center" style="margin-top: 20px;">
 						<p:commandButton value="Run Enrichment"
@@ -185,7 +226,7 @@
 										style="margin-bottom:0"
 										emptyMessage="No enrichment data found for selected edition"
 										filteredValue="#{enrichmentView.filteredEnrichmentTableValues}"
-										rowStyleClass="#{entry.result.pvalue ge enrichmentView.pThreshold ? 'not-significant' : 'significant'}"
+										rowStyleClass="#{entry.significant == true ? 'significant' : 'not-significant'}"
 										styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
 										paginatorTemplate="{Graph} {CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {Exporters}"
                  						paginator="true" paginatorPosition="bottom" rows="20"

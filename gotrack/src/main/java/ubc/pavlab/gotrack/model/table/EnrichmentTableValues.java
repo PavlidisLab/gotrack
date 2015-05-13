@@ -35,12 +35,14 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
     private final Edition edition;
     private final GeneOntologyTerm term;
     private final EnrichmentResult result;
+    private final boolean significant;
 
-    public EnrichmentTableValues( Edition edition, GeneOntologyTerm term, EnrichmentResult result ) {
+    public EnrichmentTableValues( Edition edition, GeneOntologyTerm term, EnrichmentResult result, boolean significant ) {
         super();
         this.edition = edition;
         this.term = term;
         this.result = result;
+        this.significant = significant;
         // this.rowKey = edition.getEdition().toString() + term.getGoId();
     }
 
@@ -54,6 +56,10 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
 
     public EnrichmentResult getResult() {
         return result;
+    }
+
+    public boolean isSignificant() {
+        return significant;
     }
 
     @Override

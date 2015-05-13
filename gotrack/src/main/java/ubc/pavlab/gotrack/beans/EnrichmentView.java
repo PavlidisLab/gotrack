@@ -48,6 +48,7 @@ import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
+import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.dao.GeneOntologyDAO;
@@ -99,7 +100,15 @@ public class EnrichmentView implements Serializable {
 
     // View parameters
     private String query;
-    private String bulkQuery = "MAOA DDC VTI1B   MAOB    STX12   COMT    SNAP25  SNAP23  SLC6A20 SLC6A2  TH  SLC6A3  SNAP29  PNMT    STX7    SLC18A1 VAMP1   SLC6A18 SLC6A19 SLC18A2 VAMP2   SLC6A15 SLC6A16 SLC6A17 DBH";
+    // Liver Cancer
+    // ACAA1 ACADS ADH1B ADH4 ADRA1A APOF C6 C8A C8B C9orf103 CD4 CETN2 CIDEB COLEC10 CYP2C18 CYP2C19 CYP2C8 CYP2E1
+    // CYP4A11 DMGDH DNASE1L3 ETS2 FAM20C FCN1 FETUB GBA3 HPX IGFALS ITIH4 LCAT LDHD LOC401022 LPA NDRG2 PEMT PLG PPAP2B
+    // RCAN1 RSPO3 RXRB SLC22A1 SLC22A3 SLC28A1 SLCO1B3 TMED8 TMEM27 TTC36 TTR UROC1
+
+    // Adrenaline and noradrenaline biosynthesis
+    // MAOA DDC VTI1B MAOB STX12 COMT SNAP25 SNAP23 SLC6A20 SLC6A2 TH SLC6A3 SNAP29 PNMT STX7 SLC18A1 VAMP1 SLC6A18
+    // SLC6A19 SLC18A2 VAMP2 SLC6A15 SLC6A16 SLC6A17 DBH
+    private String bulkQuery = "ACAA1 ACADS ADH1B ADH4 ADRA1A APOF C6 C8A C8B C9orf103 CD4 CETN2 CIDEB COLEC10 CYP2C18 CYP2C19 CYP2C8 CYP2E1 CYP4A11 DMGDH DNASE1L3 ETS2 FAM20C FCN1 FETUB GBA3 HPX IGFALS ITIH4 LCAT LDHD LOC401022 LPA NDRG2 PEMT PLG PPAP2B RCAN1 RSPO3 RXRB SLC22A1 SLC22A3 SLC28A1 SLCO1B3 TMED8 TMEM27 TTC36 TTR UROC1";
 
     private Map<Integer, List<Gene>> speciesToSelectedGenes = new HashMap<>();
     private Gene geneToRemove;
@@ -109,8 +118,9 @@ public class EnrichmentView implements Serializable {
     private Integer currentSpeciesId = 7;
     private int minAnnotatedPopulation = 5;
     private int maxAnnotatedPopulation = 200;
-    private boolean bonferroniCorrection = true;
+    private MultipleTestCorrection multipleTestCorrection = MultipleTestCorrection.BH;
     private double pThreshold = 0.05;
+    private double fdr = 0.05;
 
     // Enrichment Data
     private EnrichmentAnalysis analysis;
@@ -268,9 +278,9 @@ public class EnrichmentView implements Serializable {
         Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
 
         log.info( "Running enrichment analysis" );
+        double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
         analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, minAnnotatedPopulation, maxAnnotatedPopulation,
-                bonferroniCorrection, cache, currentSpeciesId );
-        analysis.applyThreshold( pThreshold );
+                multipleTestCorrection, thresh, cache, currentSpeciesId );
 
         enrichmentResults = analysis.getResults();
         enrichmentResultsStrict = analysis.getSignificantResults();
@@ -583,11 +593,12 @@ public class EnrichmentView implements Serializable {
                 log.info( "Lazy loading Term Info for Edition: (" + ed + ")." );
             }
 
+            Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant().get( ed );
             Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
             for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
                 EnrichmentResult er = termEntry.getValue();
-                enrichmentTableValues.add( new EnrichmentTableValues( ed, term, er ) );
+                enrichmentTableValues.add( new EnrichmentTableValues( ed, term, er, sigTerms.contains( term ) ) );
             }
             Collections.sort( enrichmentTableValues );
 
@@ -746,12 +757,12 @@ public class EnrichmentView implements Serializable {
         return enrichmentSuccess;
     }
 
-    public boolean isBonferroniCorrection() {
-        return bonferroniCorrection;
+    public MultipleTestCorrection getMultipleTestCorrection() {
+        return multipleTestCorrection;
     }
 
-    public void setBonferroniCorrection( boolean bonferroniCorrection ) {
-        this.bonferroniCorrection = bonferroniCorrection;
+    public void setMultipleTestCorrection( MultipleTestCorrection multipleTestCorrection ) {
+        this.multipleTestCorrection = multipleTestCorrection;
     }
 
     public double getpThreshold() {
@@ -760,6 +771,14 @@ public class EnrichmentView implements Serializable {
 
     public void setpThreshold( double pThreshold ) {
         this.pThreshold = pThreshold;
+    }
+
+    public double getFdr() {
+        return fdr;
+    }
+
+    public void setFdr( double fdr ) {
+        this.fdr = fdr;
     }
 
     public Integer getCurrentSpeciesId() {
