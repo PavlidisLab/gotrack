@@ -184,6 +184,26 @@
 						</p:row>
 						
 					</p:panelGrid>
+					
+					<p:separator style="max-width:200px" />
+					<h3 class="center">Similarity Settings</h3>
+					<p:panelGrid style="margin-bottom:10px" cellpadding="5" styleClass="no-border">
+					
+						<p:row>
+						<p:column>
+						<i class="fa fa-info-circle"
+							title="Compare analysis results to previous edition (PROXIMAL) or current edition (CURRENT) ">&nbsp;
+							Similarity Between:</i>
+						</p:column>
+						<p:column>
+						<p:selectOneMenu value="#{enrichmentView.similarityCompareMethod}">
+							<f:selectItems value="#{cache.similarityCompareMethods}" var="method"
+							    itemValue="#{method}" itemLabel="#{method.label}" />
+						</p:selectOneMenu>
+						</p:column>
+						</p:row>
+					</p:panelGrid>
+					
 					<p:separator style="max-width:200px; height:5px;" />
 					<div align="center" style="margin-top: 20px;">
 						<p:commandButton value="Run Enrichment"
@@ -213,7 +233,7 @@
 						<p:tab title="Overview">
 							
 							<h:form>
-							    <p:progressBar widgetVar="enrichmentProgressBarWdg" interval="1" ajax="true" value="#{enrichmentView.enrichmentProgress}" 
+							    <p:progressBar widgetVar="enrichmentProgressBarWdg" interval="500" ajax="true" value="#{enrichmentView.enrichmentProgress}" 
 							    				labelTemplate="{value}%" styleClass="animated" global="false" style="width:300px;margin-top:25px;margin-bottom:50px;"/>
 								
 								<p:outputPanel autoUpdate="true">

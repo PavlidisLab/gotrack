@@ -50,6 +50,7 @@ import org.primefaces.context.RequestContext;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
+import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.analysis.StabilityScore;
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
@@ -134,6 +135,7 @@ public class EnrichmentView implements Serializable {
 
     // Stability Settings
     private static final int TOP_N_JACCARD = 5;
+    private SimilarityCompareMethod similarityCompareMethod = SimilarityCompareMethod.PROXIMAL;
 
     // Stability Data
     private Map<Edition, StabilityScore> stabilityScores = new HashMap<>();
@@ -316,7 +318,8 @@ public class EnrichmentView implements Serializable {
         status = "Running Stability Analyses on all editions...";
         enrichmentStatus.add( status );
         enrichmentProgress = 80;
-        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( enrichmentResultsStrict, geneGOMap, TOP_N_JACCARD );
+        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( enrichmentResultsStrict, geneGOMap, TOP_N_JACCARD,
+                similarityCompareMethod );
         stabilityScores = stabilityAnalysis.getStabilityScores();
         enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
@@ -354,7 +357,12 @@ public class EnrichmentView implements Serializable {
         cv.addSeries( topGeneJaccard );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Similarity" );
+        RequestContext.getCurrentInstance()
+                .addCallbackParam(
+                        "hc_title",
+                        "Enrichment Similarity to "
+                                + ( similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous"
+                                        : "Current" ) + " Edition" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Index" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
 
@@ -996,6 +1004,14 @@ public class EnrichmentView implements Serializable {
 
     public int getEnrichmentProgress() {
         return enrichmentProgress;
+    }
+
+    public SimilarityCompareMethod getSimilarityCompareMethod() {
+        return similarityCompareMethod;
+    }
+
+    public void setSimilarityCompareMethod( SimilarityCompareMethod similarityCompareMethod ) {
+        this.similarityCompareMethod = similarityCompareMethod;
     }
 
     public EnrichmentAnalysis getAnalysis() {

@@ -49,8 +49,14 @@ public class StabilityAnalysis {
 
     private final Map<Edition, StabilityScore> stabilityScores;
 
+    /**
+     * @param enrichmentResults results of enrichment analysis
+     * @param geneGOMap raw data in order to get gene sets
+     * @param TOP_N_JACCARD number of top terms to use for top N series
+     * @param proximal true if comparing to previous edition, false if comparing to current edition
+     */
     public StabilityAnalysis( Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults,
-            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap, int TOP_N_JACCARD ) {
+            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap, int TOP_N_JACCARD, SimilarityCompareMethod scm ) {
         Map<Edition, StabilityScore> stabilityScores = new LinkedHashMap<>();
 
         List<Edition> orderedEditions = new ArrayList<>( enrichmentResults.keySet() );
@@ -66,8 +72,9 @@ public class StabilityAnalysis {
         }
 
         // completeTermJaccard
-
+        LinkedHashMap<GeneOntologyTerm, Set<Gene>> previousSortedTermsMap = null;
         for ( Edition ed : orderedEditions ) {
+
             LinkedHashSet<GeneOntologyTerm> sortedTerms = getSortedKeySetByValue( enrichmentResults.get( ed ) );
 
             LinkedHashMap<GeneOntologyTerm, Set<Gene>> sortedTermsMap = new LinkedHashMap<>();
@@ -76,7 +83,16 @@ public class StabilityAnalysis {
                 sortedTermsMap.put( term, geneGOMap.get( ed ).get( term ) );
             }
 
-            stabilityScores.put( ed, new StabilityScore( sortedTermsMap, currentSortedTermsMap, TOP_N_JACCARD ) );
+            if ( scm.equals( SimilarityCompareMethod.CURRENT ) ) {
+                previousSortedTermsMap = currentSortedTermsMap;
+            } else if ( previousSortedTermsMap == null ) {
+                previousSortedTermsMap = sortedTermsMap;
+            }
+
+            stabilityScores.put( ed, new StabilityScore( sortedTermsMap, previousSortedTermsMap, TOP_N_JACCARD ) );
+
+            previousSortedTermsMap = sortedTermsMap;
+
         }
 
         this.stabilityScores = Collections.unmodifiableMap( stabilityScores );

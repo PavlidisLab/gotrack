@@ -240,7 +240,7 @@ function handleEnrichmentComplete(xhr, status, args) {
                      headerFormat: '<b>{series.name}</b><br />',
                      pointFormat: 'x = {point.x}, y = {point.y}',
                      formatter:function(){
-                        return '<b>'+this.series.name+'</b><br />' + new Date(this.x).toLocaleDateString() + "<br> score: " + this.y;
+                        return '<b>'+this.series.name+'</b><br />' + new Date(this.x).toLocaleDateString() + "<br> index: " + this.y;
                      }
                   },
                   legend : {
