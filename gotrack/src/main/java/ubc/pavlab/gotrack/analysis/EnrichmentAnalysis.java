@@ -34,7 +34,6 @@ import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.EnrichmentResult;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 

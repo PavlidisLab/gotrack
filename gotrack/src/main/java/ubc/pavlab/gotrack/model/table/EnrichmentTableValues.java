@@ -19,8 +19,8 @@
 
 package ubc.pavlab.gotrack.model.table;
 
+import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.EnrichmentResult;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 
 /**

@@ -17,7 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.analysis;
 
 import org.apache.commons.math3.distribution.HypergeometricDistribution;
 

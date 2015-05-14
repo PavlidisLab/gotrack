@@ -48,15 +48,15 @@ import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
+import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
+import ubc.pavlab.gotrack.analysis.StabilityScore;
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.dao.GeneOntologyDAO;
 import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.EnrichmentResult;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.StabilityScore;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;

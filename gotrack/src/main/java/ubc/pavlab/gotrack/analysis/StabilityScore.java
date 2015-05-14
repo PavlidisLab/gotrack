@@ -17,7 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.analysis;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -26,6 +26,8 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**

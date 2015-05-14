@@ -30,10 +30,8 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.EnrichmentResult;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.StabilityScore;
 
 import com.google.common.collect.Iterables;
 
