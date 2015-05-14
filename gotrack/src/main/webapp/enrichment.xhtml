@@ -266,12 +266,12 @@
 								</p:panelGrid>
 							</h:form>
 						</p:tab>
-						<p:tab title="Stability" rendered="#{enrichmentView.enrichmentSuccess}">
-							<p:outputPanel id="stabilityChartPanel">
-								<div id="hc_stability_container" style="width:100%; height:600px;"></div>
+						<p:tab title="Similarity" rendered="#{enrichmentView.enrichmentSuccess}">
+							<p:outputPanel id="similarityChartPanel">
+								<div id="hc_similarity_container" style="width:100%; height:600px;"></div>
 					
-								<p:remoteCommand oncomplete="PF('itemSelectStabilityDlg').show();"
-									update=":termDetail" name="openitemSelectStabilityDlg" />
+								<p:remoteCommand oncomplete="PF('itemSelectSimilarityDlg').show();"
+									update=":termDetail" name="openitemSelectSimilarityDlg" />
 							</p:outputPanel>
 						</p:tab>
 						<p:tab title="Enrichment" rendered="#{enrichmentView.enrichmentSuccess}">

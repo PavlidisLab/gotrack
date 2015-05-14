@@ -22,7 +22,7 @@ var showLoadingSpinner = function() {
 function centerResize() {
    //updateCenterPanel();
    try {
-      PrimeFaces.widgets.stabilityChartWdg.plot.replot( {resetAxes:true} );
+      PrimeFaces.widgets.similarityChartWdg.plot.replot( {resetAxes:true} );
    } catch (e) {
 
    }
@@ -74,7 +74,7 @@ function tabChanged(index)
 function tabShowed(index)
 {
    if (index==1) {
-      HC.charts.stability.resize();
+      HC.charts.similarity.resize();
    }
 
 }
@@ -145,7 +145,7 @@ function handleEnrichmentComplete(xhr, status, args) {
 
    var options = {
                   chart: {
-                     renderTo: 'hc_stability_container',
+                     renderTo: 'hc_similarity_container',
                      zoomType: 'x',
                      resetZoomButton: {
                         position: {
@@ -278,8 +278,8 @@ function handleEnrichmentComplete(xhr, status, args) {
 
    }
 
-   HC.charts.stability.options = options;
-   HC.charts.stability.recreate(options);
+   HC.charts.similarity.options = options;
+   HC.charts.similarity.recreate(options);
 
 }
 
@@ -741,7 +741,7 @@ $(document).ready(function() {
          }
    }
 
-   HC.createNewChart( 'stability' );
+   HC.createNewChart( 'similarity' );
    HC.createNewChart( 'enrichment' );
    HC.createNewChart( 'enrichmentMaster' );
 

@@ -334,7 +334,7 @@ public class EnrichmentView implements Serializable {
 
         createTables();
 
-        // Create Stability Chart
+        // Create Similarity Chart
         ChartValues cv = new ChartValues();
 
         Series completeTermJaccard = new Series( "All Terms" );
@@ -354,8 +354,8 @@ public class EnrichmentView implements Serializable {
         cv.addSeries( topGeneJaccard );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Stability" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Score" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Similarity" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Index" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
 
         enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
