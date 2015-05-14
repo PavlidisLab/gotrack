@@ -51,6 +51,10 @@ public class EnrichmentAnalysis {
     private final int currentSpeciesId;
     private final int minAnnotatedPopulation;
     private final int maxAnnotatedPopulation;
+    private final int totalEditions;
+    private final int totalGenes;
+    private final int totalTerms;
+    private final int totalResults;
 
     private Double threshold = null;
 
@@ -83,6 +87,10 @@ public class EnrichmentAnalysis {
         this.maxAnnotatedPopulation = max == 0 ? Integer.MAX_VALUE : max;
         this.currentSpeciesId = currentSpeciesId;
         this.threshold = threshold;
+        this.totalEditions = geneGOMap.keySet().size();
+        Set<Gene> totalGenes = new HashSet<>();
+        Set<GeneOntologyTerm> totalTerms = new HashSet<>();
+        int totalResults = 0;
 
         Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> rawResults = new HashMap<>();
         Map<Edition, Set<GeneOntologyTerm>> unmappedTerms = new HashMap<>();
@@ -115,6 +123,10 @@ public class EnrichmentAnalysis {
                     Integer sampleAnnotated = termEntry.getValue().size();
                     resultsInEdition.put( term, new EnrichmentResult( sampleAnnotated, populationAnnotated, sampleSize,
                             populationSize ) );
+
+                    totalResults++;
+                    totalGenes.addAll( termEntry.getValue() );
+                    totalTerms.add( term );
 
                     // Everything starts out significant until we apply a threshold
                     // termsSignificantInAnyEdition.add( term );
@@ -213,7 +225,9 @@ public class EnrichmentAnalysis {
         this.rejectedTerms = Collections.unmodifiableMap( rejectedTerms );
         this.termsSignificantInAnyEdition = Collections.unmodifiableSet( termsSignificantInAnyEdition );
         this.termsSignificant = Collections.unmodifiableMap( termsSignificant );
-
+        this.totalGenes = totalGenes.size();
+        this.totalTerms = totalTerms.size();
+        this.totalResults = totalResults;
     }
 
     /**
@@ -371,6 +385,22 @@ public class EnrichmentAnalysis {
 
         }
         return top;
+    }
+
+    public int getTotalEditions() {
+        return totalEditions;
+    }
+
+    public int getTotalGenes() {
+        return totalGenes;
+    }
+
+    public int getTotalTerms() {
+        return totalTerms;
+    }
+
+    public int getTotalResults() {
+        return totalResults;
     }
 
     public static LinkedHashSet<GeneOntologyTerm> getSortedKeySetByValue( Map<GeneOntologyTerm, EnrichmentResult> data ) {

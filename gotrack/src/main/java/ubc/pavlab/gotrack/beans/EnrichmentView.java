@@ -122,6 +122,10 @@ public class EnrichmentView implements Serializable {
     private double pThreshold = 0.05;
     private double fdr = 0.05;
 
+    // Enrichment Feedback
+    private int enrichmentProgress;
+    private List<String> enrichmentStatus = new ArrayList<>();
+
     // Enrichment Data
     private EnrichmentAnalysis analysis;
     private Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults;
@@ -197,6 +201,9 @@ public class EnrichmentView implements Serializable {
             }
 
             log.info( "retreiving gene data..." );
+            String status = "Retreiving Gene Information from cache...";
+            enrichmentStatus.add( status );
+            enrichmentProgress = 5;
 
             Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = new HashMap<>();
             Set<Gene> genesToLoad = new HashSet<>();
@@ -208,6 +215,11 @@ public class EnrichmentView implements Serializable {
                     genesToLoad.add( gene );
                 }
             }
+            enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+
+            status = "Retreiving Gene Information from database...";
+            enrichmentStatus.add( status );
+            enrichmentProgress = 10;
 
             if ( !genesToLoad.isEmpty() ) {
 
@@ -225,6 +237,7 @@ public class EnrichmentView implements Serializable {
                 log.info( "Retrieved all (" + genes.size() + ") genes from cache" );
 
             }
+            enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
             return geneGOMap;
 
         } else {
@@ -264,6 +277,11 @@ public class EnrichmentView implements Serializable {
     }
 
     public void enrich() {
+        String status = "";
+        enrichmentStatus = new ArrayList<>();
+        status = "Starting Enrichment Analysis";
+        enrichmentStatus.add( status );
+        enrichmentProgress = 0;
         Set<Gene> genes = new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) );
 
         Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, currentSpeciesId );
@@ -275,19 +293,32 @@ public class EnrichmentView implements Serializable {
         }
 
         log.info( "Retrieving sample sizes from db" );
+        status = "Retreiving Sample Sizes from database...";
+        enrichmentStatus.add( status );
+        enrichmentProgress = 50;
         Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
+        enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
         log.info( "Running enrichment analysis" );
+        status = "Running Overrepresentation Analyses on all editions...";
+        enrichmentStatus.add( status );
+        enrichmentProgress = 60;
         double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
         analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, minAnnotatedPopulation, maxAnnotatedPopulation,
                 multipleTestCorrection, thresh, cache, currentSpeciesId );
 
         enrichmentResults = analysis.getResults();
         enrichmentResultsStrict = analysis.getSignificantResults();
+        enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
         log.info( "Running stability analysis" );
+
+        status = "Running Stability Analyses on all editions...";
+        enrichmentStatus.add( status );
+        enrichmentProgress = 80;
         StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( enrichmentResultsStrict, geneGOMap, TOP_N_JACCARD );
         stabilityScores = stabilityAnalysis.getStabilityScores();
+        enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
         if ( !LAZY_LOADING ) {
             log.info( "Loading Term Info for All Editions" );
@@ -296,6 +327,10 @@ public class EnrichmentView implements Serializable {
             }
             log.info( "Loading Complete." );
         }
+
+        status = "Creating tables and charts...";
+        enrichmentStatus.add( status );
+        enrichmentProgress = 90;
 
         createTables();
 
@@ -323,7 +358,11 @@ public class EnrichmentView implements Serializable {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Score" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
 
+        enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+
         enrichmentSuccess = true;
+        enrichmentStatus.add( "Finished" );
+        enrichmentProgress = 100;
 
     }
 
@@ -949,6 +988,18 @@ public class EnrichmentView implements Serializable {
 
     public EnrichmentResult getSelectedEnrichmentResult() {
         return selectedEnrichmentResult;
+    }
+
+    public List<String> getEnrichmentStatus() {
+        return enrichmentStatus;
+    }
+
+    public int getEnrichmentProgress() {
+        return enrichmentProgress;
+    }
+
+    public EnrichmentAnalysis getAnalysis() {
+        return analysis;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

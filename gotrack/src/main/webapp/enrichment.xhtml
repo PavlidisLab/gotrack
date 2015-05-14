@@ -188,7 +188,7 @@
 					<div align="center" style="margin-top: 20px;">
 						<p:commandButton value="Run Enrichment"
 							actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
-							update=":formEnrich, :formSelect"
+							update=":formEnrich, :formSelect" onclick="PF('enrichmentProgressBarWdg').start()"
 							oncomplete="handleEnrichmentComplete(xhr, status, args);PF('tableEnrichmentWdg').filter()" disabled="#{fn:length(enrichmentView.selectedGenes) == 0}"/>
 					</div>
 
@@ -208,10 +208,65 @@
 				
 				<h:form id="formEnrich">
 					<p:remoteCommand name="updateCenterPanel" update=":formEnrich" />
-					<h:outputText value="There's Nothing Here!" rendered="#{!enrichmentView.enrichmentSuccess}" />
-					<p:tabView id="tabEnrich" rendered="#{enrichmentView.enrichmentSuccess}" onTabShow="tabShowed(index)">
+
+					<p:tabView id="tabEnrich" onTabShow="tabShowed(index)">
+						<p:tab title="Overview">
+							
+							<h:form>
+							    <p:progressBar widgetVar="enrichmentProgressBarWdg" interval="1" ajax="true" value="#{enrichmentView.enrichmentProgress}" 
+							    				labelTemplate="{value}%" styleClass="animated" global="false" style="width:300px;margin-top:25px;margin-bottom:50px;"/>
+								
+								<p:outputPanel autoUpdate="true">
+									<ul>
+									<ui:repeat value="#{enrichmentView.enrichmentStatus}" var="msg" >
+									<li style="margin-bottom:10px;">
+									  #{msg}
+									  </li>
+									</ui:repeat>
+									</ul>
+							    </p:outputPanel>
+							    
+							    <p:panelGrid style="margin-bottom:10px;margin-top:50px" cellpadding="5" styleClass="no-border" rendered="#{enrichmentView.enrichmentSuccess}">
 					
-						<p:tab title="Stability">
+									<p:row>
+										<p:column>
+											<h:outputText value="Total Genes Analyzed: " style="font-weight: bold;"/>
+										</p:column>
+										<p:column>
+											<h:outputText value="#{enrichmentView.analysis.totalGenes}"/>
+										</p:column>
+									</p:row>
+									
+									<p:row>
+										<p:column>
+											<h:outputText value="Total Editions Analyzed: " style="font-weight: bold;"/>
+										</p:column>
+										<p:column>
+											<h:outputText value="#{enrichmentView.analysis.totalEditions}"/>
+										</p:column>
+									</p:row>
+									
+									<p:row>
+										<p:column>
+											<h:outputText value="Total Unique GO Terms: " style="font-weight: bold;"/>
+										</p:column>
+										<p:column>
+											<h:outputText value="#{enrichmentView.analysis.totalTerms}"/>
+										</p:column>
+									</p:row>
+									
+									<p:row>
+										<p:column>
+											<h:outputText value="Total Independent Results: " style="font-weight: bold;"/>
+										</p:column>
+										<p:column>
+											<h:outputText value="#{enrichmentView.analysis.totalResults}"/>
+										</p:column>
+									</p:row>
+								</p:panelGrid>
+							</h:form>
+						</p:tab>
+						<p:tab title="Stability" rendered="#{enrichmentView.enrichmentSuccess}">
 							<p:outputPanel id="stabilityChartPanel">
 								<div id="hc_stability_container" style="width:100%; height:600px;"></div>
 					
@@ -219,7 +274,7 @@
 									update=":termDetail" name="openitemSelectStabilityDlg" />
 							</p:outputPanel>
 						</p:tab>
-						<p:tab title="Enrichment">
+						<p:tab title="Enrichment" rendered="#{enrichmentView.enrichmentSuccess}">
 								<p:outputPanel id="tablePanel">
 									<p:dataTable id="tableEnrichment" widgetVar="tableEnrichmentWdg"
 										var="entry" value="#{enrichmentView.enrichmentTableValues}" sortMode="multiple"

@@ -73,7 +73,7 @@ function tabChanged(index)
 }
 function tabShowed(index)
 {
-   if (index==0) {
+   if (index==1) {
       HC.charts.stability.resize();
    }
 
@@ -547,6 +547,18 @@ function handleGraphSelected(xhr, status, args) {
             //console.log(s);
          }
          if (outsideTopNCheck ) {
+            
+            // This loop is to flatten regions that have been erroneously attributed to be significant because
+            // the region of insignificance extended lower (less magnitude) than topN
+            for (var i = 0; i < polygonPoints.length; i++) {
+               var barrierPoint = polygonPoints[i];
+               if ( barrierPoint[1] < topN - 0.5 ) {
+                     console.log(i)
+                  polygonPoints[i][1] = topN - 0.5;
+               }
+               
+            }
+            
             s = {name:"Outside Top " + topN, 
                  type: 'polygon', 
                  data: polygonPoints.slice(), 
