@@ -35,6 +35,7 @@ public class EnrichmentResult {
     private final int sampleSize;
     private final int populationSize;
     private int rank;
+    private double fractionalRank;
 
     public EnrichmentResult( double pvalue, int sampleAnnotated, int populationAnnotated, int sampleSize,
             int populationSize ) {
@@ -79,6 +80,14 @@ public class EnrichmentResult {
         this.rank = rank;
     }
 
+    public double getFractionalRank() {
+        return fractionalRank;
+    }
+
+    public void setFractionalRank( double fractionalRank ) {
+        this.fractionalRank = fractionalRank;
+    }
+
     public int getSampleAnnotated() {
         return sampleAnnotated;
     }
@@ -93,6 +102,30 @@ public class EnrichmentResult {
 
     public int getPopulationSize() {
         return populationSize;
+    }
+
+    @Override
+    public int hashCode() {
+        final int prime = 31;
+        int result = 1;
+        result = prime * result + populationAnnotated;
+        result = prime * result + populationSize;
+        result = prime * result + sampleAnnotated;
+        result = prime * result + sampleSize;
+        return result;
+    }
+
+    @Override
+    public boolean equals( Object obj ) {
+        if ( this == obj ) return true;
+        if ( obj == null ) return false;
+        if ( getClass() != obj.getClass() ) return false;
+        EnrichmentResult other = ( EnrichmentResult ) obj;
+        if ( populationAnnotated != other.populationAnnotated ) return false;
+        if ( populationSize != other.populationSize ) return false;
+        if ( sampleAnnotated != other.sampleAnnotated ) return false;
+        if ( sampleSize != other.sampleSize ) return false;
+        return true;
     }
 
 }

@@ -93,7 +93,10 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
 
     @Override
     public int compareTo( EnrichmentTableValues o ) {
-        return Double.compare( this.result.getPvalue(), o.getResult().getPvalue() );
+        // sort according to rank, if ranks are the same sort by goId
+        int comparison = Double.compare( this.result.getRank(), o.getResult().getRank() );
+
+        return comparison == 0 ? this.term.compareTo( o.getTerm() ) : comparison;
     }
 
 }

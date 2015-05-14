@@ -26,7 +26,7 @@ package ubc.pavlab.gotrack.model;
  * @author mjacobson
  * @version $Id$
  */
-public class GeneOntologyTerm {
+public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
 
     private final String goId;
     private String name;
@@ -99,6 +99,12 @@ public class GeneOntologyTerm {
 
     public synchronized boolean isObsolete() {
         return obsolete;
+    }
+
+    @Override
+    public int compareTo( GeneOntologyTerm o ) {
+        // TODO Auto-generated method stub
+        return this.getGoId().compareTo( o.getGoId() );
     }
 
 }

@@ -343,10 +343,10 @@
 										        <f:convertNumber type="number" pattern="#.##E0"/>
 										    </h:outputText>
 								        </p:column>
-								        
-								        <p:column filterBy="#{entry.result.rank}" headerText="Rank" sortBy="#{entry.result.rank}" 
+				       								        
+								        <p:column filterBy="#{entry.result.fractionalRank}" headerText="Rank" sortBy="#{entry.result.fractionalRank}" 
 								        	filterFunction="#{enrichmentView.filterByNumberLT}" style="width:120px;">						            
-										    <h:outputText value="#{entry.result.rank}">
+										    <h:outputText value="#{entry.result.fractionalRank}">
 										        <f:convertNumber type="number"/>
 										    </h:outputText>
 								        </p:column>
@@ -412,7 +412,7 @@
 						styleClass="sqlDialogText" />
 								
 					<h:outputText value="Absolute Rank" />
-					<h:outputText value="#{enrichmentView.selectedEnrichmentResult.rank}"
+					<h:outputText value="#{enrichmentView.selectedEnrichmentResult.fractionalRank}"
 						styleClass="sqlDialogText" />
 						
 					<h:outputText value="#{enrichmentView.selectedValueName}" rendered="#{enrichmentView.selectedValueName != null}"/>

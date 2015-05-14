@@ -139,7 +139,9 @@ public class EnrichmentAnalysis {
                     .getSortedKeySetByValue( resultsInEdition );
             int rank = -1;
             int k = 0;
+            EnrichmentResult previousResult = null;
             Set<GeneOntologyTerm> maybePile = new HashSet<>();
+            Map<Integer, List<GeneOntologyTerm>> standardRanks = new HashMap<>();
             for ( GeneOntologyTerm term : termsSortedByRank ) {
                 k++;
                 EnrichmentResult er = resultsInEdition.get( term );
@@ -171,7 +173,32 @@ public class EnrichmentAnalysis {
                     termsSignificantInAnyEdition.add( term );
                     sig.add( term );
                 }
-                er.setRank( ++rank );
+
+                // ranks
+
+                if ( !er.equals( previousResult ) ) {
+                    rank = k - 1;
+                }
+                List<GeneOntologyTerm> termSet = standardRanks.get( rank );
+                if ( termSet == null ) {
+                    termSet = new ArrayList<>();
+                    standardRanks.put( rank, termSet );
+                }
+                termSet.add( term );
+                er.setRank( rank );
+                previousResult = er;
+            }
+
+            // Compute fractional Ranks
+
+            for ( Entry<Integer, List<GeneOntologyTerm>> rankEntry : standardRanks.entrySet() ) {
+                int standardRank = rankEntry.getKey();
+                List<GeneOntologyTerm> termSet = rankEntry.getValue();
+                double newRank = standardRank + ( termSet.size() - 1 ) / 2.0;
+                for ( GeneOntologyTerm term : termSet ) {
+                    EnrichmentResult er = resultsInEdition.get( term );
+                    er.setFractionalRank( newRank );
+                }
             }
 
             rawResults.put( ed, Collections.unmodifiableMap( resultsInEdition ) );

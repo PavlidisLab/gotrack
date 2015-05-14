@@ -462,7 +462,7 @@ function handleGraphSelected(xhr, status, args) {
       options.plotOptions.series.point = {
                                           events: {
                                              click: function () {
-                                                fetchTermInformation([{name:'termId', value:this.series.name},{name:'edition', value:dateToEdition[this.x]}, {name:'value', value:this.y} ]);
+                                                fetchTermInformation([{name:'termId', value:this.series.name},{name:'edition', value:dateToEdition[this.x]}, {name:'value', value:utility.roundHalf(this.y)} ]);
                                              }
                                           }
                                        };
@@ -492,7 +492,7 @@ function handleGraphSelected(xhr, status, args) {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
                          formatter:function(){
-                            return '<b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> Relative Rank: " + ( this.y >= dateToMaxSigRank[this.x] ? "Insignificant": this.y );
+                            return '<b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> Relative Rank: " + ( this.y >= dateToMaxSigRank[this.x] ? "Insignificant": utility.roundHalf(this.y) );
                          }
       };
       

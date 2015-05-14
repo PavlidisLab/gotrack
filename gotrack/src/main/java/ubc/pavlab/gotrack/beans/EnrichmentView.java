@@ -348,7 +348,7 @@ public class EnrichmentView implements Serializable {
         List<Edition> eds = new ArrayList<>( data.keySet() );
         Collections.sort( eds );
         ChartValues cv = null;
-        int maxRank = -1;
+        double maxRank = -1;
         Map<Long, Integer> dateToEdition = new HashMap<>();
         if ( enrichmentChartMeasureScale.equals( "pvalue" ) ) {
             Map<GeneOntologyTerm, Series> series = new HashMap<>();
@@ -377,7 +377,7 @@ public class EnrichmentView implements Serializable {
         } else {
             // rank
             Map<GeneOntologyTerm, Series> series = new HashMap<>();
-            Map<Long, Integer> dateToMaxSigRank = new HashMap<>();
+            Map<Long, Double> dateToMaxSigRank = new HashMap<>();
             maxRank = -1;
             boolean outsideTopNCheck = false;
             boolean insignificantCheck = false;
@@ -396,13 +396,46 @@ public class EnrichmentView implements Serializable {
                     }
                 } );
 
-                Map<GeneOntologyTerm, Integer> relativeRanks = new HashMap<>();
-                int r = 0;
+                // Compute standard relative ranks
+
+                Map<GeneOntologyTerm, Double> relativeRanks = new HashMap<>();
+                Map<Integer, List<GeneOntologyTerm>> standardRanks = new HashMap<>();
+                int r = -1;
+                EnrichmentResult previousResult = null;
+                int cnt = -1;
                 for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : sortedData ) {
-                    relativeRanks.put( entry.getKey(), r++ );
+                    cnt++;
+                    EnrichmentResult er = entry.getValue();
+                    if ( er.equals( previousResult ) ) {
+                        // pass
+                    } else {
+                        r = cnt;
+                    }
+                    List<GeneOntologyTerm> termSet = standardRanks.get( r );
+                    if ( termSet == null ) {
+                        termSet = new ArrayList<>();
+                        standardRanks.put( r, termSet );
+                    }
+                    termSet.add( entry.getKey() );
+                    previousResult = er;
                 }
 
-                int breakPoint = relativeRanks.size();
+                // Compute fractional relative ranks with jitter
+
+                for ( Entry<Integer, List<GeneOntologyTerm>> rankEntry : standardRanks.entrySet() ) {
+                    int standardRank = rankEntry.getKey();
+                    List<GeneOntologyTerm> termSet = rankEntry.getValue();
+                    Collections.sort( termSet );
+                    double newRank = standardRank + ( termSet.size() - 1 ) / 2.0;
+                    double jitter = 0;
+                    for ( GeneOntologyTerm term : termSet ) {
+                        relativeRanks.put( term, newRank + jitter );
+                        jitter += 0.01;
+
+                    }
+                }
+
+                double breakPoint = relativeRanks.size();
                 for ( GeneOntologyTerm term : selectedTerms ) {
                     // for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : editionData ) {
                     // GeneOntologyTerm term = entry.getKey();
@@ -412,7 +445,7 @@ public class EnrichmentView implements Serializable {
                         series.put( term, s );
                     }
                     EnrichmentResult er = editionData.get( term );
-                    Integer relativeRank = relativeRanks.get( term );
+                    Double relativeRank = relativeRanks.get( term );
                     if ( er != null ) {
                         int rank = er.getRank();
                         // find smallest relative rank that is insignificant
@@ -560,10 +593,10 @@ public class EnrichmentView implements Serializable {
                         selectedValueName = null;
                     } else {
                         // selectedValue = er.getRank();
-                        int value = Integer.valueOf( FacesContext.getCurrentInstance().getExternalContext()
+                        double relativeRank = Double.valueOf( FacesContext.getCurrentInstance().getExternalContext()
                                 .getRequestParameterMap().get( "value" ) );
                         selectedValueName = "Relative Rank";
-                        selectedValue = value;
+                        selectedValue = relativeRank;
                     }
                     // RequestContext.getCurrentInstance().addCallbackParam( "term", new Gson().toJson( term ) );
                     // RequestContext.getCurrentInstance().addCallbackParam( "result", new Gson().toJson( er ) );
