@@ -55,8 +55,8 @@ public class StabilityAnalysis {
      * @param TOP_N_JACCARD number of top terms to use for top N series
      * @param proximal true if comparing to previous edition, false if comparing to current edition
      */
-    public StabilityAnalysis( Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults,
-            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap, int TOP_N_JACCARD, SimilarityCompareMethod scm ) {
+    public StabilityAnalysis( EnrichmentAnalysis analysis, int TOP_N_JACCARD, SimilarityCompareMethod scm ) {
+        Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults = analysis.getSignificantResults();
         Map<Edition, StabilityScore> stabilityScores = new LinkedHashMap<>();
 
         List<Edition> orderedEditions = new ArrayList<>( enrichmentResults.keySet() );
@@ -68,7 +68,7 @@ public class StabilityAnalysis {
         LinkedHashMap<GeneOntologyTerm, Set<Gene>> currentSortedTermsMap = new LinkedHashMap<>();
 
         for ( GeneOntologyTerm term : currentSortedTerms ) {
-            currentSortedTermsMap.put( term, geneGOMap.get( currentEdition ).get( term ) );
+            currentSortedTermsMap.put( term, analysis.getGeneSet( currentEdition, term ) );
         }
 
         // completeTermJaccard
@@ -80,7 +80,7 @@ public class StabilityAnalysis {
             LinkedHashMap<GeneOntologyTerm, Set<Gene>> sortedTermsMap = new LinkedHashMap<>();
 
             for ( GeneOntologyTerm term : sortedTerms ) {
-                sortedTermsMap.put( term, geneGOMap.get( ed ).get( term ) );
+                sortedTermsMap.put( term, analysis.getGeneSet( ed, term ) );
             }
 
             if ( scm.equals( SimilarityCompareMethod.CURRENT ) ) {

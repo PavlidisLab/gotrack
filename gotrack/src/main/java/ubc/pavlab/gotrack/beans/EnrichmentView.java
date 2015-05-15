@@ -148,6 +148,8 @@ public class EnrichmentView implements Serializable {
     private List<EnrichmentTableValues> filteredEnrichmentTableValues;
     private List<EnrichmentTableValues> selectedEnrichmentTableValues;
     private Integer enrichmentTableEdition;
+    private EnrichmentTableValues viewEnrichmentRow;
+    private Set<Gene> viewEnrichmentRowGeneSet;
 
     // Enrichment Chart
     private String enrichmentChartMeasureScale = "rank";
@@ -318,8 +320,7 @@ public class EnrichmentView implements Serializable {
         status = "Running Stability Analyses on all editions...";
         enrichmentStatus.add( status );
         enrichmentProgress = 80;
-        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( enrichmentResultsStrict, geneGOMap, TOP_N_JACCARD,
-                similarityCompareMethod );
+        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, TOP_N_JACCARD, similarityCompareMethod );
         stabilityScores = stabilityAnalysis.getStabilityScores();
         enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
@@ -685,6 +686,14 @@ public class EnrichmentView implements Serializable {
         }
     }
 
+    public void viewEnrichmentTableValue() {
+        if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.isEmpty() ) {
+            return;
+        }
+        viewEnrichmentRow = selectedEnrichmentTableValues.iterator().next();
+        viewEnrichmentRowGeneSet = analysis.getGeneSet( viewEnrichmentRow.getEdition(), viewEnrichmentRow.getTerm() );
+    }
+
     public boolean filterByNumberLT( Object value, Object filter, Locale locale ) {
         String filterText = ( filter == null ) ? null : filter.toString().trim();
         if ( filterText == null || filterText.equals( "" ) ) {
@@ -1016,6 +1025,14 @@ public class EnrichmentView implements Serializable {
 
     public EnrichmentAnalysis getAnalysis() {
         return analysis;
+    }
+
+    public EnrichmentTableValues getViewEnrichmentRow() {
+        return viewEnrichmentRow;
+    }
+
+    public Set<Gene> getViewEnrichmentRowGeneSet() {
+        return viewEnrichmentRowGeneSet;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

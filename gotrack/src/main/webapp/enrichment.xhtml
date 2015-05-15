@@ -296,6 +296,9 @@
 						</p:tab>
 						<p:tab title="Enrichment" rendered="#{enrichmentView.enrichmentSuccess}">
 								<p:outputPanel id="tablePanel">
+								    <p:contextMenu for="tableEnrichment">
+								        <p:menuitem value="View" icon="ui-icon-search" actionListener="#{enrichmentView.viewEnrichmentTableValue()}" update=":enrichmentResultDetailsDlg" oncomplete="PF('enrichmentResultDetailsWdg').show()"/>
+								    </p:contextMenu>
 									<p:dataTable id="tableEnrichment" widgetVar="tableEnrichmentWdg"
 										var="entry" value="#{enrichmentView.enrichmentTableValues}" sortMode="multiple"
 										style="margin-bottom:0"
@@ -405,12 +408,6 @@
 										        <f:convertNumber type="number"/>
 										    </h:outputText>
 								        </p:column>
-								        
-								        <p:column headerText="Expected" sortBy="#{entry.result.expected}" style="width:120px;">
-										    <h:outputText value="#{entry.result.expected}">
-										        <f:convertNumber type="number" pattern="#.##E0"/>
-										    </h:outputText>
-								        </p:column>
 										
 								        <p:column filterBy="#{entry.result.pvalue}" headerText="P-Value" sortBy="#{entry.result.pvalue}" 
 								        	filterFunction="#{enrichmentView.filterByNumberLT}" style="width:120px;">						            
@@ -454,6 +451,71 @@
 					<h:outputText value="#{(enrichmentView.viewGene.viewAccessions())}"
 						styleClass="sqlDialogText" />
 				</p:panelGrid>
+			</p:outputPanel>
+		</p:dialog>
+		
+		<p:dialog id="enrichmentResultDetailsDlg" header="Result Details" widgetVar="enrichmentResultDetailsWdg" modal="false"
+			showEffect="fade" hideEffect="fade" resizable="false" dynamic="true"  fitViewport="true" 
+			closeOnEscape="true">
+			<p:outputPanel style="text-align:center;">
+				<p:tabView id="enrichmentResultDetailsTabView">
+				<p:tab title="General" >
+				<p:panelGrid columns="2">
+					<h:outputText value="Edition" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.edition.edition} : #{enrichmentView.viewEnrichmentRow.edition.date}"
+						styleClass="sqlDialogText" />			
+				
+					<h:outputText value="Id" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.term.goId}"
+						styleClass="sqlDialogText" />
+
+					<h:outputText value="Aspect" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.term.aspect}"
+						styleClass="sqlDialogText" />
+
+					<h:outputText value="Name" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.term.name}"
+						styleClass="sqlDialogText" />
+						
+					<h:outputText value="Population Size" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.result.populationSize}"
+						styleClass="sqlDialogText" />
+						
+					<h:outputText value="Sample Size" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.result.sampleSize}"
+						styleClass="sqlDialogText" />
+						
+					<h:outputText value="Population Annotated" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.result.populationAnnotated}"
+						styleClass="sqlDialogText" />
+						
+					<h:outputText value="Sample Annotated" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.result.sampleAnnotated}"
+						styleClass="sqlDialogText" />
+						
+					<h:outputText value="Expected Annotations" />	
+				    <h:outputText value="#{enrichmentView.viewEnrichmentRow.result.expected}" styleClass="sqlDialogText">
+				        <f:convertNumber type="number" pattern="#.##E0"/>
+				    </h:outputText>
+						
+					<h:outputText value="P-Value" />
+				    <h:outputText value="#{enrichmentView.viewEnrichmentRow.result.pvalue}" styleClass="sqlDialogText">
+				        <f:convertNumber type="number" pattern="#.##E0"/>
+				    </h:outputText>
+						
+					<h:outputText value="Rank" />
+					<h:outputText value="#{enrichmentView.viewEnrichmentRow.result.fractionalRank}"
+						styleClass="sqlDialogText" />
+				</p:panelGrid>
+				</p:tab>
+				<p:tab title="Genes">
+					<p:dataGrid id="annotatedGenesList" value="#{enrichmentView.viewEnrichmentRowGeneSet}" var="gene" layout="grid" columns="8">
+					<p:panel style="text-align:center">
+					<h:outputText value="#{gene.symbol}" style="display:inline-block"/>
+					</p:panel>
+					</p:dataGrid>
+				</p:tab>
+				</p:tabView>
 			</p:outputPanel>
 		</p:dialog>
 		

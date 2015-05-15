@@ -95,3 +95,8 @@ span.filter-spinner input {
 body .ui-selectonemenu .ui-selectonemenu-label {
 	width:auto;
 }
+
+#enrichmentResultDetailsTabView\:annotatedGenesList_content {
+  height: 300px;
+  overflow-y: auto;
+}

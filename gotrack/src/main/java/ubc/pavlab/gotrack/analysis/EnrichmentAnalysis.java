@@ -57,6 +57,8 @@ public class EnrichmentAnalysis {
 
     private Double threshold = null;
 
+    private final Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> rawData;
+
     // Holds those unmodifiable results which met the population limits and had population data present in cache
     private final Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> rawResults;
     // Holds those unmodifiable terms which met the population limits but did not have population data present in cache
@@ -82,6 +84,7 @@ public class EnrichmentAnalysis {
             Map<Edition, Integer> sampleSizes, int min, int max, MultipleTestCorrection test, double threshold,
             Cache cache, int currentSpeciesId ) {
 
+        this.rawData = geneGOMap;
         this.minAnnotatedPopulation = min;
         this.maxAnnotatedPopulation = max == 0 ? Integer.MAX_VALUE : max;
         this.currentSpeciesId = currentSpeciesId;
@@ -369,6 +372,16 @@ public class EnrichmentAnalysis {
 
     public Map<Edition, Set<GeneOntologyTerm>> getTermsSignificant() {
         return termsSignificant;
+    }
+
+    public Set<Gene> getGeneSet( Edition ed, GeneOntologyTerm term ) {
+        Map<GeneOntologyTerm, Set<Gene>> m1 = rawData.get( ed );
+        if ( m1 != null ) {
+            return Collections.unmodifiableSet( m1.get( term ) );
+        }
+
+        return null;
+
     }
 
     public Set<GeneOntologyTerm> getTopNTerms( int n ) {
