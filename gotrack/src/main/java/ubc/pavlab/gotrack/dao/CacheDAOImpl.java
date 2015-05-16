@@ -330,12 +330,12 @@ public class CacheDAOImpl implements CacheDAO {
                 if ( g == null ) {
                     // New gene
                     g = new Gene( symbol );
-                    Set<String> synonyms = new HashSet<>( Arrays.asList( resultSet.getString( "synonyms" )
-                            .split( "\\|" ) ) );
-                    g.setSynonyms( synonyms );
+
                     symbolMap.put( symbol.toUpperCase(), g );
                 }
 
+                Set<String> synonyms = new HashSet<>( Arrays.asList( resultSet.getString( "synonyms" ).split( "\\|" ) ) );
+                g.getSynonyms().addAll( synonyms );
                 String accession = resultSet.getString( "accession" );
 
                 Accession acc = currentAccessions.get( accession );
