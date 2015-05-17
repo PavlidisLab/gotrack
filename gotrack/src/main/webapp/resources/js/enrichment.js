@@ -83,6 +83,11 @@ function enrichmentChartHide() {
    HC.charts.enrichmentMaster.destroy();
 }
 
+function showTerminal() {
+   PF('terminalDialogWdg').show();
+   PF('terminalWdg').focus();
+}
+
 function HChart(id) {
    this.id = id;
    this.chart = null;

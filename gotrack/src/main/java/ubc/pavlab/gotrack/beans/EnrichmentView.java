@@ -130,7 +130,6 @@ public class EnrichmentView implements Serializable {
     // Enrichment Data
     private EnrichmentAnalysis analysis;
     private Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults;
-    private Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResultsStrict;
     private boolean enrichmentSuccess = false;
 
     // Stability Settings
@@ -312,7 +311,6 @@ public class EnrichmentView implements Serializable {
                 multipleTestCorrection, thresh, cache, currentSpeciesId );
 
         enrichmentResults = analysis.getResults();
-        enrichmentResultsStrict = analysis.getSignificantResults();
         enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
         log.info( "Running stability analysis" );
