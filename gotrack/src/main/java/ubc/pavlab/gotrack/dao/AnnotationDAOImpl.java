@@ -65,6 +65,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_ENRICH_PROPAGATE_COUNTS_ONLY = "select edition.date, goa_symbol.edition, edition.go_edition_id_fk, edition.date go_date, IFNULL(go_ontology_tclosure.parent, goa_annot.go_id) ancestor, go_term.name, go_term.aspect, COUNT(distinct goa_symbol.symbol) sample_annotated from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id INNER JOIN edition on edition.edition=goa_symbol.edition and edition.species_id =goa_symbol.species_id LEFT JOIN go_ontology_tclosure on edition.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk and goa_annot.go_id = go_ontology_tclosure.child LEFT JOIN go_term on go_term.go_id=IFNULL(go_ontology_tclosure.parent, goa_annot.go_id) and go_term.go_edition_id_fk=edition.go_edition_id_fk where goa_symbol.species_id=? and goa_symbol.symbol in (%s) GROUP BY goa_symbol.edition, ancestor ORDER BY NULL";
     private static final String SQL_ENRICH_SAMPLE_SIZES = "select edition.date, goa_symbol.edition, edition.go_edition_id_fk, edition.date go_date, COUNT(distinct goa_symbol.symbol) sample_size from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id INNER JOIN edition on edition.edition=goa_symbol.edition and edition.species_id =goa_symbol.species_id where goa_symbol.species_id = ? and goa_symbol.symbol in (%s) group by goa_symbol.edition order by null;";
 
+    private static final String SQL_ENRICH_NOPROPAGATE_NOTERM = "select edition.date, goa_symbol.edition, edition.go_edition_id_fk, edition.date go_date, goa_annot.go_id parent, goa_symbol.symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id INNER JOIN edition on edition.edition=goa_symbol.edition and edition.species_id =goa_symbol.species_id where goa_symbol.species_id=? and goa_symbol.symbol in (%s) GROUP BY goa_symbol.edition, parent, goa_symbol.symbol ORDER BY NULL";
     // species, symbols, go_ids
     // private static final String SQL_ENRICH_GENE_SUBSET_BY_TERM_SUBSET =
     // "select edition.date, goa_symbol.edition, edition.go_edition_id_fk, edition.date go_date, goa_symbol.symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id INNER JOIN edition on edition.edition=goa_symbol.edition and edition.species_id =goa_symbol.species_id LEFT JOIN go_ontology_tclosure on edition.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk and goa_annot.go_id = go_ontology_tclosure.child where goa_symbol.species_id=? and goa_symbol.symbol in (%s) and IFNULL(go_ontology_tclosure.parent, goa_annot.go_id) in (%s) GROUP BY goa_symbol.edition, goa_symbol.symbol ORDER BY NULL";
@@ -696,6 +697,90 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 if ( goSet == null ) {
                     goSet = new HashSet<>();
                     edEntry.put( g, goSet );
+                }
+
+                goSet.add( go );
+
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return data;
+    }
+
+    @Override
+    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataNoPropagateNoTermInfo( Integer species,
+            Set<Gene> genes ) throws DAOException {
+        List<Object> params = new ArrayList<Object>();
+
+        String sql = String.format( SQL_ENRICH_NOPROPAGATE_NOTERM, DAOUtil.preparePlaceHolders( genes.size() ) );
+
+        Map<String, Gene> givenGenes = new HashMap<>();
+
+        // species, symbols
+        params.add( species );
+        for ( Gene g : genes ) {
+            params.add( g.getSymbol() );
+            givenGenes.put( g.getSymbol().toUpperCase(), g );
+        }
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> data = new HashMap<>();
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+
+                String symbol = resultSet.getString( "symbol" );
+                Gene g = givenGenes.get( symbol.toUpperCase() );
+                if ( g == null ) {
+                    log.warn( "Could not find symbol:" + symbol + " in given genes." );
+                    g = new Gene( symbol );
+                }
+
+                Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
+                        resultSet.getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) );
+                GeneOntologyTerm go = new GeneOntologyTerm( resultSet.getString( "parent" ) );
+
+                // if ( go.getName() == null ) {
+                // log.warn( "Could not find (" + go.getGoId() + ") in go_edition: " + ed.getGoEditionId() );
+                // }
+
+                Map<Edition, Set<GeneOntologyTerm>> geneEntry = data.get( g );
+                if ( geneEntry == null ) {
+                    geneEntry = new HashMap<>();
+                    data.put( g, geneEntry );
+                }
+
+                Set<GeneOntologyTerm> goSet = geneEntry.get( ed );
+                if ( goSet == null ) {
+                    goSet = new HashSet<>();
+                    geneEntry.put( ed, goSet );
                 }
 
                 goSet.add( go );

@@ -57,4 +57,7 @@ public interface AnnotationDAO {
     public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataPropagateNoTermInfo( Integer species,
             Set<Gene> genes ) throws DAOException;
 
+    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataNoPropagateNoTermInfo( Integer species,
+            Set<Gene> genes ) throws DAOException;
+
 }

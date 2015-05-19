@@ -80,6 +80,7 @@ public class EnrichmentView implements Serializable {
     private static final long serialVersionUID = 166880636358923147L;
     // private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
 
+    private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
     private static final Integer MAX_RESULTS = 10;
     private static final int MAX_GENESET_SIZE = 200;
@@ -94,6 +95,9 @@ public class EnrichmentView implements Serializable {
 
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
+
+    // Application settings
+    private boolean ontologyInMemory = false;
 
     // DAO
     private AnnotationDAO annotationDAO;
@@ -190,6 +194,7 @@ public class EnrichmentView implements Serializable {
         annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
         geneOntologyDAO = daoFactoryBean.getGotrack().getGeneOntologyDAO();
         enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
+        ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
         // ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
         return null;
     }
@@ -230,12 +235,27 @@ public class EnrichmentView implements Serializable {
 
             if ( !genesToLoad.isEmpty() ) {
 
-                Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB = annotationDAO
-                        .enrichmentDataPropagateNoTermInfo( currentSpeciesId, genesToLoad );
+                Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB;
 
-                for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
-                    addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
-                    cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
+                if ( ontologyInMemory ) {
+                    enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+                    status = "Propagating GO Terms...";
+                    enrichmentStatus.add( status );
+                    enrichmentProgress = 40;
+                    geneGOMapFromDB = annotationDAO.enrichmentDataNoPropagateNoTermInfo( currentSpeciesId, genesToLoad );
+                    for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : propagate( geneGOMapFromDB )
+                            .entrySet() ) {
+                        addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
+                        cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
+                    }
+                    enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+                } else {
+                    geneGOMapFromDB = annotationDAO.enrichmentDataPropagateNoTermInfo( currentSpeciesId, genesToLoad );
+                    enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+                    for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
+                        addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
+                        cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
+                    }
                 }
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
@@ -244,7 +264,6 @@ public class EnrichmentView implements Serializable {
                 log.info( "Retrieved all (" + genes.size() + ") genes from cache" );
 
             }
-            enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
             return geneGOMap;
 
         } else {
@@ -283,6 +302,30 @@ public class EnrichmentView implements Serializable {
         }
     }
 
+    private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> propagate(
+            Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB ) {
+        Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> propagatedData = new HashMap<>();
+        for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
+            Gene g = geneEntry.getKey();
+            Map<Edition, Set<GeneOntologyTerm>> propagatedSeries = new HashMap<>();
+            propagatedData.put( g, propagatedSeries );
+            Map<Edition, Set<GeneOntologyTerm>> series = geneEntry.getValue();
+            for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
+                Edition ed = editionEntry.getKey();
+                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed.getGoEditionId() );
+
+                if ( propagatedTerms == null ) {
+                    // No ontology exists for this edition
+                } else {
+                    propagatedSeries.put( ed, propagatedTerms );
+                }
+
+            }
+
+        }
+        return propagatedData;
+    }
+
     public void enrich() {
         String status = "";
         enrichmentStatus = new ArrayList<>();
@@ -301,11 +344,29 @@ public class EnrichmentView implements Serializable {
             return;
         }
 
-        log.info( "Retrieving sample sizes from db" );
-        status = "Retreiving Sample Sizes from database...";
+        log.info( "Retrieving sample sizes" );
+        status = "Retreiving Sample Sizes...";
         enrichmentStatus.add( status );
         enrichmentProgress = 50;
-        Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
+        // Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
+        Map<Edition, Integer> sampleSizes = new HashMap<>();
+        Map<Edition, Set<Gene>> testMap = new HashMap<>();
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Gene>>> editionEntry : geneGOMap.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            Set<Gene> gset = new HashSet<>();
+            testMap.put( ed, gset );
+            for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : editionEntry.getValue().entrySet() ) {
+                gset.addAll( termEntry.getValue() );
+
+            }
+
+        }
+
+        for ( Entry<Edition, Set<Gene>> editionEntry : testMap.entrySet() ) {
+            sampleSizes.put( editionEntry.getKey(), editionEntry.getValue().size() );
+        }
+        testMap = null;
+
         enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
         log.info( "Running enrichment analysis" );
