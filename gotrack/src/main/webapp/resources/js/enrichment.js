@@ -260,26 +260,29 @@ function handleEnrichmentComplete(xhr, status, args) {
                      }
                   }
    }
-
-   for (var i = 0; i < args.hc_data.series.length; i++) {
-      var series = args.hc_data.series[i];
-      var name = series.name;
-      var data = []
-
-      for (var j = 0; j < series.data.length; j++) {
-         var point = series.data[j];
-         data.push([point.x,point.y]);
+   if (!utility.isUndefined( args.hc_data ) ){
+      for (var i = 0; i < args.hc_data.series.length; i++) {
+         var series = args.hc_data.series[i];
+         var name = series.name;
+         var data = []
+   
+         for (var j = 0; j < series.data.length; j++) {
+            var point = series.data[j];
+            data.push([point.x,point.y]);
+         }
+   
+         options.series.push({
+            name : name,
+            data : data
+         })
+   
       }
-
-      options.series.push({
-         name : name,
-         data : data
-      })
-
-   }
+   
 
    HC.charts.similarity.options = options;
    HC.charts.similarity.recreate(options);
+   PF('tableEnrichmentWdg').filter()
+   }
 
 }
 

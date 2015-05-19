@@ -198,14 +198,17 @@ public class EnrichmentView implements Serializable {
         if ( genes != null && !genes.isEmpty() ) {
             log.info( "Current species: " + currentSpeciesId );
             log.info( "Geneset Size: " + genes.size() );
-
+            String status;
             if ( genes.size() > MAX_GENESET_SIZE ) {
+                status = "Gene Hit List too large; maximum geneset size is " + MAX_GENESET_SIZE + "!";
+                enrichmentStatus.add( status );
+                enrichmentProgress = 50;
                 addMessage( "Maximum geneset size is " + MAX_GENESET_SIZE + "!", FacesMessage.SEVERITY_ERROR );
                 return null;
             }
 
             log.info( "retreiving gene data..." );
-            String status = "Retreiving Gene Information from cache...";
+            status = "Retreiving Gene Information from cache...";
             enrichmentStatus.add( status );
             enrichmentProgress = 5;
 
@@ -292,6 +295,8 @@ public class EnrichmentView implements Serializable {
 
         // TODO
         if ( geneGOMap == null ) {
+            enrichmentStatus.add( "Failed" );
+            enrichmentProgress = 100;
             enrichmentSuccess = false;
             return;
         }

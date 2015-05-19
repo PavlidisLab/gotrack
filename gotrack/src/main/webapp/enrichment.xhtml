@@ -209,7 +209,7 @@
 						<p:commandButton value="Run Enrichment"
 							actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
 							update=":formEnrich, :formSelect" onclick="PF('enrichmentProgressBarWdg').start()"
-							oncomplete="handleEnrichmentComplete(xhr, status, args);PF('tableEnrichmentWdg').filter()" disabled="#{fn:length(enrichmentView.selectedGenes) == 0}"/>
+							oncomplete="handleEnrichmentComplete(xhr, status, args);" disabled="#{fn:length(enrichmentView.selectedGenes) == 0}"/>
 					</div>
 
 					<pe:tooltip global="true" />
