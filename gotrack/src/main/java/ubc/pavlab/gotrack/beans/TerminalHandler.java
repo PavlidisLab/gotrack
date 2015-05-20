@@ -22,9 +22,9 @@ package ubc.pavlab.gotrack.beans;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
@@ -41,6 +41,11 @@ import javax.faces.bean.RequestScoped;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.log4j.Logger;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.Element;
+import org.dom4j.Node;
+import org.dom4j.io.SAXReader;
 
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
@@ -51,6 +56,9 @@ import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.Species;
+
+import com.google.common.base.Joiner;
 
 /**
  * TODO Document Me
@@ -72,12 +80,18 @@ public class TerminalHandler implements Serializable {
     private static final List<String> AUTH_COMMANDS = Arrays.asList( "greet", "auth", "help", "genes",
             "reload_settings" );
 
+    // Application settings
+    private boolean ontologyInMemory = false;
+
     private Map<String, StabilityAnalysis> stabilityResults = new HashMap<>();
     private Map<String, Set<String>> missingGenes = new HashMap<>();
     private Map<String, Map<String, Gene>> mappedToSecondary = new HashMap<>();
 
     @ManagedProperty("#{sessionManager}")
     private SessionManager sessionManager;
+
+    @ManagedProperty("#{settingsCache}")
+    private SettingsCache settingsCache;
 
     @ManagedProperty("#{daoFactoryBean}")
     private DAOFactoryBean daoFactoryBean;
@@ -100,6 +114,7 @@ public class TerminalHandler implements Serializable {
     @PostConstruct
     public void postConstruct() {
         log.info( "TerminalHandler PostConstruct" );
+        ontologyInMemory = settingsCache.getOntologyInMemory();
     }
 
     public String handleCommand( String command, String[] params ) {
@@ -133,25 +148,17 @@ public class TerminalHandler implements Serializable {
             if ( command.equals( "reload_settings" ) ) {
                 sessionManager.reloadSettings();
                 return "Settings reloaded";
+
             } else if ( command.equals( "stability" ) ) {
                 log.info( System.getProperty( "user.dir" ) );
-                String returnString = "";
                 StopWatch timer = new StopWatch();
                 timer.start();
-                if ( params.length != 3 ) {
+                if ( params.length != 2 ) {
                     timer.stop();
-                    return "Malformed Input : species inputFile outputFolder";
+                    return "Malformed Input : inputFile outputFolder";
                 }
 
-                int currentSpeciesId;
-                try {
-                    currentSpeciesId = Integer.parseInt( params[0] );
-                } catch ( NumberFormatException e ) {
-                    timer.stop();
-                    return "Malformed Input : First parameter should be integer.";
-                }
-
-                String inputFile = params[1];
+                String inputFile = params[0];
 
                 BufferedReader bReader;
                 try {
@@ -161,51 +168,78 @@ public class TerminalHandler implements Serializable {
                     return "File Not Found!";
                 }
 
-                String outputFolder = params[2];
+                String outputFolder = params[1];
 
-                String line;
+                SAXReader reader = new SAXReader();
+                Document document = null;
                 try {
-                    while ( ( line = bReader.readLine() ) != null ) {
+                    document = reader.read( bReader );
+                } catch ( DocumentException e ) {
+                    timer.stop();
+                    return "Error parsing XML!";
+                }
 
-                        /**
-                         * Splitting the content of tabbed separated line
-                         */
-                        String datavalue[] = line.split( "\\s+" );
-                        String name = datavalue[0];
-                        String url = datavalue[1];
-                        Set<String> missing = new HashSet<>();
+                List<? extends Node> genesets = ( List<? extends Node> ) document.selectNodes( "//MSIGDB/GENESET" );
 
-                        missingGenes.put( name, missing );
-                        Map<String, Gene> secondaryMap = new HashMap<>();
-                        mappedToSecondary.put( name, secondaryMap );
+                log.info( "Total Genesets: " + genesets.size() );
 
-                        Set<Gene> hitList = new HashSet<>();
+                Map<String, Integer> organismMap = new HashMap<>();
 
-                        for ( int i = 2; i < datavalue.length; i++ ) {
-                            String geneInput = datavalue[i];
+                for ( Species sp : cache.getSpeciesList() ) {
+                    organismMap.put( sp.getScientificName(), sp.getId() );
+                }
 
-                            Gene g = cache.getCurrentGene( currentSpeciesId, geneInput );
+                // To join secondary map
+                Joiner.MapJoiner joiner = Joiner.on( "," ).withKeyValueSeparator( ":" );
 
-                            if ( g != null ) {
+                for ( Node node : genesets ) {
+                    Element element = ( Element ) node;
+                    String organism = element.attributeValue( "ORGANISM" );
+                    Integer species = organismMap.get( organism );
+                    if ( species == null ) {
+                        log.warn( "Unsupported species (" + organism + ")" );
+                        continue;
+                    }
+                    String standardName = element.attributeValue( "STANDARD_NAME" );
+                    String systematicName = element.attributeValue( "SYSTEMATIC_NAME" );
+                    String chip = element.attributeValue( "CHIP" );
+                    String description = element.attributeValue( "DESCRIPTION_BRIEF" );
+                    String[] genes = element.attributeValue( "MEMBERS_SYMBOLIZED" ).split( "," );
+
+                    Set<String> missing = new HashSet<>();
+
+                    Map<String, Gene> secondaryMap = new HashMap<>();
+
+                    Set<Gene> hitList = new HashSet<>();
+
+                    for ( int i = 0; i < genes.length; i++ ) {
+                        String geneInput = genes[i];
+
+                        Gene g = cache.getCurrentGene( species, geneInput );
+
+                        if ( g != null ) {
+                            hitList.add( g );
+                        } else {
+                            Set<Gene> gs = cache.getCurrentGeneBySynonym( species, geneInput );
+                            if ( gs.size() == 1 ) {
+                                g = gs.iterator().next();
                                 hitList.add( g );
+                                secondaryMap.put( geneInput, g );
                             } else {
-                                Set<Gene> gs = cache.getCurrentGeneBySynonym( currentSpeciesId, geneInput );
-                                if ( gs.size() == 1 ) {
-                                    g = gs.iterator().next();
-                                    hitList.add( g );
-                                    secondaryMap.put( geneInput, g );
-                                } else {
-                                    missing.add( geneInput );
-                                }
-
+                                missing.add( geneInput );
                             }
+
                         }
-                        StabilityAnalysis sa = enrich( hitList, currentSpeciesId );
-                        // stabilityResults.put( name, enrich( hitList, currentSpeciesId ) );
+                    }
 
-                        String outputFile = outputFolder + "/" + name + "_results.txt";
+                    StabilityAnalysis sa = enrich( hitList, species );
 
-                        PrintWriter writer = new PrintWriter( outputFile, "UTF-8" );
+                    String outputFile = outputFolder + "/" + systematicName + "_results.txt";
+
+                    PrintWriter writer = null;
+                    try {
+                        writer = new PrintWriter( outputFile, "UTF-8" );
+
                         writer.println( "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard" );
                         for ( Entry<Edition, StabilityScore> editionEntry : sa.getStabilityScores().entrySet() ) {
                             Edition ed = editionEntry.getKey();
@@ -216,43 +250,36 @@ public class TerminalHandler implements Serializable {
                         }
                         writer.close();
 
-                        outputFile = outputFolder + "/" + name + "_missing.txt";
+                        outputFile = outputFolder + "/" + systematicName + "_info.txt";
                         writer = new PrintWriter( outputFile, "UTF-8" );
-                        writer.println( "Symbol" );
-                        for ( String gene : missing ) {
-                            writer.println( gene );
-                        }
+
+                        writer.println( "STANDARD_NAME: " + standardName );
+                        writer.println( "SYSTEMATIC_NAME: " + systematicName );
+                        writer.println( "ORGANISM: " + organism + "|" + species );
+                        writer.println( "CHIP: " + chip );
+                        writer.println( "DESCRIPTION: " + description );
+                        writer.println( "SIZE: " + genes.length );
+                        writer.println( "GENES: " + Arrays.toString( genes ) );
+                        writer.println( "MISSING: " + missing );
+                        writer.println( "MAPPED_TO_SECONDARY: " + joiner.join( secondaryMap ) );
+
                         writer.close();
 
-                        outputFile = outputFolder + "/" + name + "_secondary.txt";
-                        writer = new PrintWriter( outputFile, "UTF-8" );
-                        writer.println( "Symbol\tGene" );
-                        for ( Entry<String, Gene> gene : secondaryMap.entrySet() ) {
-                            writer.println( gene.getKey() + "\t" + gene.getValue() );
-                        }
-                        writer.close();
-
-                        returnString += name + " -- " + timer + "<br/>";
-                        log.info( name + " -- " + timer );
-
-                        /**
-                         * Printing the value read from file to the console
-                         */
-
-                    }
-                } catch ( IOException e1 ) {
-                    e1.printStackTrace();
-                } finally {
-                    if ( bReader != null ) {
-                        try {
-                            bReader.close();
-                        } catch ( IOException e ) {
-                            e.printStackTrace();
+                    } catch ( FileNotFoundException | UnsupportedEncodingException e ) {
+                        log.error( systematicName + " failed to write" );
+                        log.error( e );
+                    } finally {
+                        if ( writer != null ) {
+                            writer.close();
                         }
                     }
+
+                    log.info( systematicName + " -- " + timer );
+
                 }
+
                 timer.stop();
-                return returnString += "Completed in " + timer;
+                return "Completed in " + timer;
 
             } else if ( command.equals( "enrich" ) ) {
                 String returnString = "";
@@ -312,7 +339,7 @@ public class TerminalHandler implements Serializable {
         }
 
         Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
-        log.info( "retreiving sample sizes..." );
+        log.info( "retrieving sample sizes..." );
 
         EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, 5, 200,
                 MultipleTestCorrection.BH, 0.05, cache, currentSpeciesId );
@@ -327,7 +354,7 @@ public class TerminalHandler implements Serializable {
             log.info( "Current species: " + currentSpeciesId );
             log.info( "Geneset Size: " + genes.size() );
 
-            log.info( "retreiving gene data..." );
+            log.info( "retrieving gene data..." );
 
             Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = new HashMap<>();
             Set<Gene> genesToLoad = new HashSet<>();
@@ -342,12 +369,23 @@ public class TerminalHandler implements Serializable {
 
             if ( !genesToLoad.isEmpty() ) {
 
-                Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB = annotationDAO
-                        .enrichmentDataPropagateNoTermInfo( currentSpeciesId, genesToLoad );
+                Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB;
 
-                for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
-                    addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
-                    cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
+                if ( ontologyInMemory ) {
+                    geneGOMapFromDB = annotationDAO.enrichmentDataNoPropagateNoTermInfo( currentSpeciesId, genesToLoad );
+                    for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : propagate( geneGOMapFromDB )
+                            .entrySet() ) {
+                        addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
+                        cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
+                    }
+
+                } else {
+                    geneGOMapFromDB = annotationDAO.enrichmentDataPropagateNoTermInfo( currentSpeciesId, genesToLoad );
+
+                    for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
+                        addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
+                        cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
+                    }
                 }
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
@@ -395,6 +433,30 @@ public class TerminalHandler implements Serializable {
         }
     }
 
+    private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> propagate(
+            Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB ) {
+        Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> propagatedData = new HashMap<>();
+        for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
+            Gene g = geneEntry.getKey();
+            Map<Edition, Set<GeneOntologyTerm>> propagatedSeries = new HashMap<>();
+            propagatedData.put( g, propagatedSeries );
+            Map<Edition, Set<GeneOntologyTerm>> series = geneEntry.getValue();
+            for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
+                Edition ed = editionEntry.getKey();
+                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed.getGoEditionId() );
+
+                if ( propagatedTerms == null ) {
+                    // No ontology exists for this edition
+                } else {
+                    propagatedSeries.put( ed, propagatedTerms );
+                }
+
+            }
+
+        }
+        return propagatedData;
+    }
+
     public void setSessionManager( SessionManager sessionManager ) {
         this.sessionManager = sessionManager;
     }
@@ -409,6 +471,10 @@ public class TerminalHandler implements Serializable {
 
     public void setEnrichmentView( EnrichmentView enrichmentView ) {
         this.enrichmentView = enrichmentView;
+    }
+
+    public void setSettingsCache( SettingsCache settingsCache ) {
+        this.settingsCache = settingsCache;
     }
 
 }
