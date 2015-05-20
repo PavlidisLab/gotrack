@@ -302,7 +302,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 Gene g = givenGenes.get( symbol.toUpperCase() );
                 if ( g == null ) {
                     log.warn( "Could not find symbol:" + symbol + " in given genes." );
-                    g = new Gene( symbol );
+                    g = new Gene( symbol, species );
                 }
 
                 Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
@@ -387,7 +387,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 Gene g = givenGenes.get( symbol.toUpperCase() );
                 if ( g == null ) {
                     log.warn( "Could not find symbol:" + symbol + " in given genes." );
-                    g = new Gene( symbol );
+                    g = new Gene( symbol, species );
                 }
 
                 Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
@@ -679,7 +679,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 Gene g = givenGenes.get( symbol.toUpperCase() );
                 if ( g == null ) {
                     log.warn( "Could not find symbol:" + symbol + " in given genes." );
-                    g = new Gene( symbol );
+                    g = new Gene( symbol, species );
                 }
                 // Gene g = new Gene( resultSet.getString( "symbol" ) );
                 Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
@@ -760,7 +760,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
                 Gene g = givenGenes.get( symbol.toUpperCase() );
                 if ( g == null ) {
                     log.warn( "Could not find symbol:" + symbol + " in given genes." );
-                    g = new Gene( symbol );
+                    g = new Gene( symbol, species );
                 }
 
                 Edition ed = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),

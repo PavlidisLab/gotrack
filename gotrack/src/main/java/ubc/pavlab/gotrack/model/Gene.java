@@ -34,23 +34,14 @@ import org.apache.commons.lang3.StringUtils;
 public class Gene {
 
     String symbol;
+    Integer species;
     Set<Accession> accessions = new HashSet<>();
     Set<String> synonyms = new HashSet<>();
 
-    public Gene() {
-        super();
-    }
-
-    public Gene( String symbol ) {
+    public Gene( String symbol, Integer species ) {
         super();
         this.symbol = symbol;
-    }
-
-    public Gene( String symbol, Set<Accession> accessions, Set<String> synonyms ) {
-        super();
-        this.symbol = symbol;
-        this.accessions = accessions;
-        this.synonyms = synonyms;
+        this.species = species;
     }
 
     public String viewSynonyms() {
@@ -99,13 +90,15 @@ public class Gene {
 
     @Override
     public String toString() {
-        return "Gene [symbol=" + symbol + ", accessions=" + accessions + ", synonyms=" + synonyms + "]";
+        return "Gene [symbol=" + symbol + ", species=" + species + ", accessions=" + accessions + ", synonyms="
+                + synonyms + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
+        result = prime * result + ( ( species == null ) ? 0 : species.hashCode() );
         result = prime * result + ( ( symbol == null ) ? 0 : symbol.hashCode() );
         return result;
     }
@@ -116,6 +109,9 @@ public class Gene {
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
         Gene other = ( Gene ) obj;
+        if ( species == null ) {
+            if ( other.species != null ) return false;
+        } else if ( !species.equals( other.species ) ) return false;
         if ( symbol == null ) {
             if ( other.symbol != null ) return false;
         } else if ( !symbol.equals( other.symbol ) ) return false;

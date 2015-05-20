@@ -329,7 +329,7 @@ public class CacheDAOImpl implements CacheDAO {
 
                 if ( g == null ) {
                     // New gene
-                    g = new Gene( symbol );
+                    g = new Gene( symbol, speciesId );
 
                     symbolMap.put( symbol.toUpperCase(), g );
                 }
