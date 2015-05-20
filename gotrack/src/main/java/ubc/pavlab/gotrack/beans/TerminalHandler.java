@@ -23,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Date;
@@ -45,6 +46,7 @@ import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
+import ubc.pavlab.gotrack.analysis.StabilityScore;
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
@@ -69,6 +71,10 @@ public class TerminalHandler implements Serializable {
     private static final List<String> OPEN_COMMANDS = Arrays.asList( "greet", "auth", "help", "genes" );
     private static final List<String> AUTH_COMMANDS = Arrays.asList( "greet", "auth", "help", "genes",
             "reload_settings" );
+
+    private Map<String, StabilityAnalysis> stabilityResults = new HashMap<>();
+    private Map<String, Set<String>> missingGenes = new HashMap<>();
+    private Map<String, Map<String, Gene>> mappedToSecondary = new HashMap<>();
 
     @ManagedProperty("#{sessionManager}")
     private SessionManager sessionManager;
@@ -127,6 +133,127 @@ public class TerminalHandler implements Serializable {
             if ( command.equals( "reload_settings" ) ) {
                 sessionManager.reloadSettings();
                 return "Settings reloaded";
+            } else if ( command.equals( "stability" ) ) {
+                log.info( System.getProperty( "user.dir" ) );
+                String returnString = "";
+                StopWatch timer = new StopWatch();
+                timer.start();
+                if ( params.length != 3 ) {
+                    timer.stop();
+                    return "Malformed Input : species inputFile outputFolder";
+                }
+
+                int currentSpeciesId;
+                try {
+                    currentSpeciesId = Integer.parseInt( params[0] );
+                } catch ( NumberFormatException e ) {
+                    timer.stop();
+                    return "Malformed Input : First parameter should be integer.";
+                }
+
+                String inputFile = params[1];
+
+                BufferedReader bReader;
+                try {
+                    bReader = new BufferedReader( new FileReader( inputFile ) );
+                } catch ( FileNotFoundException e1 ) {
+                    timer.stop();
+                    return "File Not Found!";
+                }
+
+                String outputFolder = params[2];
+
+                String line;
+                try {
+                    while ( ( line = bReader.readLine() ) != null ) {
+
+                        /**
+                         * Splitting the content of tabbed separated line
+                         */
+                        String datavalue[] = line.split( "\\s+" );
+                        String name = datavalue[0];
+                        String url = datavalue[1];
+                        Set<String> missing = new HashSet<>();
+
+                        missingGenes.put( name, missing );
+                        Map<String, Gene> secondaryMap = new HashMap<>();
+                        mappedToSecondary.put( name, secondaryMap );
+
+                        Set<Gene> hitList = new HashSet<>();
+
+                        for ( int i = 2; i < datavalue.length; i++ ) {
+                            String geneInput = datavalue[i];
+
+                            Gene g = cache.getCurrentGene( currentSpeciesId, geneInput );
+
+                            if ( g != null ) {
+                                hitList.add( g );
+                            } else {
+                                Set<Gene> gs = cache.getCurrentGeneBySynonym( currentSpeciesId, geneInput );
+                                if ( gs.size() == 1 ) {
+                                    g = gs.iterator().next();
+                                    hitList.add( g );
+                                    secondaryMap.put( geneInput, g );
+                                } else {
+                                    missing.add( geneInput );
+                                }
+
+                            }
+                        }
+                        StabilityAnalysis sa = enrich( hitList, currentSpeciesId );
+                        // stabilityResults.put( name, enrich( hitList, currentSpeciesId ) );
+
+                        String outputFile = outputFolder + "/" + name + "_results.txt";
+
+                        PrintWriter writer = new PrintWriter( outputFile, "UTF-8" );
+                        writer.println( "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard" );
+                        for ( Entry<Edition, StabilityScore> editionEntry : sa.getStabilityScores().entrySet() ) {
+                            Edition ed = editionEntry.getKey();
+                            StabilityScore score = editionEntry.getValue();
+                            writer.println( ed.getEdition() + "\t" + ed.getDate() + "\t"
+                                    + score.getCompleteTermJaccard() + "\t" + score.getTopTermJaccard() + "\t"
+                                    + score.getTopGeneJaccard() );
+                        }
+                        writer.close();
+
+                        outputFile = outputFolder + "/" + name + "_missing.txt";
+                        writer = new PrintWriter( outputFile, "UTF-8" );
+                        writer.println( "Symbol" );
+                        for ( String gene : missing ) {
+                            writer.println( gene );
+                        }
+                        writer.close();
+
+                        outputFile = outputFolder + "/" + name + "_secondary.txt";
+                        writer = new PrintWriter( outputFile, "UTF-8" );
+                        writer.println( "Symbol\tGene" );
+                        for ( Entry<String, Gene> gene : secondaryMap.entrySet() ) {
+                            writer.println( gene.getKey() + "\t" + gene.getValue() );
+                        }
+                        writer.close();
+
+                        returnString += name + " -- " + timer + "<br/>";
+                        log.info( name + " -- " + timer );
+
+                        /**
+                         * Printing the value read from file to the console
+                         */
+
+                    }
+                } catch ( IOException e1 ) {
+                    e1.printStackTrace();
+                } finally {
+                    if ( bReader != null ) {
+                        try {
+                            bReader.close();
+                        } catch ( IOException e ) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                timer.stop();
+                return returnString += "Completed in " + timer;
+
             } else if ( command.equals( "enrich" ) ) {
                 String returnString = "";
                 StopWatch timer = new StopWatch();
@@ -134,73 +261,6 @@ public class TerminalHandler implements Serializable {
                 if ( params.length == 0 ) {
 
                     enrich( new HashSet<>( enrichmentView.getSelectedGenes() ), enrichmentView.getCurrentSpeciesId() );
-
-                } else if ( params.length == 2 ) {
-
-                    int currentSpeciesId;
-                    try {
-                        currentSpeciesId = Integer.parseInt( params[0] );
-                    } catch ( NumberFormatException e ) {
-                        timer.stop();
-                        return "Malformed Input : First parameter should be species Id.";
-                    }
-
-                    // String path = "GOTrack/analysis/c2.all.v5.0.symbols.gmt";
-                    String path = params[1];
-
-                    BufferedReader bReader;
-                    try {
-                        bReader = new BufferedReader( new FileReader( path ) );
-                    } catch ( FileNotFoundException e1 ) {
-                        timer.stop();
-                        return "File Not Found!";
-                    }
-                    String line;
-                    try {
-                        while ( ( line = bReader.readLine() ) != null ) {
-
-                            /**
-                             * Splitting the content of tabbed separated line
-                             */
-                            String datavalue[] = line.split( "\\s+" );
-                            String name = datavalue[0];
-                            String url = datavalue[1];
-
-                            Set<Gene> hitList = new HashSet<>();
-
-                            for ( int i = 2; i < datavalue.length; i++ ) {
-                                String geneInput = datavalue[i];
-
-                                Gene g = cache.getCurrentGene( currentSpeciesId, geneInput );
-
-                                if ( g != null ) {
-                                    hitList.add( g );
-                                } else {
-                                    returnString += "Could not find " + geneInput + "<br/>";
-                                }
-                            }
-
-                            enrich( hitList, currentSpeciesId );
-
-                            returnString += datavalue + "<br/>";
-                            break;
-
-                            /**
-                             * Printing the value read from file to the console
-                             */
-
-                        }
-                    } catch ( IOException e1 ) {
-                        e1.printStackTrace();
-                    } finally {
-                        if ( bReader != null ) {
-                            try {
-                                bReader.close();
-                            } catch ( IOException e ) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
 
                 } else if ( params.length > 2 ) {
 
@@ -240,7 +300,7 @@ public class TerminalHandler implements Serializable {
         return command + " not found";
     }
 
-    public void enrich( Set<Gene> genes, Integer currentSpeciesId ) {
+    public StabilityAnalysis enrich( Set<Gene> genes, Integer currentSpeciesId ) {
         if ( annotationDAO == null ) {
             annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
         }
@@ -248,15 +308,17 @@ public class TerminalHandler implements Serializable {
         Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, currentSpeciesId );
 
         if ( geneGOMap == null ) {
-            return;
+            return null;
         }
 
         Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
+        log.info( "retreiving sample sizes..." );
 
         EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, 5, 200,
                 MultipleTestCorrection.BH, 0.05, cache, currentSpeciesId );
+        log.info( "Similarity Analysis" );
 
-        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, 5, SimilarityCompareMethod.CURRENT );
+        return new StabilityAnalysis( analysis, 5, SimilarityCompareMethod.CURRENT );
 
     }
 
