@@ -67,6 +67,9 @@
 							icon="fa fa-book" styleClass="right-border" />
 						<p:menuitem value="&nbsp; Resources" url="resources.xhtml"
 							icon="fa fa-info-circle" styleClass="right-border" />
+							<f:facet name="options">
+								<p:commandButton type="button" icon="fa fa-terminal" onclick="showTerminal()" rendered="#{facesContext.application.projectStage != 'Production'}"/>
+							</f:facet>
 					</p:menubar>
 				</h:form>
 			</p:layoutUnit>
@@ -631,6 +634,18 @@
 			</p:dialog>
 
 		</h:form>
+		
+		<p:dialog id="terminalDialog" header="Terminal"
+			widgetVar="terminalDialogWdg" modal="false" showEffect="fade"
+			hideEffect="fade" resizable="false" width="800px">
+			<h:form id="terminalForm">
+			    <p:focus for="terminal" />
+			 
+			    <p:terminal id="terminal" widgetVar="terminalWdg" commandHandler="#{terminalHandler.handleCommand}"
+			                welcomeMessage="Welcome to the administrative console, how are you today?" prompt="$" width="100%" height="100%"/>
+			
+			</h:form>
+		</p:dialog>
 		
 		<p:ajaxStatus style="width:42px;height:42px;position:fixed;right:5px;bottom:9px">
             <f:facet name="start">

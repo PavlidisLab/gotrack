@@ -76,7 +76,7 @@ public class Cache implements Serializable {
     private static final Logger log = Logger.getLogger( Cache.class );
 
     private final int MAX_DATA_ENTRIES = 20;
-    private final int MAX_ENRICHMENT_ENTRIES = 500;
+    private final int MAX_ENRICHMENT_ENTRIES = 2000;
 
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
@@ -396,6 +396,39 @@ public class Cache implements Serializable {
             return map2.get( symbol.toUpperCase() );
         }
         return null;
+    }
+
+    public Set<Gene> getCurrentGeneBySynonym( Integer speciesId, String symbol ) {
+        if ( speciesId == null || symbol == null ) {
+            return null;
+        }
+
+        String symbolUpper = symbol.toUpperCase();
+        Set<Gene> exactSynonym = new HashSet<>();
+
+        Map<String, Gene> gs = speciesToCurrentGenes.get( speciesId );
+
+        if ( gs != null ) {
+
+            for ( Gene gene : gs.values() ) {
+
+                Set<String> synonyms = gene.getSynonyms();
+
+                for ( String s : synonyms ) {
+                    if ( symbolUpper.equals( s.toUpperCase() ) ) {
+                        exactSynonym.add( gene );
+                    }
+                }
+
+            }
+
+        }
+
+        if ( exactSynonym.size() > 1 ) {
+            log.warn( "Secondary symbol (" + symbol + ") has multiple associated genes (" + exactSynonym + ")" );
+        }
+
+        return exactSynonym;
     }
 
     public boolean currentSymbolExists( Integer speciesId, String symbol ) {
