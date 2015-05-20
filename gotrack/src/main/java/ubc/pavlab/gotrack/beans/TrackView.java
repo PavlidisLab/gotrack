@@ -81,7 +81,6 @@ import ubc.pavlab.gotrack.utilities.Jaccard;
 public class TrackView {
 
     // Static
-    private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
     private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
     private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
     private static final List<GraphType> filterEnabledGraphs = Arrays.asList( GraphType.annotation );
@@ -217,7 +216,7 @@ public class TrackView {
             // allEditions = cache.getAllEditions( currentSpeciesId );
             allEditions = cache.getAllEditions( currentSpeciesId );
 
-            ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
+            ontologyInMemory = settingsCache.getOntologyInMemory();
 
             for ( Species s : cache.getSpeciesList() ) {
                 if ( s.getId().equals( currentSpeciesId ) ) {

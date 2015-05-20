@@ -78,9 +78,7 @@ public class EnrichmentView implements Serializable {
      * 
      */
     private static final long serialVersionUID = 166880636358923147L;
-    // private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
 
-    private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
     private static final Integer MAX_RESULTS = 10;
     private static final int MAX_GENESET_SIZE = 200;
@@ -193,7 +191,7 @@ public class EnrichmentView implements Serializable {
         annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
         geneOntologyDAO = daoFactoryBean.getGotrack().getGeneOntologyDAO();
         enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
-        ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
+        ontologyInMemory = settingsCache.getOntologyInMemory();
         // ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
         return null;
     }

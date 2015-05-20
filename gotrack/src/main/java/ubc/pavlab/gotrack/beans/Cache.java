@@ -177,7 +177,7 @@ public class Cache implements Serializable {
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        if ( settingsCache.getProperty( "gotrack.ontologyInMemory" ).equals( "true" ) ) {
+        if ( settingsCache.getOntologyInMemory() ) {
 
             List<Integer> eds = new ArrayList<Integer>( cacheDAO.getGOEditions() );
 
