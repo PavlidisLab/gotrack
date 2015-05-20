@@ -146,6 +146,21 @@ function HChart(id) {
 }
 
 function handleEnrichmentComplete(xhr, status, args) {
+   console.log(xhr, status, args)
+   // Slight hack here to make sure that the polling functionality of the progress bar stops
+   // Ran into a problem with viewexpiredexception not stopping the polling while also
+   // clearing the PrimeFaces widgets...
+   try {
+      PF('enrichmentProgressBarWdg').stop()
+   } catch (e) {
+      window.clearInterval(window.progressBarId);
+      window.clearTimeout(window.progressBarId);      
+   }
+   try {
+      PF('runEnrichmentBtnWdg').enable();
+   } catch (e) {
+      
+   }
    console.log(args);
 
    var options = {

@@ -209,8 +209,8 @@ public class EnrichmentView implements Serializable {
                 return null;
             }
 
-            log.info( "retreiving gene data..." );
-            status = "Retreiving Gene Information from cache...";
+            log.info( "retrieving gene data..." );
+            status = "Retrieving Gene Information from cache...";
             enrichmentStatus.add( status );
             enrichmentProgress = 5;
 
@@ -226,7 +226,7 @@ public class EnrichmentView implements Serializable {
             }
             enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
-            status = "Retreiving Gene Information from database...";
+            status = "Retrieving Gene Information from database...";
             enrichmentStatus.add( status );
             enrichmentProgress = 10;
 
@@ -342,7 +342,7 @@ public class EnrichmentView implements Serializable {
         }
 
         log.info( "Retrieving sample sizes" );
-        status = "Retreiving Sample Sizes...";
+        status = "Retrieving Sample Sizes...";
         enrichmentStatus.add( status );
         enrichmentProgress = 50;
         // Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );

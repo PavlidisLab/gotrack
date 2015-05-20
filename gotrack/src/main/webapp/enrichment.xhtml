@@ -209,9 +209,9 @@
 					
 					<p:separator style="max-width:200px; height:5px;" />
 					<div align="center" style="margin-top: 20px;">
-						<p:commandButton value="Run Enrichment"
+						<p:commandButton value="Run Enrichment" widgetVar="runEnrichmentBtnWdg"
 							actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
-							update=":formEnrich, :formSelect" onclick="PF('enrichmentProgressBarWdg').start()"
+							update=":formEnrich, :formSelect" onclick="PF('runEnrichmentBtnWdg').disable();PF('enrichmentProgressBarWdg').start();window.progressBarId=PF('enrichmentProgressBarWdg').progressPoll;"
 							oncomplete="handleEnrichmentComplete(xhr, status, args);" disabled="#{fn:length(enrichmentView.selectedGenes) == 0}"/>
 					</div>
 
