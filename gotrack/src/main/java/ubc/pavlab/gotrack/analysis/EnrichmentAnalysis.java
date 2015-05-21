@@ -374,6 +374,10 @@ public class EnrichmentAnalysis {
         return termsSignificant;
     }
 
+    public Set<GeneOntologyTerm> getTermsSignificant( Edition ed ) {
+        return termsSignificant.get( ed );
+    }
+
     public Set<Gene> getGeneSet( Edition ed, GeneOntologyTerm term ) {
         Map<GeneOntologyTerm, Set<Gene>> m1 = rawData.get( ed );
         if ( m1 != null ) {
@@ -395,6 +399,18 @@ public class EnrichmentAnalysis {
                 }
             }
 
+        }
+        return top;
+    }
+
+    public Set<GeneOntologyTerm> getTopNTerms( int n, Edition ed ) {
+        HashSet<GeneOntologyTerm> top = new HashSet<>();
+        Set<GeneOntologyTerm> data = termsSignificant.get( ed );
+        for ( GeneOntologyTerm term : data ) {
+            EnrichmentResult er = getResult( ed, term );
+            if ( er.getRank() < n ) {
+                top.add( term );
+            }
         }
         return top;
     }

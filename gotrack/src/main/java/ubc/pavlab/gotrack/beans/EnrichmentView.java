@@ -382,7 +382,8 @@ public class EnrichmentView implements Serializable {
         status = "Running Stability Analyses on all editions...";
         enrichmentStatus.add( status );
         enrichmentProgress = 80;
-        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, TOP_N_JACCARD, similarityCompareMethod );
+        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, TOP_N_JACCARD, similarityCompareMethod,
+                ontologyInMemory ? cache : null );
         stabilityScores = stabilityAnalysis.getStabilityScores();
         enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
@@ -406,6 +407,7 @@ public class EnrichmentView implements Serializable {
         Series completeTermJaccard = new Series( "All Terms" );
         Series topTermJaccard = new Series( "Top " + TOP_N_JACCARD + " Terms" );
         Series topGeneJaccard = new Series( "Genes Backing Top Terms" );
+        Series topParentsJaccard = new Series( "Parents of Top Terms" );
 
         for ( Entry<Edition, StabilityScore> editionEntry : stabilityScores.entrySet() ) {
             StabilityScore score = editionEntry.getValue();
@@ -413,11 +415,19 @@ public class EnrichmentView implements Serializable {
             completeTermJaccard.addDataPoint( date, score.getCompleteTermJaccard() );
             topTermJaccard.addDataPoint( date, score.getTopTermJaccard() );
             topGeneJaccard.addDataPoint( date, score.getTopGeneJaccard() );
+            if ( score.getTopParentsJaccard() != null ) {
+                topParentsJaccard.addDataPoint( date, score.getTopParentsJaccard() );
+            }
+
         }
 
         cv.addSeries( completeTermJaccard );
         cv.addSeries( topTermJaccard );
         cv.addSeries( topGeneJaccard );
+
+        if ( topParentsJaccard.getData().size() > 0 ) {
+            cv.addSeries( topParentsJaccard );
+        }
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
         RequestContext.getCurrentInstance()

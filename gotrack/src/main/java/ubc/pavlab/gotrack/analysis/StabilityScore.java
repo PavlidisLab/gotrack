@@ -19,16 +19,10 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
-import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
  * scores which attempt to explore the impact that annotation stability has on the performance of gene set enrichment
@@ -42,56 +36,29 @@ public class StabilityScore {
     private final Double completeTermJaccard;
     private final Double topTermJaccard;
     private final Double topGeneJaccard;
+    private final Double topParentsJaccard;
     private final Set<GeneOntologyTerm> topTerms;
     private final Set<Gene> topGenes;
+    private final Set<GeneOntologyTerm> topParents;
 
-    public StabilityScore( Double completeTermJaccard, Double topTermJaccard, Double topGeneJaccard ) {
+    /**
+     * @param completeTermJaccard
+     * @param topTermJaccard
+     * @param topGeneJaccard
+     * @param topTerms
+     * @param topGenes
+     */
+    public StabilityScore( Double completeTermJaccard, Double topTermJaccard, Double topGeneJaccard,
+            Double topParentsJaccard, Set<GeneOntologyTerm> topTerms, Set<Gene> topGenes,
+            Set<GeneOntologyTerm> topParents ) {
         super();
         this.completeTermJaccard = completeTermJaccard;
         this.topTermJaccard = topTermJaccard;
         this.topGeneJaccard = topGeneJaccard;
-        this.topTerms = null;
-        this.topGenes = null;
-    }
-
-    public StabilityScore( LinkedHashMap<GeneOntologyTerm, Set<Gene>> testingEdition,
-            LinkedHashMap<GeneOntologyTerm, Set<Gene>> currentEdition, int n ) {
-
-        completeTermJaccard = Jaccard.similarity( testingEdition.keySet(), currentEdition.keySet() );
-        Set<GeneOntologyTerm> testingTopTerms = getTopNTerms( testingEdition.keySet(), n );
-        Set<GeneOntologyTerm> currentTopTerms = getTopNTerms( currentEdition.keySet(), n );
-        topTermJaccard = Jaccard.similarity( testingTopTerms, currentTopTerms );
-
-        Set<Gene> testingTopGenes = new HashSet<>();
-
-        for ( GeneOntologyTerm term : testingTopTerms ) {
-            testingTopGenes.addAll( testingEdition.get( term ) );
-        }
-
-        Set<Gene> currentTopGenes = new HashSet<>();
-
-        for ( GeneOntologyTerm term : currentTopTerms ) {
-            currentTopGenes.addAll( currentEdition.get( term ) );
-        }
-
-        topGeneJaccard = Jaccard.similarity( testingTopGenes, currentTopGenes );
-
-        this.topTerms = Collections.unmodifiableSet( testingTopTerms );
-        this.topGenes = Collections.unmodifiableSet( testingTopGenes );
-
-    }
-
-    private static Set<GeneOntologyTerm> getTopNTerms( Collection<GeneOntologyTerm> set, int n ) {
-        int cnt = 0;
-        Set<GeneOntologyTerm> results = new LinkedHashSet<>();
-        for ( GeneOntologyTerm geneOntologyTerm : set ) {
-            cnt++;
-            if ( cnt > n ) {
-                break;
-            }
-            results.add( geneOntologyTerm );
-        }
-        return results;
+        this.topParentsJaccard = topParentsJaccard;
+        this.topTerms = topTerms;
+        this.topGenes = topGenes;
+        this.topParents = topParents;
     }
 
     public Double getCompleteTermJaccard() {
@@ -106,12 +73,20 @@ public class StabilityScore {
         return topGeneJaccard;
     }
 
+    public Double getTopParentsJaccard() {
+        return topParentsJaccard;
+    }
+
     public Set<GeneOntologyTerm> getTopTerms() {
         return topTerms;
     }
 
     public Set<Gene> getTopGenes() {
         return topGenes;
+    }
+
+    public Set<GeneOntologyTerm> getTopParents() {
+        return topParents;
     }
 
 }

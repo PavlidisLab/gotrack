@@ -240,13 +240,13 @@ public class TerminalHandler implements Serializable {
                     try {
                         writer = new PrintWriter( outputFile, "UTF-8" );
 
-                        writer.println( "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard" );
+                        writer.println( "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard\tTopParentsJaccard" );
                         for ( Entry<Edition, StabilityScore> editionEntry : sa.getStabilityScores().entrySet() ) {
                             Edition ed = editionEntry.getKey();
                             StabilityScore score = editionEntry.getValue();
                             writer.println( ed.getEdition() + "\t" + ed.getDate() + "\t"
                                     + score.getCompleteTermJaccard() + "\t" + score.getTopTermJaccard() + "\t"
-                                    + score.getTopGeneJaccard() );
+                                    + score.getTopGeneJaccard() + "\t" + score.getTopParentsJaccard() );
                         }
                         writer.close();
 
@@ -345,7 +345,7 @@ public class TerminalHandler implements Serializable {
                 MultipleTestCorrection.BH, 0.05, cache, currentSpeciesId );
         log.info( "Similarity Analysis" );
 
-        return new StabilityAnalysis( analysis, 5, SimilarityCompareMethod.CURRENT );
+        return new StabilityAnalysis( analysis, 5, SimilarityCompareMethod.CURRENT, ontologyInMemory ? cache : null );
 
     }
 

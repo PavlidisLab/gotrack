@@ -21,17 +21,19 @@ package ubc.pavlab.gotrack.analysis;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.log4j.Logger;
+
+import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.utilities.Jaccard;
 
 import com.google.common.collect.Iterables;
 
@@ -47,79 +49,93 @@ import com.google.common.collect.Iterables;
  */
 public class StabilityAnalysis {
 
+    private static final Logger log = Logger.getLogger( StabilityAnalysis.class );
+
     private final Map<Edition, StabilityScore> stabilityScores;
+    private final EnrichmentAnalysis analysis;
 
     /**
-     * @param enrichmentResults results of enrichment analysis
-     * @param geneGOMap raw data in order to get gene sets
+     * @param analysis results of enrichment analysis
      * @param TOP_N_JACCARD number of top terms to use for top N series
-     * @param proximal true if comparing to previous edition, false if comparing to current edition
+     * @param scm compare method to be used in the analysis
+     * @param cache Cache bean in order to access propagation needed for parent similarity, null to leave out parent
+     *        similarity
      */
-    public StabilityAnalysis( EnrichmentAnalysis analysis, int TOP_N_JACCARD, SimilarityCompareMethod scm ) {
-        Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults = analysis.getSignificantResults();
+    public StabilityAnalysis( EnrichmentAnalysis analysis, int TOP_N_JACCARD, SimilarityCompareMethod scm, Cache cache ) {
+        this.analysis = analysis;
         Map<Edition, StabilityScore> stabilityScores = new LinkedHashMap<>();
+        Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults = analysis.getSignificantResults();
 
         List<Edition> orderedEditions = new ArrayList<>( enrichmentResults.keySet() );
         Collections.sort( orderedEditions );
-        Edition currentEdition = Iterables.getLast( orderedEditions, null );
-        LinkedHashSet<GeneOntologyTerm> currentSortedTerms = getSortedKeySetByValue( enrichmentResults
-                .get( currentEdition ) );
 
-        LinkedHashMap<GeneOntologyTerm, Set<Gene>> currentSortedTermsMap = new LinkedHashMap<>();
+        Edition compareEdition = scm.equals( SimilarityCompareMethod.CURRENT ) ? Iterables.getLast( orderedEditions,
+                null ) : Iterables.getFirst( orderedEditions, null );
 
-        for ( GeneOntologyTerm term : currentSortedTerms ) {
-            currentSortedTermsMap.put( term, analysis.getGeneSet( currentEdition, term ) );
+        Set<GeneOntologyTerm> compareTopTerms = analysis.getTopNTerms( TOP_N_JACCARD, compareEdition );
+
+        Set<Gene> compareTopGenes = new HashSet<>();
+
+        for ( GeneOntologyTerm term : compareTopTerms ) {
+            compareTopGenes.addAll( analysis.getGeneSet( compareEdition, term ) );
+        }
+        Set<GeneOntologyTerm> compareTopParents = null;
+        if ( cache != null ) {
+            compareTopParents = cache.propagate( compareTopTerms, compareEdition.getGoEditionId() );
         }
 
-        // completeTermJaccard
-        LinkedHashMap<GeneOntologyTerm, Set<Gene>> previousSortedTermsMap = null;
-        for ( Edition ed : orderedEditions ) {
+        for ( Edition testingEdition : orderedEditions ) {
 
-            LinkedHashSet<GeneOntologyTerm> sortedTerms = getSortedKeySetByValue( enrichmentResults.get( ed ) );
+            // Complete Terms
+            Double completeTermJaccard = Jaccard.similarity( analysis.getTermsSignificant( testingEdition ),
+                    analysis.getTermsSignificant( compareEdition ) );
 
-            LinkedHashMap<GeneOntologyTerm, Set<Gene>> sortedTermsMap = new LinkedHashMap<>();
+            // Top Terms
+            Set<GeneOntologyTerm> testingTopTerms = analysis.getTopNTerms( TOP_N_JACCARD, testingEdition );
 
-            for ( GeneOntologyTerm term : sortedTerms ) {
-                sortedTermsMap.put( term, analysis.getGeneSet( ed, term ) );
+            Double topTermJaccard = Jaccard.similarity( testingTopTerms, compareTopTerms );
+
+            // Top Genes
+
+            Set<Gene> testingTopGenes = new HashSet<>();
+
+            for ( GeneOntologyTerm term : testingTopTerms ) {
+                testingTopGenes.addAll( analysis.getGeneSet( testingEdition, term ) );
             }
 
-            if ( scm.equals( SimilarityCompareMethod.CURRENT ) ) {
-                previousSortedTermsMap = currentSortedTermsMap;
-            } else if ( previousSortedTermsMap == null ) {
-                previousSortedTermsMap = sortedTermsMap;
+            Double topGeneJaccard = Jaccard.similarity( testingTopGenes, compareTopGenes );
+
+            // Top Parents
+            Set<GeneOntologyTerm> testingTopParents = new HashSet<>();
+            Double topParentsJaccard = null;
+            if ( cache != null ) {
+                testingTopParents = cache.propagate( testingTopTerms, testingEdition.getGoEditionId() );
+
+                topParentsJaccard = Jaccard.similarity( testingTopParents, compareTopParents );
             }
 
-            stabilityScores.put( ed, new StabilityScore( sortedTermsMap, previousSortedTermsMap, TOP_N_JACCARD ) );
+            stabilityScores.put(
+                    testingEdition,
+                    new StabilityScore( completeTermJaccard, topTermJaccard, topGeneJaccard, topParentsJaccard,
+                            Collections.unmodifiableSet( testingTopTerms ), Collections
+                                    .unmodifiableSet( testingTopGenes ), Collections
+                                    .unmodifiableSet( testingTopParents ) ) );
 
-            previousSortedTermsMap = sortedTermsMap;
+            if ( scm.equals( SimilarityCompareMethod.PROXIMAL ) ) {
+                compareEdition = testingEdition;
+                compareTopTerms = testingTopTerms;
+                compareTopGenes = testingTopGenes;
+                compareTopParents = testingTopParents;
+            }
 
         }
 
         this.stabilityScores = Collections.unmodifiableMap( stabilityScores );
+
     }
 
     public Map<Edition, StabilityScore> getStabilityScores() {
         return stabilityScores;
-    }
-
-    public static LinkedHashSet<GeneOntologyTerm> getSortedKeySetByValue( Map<GeneOntologyTerm, EnrichmentResult> data ) {
-        LinkedHashSet<GeneOntologyTerm> results = new LinkedHashSet<>();
-
-        List<Entry<GeneOntologyTerm, EnrichmentResult>> entryList = new ArrayList<>( data.entrySet() );
-
-        Collections.sort( entryList, new Comparator<Entry<GeneOntologyTerm, EnrichmentResult>>() {
-            public int compare( Entry<GeneOntologyTerm, EnrichmentResult> e1,
-                    Entry<GeneOntologyTerm, EnrichmentResult> e2 ) {
-                return Double.compare( e1.getValue().getPvalue(), e2.getValue().getPvalue() );
-            }
-        } );
-
-        for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : entryList ) {
-            results.add( entry.getKey() );
-        }
-
-        return results;
-
     }
 
 }
