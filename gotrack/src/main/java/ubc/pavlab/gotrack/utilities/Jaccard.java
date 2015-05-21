@@ -38,20 +38,23 @@ public class Jaccard {
 
     public static <T> Double similarity( T[] a, T[] b ) {
         if ( a == null && b == null ) return null;
-        if ( a.length == 0 || b.length == 0 ) return 1.0d;
+        if ( a.length == 0 && b.length == 0 ) return 1.0d;
+        if ( a.length == 0 || b.length == 0 ) return 0.0d;
 
         return calculate( new HashSet<T>( Arrays.asList( a ) ), new HashSet<T>( Arrays.asList( b ) ) );
     }
 
     public static <T> Double similarity( Set<T> a, Set<T> b ) {
         if ( a == null && b == null ) return null;
-        if ( a.size() == 0 || b.size() == 0 ) return 1.0d;
+        if ( a.size() == 0 && b.size() == 0 ) return 1.0d;
+        if ( a.size() == 0 || b.size() == 0 ) return 0.0d;
 
         return calculate( a, b );
     }
 
     public static <T> Double distance( T[] a, T[] b ) {
         if ( a == null && b == null ) return null;
+        if ( a.length == 0 && b.length == 0 ) return 0.0d;
         if ( a.length == 0 || b.length == 0 ) return 1.0d;
 
         return 1 - calculate( new HashSet<T>( Arrays.asList( a ) ), new HashSet<T>( Arrays.asList( b ) ) );
@@ -59,8 +62,8 @@ public class Jaccard {
 
     public static <T> Double distance( Set<T> a, Set<T> b ) {
         if ( a == null && b == null ) return null;
+        if ( a.size() == 0 && b.size() == 0 ) return 0.0d;
         if ( a.size() == 0 || b.size() == 0 ) return 1.0d;
-
         return 1 - calculate( a, b );
     }
 
