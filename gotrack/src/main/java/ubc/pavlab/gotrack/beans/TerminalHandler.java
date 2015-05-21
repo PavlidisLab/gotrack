@@ -338,8 +338,25 @@ public class TerminalHandler implements Serializable {
             return null;
         }
 
-        Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
-        log.info( "retrieving sample sizes..." );
+        Map<Edition, Integer> sampleSizes = new HashMap<>();
+        Map<Edition, Set<Gene>> testMap = new HashMap<>();
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Gene>>> editionEntry : geneGOMap.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            Set<Gene> gset = new HashSet<>();
+            testMap.put( ed, gset );
+            for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : editionEntry.getValue().entrySet() ) {
+                gset.addAll( termEntry.getValue() );
+
+            }
+
+        }
+
+        for ( Entry<Edition, Set<Gene>> editionEntry : testMap.entrySet() ) {
+            sampleSizes.put( editionEntry.getKey(), editionEntry.getValue().size() );
+        }
+        testMap = null;
+
+        log.info( "Running enrichment analysis" );
 
         EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, 5, 200,
                 MultipleTestCorrection.BH, 0.05, cache, currentSpeciesId );
