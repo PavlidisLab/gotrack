@@ -51,7 +51,7 @@
 
 	<h:body id="body" onload="onLoad()">
 		<p:layout fullPage="true" onResize="centerResize()">
-			<p:growl id="globalGrowl" globalOnly="true" life="2000" autoUpdate="true"/>
+			<p:growl id="globalGrowl" globalOnly="true" autoUpdate="true" life="5000" escape="false"/>
 			<p:layoutUnit id="top" position="north" size="50">
 				<h:form id="topForm">
 					<p:menubar toggleEvent="click">
@@ -97,27 +97,28 @@
 					</p:selectOneMenu>
 					</h:panelGrid>
 					
-				    <p:dataList id="geneList" value="#{enrichmentView.selectedGenes}" var="gene" type="unordered" 
-				    			itemType="none" >
-				        <f:facet name="header">
-				        	Gene Hit List (Total: #{fn:length(enrichmentView.selectedGenes)})
-						</f:facet>
-				    			
-				        <p:commandLink update=":geneDetail" oncomplete="PF('geneDialog').show()" title="View Detail" styleClass="ui-icon ui-icon-search" style="float:left;margin-right:10px">
-				            <f:setPropertyActionListener value="#{gene}" target="#{enrichmentView.viewGene}" />
-				            <h:outputText value="#{gene.symbol}" />
-				        </p:commandLink>
-				        <p:commandLink update=":globalGrowl, :formSelect:geneList" title="Remove" action="#{enrichmentView.removeGene}" styleClass="ui-icon ui-icon-trash" style="float:left;margin-right:10px">
-				            <f:setPropertyActionListener value="#{gene}" target="#{enrichmentView.geneToRemove}" />
-				            <h:outputText value="#{gene.symbol}" />
-				        </p:commandLink>
-				        <h:outputText value="#{gene.symbol}" style="display:inline-block"/>
-				        
-				        <f:facet name="footer">
-							<p:commandButton icon="fa fa-plus" value="Add" oncomplete="PF('addGenesDlg').show()" />
-							<p:commandButton icon="fa fa-trash" value="Remove All" actionListener="#{enrichmentView.removeAllGenes}" update=":formSelect:geneList" />
-						</f:facet>
-				    </p:dataList>
+					    <p:dataList id="geneList" value="#{enrichmentView.selectedGenes}" var="gene" type="unordered" 
+					    			itemType="none" styleClass="geneList">
+					        <f:facet name="header">
+					        	Gene Hit List (Total: #{fn:length(enrichmentView.selectedGenes)})
+							</f:facet>
+					    			
+					        <p:commandLink update=":geneDetail" oncomplete="PF('geneDialog').show()" title="View Detail" styleClass="ui-icon ui-icon-search" style="float:left;margin-right:10px">
+					            <f:setPropertyActionListener value="#{gene}" target="#{enrichmentView.viewGene}" />
+					            <h:outputText value="#{gene.symbol}" />
+					        </p:commandLink>
+					        <p:commandLink update=":globalGrowl, :formSelect:geneList" title="Remove" action="#{enrichmentView.removeGene}" styleClass="ui-icon ui-icon-trash" style="float:left;margin-right:10px">
+					            <f:setPropertyActionListener value="#{gene}" target="#{enrichmentView.geneToRemove}" />
+					            <h:outputText value="#{gene.symbol}" />
+					        </p:commandLink>
+					        <h:outputText value="#{gene.symbol}" style="display:inline-block"/>
+					        
+					        <f:facet name="footer">
+								<p:commandButton icon="fa fa-plus" value="Add" oncomplete="PF('addGenesDlg').show()" styleClass="smallBtn" />
+								<p:commandButton icon="fa fa-plus" value="Add Multiple" oncomplete="PF('addMultipleGenesDlg').show()" styleClass="smallBtn" />
+								<p:commandButton icon="fa fa-trash" value="Clear" actionListener="#{enrichmentView.removeAllGenes}" update=":formSelect" styleClass="smallBtn"/>
+							</f:facet>
+					    </p:dataList>
 				    
 					
 				<p:separator style="max-width:200px" />
@@ -580,8 +581,8 @@
 		</p:dialog>
 		
 		<h:form id="formAddGenes">
-			<p:dialog header="Add Genes" widgetVar="addGenesDlg" modal="false"
-				showEffect="fade" hideEffect="fade" resizable="false">
+			<p:dialog header="Add Gene" widgetVar="addGenesDlg" modal="false"
+				showEffect="fade" hideEffect="fade" resizable="false" styleClass="center-footer">
 				<p:panelGrid style="margin-bottom:10px" cellpadding="5"
 					styleClass="no-border">
 					<p:row>
@@ -598,41 +599,94 @@
 							</p:autoComplete>
 						</p:column>
 					</p:row>
-
-					<p:row>
-						<p:column colspan="2">
-							<p:separator />
-						</p:column>
-					</p:row>
-
-					<p:row>
-						<p:column>
-							<h:outputText value="Bulk Genes: " />
-						</p:column>
-
-						<p:column>
-							<p:inputTextarea id="inputBulkGene"
-								value="#{enrichmentView.bulkQuery}" rows="10" cols="50" placeholder="BRCA1 GRIN1 RB1"
-								title="whitespace or newline delimited" autoResize="false"/>
-
-						</p:column>
-					</p:row>
 				</p:panelGrid>
 
 
 
 				<f:facet name="footer">
-					<p:commandButton value="&nbsp; Add Single"
+					<p:commandButton value="&nbsp; Add"
 						actionListener="#{enrichmentView.addGene}" icon="fa fa-plus"
-						update=":formSelect, :globalGrowl" />
-					<p:commandButton value="&nbsp; Add Bulk"
-						actionListener="#{enrichmentView.addBulkGenes}"
-						icon="fa fa-plus-circle"
-						update=":formSelect, :globalGrowl" />
+						update=":formSelect, :globalGrowl" styleClass="smallBtn"
+						oncomplete="PF('addGenesDlg').hide();"/>
 				</f:facet>
 
 			</p:dialog>
+			
+			<p:dialog header="Add Multiple Genes" widgetVar="addMultipleGenesDlg" modal="false"
+				showEffect="fade" hideEffect="fade" resizable="false" styleClass="center-footer">
+				
+				<h:panelGrid style="margin-bottom:10px" cellpadding="5" columns="1" columnClasses="center">
 
+				<p:inputTextarea value="#{enrichmentView.bulkQuery}" rows="10" cols="50"
+					placeholder="BRCA1 GRIN1 RB1"
+					title="whitespace or newline delimited" autoResize="false" />
+
+
+						
+				</h:panelGrid>
+
+				<f:facet name="footer">
+					<p:commandButton value="&nbsp; Add All"
+						actionListener="#{enrichmentView.searchMultipleGenes}"
+						icon="fa fa-plus-circle"
+						update=":globalGrowl, :formAddGenes:tableConfirmGenes" styleClass="smallBtn"
+						oncomplete="PF('addMultipleGenesDlg').hide();PF('confirmGenesDlg').show()"/>
+				</f:facet>
+
+			</p:dialog>
+			
+			<p:dialog header="Confirm Selection" widgetVar="confirmGenesDlg"
+				modal="false" showEffect="fade" hideEffect="fade" resizable="false" style="height:600px;width:900px;">
+
+				<p:dataTable id="tableConfirmGenes" var="gm" value="#{enrichmentView.geneMatches}"
+					editable="true" style="margin-bottom:20px;width:800px" scrollable="true" scrollHeight="400"
+					rowStyleClass="#{gm.type == 'EXACT' ? 'green-row' : ( gm.type != 'EXACT_SYNONYM' ? 'red-row': '') }">
+			       
+   					<p:column headerText="Input">
+						<h:outputText value="#{gm.querySymbol}" />
+					</p:column>
+
+					<p:column headerText="Selected Gene">
+						<p:cellEditor>
+							<f:facet name="output">
+								<h:outputText value="#{gm.selectedGene.symbol}" />
+							</f:facet>
+							<f:facet name="input">
+								<p:autoComplete id="geneInput" value="#{gm.selectedGene}"
+									completeMethod="#{enrichmentView.complete}" minQueryLength="2"
+									forceSelection="true" maxResults="10" label="ID"
+									emptyMessage="No gene suggestions available,  please try again."
+									placeholder="BRCA1" converter="geneConverter">
+									<f:attribute name="species" value="#{enrichmentView.currentSpeciesId}"/>
+									</p:autoComplete>
+							</f:facet>
+						</p:cellEditor>
+					</p:column>
+					
+					<p:column headerText="Match Type">
+						<h:outputText value="#{gm.type}" />
+					</p:column>
+
+
+
+					<p:column style="width:48px">
+						<p:rowEditor />
+					</p:column>
+					
+					<f:facet name="footer"> 
+						<h:outputText value="" />
+					</f:facet>
+				</p:dataTable>
+				
+				<f:facet name="footer">
+					<p:commandButton value="&nbsp; Confirm"
+						actionListener="#{enrichmentView.confirmMatches}"
+						icon="fa fa-plus-circle"
+						update=":globalGrowl, :formSelect" styleClass="smallBtn"
+						oncomplete="PF('confirmGenesDlg').hide();"/>
+				</f:facet>
+				
+			</p:dialog>
 		</h:form>
 		
 		<p:dialog id="terminalDialog" header="Terminal"

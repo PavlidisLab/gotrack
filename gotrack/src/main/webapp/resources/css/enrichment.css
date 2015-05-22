@@ -15,7 +15,11 @@ li.ui-datalist-item {
 	margin-bottom:5px;
 }
 
-#formSelect\:geneList_content {
+div.geneList {
+	/* width:500px */
+}
+
+div.geneList .ui-datalist-content {
 	height: 135px;
   	overflow-y: auto;
 }
@@ -99,4 +103,12 @@ body .ui-selectonemenu .ui-selectonemenu-label {
 #enrichmentResultDetailsTabView\:annotatedGenesList_content {
   height: 300px;
   overflow-y: auto;
+}
+
+button.smallBtn {
+	font-size:0.8em !important;
+}
+
+button.smallBtn > span.fa {
+	margin-top:-6px;
 }

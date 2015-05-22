@@ -61,6 +61,8 @@ import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
+import ubc.pavlab.gotrack.model.table.GeneMatches;
+import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
 
 import com.google.gson.Gson;
 
@@ -81,7 +83,7 @@ public class EnrichmentView implements Serializable {
 
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
     private static final Integer MAX_RESULTS = 10;
-    private static final int MAX_GENESET_SIZE = 200;
+    private static final int MAX_GENESET_SIZE = 300;
     // True if Terms should be lazy-loaded as required, false if all terms should be loaded on enrichment run
     private static final boolean LAZY_LOADING = false;
 
@@ -112,6 +114,8 @@ public class EnrichmentView implements Serializable {
     // MAOA DDC VTI1B MAOB STX12 COMT SNAP25 SNAP23 SLC6A20 SLC6A2 TH SLC6A3 SNAP29 PNMT STX7 SLC18A1 VAMP1 SLC6A18
     // SLC6A19 SLC18A2 VAMP2 SLC6A15 SLC6A16 SLC6A17 DBH
     private String bulkQuery = "ACAA1 ACADS ADH1B ADH4 ADRA1A APOF C6 C8A C8B C9orf103 CD4 CETN2 CIDEB COLEC10 CYP2C18 CYP2C19 CYP2C8 CYP2E1 CYP4A11 DMGDH DNASE1L3 ETS2 FAM20C FCN1 FETUB GBA3 HPX IGFALS ITIH4 LCAT LDHD LOC401022 LPA NDRG2 PEMT PLG PPAP2B RCAN1 RSPO3 RXRB SLC22A1 SLC22A3 SLC28A1 SLCO1B3 TMED8 TMEM27 TTC36 TTR UROC1";
+
+    private List<GeneMatches> geneMatches;
 
     private Map<Integer, List<Gene>> speciesToSelectedGenes = new HashMap<>();
     private Gene geneToRemove;
@@ -809,45 +813,72 @@ public class EnrichmentView implements Serializable {
 
     }
 
-    public void addBulkGenes( ActionEvent actionEvent ) {
+    public void searchMultipleGenes( ActionEvent actionEvent ) {
+        Set<String> inputSet = new HashSet<>( Arrays.asList( bulkQuery.split( "\\s*(,|\\s)\\s*" ) ) );
+        geneMatches = new ArrayList<>();
+        Map<GeneMatches.MatchType, Integer> cntMap = new HashMap<>();
+        for ( String geneInput : inputSet ) {
+            Gene gene = cache.getCurrentGene( currentSpeciesId, geneInput );
+            GeneMatches.MatchType type = null;
+            if ( gene != null ) {
+                type = GeneMatches.MatchType.EXACT;
 
-        String[] bulkGeneInput = bulkQuery.split( "\\s+" );
-        Set<String> geneInputsNotFound = new HashSet<>();
+            } else {
+                Set<Gene> synonyms = cache.getCurrentGeneBySynonym( currentSpeciesId, geneInput );
+
+                if ( synonyms.size() == 1 ) {
+                    gene = synonyms.iterator().next();
+                    type = GeneMatches.MatchType.EXACT_SYNONYM;
+                } else if ( synonyms.size() > 1 ) {
+                    type = GeneMatches.MatchType.MULTIPLE_EXACT_SYNONYMS;
+                } else {
+                    type = GeneMatches.MatchType.NO_MATCH;
+                }
+
+            }
+
+            geneMatches.add( new GeneMatches( geneInput, gene, type ) );
+            Integer cnt = cntMap.get( type );
+            cntMap.put( type, ( cnt == null ? 0 : cnt ) + 1 );
+
+        }
+
+        if ( !geneMatches.isEmpty() ) {
+
+            Collections.sort( geneMatches, new Comparator<GeneMatches>() {
+                public int compare( GeneMatches e1, GeneMatches e2 ) {
+                    return -e1.getType().compareTo( e2.getType() );
+                }
+            } );
+
+            String message = "";
+
+            for ( Entry<MatchType, Integer> typeEntry : cntMap.entrySet() ) {
+                message += typeEntry.getKey().toString() + " : " + typeEntry.getValue().toString() + "<br/>";
+            }
+            addMessage( message, FacesMessage.SEVERITY_INFO );
+        }
+
+    }
+
+    public void confirmMatches() {
         int genesAdded = 0;
-
         List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
         if ( selectGenes == null ) {
             selectGenes = new ArrayList<>();
             speciesToSelectedGenes.put( currentSpeciesId, selectGenes );
         }
 
-        for ( int i = 0; i < bulkGeneInput.length; i++ ) {
-            String geneInput = bulkGeneInput[i];
-
-            Gene g = cache.getCurrentGene( currentSpeciesId, geneInput );
-
-            if ( g != null ) {
-
-                if ( !selectGenes.contains( g ) ) {
-                    genesAdded++;
-                    selectGenes.add( g );
-
-                }
-
-            } else {
-                geneInputsNotFound.add( geneInput );
+        for ( GeneMatches gm : geneMatches ) {
+            Gene g = gm.getSelectedGene();
+            if ( g != null && !selectGenes.contains( g ) ) {
+                genesAdded++;
+                selectGenes.add( g );
             }
-
         }
 
         if ( genesAdded > 0 ) {
             addMessage( "Successfully added " + genesAdded + " gene(s)", FacesMessage.SEVERITY_INFO );
-        }
-        if ( geneInputsNotFound.size() > 0 ) {
-
-            String geneString = StringUtils.join( geneInputsNotFound, ", " );
-
-            addMessage( "Could not find matching gene(s) for (" + geneString + ")", FacesMessage.SEVERITY_WARN );
         }
 
     }
@@ -1105,6 +1136,10 @@ public class EnrichmentView implements Serializable {
 
     public Set<Gene> getViewEnrichmentRowGeneSet() {
         return viewEnrichmentRowGeneSet;
+    }
+
+    public List<GeneMatches> getGeneMatches() {
+        return geneMatches;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
