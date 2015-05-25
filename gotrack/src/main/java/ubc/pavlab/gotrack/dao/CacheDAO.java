@@ -43,17 +43,17 @@ public interface CacheDAO {
      * @return Map of species to ordered linkedlist of editions
      * @throws DAOException
      */
-    public Map<Integer, List<Edition>> getAllEditions() throws DAOException;
+    public Map<Integer, List<Edition>> getAllEditions( int[] speciesRestrictions ) throws DAOException;
 
-    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes() throws DAOException;
+    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes( int[] speciesRestrictions ) throws DAOException;
 
-    public Map<Integer, Map<Edition, StatsEntry>> getAggregates() throws DAOException;
+    public Map<Integer, Map<Edition, StatsEntry>> getAggregates( int[] speciesRestrictions ) throws DAOException;
 
     public Set<Integer> getGOEditions() throws DAOException;
 
     public Map<String, String> getEvidenceCategories() throws DAOException;
 
-    public Map<Integer, Map<String, Gene>> getCurrentGenes() throws DAOException;
+    public Map<Integer, Map<String, Gene>> getCurrentGenes( int[] speciesRestrictions ) throws DAOException;
 
     public Map<Integer, Set<Term>> getGoTerms() throws DAOException;
 

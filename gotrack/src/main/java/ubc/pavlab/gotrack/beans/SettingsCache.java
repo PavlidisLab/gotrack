@@ -30,6 +30,7 @@ import javax.annotation.PostConstruct;
 import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 /**
@@ -51,8 +52,12 @@ public class SettingsCache implements Serializable {
     private static final String PROPERTIES_FILE = "/usr/local/tomcat/gotrack.properties";
 
     private static final String ONTOLOGY_SETTING_PROPERTY = "gotrack.ontologyInMemory";
+    private static final String SPECIES_RESTRICTIONS_PROPERTY = "gotrack.speciesRestrictions";
 
     private Properties prop = new Properties();
+
+    // Individual settings caches
+    private int[] speciesRestrictions = null;
 
     @PostConstruct
     public void init() {
@@ -97,6 +102,23 @@ public class SettingsCache implements Serializable {
 
     public boolean getOntologyInMemory() {
         return prop.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
+    }
+
+    public int[] getSpeciesRestrictions() {
+        if ( speciesRestrictions == null ) {
+            String sr = prop.getProperty( SPECIES_RESTRICTIONS_PROPERTY );
+            if ( StringUtils.isBlank( sr ) ) {
+                speciesRestrictions = new int[] {};
+            } else {
+                String[] tokens = sr.split( "," );
+                speciesRestrictions = new int[tokens.length];
+                for ( int i = 0; i < tokens.length; i++ ) {
+                    speciesRestrictions[i] = Integer.parseInt( tokens[i] );
+                }
+            }
+        }
+
+        return speciesRestrictions;
     }
 
     public boolean contains( String key ) {

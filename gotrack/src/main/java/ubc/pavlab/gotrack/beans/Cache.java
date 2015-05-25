@@ -150,6 +150,8 @@ public class Cache implements Serializable {
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
+        int[] speciesRestrictions = settingsCache.getSpeciesRestrictions();
+
         // Obtain SpeciesDAO.
         SpeciesDAO speciesDAO = daoFactoryBean.getGotrack().getSpeciesDAO();
         log.info( "SpeciesDAO successfully obtained: " + speciesDAO );
@@ -169,7 +171,7 @@ public class Cache implements Serializable {
                 / 1000000 + " MB" );
 
         // TODO Change to new goa_go_aggregate table
-        goSetSizes = cacheDAO.getGOSizes();
+        goSetSizes = cacheDAO.getGOSizes( speciesRestrictions );
 
         log.info( "GO Set sizes successfully obtained" );
 
@@ -215,14 +217,14 @@ public class Cache implements Serializable {
 
         }
 
-        aggregates = cacheDAO.getAggregates();
+        aggregates = cacheDAO.getAggregates( speciesRestrictions );
 
         log.info( "Aggregates successfully obtained" );
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
 
-        for ( Entry<Integer, List<Edition>> speciesEntry : cacheDAO.getAllEditions().entrySet() ) {
+        for ( Entry<Integer, List<Edition>> speciesEntry : cacheDAO.getAllEditions( speciesRestrictions ).entrySet() ) {
             Integer species = speciesEntry.getKey();
 
             Map<Integer, Edition> eds = new HashMap<>();
@@ -243,7 +245,7 @@ public class Cache implements Serializable {
 
         log.debug( "All Editions Size: " + allEditions.size() );
 
-        speciesToCurrentGenes = cacheDAO.getCurrentGenes();
+        speciesToCurrentGenes = cacheDAO.getCurrentGenes( speciesRestrictions );
         log.info( "Done loading current genes..." );
 
         for ( Species species : speciesList ) {

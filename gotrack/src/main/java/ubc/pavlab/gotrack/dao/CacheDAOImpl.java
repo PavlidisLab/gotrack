@@ -62,13 +62,17 @@ public class CacheDAOImpl implements CacheDAO {
             + "as temp group by species_id";
     private static final String SQL_ALL_EDITIONS = "select species_id, edition, edition.date, go_edition.date as go_date, go_edition_id_fk "
             + "from edition left join go_edition on edition.go_edition_id_fk=go_edition.id order by edition";
+    private static final String SQL_ALL_EDITIONS_RESTRICT = "select species_id, edition, edition.date, go_edition.date as go_date, go_edition_id_fk "
+            + "from edition left join go_edition on edition.go_edition_id_fk=go_edition.id WHERE edition.species_id in (%s) order by edition";
     private static final String SQL_ALL_GO_SIZES = "select species_id, edition, go_id, annotation_count from goa_go_aggregate";
+    private static final String SQL_ALL_GO_SIZES_RESTRICT = "select species_id, edition, go_id, annotation_count from goa_go_aggregate WHERE species_id in (%s)";
     private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, edition.date, edition.go_edition_id_fk, go_edition.date go_date, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id";
+    private static final String SQL_AGGREGATE_RESTRICT = "select aggregate.species_id, aggregate.edition, edition.date, edition.go_edition_id_fk, go_edition.date go_date, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id WHERE aggregate.species_id in (%s)";
     private static final String SQL_GO_EDITIONS = "SELECT distinct id from go_edition";
     private static final String SQL_EVIDENCE_CATEGORIES = "select evidence, category from evidence_categories";
 
     private static final String SQL_CURRENT_GENES = "select species_id, symbol, accession, synonyms, sec from current_genes LEFT JOIN sec_ac on accession=ac";
-
+    private static final String SQL_CURRENT_GENES_RESTRICT = "select species_id, symbol, accession, synonyms, sec from current_genes LEFT JOIN sec_ac on accession=ac WHERE species_id in (%s)";
     private static final String SQL_GO_TERMS = "Select go_ontology_tclosure.go_edition_id_fk, child go_id, name, aspect from go_ontology_tclosure inner join go_term on go_term.go_id=go_ontology_tclosure.child and go_term.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk where min_distance=0";
     private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from go_ontology_tclosure where min_distance =1";
 
@@ -94,15 +98,27 @@ public class CacheDAOImpl implements CacheDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes() throws DAOException {
+    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
 
+        List<Object> params = new ArrayList<Object>();
+
+        String sql = SQL_ALL_GO_SIZES;
+        if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
+            sql = String.format( SQL_ALL_GO_SIZES_RESTRICT, DAOUtil.preparePlaceHolders( speciesRestrictions.length ) );
+            for ( int i = 0; i < speciesRestrictions.length; i++ ) {
+                params.add( speciesRestrictions[i] );
+            }
+        }
+
+        log.debug( sql );
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_ALL_GO_SIZES );
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
@@ -171,15 +187,26 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Map<Integer, List<Edition>> getAllEditions() throws DAOException {
+    public Map<Integer, List<Edition>> getAllEditions( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         Map<Integer, List<Edition>> results = new HashMap<>();
+        List<Object> params = new ArrayList<Object>();
 
+        String sql = SQL_ALL_EDITIONS;
+        if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
+            sql = String.format( SQL_ALL_EDITIONS_RESTRICT, DAOUtil.preparePlaceHolders( speciesRestrictions.length ) );
+            for ( int i = 0; i < speciesRestrictions.length; i++ ) {
+                params.add( speciesRestrictions[i] );
+            }
+        }
+
+        log.debug( sql );
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_ALL_EDITIONS );
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
 
@@ -208,15 +235,28 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Map<Integer, Map<Edition, StatsEntry>> getAggregates() throws DAOException {
+    public Map<Integer, Map<Edition, StatsEntry>> getAggregates( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         Map<Integer, Map<Edition, StatsEntry>> aggregates = new HashMap<>();
 
+        List<Object> params = new ArrayList<Object>();
+
+        String sql = SQL_AGGREGATE;
+        if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
+            sql = String.format( SQL_AGGREGATE_RESTRICT, DAOUtil.preparePlaceHolders( speciesRestrictions.length ) );
+            for ( int i = 0; i < speciesRestrictions.length; i++ ) {
+                params.add( speciesRestrictions[i] );
+            }
+        }
+
+        log.debug( sql );
+
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_AGGREGATE );
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
@@ -301,16 +341,28 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Map<Integer, Map<String, Gene>> getCurrentGenes() throws DAOException {
+    public Map<Integer, Map<String, Gene>> getCurrentGenes( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         Map<Integer, Map<String, Gene>> currentGenes = new HashMap<>();
         Map<String, Accession> currentAccessions = new HashMap<>();
 
+        List<Object> params = new ArrayList<Object>();
+
+        String sql = SQL_CURRENT_GENES;
+        if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
+            sql = String.format( SQL_CURRENT_GENES_RESTRICT, DAOUtil.preparePlaceHolders( speciesRestrictions.length ) );
+            for ( int i = 0; i < speciesRestrictions.length; i++ ) {
+                params.add( speciesRestrictions[i] );
+            }
+        }
+
+        log.debug( sql );
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_CURRENT_GENES );
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
