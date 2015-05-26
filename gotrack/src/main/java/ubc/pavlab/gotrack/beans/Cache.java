@@ -21,6 +21,7 @@ package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -152,6 +153,10 @@ public class Cache implements Serializable {
 
         int[] speciesRestrictions = settingsCache.getSpeciesRestrictions();
 
+        if ( speciesRestrictions == null || speciesRestrictions.length == 0 ) {
+            log.info( "restriction species to: " + Arrays.toString( speciesRestrictions ) );
+        }
+
         // Obtain SpeciesDAO.
         SpeciesDAO speciesDAO = daoFactoryBean.getGotrack().getSpeciesDAO();
         log.info( "SpeciesDAO successfully obtained: " + speciesDAO );
@@ -196,7 +201,9 @@ public class Cache implements Serializable {
             // }
 
             Map<Integer, Set<Term>> goTerms = cacheDAO.getGoTerms();
+            log.info( "GO Terms fetched" );
             Map<Integer, Set<Relationship>> goAdjacency = cacheDAO.getAdjacencies();
+            log.info( "GO Adjacencies fetched" );
 
             for ( Integer goEd : goTerms.keySet() ) {
                 ontologies.put( goEd, new GeneOntology( goTerms.get( goEd ), goAdjacency.get( goEd ) ) );

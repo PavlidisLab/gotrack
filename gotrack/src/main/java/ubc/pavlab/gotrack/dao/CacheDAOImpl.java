@@ -73,7 +73,8 @@ public class CacheDAOImpl implements CacheDAO {
 
     private static final String SQL_CURRENT_GENES = "select species_id, symbol, accession, synonyms, sec from current_genes LEFT JOIN sec_ac on accession=ac";
     private static final String SQL_CURRENT_GENES_RESTRICT = "select species_id, symbol, accession, synonyms, sec from current_genes LEFT JOIN sec_ac on accession=ac WHERE species_id in (%s)";
-    private static final String SQL_GO_TERMS = "Select go_ontology_tclosure.go_edition_id_fk, child go_id, name, aspect from go_ontology_tclosure inner join go_term on go_term.go_id=go_ontology_tclosure.child and go_term.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk where min_distance=0";
+    private static final String SQL_GO_TERMS2 = "Select go_ontology_tclosure.go_edition_id_fk, child go_id, name, aspect from go_ontology_tclosure inner join go_term on go_term.go_id=go_ontology_tclosure.child and go_term.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk where min_distance=0";
+    private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from go_term";
     private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from go_ontology_tclosure where min_distance =1";
 
     private static final String SQL_GO_TERMS_BY_EDITION = "Select child go_id, name, aspect from go_ontology_tclosure inner join go_term on go_term.go_id=go_ontology_tclosure.child and go_term.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk where go_ontology_tclosure.go_edition_id_fk=? and min_distance=0";
