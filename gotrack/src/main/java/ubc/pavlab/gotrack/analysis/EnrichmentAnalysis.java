@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.commons.math3.util.CombinatoricsUtils;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.beans.Cache;
@@ -123,9 +124,11 @@ public class EnrichmentAnalysis {
                 if ( populationAnnotated != null && populationAnnotated >= minAnnotatedPopulation
                         && populationAnnotated <= maxAnnotatedPopulation ) {
                     Integer sampleAnnotated = termEntry.getValue().size();
-                    resultsInEdition.put( term, new EnrichmentResult( sampleAnnotated, populationAnnotated, sampleSize,
-                            populationSize ) );
-
+                    resultsInEdition.put(
+                            term,
+                            new EnrichmentResult( upperCumulativeProbability( sampleAnnotated, populationAnnotated,
+                                    sampleSize, populationSize ), sampleAnnotated, populationAnnotated, sampleSize,
+                                    populationSize ) );
                     totalResults++;
                     totalGenes.addAll( termEntry.getValue() );
                     totalTerms.add( term );
@@ -429,6 +432,30 @@ public class EnrichmentAnalysis {
 
     public int getTotalResults() {
         return totalResults;
+    }
+
+    /**
+     * Optimized method of calculating probability tails, relies on the fact that given a probability from a
+     * hypergeometric distribution with given M,N,k at r : h_M,N,k(r) we can then find h_M,N,k(r+1) without calculating
+     * the 9 factorials which are usually required. h_M,N,k(r+1) = h_M,N,k(r) * (k-r) * (M-r) / [ (r+1) * (N-k+r+1) ]
+     * proof can be demonstrated relatively easily.
+     * 
+     * @param r sampleAnnotated
+     * @param m populationAnnotated
+     * @param k sampleSize
+     * @param t populationSize (N+M)
+     * @return upper cumulative probability at r given m,k,t
+     */
+    public static double upperCumulativeProbability( int r, int m, int k, int t ) {
+        double h_r = CombinatoricsUtils.binomialCoefficientDouble( m, r )
+                * CombinatoricsUtils.binomialCoefficientDouble( t - m, k - r )
+                / CombinatoricsUtils.binomialCoefficientDouble( t, k );
+        double pvalue = h_r;
+        for ( int r_ = r + 1; r_ <= k; r_++ ) {
+            h_r = h_r * ( k - r_ + 1 ) * ( m - r_ + 1 ) / ( ( r_ ) * ( t - m - k + r_ ) );
+            pvalue += h_r;
+        }
+        return pvalue;
     }
 
     public static LinkedHashSet<GeneOntologyTerm> getSortedKeySetByValue( Map<GeneOntologyTerm, EnrichmentResult> data ) {
