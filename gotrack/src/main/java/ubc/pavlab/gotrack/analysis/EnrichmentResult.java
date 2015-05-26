@@ -56,7 +56,22 @@ public class EnrichmentResult {
 
         HypergeometricDistribution hyper = new HypergeometricDistribution( populationSize, populationAnnotated,
                 sampleSize );
-        this.pvalue = hyper.upperCumulativeProbability( sampleAnnotated );
+
+        // Optimized method of calculating probability tails, relies on the fact that given a probability from
+        // a hypergeometric distribution with given M,N,k at r : h_M,N,k(r)
+        // we can then find h_M,N,k(r+1) without calculating the 9 factorials which are usually required.
+        // h_M,N,k(r+1) = h_M,N,k(r) * (k-r) * (M-r) / [ (r+1) * (N-k+r+1) ]
+        // proof can be demonstrated relatively easily.
+        double h_r = hyper.probability( sampleAnnotated );
+        double pvalue = h_r;
+        for ( int r = sampleAnnotated + 1; r <= sampleSize; r++ ) {
+            h_r = h_r * ( sampleSize - r + 1 ) * ( populationAnnotated - r + 1 )
+                    / ( ( r ) * ( populationSize - populationAnnotated - sampleSize + r ) );
+            pvalue += h_r;
+        }
+        this.pvalue = pvalue;
+
+        // this.pvalue = hyper.upperCumulativeProbability( sampleAnnotated );
 
     }
 
