@@ -29,7 +29,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
 
 /**
  * TODO Document Me
@@ -68,16 +68,16 @@ public class SpeciesDAOImpl implements SpeciesDAO {
      * @see ubc.pavlab.gotrack.dao.AnnotationDAO#find(java.lang.Long)
      */
     @Override
-    public Species find( Long id ) throws DAOException {
+    public SpeciesDTO find( Long id ) throws DAOException {
         return execute( SQL_FIND_BY_ID, id );
     }
 
     @Override
-    public List<Species> list() throws DAOException {
+    public List<SpeciesDTO> list() throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        List<Species> list = new ArrayList<Species>();
+        List<SpeciesDTO> list = new ArrayList<>();
 
         try {
             connection = daoFactory.getConnection();
@@ -95,11 +95,11 @@ public class SpeciesDAOImpl implements SpeciesDAO {
         return list;
     }
 
-    private Species execute( String sql, Object... values ) throws DAOException {
+    private SpeciesDTO execute( String sql, Object... values ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Species species = null;
+        SpeciesDTO species = null;
 
         try {
             connection = daoFactory.getConnection();
@@ -124,20 +124,14 @@ public class SpeciesDAOImpl implements SpeciesDAO {
      * @return The mapped Species from the current row of the given ResultSet.
      * @throws SQLException If something fails at database level.
      */
-    private static Species map( ResultSet resultSet ) throws SQLException {
-        Species species = new Species();
-
-        species.setId( resultSet.getInt( "id" ) );
-        species.setCommonName( resultSet.getString( "common_name" ) );
-        species.setScientificName( resultSet.getString( "scientific_name" ) );
+    private static SpeciesDTO map( ResultSet resultSet ) throws SQLException {
 
         String[] taxons = resultSet.getString( "taxon" ).split( "\\|" );
-        species.setTaxon( Integer.parseInt( taxons[0].split( ":" )[1] ) );
 
-        if ( taxons.length == 2 ) {
-            species.setInteractingTaxon( Integer.parseInt( taxons[1].split( ":" )[1] ) );
-        }
+        SpeciesDTO dto = new SpeciesDTO( resultSet.getInt( "id" ), resultSet.getString( "common_name" ),
+                resultSet.getString( "scientific_name" ), Integer.parseInt( taxons[0].split( ":" )[1] ),
+                taxons.length == 2 ? Integer.parseInt( taxons[1].split( ":" )[1] ) : null );
 
-        return species;
+        return dto;
     }
 }

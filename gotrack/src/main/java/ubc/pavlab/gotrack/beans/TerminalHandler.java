@@ -52,7 +52,7 @@ import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.analysis.StabilityScore;
-import ubc.pavlab.gotrack.dao.AnnotationDAO;
+import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
@@ -80,9 +80,6 @@ public class TerminalHandler implements Serializable {
     private static final List<String> AUTH_COMMANDS = Arrays.asList( "greet", "auth", "help", "genes",
             "reload_settings" );
 
-    // Application settings
-    private boolean ontologyInMemory = false;
-
     private Map<String, StabilityAnalysis> stabilityResults = new HashMap<>();
     private Map<String, Set<String>> missingGenes = new HashMap<>();
     private Map<String, Map<String, Gene>> mappedToSecondary = new HashMap<>();
@@ -93,16 +90,14 @@ public class TerminalHandler implements Serializable {
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
 
-    @ManagedProperty("#{daoFactoryBean}")
-    private DAOFactoryBean daoFactoryBean;
-
     @ManagedProperty("#{cache}")
     private Cache cache;
 
     @ManagedProperty("#{enrichmentView}")
     EnrichmentView enrichmentView;
 
-    private AnnotationDAO annotationDAO;
+    @ManagedProperty("#{annotationService}")
+    private AnnotationService annotationService;
 
     public TerminalHandler() {
         log.info( "TerminalHandler created" );
@@ -114,7 +109,6 @@ public class TerminalHandler implements Serializable {
     @PostConstruct
     public void postConstruct() {
         log.info( "TerminalHandler PostConstruct" );
-        ontologyInMemory = settingsCache.getOntologyInMemory();
     }
 
     public String handleCommand( String command, String[] params ) {
@@ -328,9 +322,6 @@ public class TerminalHandler implements Serializable {
     }
 
     public StabilityAnalysis enrich( Set<Gene> genes, Integer currentSpeciesId ) {
-        if ( annotationDAO == null ) {
-            annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-        }
 
         Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, currentSpeciesId );
 
@@ -362,7 +353,7 @@ public class TerminalHandler implements Serializable {
                 MultipleTestCorrection.BH, 0.05, cache, currentSpeciesId );
         log.info( "Similarity Analysis" );
 
-        return new StabilityAnalysis( analysis, 5, SimilarityCompareMethod.CURRENT, ontologyInMemory ? cache : null );
+        return new StabilityAnalysis( analysis, 5, SimilarityCompareMethod.CURRENT, cache );
 
     }
 
@@ -388,21 +379,11 @@ public class TerminalHandler implements Serializable {
 
                 Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB;
 
-                if ( ontologyInMemory ) {
-                    geneGOMapFromDB = annotationDAO.enrichmentDataNoPropagateNoTermInfo( currentSpeciesId, genesToLoad );
-                    for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : propagate( geneGOMapFromDB )
-                            .entrySet() ) {
-                        addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
-                        cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
-                    }
-
-                } else {
-                    geneGOMapFromDB = annotationDAO.enrichmentDataPropagateNoTermInfo( currentSpeciesId, genesToLoad );
-
-                    for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
-                        addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
-                        cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
-                    }
+                geneGOMapFromDB = annotationService.fetchEnrichmentData( currentSpeciesId, genesToLoad );
+                for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : propagate( geneGOMapFromDB )
+                        .entrySet() ) {
+                    addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
+                    cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
                 }
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
@@ -482,16 +463,16 @@ public class TerminalHandler implements Serializable {
         this.cache = cache;
     }
 
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
-    }
-
     public void setEnrichmentView( EnrichmentView enrichmentView ) {
         this.enrichmentView = enrichmentView;
     }
 
     public void setSettingsCache( SettingsCache settingsCache ) {
         this.settingsCache = settingsCache;
+    }
+
+    public void setAnnotationService( AnnotationService annotationService ) {
+        this.annotationService = annotationService;
     }
 
 }

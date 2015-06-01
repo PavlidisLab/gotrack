@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.math3.util.CombinatoricsUtils;
+import org.apache.commons.math3.util.FastMath;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.beans.Cache;
@@ -119,16 +120,15 @@ public class EnrichmentAnalysis {
 
             for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : data.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
-                Integer populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(), term.getGoId() );
+                Integer populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed, term );
 
                 if ( populationAnnotated != null && populationAnnotated >= minAnnotatedPopulation
                         && populationAnnotated <= maxAnnotatedPopulation ) {
                     Integer sampleAnnotated = termEntry.getValue().size();
-                    resultsInEdition.put(
-                            term,
-                            new EnrichmentResult( upperCumulativeProbability( sampleAnnotated, populationAnnotated,
-                                    sampleSize, populationSize ), sampleAnnotated, populationAnnotated, sampleSize,
-                                    populationSize ) );
+                    double p = upperCumulativeProbabilityLogMethod( sampleAnnotated, populationAnnotated, sampleSize,
+                            populationSize );
+                    resultsInEdition.put( term, new EnrichmentResult( p, sampleAnnotated, populationAnnotated,
+                            sampleSize, populationSize ) );
                     totalResults++;
                     totalGenes.addAll( termEntry.getValue() );
                     totalTerms.add( term );
@@ -147,6 +147,7 @@ public class EnrichmentAnalysis {
                     log.warn( "Something went wrong with analysis term (" + term + ") with population: "
                             + populationAnnotated );
                 }
+
             }
 
             // Create EnrichmentResults
@@ -205,6 +206,11 @@ public class EnrichmentAnalysis {
                 er.setRank( rank );
                 previousResult = er;
             }
+
+            // log.debug( "Results " + ed + " size: " + resultsInEdition.size() );
+            // log.debug( "Significant " + ed + " size: " + sig.size() );
+            // log.debug( "unmappedTerms " + ed + " size: " + um.size() );
+            // log.debug( "rejectedTerms " + ed + " size: " + rj.size() );
 
             // Compute fractional Ranks
 
@@ -446,16 +452,56 @@ public class EnrichmentAnalysis {
      * @param t populationSize (N+M)
      * @return upper cumulative probability at r given m,k,t
      */
+    @Deprecated
     public static double upperCumulativeProbability( int r, int m, int k, int t ) {
-        double h_r = CombinatoricsUtils.binomialCoefficientDouble( m, r )
-                * CombinatoricsUtils.binomialCoefficientDouble( t - m, k - r )
-                / CombinatoricsUtils.binomialCoefficientDouble( t, k );
+        double h_r = sampleProbability( r, m, k, t );
         double pvalue = h_r;
-        for ( int r_ = r + 1; r_ <= k; r_++ ) {
+        int min = Math.min( k, m );
+        for ( int r_ = r + 1; r_ <= min; r_++ ) {
             h_r = h_r * ( k - r_ + 1 ) * ( m - r_ + 1 ) / ( ( r_ ) * ( t - m - k + r_ ) );
+
             pvalue += h_r;
         }
         return pvalue;
+    }
+
+    /**
+     * Optimized method of calculating probability tails, relies on the fact that given a probability from a
+     * hypergeometric distribution with given M,N,k at r : h_M,N,k(r) we can then find h_M,N,k(r+1) without calculating
+     * the 9 factorials which are usually required. h_M,N,k(r+1) = h_M,N,k(r) * (k-r) * (M-r) / [ (r+1) * (N-k+r+1) ]
+     * proof can be demonstrated relatively easily. Utilizes log probabilities to be able to handle large integer inputs
+     * > 1000~
+     * 
+     * @param r sampleAnnotated
+     * @param m populationAnnotated
+     * @param k sampleSize
+     * @param t populationSize (N+M)
+     * @return upper cumulative probability at r given m,k,t
+     */
+    public static double upperCumulativeProbabilityLogMethod( int r, int m, int k, int t ) {
+        double h_r_log = sampleProbabilityLog( r, m, k, t );
+        double pvalue = Math.exp( h_r_log );
+        int min = Math.min( k, m );
+        for ( int r_ = r + 1; r_ <= min; r_++ ) {
+            h_r_log = h_r_log
+                    + FastMath.log( ( k - r_ + 1 ) * ( m - r_ + 1 ) / ( ( double ) ( r_ ) * ( t - m - k + r_ ) ) );
+
+            pvalue += FastMath.exp( h_r_log );
+        }
+        return pvalue;
+    }
+
+    @Deprecated
+    public static double sampleProbability( int r, int m, int k, int t ) {
+        // if ( r > m ) return 0d;
+        return CombinatoricsUtils.binomialCoefficientDouble( m, r )
+                / CombinatoricsUtils.binomialCoefficientDouble( t, k )
+                * CombinatoricsUtils.binomialCoefficientDouble( t - m, k - r );
+    }
+
+    public static double sampleProbabilityLog( int r, int m, int k, int t ) {
+        return ( CombinatoricsUtils.binomialCoefficientLog( m, r ) - CombinatoricsUtils.binomialCoefficientLog( t, k ) )
+                + CombinatoricsUtils.binomialCoefficientLog( t - m, k - r );
     }
 
     public static LinkedHashSet<GeneOntologyTerm> getSortedKeySetByValue( Map<GeneOntologyTerm, EnrichmentResult> data ) {

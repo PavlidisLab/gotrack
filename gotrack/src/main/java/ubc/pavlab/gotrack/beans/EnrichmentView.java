@@ -53,8 +53,7 @@ import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.analysis.StabilityScore;
-import ubc.pavlab.gotrack.dao.AnnotationDAO;
-import ubc.pavlab.gotrack.dao.GeneOntologyDAO;
+import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.GeneOntologyTerm;
@@ -84,8 +83,6 @@ public class EnrichmentView implements Serializable {
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
     private static final Integer MAX_RESULTS = 10;
     private static final int MAX_GENESET_SIZE = 300;
-    // True if Terms should be lazy-loaded as required, false if all terms should be loaded on enrichment run
-    private static final boolean LAZY_LOADING = false;
 
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
@@ -93,19 +90,13 @@ public class EnrichmentView implements Serializable {
     @ManagedProperty("#{cache}")
     private Cache cache;
 
-    @ManagedProperty("#{daoFactoryBean}")
-    private DAOFactoryBean daoFactoryBean;
-
-    // Application settings
-    private boolean ontologyInMemory = false;
-
-    // DAO
-    private AnnotationDAO annotationDAO;
-    private GeneOntologyDAO geneOntologyDAO;
+    @ManagedProperty("#{annotationService}")
+    private AnnotationService annotationService;
 
     // View parameters
     private String query;
-    // Liver Cancer
+    // LEE_LIVER_CANCER
+    // http://www.broadinstitute.org/gsea/msigdb/geneset_page.jsp?geneSetName=LEE_LIVER_CANCER&keywords=lee%20AND%20liver
     // ACAA1 ACADS ADH1B ADH4 ADRA1A APOF C6 C8A C8B C9orf103 CD4 CETN2 CIDEB COLEC10 CYP2C18 CYP2C19 CYP2C8 CYP2E1
     // CYP4A11 DMGDH DNASE1L3 ETS2 FAM20C FCN1 FETUB GBA3 HPX IGFALS ITIH4 LCAT LDHD LOC401022 LPA NDRG2 PEMT PLG PPAP2B
     // RCAN1 RSPO3 RXRB SLC22A1 SLC22A3 SLC28A1 SLCO1B3 TMED8 TMEM27 TTC36 TTR UROC1
@@ -192,15 +183,18 @@ public class EnrichmentView implements Serializable {
                                     "This is the DEVELOPMENT version of GOTrack!", null ) );
         }
 
-        annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-        geneOntologyDAO = daoFactoryBean.getGotrack().getGeneOntologyDAO();
         enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
-        ontologyInMemory = settingsCache.getOntologyInMemory();
         // ontologyInMemory = settingsCache.getProperty( ONTOLOGY_SETTING_PROPERTY ).equals( "true" );
         return null;
     }
 
     private Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> retrieveData( Set<Gene> genes, Integer currentSpeciesId ) {
+        // StopWatch timer = new StopWatch();//
+        // timer.start();//
+        // long fromTime;//
+        // Long prevTime;//
+        // Map<String, Long> timerMap = new HashMap<>();//
+
         if ( genes != null && !genes.isEmpty() ) {
             log.info( "Current species: " + currentSpeciesId );
             log.info( "Geneset Size: " + genes.size() );
@@ -221,9 +215,21 @@ public class EnrichmentView implements Serializable {
             Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = new HashMap<>();
             Set<Gene> genesToLoad = new HashSet<>();
             for ( Gene gene : genes ) {
+                // fromTime = timer.getNanoTime();//
                 Map<Edition, Set<GeneOntologyTerm>> cachedGeneData = cache.getEnrichmentData( gene );
+                // timer.suspend();//
+                // prevTime = timerMap.get( "getFromCache" );//
+                // timerMap.put( "getFromCache", ( prevTime == null ? 0 : prevTime ) + timer.getNanoTime() - fromTime
+                // );//
+                // timer.resume();//
                 if ( cachedGeneData != null ) {
+                    // fromTime = timer.getNanoTime();//
                     addGeneData( gene, cachedGeneData, geneGOMap );
+                    // timer.suspend();//
+                    // prevTime = timerMap.get( "addGeneDataFromCache" );//
+                    // timerMap.put( "addGeneDataFromCache", ( prevTime == null ? 0 : prevTime ) + timer.getNanoTime()
+                    // - fromTime );//
+                    // timer.resume();//
                 } else {
                     genesToLoad.add( gene );
                 }
@@ -238,26 +244,39 @@ public class EnrichmentView implements Serializable {
 
                 Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB;
 
-                if ( ontologyInMemory ) {
-                    enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
-                    status = "Propagating GO Terms...";
-                    enrichmentStatus.add( status );
-                    enrichmentProgress = 40;
-                    geneGOMapFromDB = annotationDAO.enrichmentDataNoPropagateNoTermInfo( currentSpeciesId, genesToLoad );
-                    for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : propagate( geneGOMapFromDB )
-                            .entrySet() ) {
-                        addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
-                        cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
-                    }
-                    enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
-                } else {
-                    geneGOMapFromDB = annotationDAO.enrichmentDataPropagateNoTermInfo( currentSpeciesId, genesToLoad );
-                    enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
-                    for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
-                        addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
-                        cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
-                    }
+                enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+                status = "Propagating GO Terms...";
+                enrichmentStatus.add( status );
+                enrichmentProgress = 40;
+                // fromTime = timer.getNanoTime();//
+                geneGOMapFromDB = annotationService.fetchEnrichmentData( currentSpeciesId, genesToLoad );
+                // timer.suspend();//
+                // timerMap.put( "getFromDB", timer.getNanoTime() - fromTime );//
+                // timer.resume();//
+
+                // fromTime = timer.getNanoTime();//
+                Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> prop = propagate( geneGOMapFromDB );
+                // timer.suspend();//
+                // timerMap.put( "propagate", timer.getNanoTime() - fromTime );//
+                // timer.resume();//
+
+                for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : prop.entrySet() ) {
+                    // fromTime = timer.getNanoTime();//
+                    addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
+                    // timer.suspend();//
+                    // prevTime = timerMap.get( "addGeneDataFromDB" );//
+                    // timerMap.put( "addGeneDataFromDB", ( prevTime == null ? 0 : prevTime ) + timer.getNanoTime()
+                    // - fromTime );//
+                    // timer.resume();//
+                    // fromTime = timer.getNanoTime();//
+                    cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
+                    // timer.suspend();//
+                    // prevTime = timerMap.get( "addGeneDataToCache" );//
+                    // timerMap.put( "addGeneDataToCache", ( prevTime == null ? 0 : prevTime ) + timer.getNanoTime()
+                    // - fromTime );//
+                    // timer.resume();//
                 }
+                enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
                         + ( genes.size() - genesToLoad.size() ) + ") from cache" );
@@ -265,6 +284,13 @@ public class EnrichmentView implements Serializable {
                 log.info( "Retrieved all (" + genes.size() + ") genes from cache" );
 
             }
+            // timer.stop();
+            // log.info( "Total time: " + timer );
+            // for ( Entry<String, Long> entry : timerMap.entrySet() ) {
+            // log.info( entry.getKey() + " - " + entry.getValue() + " - " + entry.getValue()
+            // / ( double ) timer.getNanoTime() );
+            // }
+
             return geneGOMap;
 
         } else {
@@ -338,7 +364,7 @@ public class EnrichmentView implements Serializable {
         Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, currentSpeciesId );
 
         // TODO
-        if ( geneGOMap == null ) {
+        if ( geneGOMap == null || geneGOMap.isEmpty() ) {
             enrichmentStatus.add( "Failed" );
             enrichmentProgress = 100;
             enrichmentSuccess = false;
@@ -387,17 +413,9 @@ public class EnrichmentView implements Serializable {
         enrichmentStatus.add( status );
         enrichmentProgress = 80;
         StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, TOP_N_JACCARD, similarityCompareMethod,
-                ontologyInMemory ? cache : null );
+                cache );
         stabilityScores = stabilityAnalysis.getStabilityScores();
         enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
-
-        if ( !LAZY_LOADING ) {
-            log.info( "Loading Term Info for All Editions" );
-            for ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> editionEntry : enrichmentResults.entrySet() ) {
-                geneOntologyDAO.loadTermInfo( editionEntry.getKey().getGoEditionId(), editionEntry.getValue().keySet() );
-            }
-            log.info( "Loading Complete." );
-        }
 
         status = "Creating tables and charts...";
         enrichmentStatus.add( status );
@@ -676,10 +694,6 @@ public class EnrichmentView implements Serializable {
             Map<GeneOntologyTerm, EnrichmentResult> termsInEdition = new HashMap<>();
             filteredData.put( ed, termsInEdition );
 
-            if ( LAZY_LOADING && geneOntologyDAO.loadTermInfo( ed.getGoEditionId(), editionEntry.getValue().keySet() ) ) {
-                log.info( "Lazy loading Term Info for Edition: (" + ed + ")." );
-            }
-
             Map<GeneOntologyTerm, EnrichmentResult> editionData = editionEntry.getValue();
 
             for ( GeneOntologyTerm term : terms ) {
@@ -742,13 +756,6 @@ public class EnrichmentView implements Serializable {
         enrichmentTableValues = new ArrayList<>();
         Edition ed = enrichmentTableAllEditions.get( enrichmentTableEdition );
         if ( ed != null ) {
-
-            // If this edition of terms has not been lazy loaded then lazy load their term info.
-
-            if ( LAZY_LOADING
-                    && geneOntologyDAO.loadTermInfo( ed.getGoEditionId(), enrichmentResults.get( ed ).keySet() ) ) {
-                log.info( "Lazy loading Term Info for Edition: (" + ed + ")." );
-            }
 
             Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant().get( ed );
             Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
@@ -1142,15 +1149,15 @@ public class EnrichmentView implements Serializable {
         return geneMatches;
     }
 
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
-    }
-
     public void setSettingsCache( SettingsCache settingsCache ) {
         this.settingsCache = settingsCache;
     }
 
     public void setCache( Cache cache ) {
         this.cache = cache;
+    }
+
+    public void setAnnotationService( AnnotationService annotationService ) {
+        this.annotationService = annotationService;
     }
 }

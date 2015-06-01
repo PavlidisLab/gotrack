@@ -19,69 +19,110 @@
 
 package ubc.pavlab.gotrack.model;
 
+import gnu.trove.set.hash.THashSet;
+
+import java.util.HashSet;
+import java.util.Set;
+
+import ubc.pavlab.gotrack.model.dto.GOTermDTO;
+import ubc.pavlab.gotrack.model.go.Parent;
+
+import com.google.common.collect.ImmutableSet;
+
 /**
- * The instances of this class may be shared between threads (sessions) and lazy-loaded at any time hence the
- * synchronization
+ * The instances of this class may be shared between threads (sessions)
  * 
  * @author mjacobson
  * @version $Id$
  */
 public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
 
+    private final int id;
     private final String goId;
-    private String name;
-    private String aspect;
-    private boolean obsolete = false;
+    private final String name;
+    private final Aspect aspect;
+    private final boolean obsolete = false;
+    private Set<Parent> parents = new THashSet<>();
 
-    public GeneOntologyTerm( String goId ) {
-        super();
-        this.goId = goId;
-        this.name = null;
-        this.aspect = null;
+    public void freezeParents() {
+        this.parents = ImmutableSet.copyOf( this.parents );
+        // this.parents = Collections.unmodifiableSet( this.parents );
     }
 
-    public GeneOntologyTerm( String goId, String name, String aspect ) {
-        super();
-        this.goId = goId;
-        this.name = name;
-        this.aspect = aspect;
+    private int convertGOId( String goId ) {
+        if ( goId.startsWith( "GO:" ) ) {
+            int id;
+            try {
+                id = Integer.parseInt( goId.substring( goId.length() - 7 ) );
+            } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
+                throw new IllegalArgumentException( "Gene Ontology ID (" + goId + ") not in correct format." );
+            }
+            return id;
+        } else {
+            throw new IllegalArgumentException( "Gene Ontology ID (" + goId + ") not in correct format." );
+        }
+    }
+
+    public GeneOntologyTerm( GOTermDTO dto ) {
+
+        this.id = convertGOId( dto.getGoId() );
+        this.goId = dto.getGoId();
+        this.name = dto.getName();
+        this.aspect = Aspect.valueOf( dto.getAspect() );
+    }
+
+    /**
+     * Used for when an edition has been wrongly connected with a go_edition. In this situation an annotated term may
+     * not be found within the given Ontology edition. What we do in this case is create a solitary term to represent it
+     * in any analysis this term however will have no relationships to others (ie no parents/children)
+     * 
+     * @param goId
+     * @param name
+     * @param aspect
+     */
+    public GeneOntologyTerm( GeneOntologyTerm t ) {
+
+        this.id = t.getId();
+        this.goId = t.getGoId();
+        this.name = t.getName();
+        this.aspect = t.getAspect();
+        this.parents = ImmutableSet.copyOf( new HashSet<Parent>() );
+    }
+
+    public int getId() {
+        return id;
     }
 
     public String getGoId() {
-        // No need to synchronize as the field is final
         return goId;
     }
 
-    public synchronized String getName() {
+    public String getName() {
         return name;
     }
 
-    public synchronized String getAspect() {
+    public Aspect getAspect() {
         return aspect;
     }
 
-    public synchronized void setName( String name ) {
-        this.name = name;
+    public boolean isObsolete() {
+        return obsolete;
     }
 
-    public synchronized void setAspect( String aspect ) {
-        this.aspect = aspect;
-    }
-
-    public synchronized void setObsolete( boolean obsolete ) {
-        this.obsolete = obsolete;
+    public Set<Parent> getParents() {
+        return parents;
     }
 
     @Override
     public String toString() {
-        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + "]";
+        return "GOTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( goId == null ) ? 0 : goId.hashCode() );
+        result = prime * result + id;
         return result;
     }
 
@@ -91,14 +132,8 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
         GeneOntologyTerm other = ( GeneOntologyTerm ) obj;
-        if ( goId == null ) {
-            if ( other.goId != null ) return false;
-        } else if ( !goId.equals( other.goId ) ) return false;
+        if ( id != other.id ) return false;
         return true;
-    }
-
-    public synchronized boolean isObsolete() {
-        return obsolete;
     }
 
     @Override

@@ -19,29 +19,30 @@
 
 package ubc.pavlab.gotrack.model;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 
+import com.google.common.collect.ImmutableSet;
+
 /**
- * TODO I really wish this was immutable...
- * 
  * @author mjacobson
  * @version $Id$
  */
-public class Gene {
+public final class Gene {
 
-    String symbol;
-    Integer species;
-    Set<Accession> accessions = new HashSet<>();
-    Set<String> synonyms = new HashSet<>();
+    private final String symbol;
+    private final Integer species;
+    private final Set<Accession> accessions;
+    private final Set<String> synonyms;
 
-    public Gene( String symbol, Integer species ) {
+    public Gene( String symbol, Integer species, Set<Accession> accessions, Set<String> synonyms ) {
         super();
         this.symbol = symbol;
         this.species = species;
+        this.accessions = ImmutableSet.copyOf( accessions );
+        this.synonyms = ImmutableSet.copyOf( synonyms );
     }
 
     public String viewSynonyms() {
@@ -68,24 +69,12 @@ public class Gene {
         return symbol;
     }
 
-    public void setSymbol( String symbol ) {
-        this.symbol = symbol;
-    }
-
     public Set<Accession> getAccessions() {
         return accessions;
     }
 
-    public void setAccessions( Set<Accession> accessions ) {
-        this.accessions = accessions;
-    }
-
     public Set<String> getSynonyms() {
         return synonyms;
-    }
-
-    public void setSynonyms( Set<String> synonyms ) {
-        this.synonyms = synonyms;
     }
 
     @Override

@@ -19,7 +19,6 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-
 /**
  * (Almost but not really) immutable result of GO enrichment analysis for a single term
  * 
@@ -112,6 +111,13 @@ public class EnrichmentResult {
         if ( sampleAnnotated != other.sampleAnnotated ) return false;
         if ( sampleSize != other.sampleSize ) return false;
         return true;
+    }
+
+    @Override
+    public String toString() {
+        return "EnrichmentResult [pvalue=" + pvalue + ", sampleAnnotated=" + sampleAnnotated + ", populationAnnotated="
+                + populationAnnotated + ", sampleSize=" + sampleSize + ", populationSize=" + populationSize + ", rank="
+                + rank + ", fractionalRank=" + fractionalRank + "]";
     }
 
 }

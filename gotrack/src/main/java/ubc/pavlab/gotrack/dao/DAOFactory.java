@@ -168,10 +168,6 @@ public abstract class DAOFactory {
         return new AnnotationDAOImpl( this );
     }
 
-    public GeneOntologyDAO getGeneOntologyDAO() {
-        return new GeneOntologyDAOImpl( this );
-    }
-
     // You can add more DAO implementation getters here.
 
 }

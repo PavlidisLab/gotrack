@@ -19,30 +19,26 @@
 
 package ubc.pavlab.gotrack.model.go;
 
+import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+
 /**
- * Immutable representation of a relationship between two Gene Ontology Terms
+ * TODO Document Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-public class Relationship {
-    private final int childId;
-    private final int parentId;
+public final class Parent {
+    private final GeneOntologyTerm parent;
     private final RelationshipType type;
 
-    public Relationship( int childId, int parentId, RelationshipType type ) {
+    public Parent( GeneOntologyTerm parent, RelationshipType type ) {
         super();
-        this.childId = childId;
-        this.parentId = parentId;
+        this.parent = parent;
         this.type = type;
     }
 
-    public int getChildId() {
-        return childId;
-    }
-
-    public Integer getParentId() {
-        return parentId;
+    public GeneOntologyTerm getParent() {
+        return parent;
     }
 
     public RelationshipType getType() {
@@ -51,15 +47,14 @@ public class Relationship {
 
     @Override
     public String toString() {
-        return "Relationship [childId=" + childId + ", parentId=" + parentId + ", type=" + type + "]";
+        return "Parent [parent=" + parent + ", type=" + type + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + childId;
-        result = prime * result + parentId;
+        result = prime * result + ( ( parent == null ) ? 0 : parent.hashCode() );
         result = prime * result + ( ( type == null ) ? 0 : type.hashCode() );
         return result;
     }
@@ -69,9 +64,10 @@ public class Relationship {
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        Relationship other = ( Relationship ) obj;
-        if ( childId != other.childId ) return false;
-        if ( parentId != other.parentId ) return false;
+        Parent other = ( Parent ) obj;
+        if ( parent == null ) {
+            if ( other.parent != null ) return false;
+        } else if ( !parent.equals( other.parent ) ) return false;
         if ( type != other.type ) return false;
         return true;
     }

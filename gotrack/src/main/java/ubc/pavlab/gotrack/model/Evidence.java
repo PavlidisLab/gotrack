@@ -17,7 +17,9 @@
  *
  */
 
-package ubc.pavlab.gotrack.model.go;
+package ubc.pavlab.gotrack.model;
+
+import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 
 /**
  * TODO Document Me
@@ -25,35 +27,47 @@ package ubc.pavlab.gotrack.model.go;
  * @author mjacobson
  * @version $Id$
  */
-public class Link {
-    private final Term link;
-    private final RelationshipType type;
+public final class Evidence {
+    private final int id;
+    private final String evidence;
+    private final String description;
+    private final String category;
 
-    public Term getLink() {
-        return link;
+    public Evidence( EvidenceDTO dto ) {
+        super();
+        this.id = dto.getId();
+        this.evidence = dto.getEvidence();
+        this.description = dto.getDescription();
+        this.category = dto.getCategory();
     }
 
-    public RelationshipType getType() {
-        return type;
+    public int getId() {
+        return id;
+    }
+
+    public String getEvidence() {
+        return evidence;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getCategory() {
+        return category;
     }
 
     @Override
     public String toString() {
-        return "Link [link=" + link + ", type=" + type + "]";
-    }
-
-    public Link( Term link, RelationshipType type ) {
-        super();
-        this.link = link;
-        this.type = type;
+        return "Evidence [id=" + id + ", evidence=" + evidence + ", description=" + description + ", category="
+                + category + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( link == null ) ? 0 : link.hashCode() );
-        result = prime * result + ( ( type == null ) ? 0 : type.hashCode() );
+        result = prime * result + id;
         return result;
     }
 
@@ -62,11 +76,8 @@ public class Link {
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        Link other = ( Link ) obj;
-        if ( link == null ) {
-            if ( other.link != null ) return false;
-        } else if ( !link.equals( other.link ) ) return false;
-        if ( type != other.type ) return false;
+        Evidence other = ( Evidence ) obj;
+        if ( id != other.id ) return false;
         return true;
     }
 

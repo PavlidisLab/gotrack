@@ -19,13 +19,15 @@
 
 package ubc.pavlab.gotrack.model;
 
+import ubc.pavlab.gotrack.model.dto.AggregateDTO;
+
 /**
  * TODO Immutable entry of aggregate table
  * 
  * @author mjacobson
  * @version $Id$
  */
-public class StatsEntry {
+public final class StatsEntry {
 
     private final Integer accessionCount;
     private final Double avgDirectByAccession;
@@ -33,12 +35,12 @@ public class StatsEntry {
     private final Integer geneCount;
     private final Double avgDirectByGene;
 
-    public StatsEntry( Integer accessionCount, Double avgDirectByAccession, Integer geneCount, Double avgDirectByGene ) {
+    public StatsEntry( AggregateDTO dto ) {
         super();
-        this.accessionCount = accessionCount;
-        this.avgDirectByAccession = avgDirectByAccession;
-        this.geneCount = geneCount;
-        this.avgDirectByGene = avgDirectByGene;
+        this.accessionCount = dto.getAccessionCount();
+        this.avgDirectByAccession = dto.getAccessionAverage();
+        this.geneCount = dto.getGeneCount();
+        this.avgDirectByGene = dto.getGeneAverage();
     }
 
     public Integer getAccessionCount() {

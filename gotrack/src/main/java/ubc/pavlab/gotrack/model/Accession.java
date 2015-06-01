@@ -20,7 +20,8 @@
 package ubc.pavlab.gotrack.model;
 
 import java.util.Collection;
-import java.util.HashSet;
+
+import com.google.common.collect.ImmutableSet;
 
 /**
  * TODO Document Me
@@ -28,61 +29,41 @@ import java.util.HashSet;
  * @author mjacobson
  * @version $Id$
  */
-public class Accession {
+public final class Accession {
 
-    private String accession;
-    private String swissProtEntry;
-    private Dataset dataset;
-    private Collection<String> secondary = new HashSet<String>();
+    private final String accession;
+    private final Dataset dataset;
+    private final Collection<String> secondary;
 
-    /**
-     * 
-     */
-    public Accession() {
-    }
-
+    // TODO this should be removed but it is necessary atm
     public Accession( String accession ) {
         super();
         this.accession = accession;
+        this.dataset = null;
+        this.secondary = null;
     }
 
-    public Accession( String accession, String swissProtEntry ) {
+    public Accession( String accession, boolean sp, Collection<String> secondary ) {
         super();
         this.accession = accession;
-        this.swissProtEntry = swissProtEntry;
-        if ( swissProtEntry != null && swissProtEntry != "" ) {
-            this.setDataset( Dataset.SwissProt );
+        if ( sp ) {
+            this.dataset = Dataset.SwissProt;
         } else {
-            this.setDataset( Dataset.TrEMBL );
+            this.dataset = Dataset.TrEMBL;
         }
+        this.secondary = ImmutableSet.copyOf( secondary );
     }
 
     public String getAccession() {
         return accession;
     }
 
-    public void setAccession( String accession ) {
-        this.accession = accession;
-    }
-
-    public String getSwissProtEntry() {
-        return swissProtEntry;
-    }
-
-    public void setSwissProtEntry( String swissProtEntry ) {
-        this.swissProtEntry = swissProtEntry;
-    }
-
     public Collection<String> getSecondary() {
         return secondary;
     }
 
-    public void setSecondary( Collection<String> secondary ) {
-        this.secondary = secondary;
-    }
-
-    public boolean addSecondary( String secondary ) {
-        return this.secondary.add( secondary );
+    public Dataset getDataset() {
+        return dataset;
     }
 
     @Override
@@ -108,14 +89,6 @@ public class Accession {
             if ( other.accession != null ) return false;
         } else if ( !accession.equals( other.accession ) ) return false;
         return true;
-    }
-
-    public Dataset getDataset() {
-        return dataset;
-    }
-
-    public void setDataset( Dataset dataset ) {
-        this.dataset = dataset;
     }
 
 }

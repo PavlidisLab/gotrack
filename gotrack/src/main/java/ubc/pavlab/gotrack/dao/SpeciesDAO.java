@@ -22,6 +22,7 @@ package ubc.pavlab.gotrack.dao;
 import java.util.List;
 
 import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
 
 /**
  * This interface represents a contract for a DAO for the {@link Species} model. Note that all methods are read-only.
@@ -37,7 +38,7 @@ public interface SpeciesDAO {
      * @return The annotation from the database matching the given ID, otherwise null.
      * @throws DAOException If something fails at database level.
      */
-    public Species find( Long id ) throws DAOException;
+    public SpeciesDTO find( Long id ) throws DAOException;
 
     /**
      * Returns a list of all Species from the database ordered by Species common_name. The list is never null and is
@@ -46,6 +47,6 @@ public interface SpeciesDAO {
      * @return A list of all Species from the database ordered by Species common_name.
      * @throws DAOException If something fails at database level.
      */
-    public List<Species> list() throws DAOException;
+    public List<SpeciesDTO> list() throws DAOException;
 
 }

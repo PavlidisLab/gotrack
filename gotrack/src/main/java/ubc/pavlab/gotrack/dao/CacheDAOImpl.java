@@ -26,23 +26,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import ubc.pavlab.gotrack.model.Accession;
-import ubc.pavlab.gotrack.model.Aspect;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.StatsEntry;
-import ubc.pavlab.gotrack.model.go.Relationship;
-import ubc.pavlab.gotrack.model.go.RelationshipType;
-import ubc.pavlab.gotrack.model.go.Term;
+import ubc.pavlab.gotrack.model.dto.AccessionDTO;
+import ubc.pavlab.gotrack.model.dto.AdjacencyDTO;
+import ubc.pavlab.gotrack.model.dto.AggregateDTO;
+import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
+import ubc.pavlab.gotrack.model.dto.EditionDTO;
+import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
+import ubc.pavlab.gotrack.model.dto.GOTermDTO;
+import ubc.pavlab.gotrack.model.dto.GeneDTO;
 
 /**
  * Holds methods for retrieving data that is meant to be cached
@@ -66,19 +61,24 @@ public class CacheDAOImpl implements CacheDAO {
             + "from edition left join go_edition on edition.go_edition_id_fk=go_edition.id WHERE edition.species_id in (%s) order by edition";
     private static final String SQL_ALL_GO_SIZES = "select species_id, edition, go_id, annotation_count from goa_go_aggregate";
     private static final String SQL_ALL_GO_SIZES_RESTRICT = "select species_id, edition, go_id, annotation_count from goa_go_aggregate WHERE species_id in (%s)";
-    private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, edition.date, edition.go_edition_id_fk, go_edition.date go_date, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id";
-    private static final String SQL_AGGREGATE_RESTRICT = "select aggregate.species_id, aggregate.edition, edition.date, edition.go_edition_id_fk, go_edition.date go_date, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate inner join edition on edition.edition=aggregate.edition and edition.species_id = aggregate.species_id INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id WHERE aggregate.species_id in (%s)";
+    private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate";
+    private static final String SQL_AGGREGATE_RESTRICT = "select aggregate.species_id, aggregate.edition, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate WHERE aggregate.species_id in (%s)";
     private static final String SQL_GO_EDITIONS = "SELECT distinct id from go_edition";
-    private static final String SQL_EVIDENCE_CATEGORIES = "select evidence, category from evidence_categories";
 
-    private static final String SQL_CURRENT_GENES = "select species_id, symbol, accession, synonyms, sec from current_genes LEFT JOIN sec_ac on accession=ac";
-    private static final String SQL_CURRENT_GENES_RESTRICT = "select species_id, symbol, accession, synonyms, sec from current_genes LEFT JOIN sec_ac on accession=ac WHERE species_id in (%s)";
+    private static final String SQL_ACCESSIONS = "select distinct accession, sec, acindex.symbol IS NOT NULL as sp from current_genes left join acindex using (accession) LEFT JOIN sec_ac on accession=ac";
+    private static final String SQL_ACCESSIONS_RESTRICT = "select distinct accession, sec, acindex.symbol IS NOT NULL as sp from current_genes left join acindex using (accession) LEFT JOIN sec_ac on accession=ac WHERE species_id in (%s)";
+
+    private static final String SQL_CURRENT_GENES = "select species_id, symbol, accession, synonyms from current_genes";
+    private static final String SQL_CURRENT_GENES_RESTRICT = "select species_id, symbol, accession, synonyms from current_genes WHERE species_id in (%s)";
     private static final String SQL_GO_TERMS2 = "Select go_ontology_tclosure.go_edition_id_fk, child go_id, name, aspect from go_ontology_tclosure inner join go_term on go_term.go_id=go_ontology_tclosure.child and go_term.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk where min_distance=0";
     private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from go_term";
     private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from go_ontology_tclosure where min_distance =1";
 
     private static final String SQL_GO_TERMS_BY_EDITION = "Select child go_id, name, aspect from go_ontology_tclosure inner join go_term on go_term.go_id=go_ontology_tclosure.child and go_term.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk where go_ontology_tclosure.go_edition_id_fk=? and min_distance=0";
     private static final String SQL_GO_ADJACENCY_BY_EDITION = "select child, parent, relationship from go_ontology_tclosure where go_ontology_tclosure.go_edition_id_fk=? and min_distance =1";
+
+    // Evidence
+    private static final String SQL_EVIDENCE = "SELECT id, evidence, description, category FROM evidence_categories";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -99,11 +99,11 @@ public class CacheDAOImpl implements CacheDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes( int[] speciesRestrictions ) throws DAOException {
+    public List<AnnotationCountDTO> getGOSizes( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<Integer, Map<Integer, Map<String, Integer>>> goSetSizes = new HashMap<>();
+        List<AnnotationCountDTO> results = new ArrayList<>();
 
         List<Object> params = new ArrayList<Object>();
 
@@ -123,29 +123,9 @@ public class CacheDAOImpl implements CacheDAO {
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                Integer speciesId = resultSet.getInt( "species_id" );
-                Integer ed = resultSet.getInt( "edition" );
-                String goid = resultSet.getString( "go_id" );
-                Integer count = resultSet.getInt( "annotation_count" );
 
-                Map<Integer, Map<String, Integer>> a = goSetSizes.get( speciesId );
-                if ( a == null ) {
-                    a = new HashMap<Integer, Map<String, Integer>>();
-                    goSetSizes.put( speciesId, a );
-                }
-
-                Map<String, Integer> b = a.get( ed );
-                if ( b == null ) {
-                    b = new HashMap<String, Integer>();
-                    a.put( ed, b );
-                }
-
-                Integer c = b.get( goid );
-                if ( c == null ) {
-                    b.put( goid, count );
-                } else {
-                    log.warn( goid + "|" + speciesId + "|" + ed );
-                }
+                results.add( new AnnotationCountDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
+                        resultSet.getString( "go_id" ), resultSet.getInt( "annotation_count" ) ) );
 
             }
 
@@ -155,44 +135,16 @@ public class CacheDAOImpl implements CacheDAO {
             close( connection, preparedStatement, resultSet );
         }
 
-        return goSetSizes;
+        return results;
 
     }
 
     @Override
-    public Map<Integer, Edition> getCurrentEditions() throws DAOException {
+    public List<EditionDTO> getAllEditions( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<Integer, Edition> editions = new HashMap<Integer, Edition>();
-
-        try {
-            connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_CURRENT_EDITIONS );
-            log.debug( preparedStatement );
-            resultSet = preparedStatement.executeQuery();
-            while ( resultSet.next() ) {
-                editions.put(
-                        resultSet.getInt( "species_id" ),
-                        new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ), resultSet
-                                .getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) ) );
-            }
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, preparedStatement, resultSet );
-        }
-
-        return editions;
-
-    }
-
-    @Override
-    public Map<Integer, List<Edition>> getAllEditions( int[] speciesRestrictions ) throws DAOException {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        Map<Integer, List<Edition>> results = new HashMap<>();
+        List<EditionDTO> results = new ArrayList<>();
         List<Object> params = new ArrayList<Object>();
 
         String sql = SQL_ALL_EDITIONS;
@@ -212,17 +164,8 @@ public class CacheDAOImpl implements CacheDAO {
             resultSet = preparedStatement.executeQuery();
 
             while ( resultSet.next() ) {
-                int speciesId = resultSet.getInt( "species_id" );
-                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
-                        resultSet.getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) );
-                List<Edition> editionsInSpecies = results.get( speciesId );
-
-                if ( editionsInSpecies == null ) {
-                    editionsInSpecies = new ArrayList<Edition>();
-                    results.put( speciesId, editionsInSpecies );
-                }
-
-                editionsInSpecies.add( edition );
+                results.add( new EditionDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ), resultSet
+                        .getDate( "date" ), resultSet.getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) ) );
 
             }
         } catch ( SQLException e ) {
@@ -236,11 +179,11 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Map<Integer, Map<Edition, StatsEntry>> getAggregates( int[] speciesRestrictions ) throws DAOException {
+    public List<AggregateDTO> getAggregates( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<Integer, Map<Edition, StatsEntry>> aggregates = new HashMap<>();
+        List<AggregateDTO> aggregates = new ArrayList<>();
 
         List<Object> params = new ArrayList<Object>();
 
@@ -261,22 +204,11 @@ public class CacheDAOImpl implements CacheDAO {
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                Integer speciesId = resultSet.getInt( "species_id" );
-                Edition edition = new Edition( resultSet.getInt( "edition" ), resultSet.getDate( "date" ),
-                        resultSet.getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) );
-                StatsEntry se = new StatsEntry( resultSet.getInt( "count_accessions" ),
-                        resultSet.getDouble( "avg_directs_by_accession" ), resultSet.getInt( "count_genes" ),
-                        resultSet.getDouble( "avg_directs_by_gene" ) );
-
-                Map<Edition, StatsEntry> speciesMap = aggregates.get( speciesId );
-
-                if ( speciesMap == null ) {
-                    speciesMap = new HashMap<>();
-                    aggregates.put( speciesId, speciesMap );
-                }
-
-                speciesMap.put( edition, se );
-
+                aggregates
+                        .add( new AggregateDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
+                                resultSet.getInt( "count_accessions" ), resultSet.getInt( "count_genes" ), resultSet
+                                        .getDouble( "avg_directs_by_accession" ), resultSet
+                                        .getDouble( "avg_directs_by_gene" ) ) );
             }
 
         } catch ( SQLException e ) {
@@ -289,65 +221,11 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public Set<Integer> getGOEditions() throws DAOException {
+    public List<GeneDTO> getCurrentGenes( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Set<Integer> eds = new HashSet<>();
-
-        try {
-            connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_GO_EDITIONS );
-            log.debug( preparedStatement );
-            resultSet = preparedStatement.executeQuery();
-            while ( resultSet.next() ) {
-
-                eds.add( resultSet.getInt( "id" ) );
-
-            }
-
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, preparedStatement, resultSet );
-        }
-
-        return eds;
-    }
-
-    @Override
-    public Map<String, String> getEvidenceCategories() throws DAOException {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        Map<String, String> results = new HashMap<>();
-
-        try {
-            connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_EVIDENCE_CATEGORIES );
-            log.debug( preparedStatement );
-            resultSet = preparedStatement.executeQuery();
-            while ( resultSet.next() ) {
-                String evidence = resultSet.getString( "evidence" );
-                String category = resultSet.getString( "category" );
-                results.put( evidence, category );
-            }
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, preparedStatement, resultSet );
-        }
-
-        return results;
-    }
-
-    @Override
-    public Map<Integer, Map<String, Gene>> getCurrentGenes( int[] speciesRestrictions ) throws DAOException {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        Map<Integer, Map<String, Gene>> currentGenes = new HashMap<>();
-        Map<String, Accession> currentAccessions = new HashMap<>();
+        List<GeneDTO> results = new ArrayList<>();
 
         List<Object> params = new ArrayList<Object>();
 
@@ -367,45 +245,8 @@ public class CacheDAOImpl implements CacheDAO {
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                Integer speciesId = resultSet.getInt( "species_id" );
-
-                Map<String, Gene> symbolMap = currentGenes.get( speciesId );
-
-                if ( symbolMap == null ) {
-                    symbolMap = new HashMap<>();
-                    currentGenes.put( speciesId, symbolMap );
-                }
-
-                String symbol = resultSet.getString( "symbol" );
-
-                Gene g = symbolMap.get( symbol.toUpperCase() );
-
-                if ( g == null ) {
-                    // New gene
-                    g = new Gene( symbol, speciesId );
-
-                    symbolMap.put( symbol.toUpperCase(), g );
-                }
-
-                Set<String> synonyms = new HashSet<>( Arrays.asList( resultSet.getString( "synonyms" ).split( "\\|" ) ) );
-                g.getSynonyms().addAll( synonyms );
-                String accession = resultSet.getString( "accession" );
-
-                Accession acc = currentAccessions.get( accession );
-
-                if ( acc == null ) {
-                    acc = new Accession( accession );
-                    currentAccessions.put( accession, acc );
-                }
-
-                String sec = resultSet.getString( "sec" );
-                if ( !resultSet.wasNull() ) {
-                    // Null secondary values means that it was not found in sec_ac primary column and therefore has
-                    // no secondary accessions
-                    acc.addSecondary( sec );
-                }
-
-                g.getAccessions().add( acc );
+                results.add( new GeneDTO( resultSet.getInt( "species_id" ), resultSet.getString( "symbol" ), resultSet
+                        .getString( "synonyms" ), resultSet.getString( "accession" ) ) );
 
             }
 
@@ -415,15 +256,54 @@ public class CacheDAOImpl implements CacheDAO {
             close( connection, preparedStatement, resultSet );
         }
 
-        return currentGenes;
+        return results;
     }
 
     @Override
-    public Map<Integer, Set<Term>> getGoTerms() throws DAOException {
+    public List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Map<Integer, Set<Term>> goTermsMap = new HashMap<>();
+        List<AccessionDTO> results = new ArrayList<>();
+
+        List<Object> params = new ArrayList<Object>();
+
+        String sql = SQL_ACCESSIONS;
+        if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
+            sql = String.format( SQL_ACCESSIONS_RESTRICT, DAOUtil.preparePlaceHolders( speciesRestrictions.length ) );
+            for ( int i = 0; i < speciesRestrictions.length; i++ ) {
+                params.add( speciesRestrictions[i] );
+            }
+        }
+
+        log.debug( sql );
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                results.add( new AccessionDTO( resultSet.getString( "accession" ), resultSet.getString( "sec" ),
+                        resultSet.getBoolean( "sp" ) ) );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
+    public List<GOTermDTO> getGoTerms() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        List<GOTermDTO> results = new ArrayList<>();
 
         try {
             connection = daoFactory.getConnection();
@@ -432,28 +312,8 @@ public class CacheDAOImpl implements CacheDAO {
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 // go_edition_id_fk, go_id, name, aspect
-                Integer goEdition = resultSet.getInt( "go_edition_id_fk" );
-                String goId = resultSet.getString( "go_id" );
-                int id;
-                try {
-                    id = Integer.parseInt( goId.substring( goId.length() - 7 ) );
-                } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
-                    log.warn( "Gene Ontology ID (" + goId + ") not in correct format." );
-                    continue;
-                }
-
-                String name = resultSet.getString( "name" );
-                Aspect aspect = Aspect.valueOf( resultSet.getString( "aspect" ) );
-
-                Set<Term> goTerms = goTermsMap.get( goEdition );
-
-                if ( goTerms == null ) {
-                    goTerms = new HashSet<>();
-                    goTermsMap.put( goEdition, goTerms );
-                }
-
-                goTerms.add( new Term( id, name, aspect ) );
-
+                results.add( new GOTermDTO( resultSet.getInt( "go_edition_id_fk" ), resultSet.getString( "go_id" ),
+                        resultSet.getString( "name" ), resultSet.getString( "aspect" ) ) );
             }
 
         } catch ( SQLException e ) {
@@ -462,55 +322,15 @@ public class CacheDAOImpl implements CacheDAO {
             close( connection, preparedStatement, resultSet );
         }
 
-        return goTermsMap;
+        return results;
     }
 
     @Override
-    public Set<Term> getGoTerms( int goEdition ) throws DAOException {
+    public List<AdjacencyDTO> getAdjacencies() throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Set<Term> goTerms = new HashSet<>();
-
-        try {
-            connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_GO_TERMS_BY_EDITION );
-            DAOUtil.setValues( preparedStatement, goEdition );
-            log.debug( preparedStatement );
-            resultSet = preparedStatement.executeQuery();
-            while ( resultSet.next() ) {
-                // go_id, name, aspect
-                String goId = resultSet.getString( "go_id" );
-                int id;
-                try {
-                    id = Integer.parseInt( goId.substring( goId.length() - 7 ) );
-                } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
-                    log.warn( "Gene Ontology ID (" + goId + ") not in correct format." );
-                    continue;
-                }
-
-                String name = resultSet.getString( "name" );
-                Aspect aspect = Aspect.valueOf( resultSet.getString( "aspect" ) );
-
-                goTerms.add( new Term( id, name, aspect ) );
-
-            }
-
-        } catch ( SQLException e ) {
-            throw new DAOException( e );
-        } finally {
-            close( connection, preparedStatement, resultSet );
-        }
-
-        return goTerms;
-    }
-
-    @Override
-    public Map<Integer, Set<Relationship>> getAdjacencies() throws DAOException {
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
-        ResultSet resultSet = null;
-        Map<Integer, Set<Relationship>> relsMap = new HashMap<>();
+        List<AdjacencyDTO> results = new ArrayList<>();
 
         try {
             connection = daoFactory.getConnection();
@@ -519,35 +339,8 @@ public class CacheDAOImpl implements CacheDAO {
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 // go_edition_id_fk, child, parent, relationship
-                Integer goEdition = resultSet.getInt( "go_edition_id_fk" );
-                String childGoId = resultSet.getString( "child" );
-                int childId;
-                try {
-                    childId = Integer.parseInt( childGoId.substring( childGoId.length() - 7 ) );
-                } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
-                    log.warn( "Gene Ontology ID (" + childGoId + ") not in correct format." );
-                    continue;
-                }
-
-                String parentGoId = resultSet.getString( "parent" );
-                int parentId;
-                try {
-                    parentId = Integer.parseInt( parentGoId.substring( parentGoId.length() - 7 ) );
-                } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
-                    log.warn( "Gene Ontology ID (" + parentGoId + ") not in correct format." );
-                    continue;
-                }
-
-                RelationshipType type = RelationshipType.valueOf( resultSet.getString( "relationship" ) );
-
-                Set<Relationship> rels = relsMap.get( goEdition );
-
-                if ( rels == null ) {
-                    rels = new HashSet<>();
-                    relsMap.put( goEdition, rels );
-                }
-
-                rels.add( new Relationship( childId, parentId, type ) );
+                results.add( new AdjacencyDTO( resultSet.getInt( "go_edition_id_fk" ), resultSet.getString( "child" ),
+                        resultSet.getString( "parent" ), resultSet.getString( "relationship" ) ) );
 
             }
 
@@ -557,54 +350,30 @@ public class CacheDAOImpl implements CacheDAO {
             close( connection, preparedStatement, resultSet );
         }
 
-        return relsMap;
+        return results;
     }
 
     @Override
-    public Set<Relationship> getAdjacencies( int goEdition ) throws DAOException {
+    public List<EvidenceDTO> getEvidence() throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        Set<Relationship> rels = new HashSet<>();
+        List<EvidenceDTO> list = new ArrayList<>();
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_GO_ADJACENCY_BY_EDITION );
-            DAOUtil.setValues( preparedStatement, goEdition );
-            log.debug( preparedStatement );
+            preparedStatement = connection.prepareStatement( SQL_EVIDENCE );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                // child, parent, relationship
-                String childGoId = resultSet.getString( "child" );
-                int childId;
-                try {
-                    childId = Integer.parseInt( childGoId.substring( childGoId.length() - 7 ) );
-                } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
-                    log.warn( "Gene Ontology ID (" + childGoId + ") not in correct format." );
-                    continue;
-                }
-
-                String parentGoId = resultSet.getString( "parent" );
-                int parentId;
-                try {
-                    parentId = Integer.parseInt( parentGoId.substring( parentGoId.length() - 7 ) );
-                } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
-                    log.warn( "Gene Ontology ID (" + parentGoId + ") not in correct format." );
-                    continue;
-                }
-
-                RelationshipType type = RelationshipType.valueOf( resultSet.getString( "relationship" ) );
-
-                rels.add( new Relationship( childId, parentId, type ) );
-
+                list.add( new EvidenceDTO( resultSet.getInt( "id" ), resultSet.getString( "evidence" ), resultSet
+                        .getString( "description" ), resultSet.getString( "category" ) ) );
             }
-
         } catch ( SQLException e ) {
             throw new DAOException( e );
         } finally {
             close( connection, preparedStatement, resultSet );
         }
 
-        return rels;
+        return list;
     }
 }
