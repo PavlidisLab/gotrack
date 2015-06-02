@@ -215,67 +215,71 @@ public class Cache implements Serializable {
 
         // GOTerm creation
         // ****************************
+        if ( !settingsCache.isDryRun() ) {
+            for ( GOTermDTO dto : cacheDAO.getGoTerms() ) {
+                GeneOntology go = ontologies.get( dto.getGoEdition() );
 
-        for ( GOTermDTO dto : cacheDAO.getGoTerms() ) {
-            GeneOntology go = ontologies.get( dto.getGoEdition() );
-
-            if ( go == null ) {
-                go = new GeneOntology();
-                ontologies.put( dto.getGoEdition(), go );
+                if ( go == null ) {
+                    go = new GeneOntology();
+                    ontologies.put( dto.getGoEdition(), go );
+                }
+                go.addTerm( new GeneOntologyTerm( dto ) );
             }
-            go.addTerm( new GeneOntologyTerm( dto ) );
-        }
-        log.info( "GO Terms fetched" );
+            log.info( "GO Terms fetched" );
 
-        for ( AdjacencyDTO dto : cacheDAO.getAdjacencies() ) {
-            GeneOntology go = ontologies.get( dto.getGoEdition() );
-            go.addRelationship( dto.getChild(), dto.getParent(), RelationshipType.valueOf( dto.getType() ) );
-        }
-        log.info( "GO Adjacencies fetched" );
+            for ( AdjacencyDTO dto : cacheDAO.getAdjacencies() ) {
+                GeneOntology go = ontologies.get( dto.getGoEdition() );
+                go.addRelationship( dto.getChild(), dto.getParent(), RelationshipType.valueOf( dto.getType() ) );
+            }
+            log.info( "GO Adjacencies fetched" );
 
-        System.gc();
-        log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+            System.gc();
+            log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() );
+            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                    / 1000000 + " MB" );
+        }
         // ****************************
 
         // goSetSize cache creation
         // ****************************
-        for ( AnnotationCountDTO dto : cacheDAO.getGOSizes( speciesRestrictions ) ) {
-            MultiKey k = new MultiKey( dto );
-            Integer cnt = this.goSetSizes.put( k, dto.getCount() );
-            if ( cnt != null ) {
-                // key existed before
-                log.warn( k );
+        if ( !settingsCache.isDryRun() ) {
+            for ( AnnotationCountDTO dto : cacheDAO.getGOSizes( speciesRestrictions ) ) {
+                MultiKey k = new MultiKey( dto );
+                Integer cnt = this.goSetSizes.put( k, dto.getCount() );
+                if ( cnt != null ) {
+                    // key existed before
+                    log.warn( k );
+                }
             }
-        }
 
-        log.info( "GO Set sizes successfully obtained" );
-        // System.gc();();
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+            log.info( "GO Set sizes successfully obtained" );
+            // System.gc();();
+            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                    / 1000000 + " MB" );
+        }
         // ****************************
 
         // Aggregate cache creation
         // ****************************
-        for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
-            Map<Edition, StatsEntry> m1 = aggregates.get( dto.getSpecies() );
+        if ( !settingsCache.isDryRun() ) {
+            for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
+                Map<Edition, StatsEntry> m1 = aggregates.get( dto.getSpecies() );
 
-            if ( m1 == null ) {
-                m1 = new ConcurrentHashMap<>();
-                aggregates.put( dto.getSpecies(), m1 );
+                if ( m1 == null ) {
+                    m1 = new ConcurrentHashMap<>();
+                    aggregates.put( dto.getSpecies(), m1 );
+                }
+
+                Edition ed = allEditions.get( dto.getSpecies() ).get( dto.getEdition() );
+
+                m1.put( ed, new StatsEntry( dto ) );
+
             }
+            log.info( "Aggregates successfully obtained" );
 
-            Edition ed = allEditions.get( dto.getSpecies() ).get( dto.getEdition() );
-
-            m1.put( ed, new StatsEntry( dto ) );
-
+            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+                    / 1000000 + " MB" );
         }
-        log.info( "Aggregates successfully obtained" );
-
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
-
         // ****************************
 
         // Accession cache creation

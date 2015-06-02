@@ -53,6 +53,7 @@ public class SettingsCache implements Serializable {
 
     private static final String SPECIES_RESTRICTIONS_PROPERTY = "gotrack.speciesRestrictions";
     private static final String UPDATE_POP_TABLE = "gotrack.updatePopularTable";
+    private static final String DRY_RUN = "gotrack.dryRun";
 
     private Properties prop = new Properties();
 
@@ -119,6 +120,10 @@ public class SettingsCache implements Serializable {
 
     public boolean isPopularTableUpdateable() {
         return prop.getProperty( UPDATE_POP_TABLE ).equals( "true" );
+    }
+
+    public boolean isDryRun() {
+        return prop.getProperty( DRY_RUN ).equals( "true" );
     }
 
     public boolean contains( String key ) {
