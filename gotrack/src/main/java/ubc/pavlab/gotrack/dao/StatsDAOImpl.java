@@ -1,7 +1,7 @@
 /*
  * The gotrack project
  * 
- * Copyright (c) 2014 University of British Columbia
+ * Copyright (c) 2015 University of British Columbia
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
+import ubc.pavlab.gotrack.model.dto.StatsDTO;
 
 /**
  * TODO Document Me
@@ -37,12 +37,14 @@ import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
  * @author mjacobson
  * @version $Id$
  */
-public class SpeciesDAOImpl implements SpeciesDAO {
+
+public class StatsDAOImpl implements StatsDAO {
 
     // Constants ----------------------------------------------------------------------------------
 
-    private static final String SQL_FIND_BY_ID = "SELECT * FROM species WHERE id = ?";
-    private static final String SQL_LIST_ORDER_BY_NAME = "SELECT * FROM species ORDER BY common_name";
+    private static final String SQL_FIND_BY_ID = "SELECT id, species_id, symbol, count FROM track_popular_genes WHERE id = ?";
+    private static final String SQL_LIST = "SELECT id, species_id, symbol, count FROM track_popular_genes";
+    private static final String SQL_INCREMENT = "INSERT INTO track_popular_genes(species_id, symbol, count) values (?,?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -56,7 +58,7 @@ public class SpeciesDAOImpl implements SpeciesDAO {
      * 
      * @param daoFactory The DAOFactory to construct this User DAO for.
      */
-    SpeciesDAOImpl( DAOFactory daoFactory ) {
+    StatsDAOImpl( DAOFactory daoFactory ) {
         this.daoFactory = daoFactory;
     }
 
@@ -68,20 +70,20 @@ public class SpeciesDAOImpl implements SpeciesDAO {
      * @see ubc.pavlab.gotrack.dao.AnnotationDAO#find(java.lang.Long)
      */
     @Override
-    public SpeciesDTO find( Long id ) throws DAOException {
+    public StatsDTO find( Long id ) throws DAOException {
         return execute( SQL_FIND_BY_ID, id );
     }
 
     @Override
-    public List<SpeciesDTO> list() throws DAOException {
+    public List<StatsDTO> list() throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        List<SpeciesDTO> list = new ArrayList<>();
+        List<StatsDTO> list = new ArrayList<>();
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_LIST_ORDER_BY_NAME );
+            preparedStatement = connection.prepareStatement( SQL_LIST );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 list.add( map( resultSet ) );
@@ -95,11 +97,29 @@ public class SpeciesDAOImpl implements SpeciesDAO {
         return list;
     }
 
-    private SpeciesDTO execute( String sql, Object... values ) throws DAOException {
+    public void incrementGeneHit( Integer speciesId, String symbol ) {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = prepareStatement( connection, SQL_INCREMENT, false, speciesId, symbol );
+            int result = preparedStatement.executeUpdate();
+            if ( result == 0 ) {
+                throw new SQLException( "Something went wrong in the popular genes update!" );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, null );
+        }
+    }
+
+    private StatsDTO execute( String sql, Object... values ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        SpeciesDTO species = null;
+        StatsDTO species = null;
 
         try {
             connection = daoFactory.getConnection();
@@ -124,14 +144,10 @@ public class SpeciesDAOImpl implements SpeciesDAO {
      * @return The mapped Species from the current row of the given ResultSet.
      * @throws SQLException If something fails at database level.
      */
-    private static SpeciesDTO map( ResultSet resultSet ) throws SQLException {
+    private static StatsDTO map( ResultSet resultSet ) throws SQLException {
 
-        String[] taxons = resultSet.getString( "taxon" ).split( "\\|" );
-
-        SpeciesDTO dto = new SpeciesDTO( resultSet.getInt( "id" ), resultSet.getString( "common_name" ),
-                resultSet.getString( "scientific_name" ), Integer.parseInt( taxons[0].split( ":" )[1] ),
-                taxons.length == 2 ? Integer.parseInt( taxons[1].split( ":" )[1] ) : null );
-
-        return dto;
+        return new StatsDTO( resultSet.getInt( "id" ), resultSet.getInt( "species_id" ),
+                resultSet.getString( "symbol" ), resultSet.getInt( "count" ) );
     }
+
 }

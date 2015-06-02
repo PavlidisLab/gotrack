@@ -136,9 +136,9 @@
 
 					<div class="nice-list">
 
-						<p:dataList value="#{stats.popularGenes}" var="gene"
+						<p:dataList value="#{statsService.popularGenes}" var="gene"
 							type="ordered">  
-                #{gene}  
+                #{gene.symbol} [#{gene.species.scientificName}]  
               </p:dataList>
 
 					</div>
@@ -153,7 +153,7 @@
 
 					<div class="nice-list">
 						<h:form>
-							<p:dataGrid value="#{stats.topMultifunc}" var="gene"
+							<p:dataGrid value="#{statsService.topMultifunc}" var="gene"
 								columns="1">
                   #{gene}
                 </p:dataGrid>

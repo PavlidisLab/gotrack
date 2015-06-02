@@ -19,45 +19,21 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.util.Map;
+import java.util.List;
 import java.util.Set;
 
-import ubc.pavlab.gotrack.model.Accession;
-import ubc.pavlab.gotrack.model.AnnotationDetailed;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
+import ubc.pavlab.gotrack.model.dto.TrackDTO;
 
 /**
  * This interface represents a contract for a DAO for the {@link AnnotationDetailed} model. Note that all methods are
  * read-only.
  */
 public interface AnnotationDAO {
-
     // Actions ------------------------------------------------------------------------------------
+    public List<TrackDTO> track( Integer species, String symbol ) throws DAOException;
 
-    public Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> enrichmentData( Integer species, Set<Gene> genes )
-            throws DAOException;
-
-    public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> track( Integer species,
-            String symbol ) throws DAOException;
-
-    public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> trackPropagate( Integer species,
-            String symbol ) throws DAOException;
-
-    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataPropagate( Integer species, Set<Gene> genes )
-            throws DAOException;
-
-    public Map<Edition, Map<GeneOntologyTerm, Integer>> enrichmentDataPropagateCountsOnly( Integer species,
-            Set<Gene> genes ) throws DAOException;
-
-    public Map<Edition, Integer> enrichmentSampleSizes( Integer species, Set<Gene> genes ) throws DAOException;
-
-    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataPropagateNoTermInfo( Integer species,
-            Set<Gene> genes ) throws DAOException;
-
-    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> enrichmentDataNoPropagateNoTermInfo( Integer species,
-            Set<Gene> genes ) throws DAOException;
+    public List<EnrichmentDTO> enrich( Integer species, Set<Gene> genes ) throws DAOException;
 
 }

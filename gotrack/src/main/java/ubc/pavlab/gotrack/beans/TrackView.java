@@ -54,7 +54,8 @@ import org.primefaces.model.chart.DateAxis;
 import org.primefaces.model.chart.LineChartModel;
 import org.primefaces.model.chart.LineChartSeries;
 
-import ubc.pavlab.gotrack.dao.AnnotationDAO;
+import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.beans.service.StatsService;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.CustomTimelineModel;
@@ -91,8 +92,8 @@ public class TrackView {
     @ManagedProperty("#{cache}")
     private Cache cache;
 
-    @ManagedProperty("#{stats}")
-    private Stats stats;
+    @ManagedProperty("#{statsService}")
+    private StatsService statsService;
 
     @ManagedProperty("#{sessionManager}")
     private SessionManager sessionManager;
@@ -100,16 +101,10 @@ public class TrackView {
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
 
-    @ManagedProperty("#{daoFactoryBean}")
-    private DAOFactoryBean daoFactoryBean;
+    @ManagedProperty("#{annotationService}")
+    private AnnotationService annotationService;
 
     private static final Logger log = Logger.getLogger( TrackView.class );
-
-    // Application settings
-    private boolean ontologyInMemory = false;
-
-    // DAO
-    private AnnotationDAO annotationDAO;
 
     // Query params
     private Integer currentSpeciesId;
@@ -204,25 +199,18 @@ public class TrackView {
             // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
 
             // Obtain AnnotationDAO.
-            stats.countHit( query );
+            statsService.countHit( currentGene );
             log.info( "symbol: " + currentGene.getSymbol() );
             log.info( "synonyms: " + currentGene.getSynonyms() );
             log.info( "accessions: " + currentGene.getAccessions() );
 
             log.info( "Gene: " + currentGene );
 
-            annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
             currentEdition = cache.getCurrentEditions( currentSpeciesId );
             // allEditions = cache.getAllEditions( currentSpeciesId );
             allEditions = cache.getAllEditions( currentSpeciesId );
 
-            ontologyInMemory = settingsCache.getOntologyInMemory();
-
-            for ( Species s : cache.getSpeciesList() ) {
-                if ( s.getId().equals( currentSpeciesId ) ) {
-                    currentSpecies = s;
-                }
-            }
+            currentSpecies = cache.getSpecies( currentSpeciesId );
 
             return null;
 
@@ -270,11 +258,7 @@ public class TrackView {
 
         if ( data == null ) {
 
-            if ( ontologyInMemory ) {
-                data = annotationDAO.track( currentSpeciesId, query );
-            } else {
-                data = annotationDAO.trackPropagate( currentSpeciesId, query );
-            }
+            data = annotationService.fetchTrackData( currentSpecies, currentGene );
 
             // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
 
@@ -288,15 +272,8 @@ public class TrackView {
         Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> directData = new HashMap<>();
         Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData = new HashMap<>();
 
-        if ( ontologyInMemory ) {
-            directData = data;
-            propagatedData = propagate( data );
-        } else {
-
-            propagatedData = data;
-            directData = directs( data );
-
-        }
+        directData = data;
+        propagatedData = propagate( data );
 
         log.info( "Annotation Data fetched" );
         createDirectCharts( directData, "Direct Annotations vs Time", "Dates", "Direct Annotations" );
@@ -411,52 +388,6 @@ public class TrackView {
 
         }
         return propagatedData;
-    }
-
-    private Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> directs(
-            Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
-        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> directData = new HashMap<>();
-
-        // Filter through propagated data and pick out directs
-        for ( Entry<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> accessionEntry : data
-                .entrySet() ) {
-            Accession acc = accessionEntry.getKey();
-            Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> directEditionMap = new HashMap<>();
-
-            for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : accessionEntry
-                    .getValue().entrySet() ) {
-                Edition ed = editionEntry.getKey();
-                Map<GeneOntologyTerm, Set<EvidenceReference>> directTermMap = new HashMap<>();
-
-                for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> termEntry : editionEntry.getValue().entrySet() ) {
-                    GeneOntologyTerm term = termEntry.getKey();
-                    Set<EvidenceReference> directEvidence = new HashSet<>();
-
-                    for ( EvidenceReference er : termEntry.getValue() ) {
-                        if ( er.isDirect() ) {
-                            directEvidence.add( er );
-                        }
-                    }
-
-                    if ( !directEvidence.isEmpty() ) {
-                        directTermMap.put( term, directEvidence );
-                    }
-
-                }
-
-                if ( !directTermMap.isEmpty() ) {
-                    directEditionMap.put( ed, directTermMap );
-                }
-
-            }
-
-            if ( !directEditionMap.isEmpty() ) {
-                directData.put( acc, directEditionMap );
-            }
-
-        }
-
-        return directData;
     }
 
     private void createPropagatedChart(
@@ -582,7 +513,7 @@ public class TrackView {
                 Set<GeneOntologyTerm> goSet = editionEntry.getValue().keySet();
                 if ( total != null ) {
                     for ( GeneOntologyTerm term : goSet ) {
-                        Integer inGroup = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(), term.getGoId() );
+                        Integer inGroup = cache.getGoSetSizes( currentSpeciesId, ed, term );
                         if ( inGroup != null ) {
                             multi += 1.0 / ( inGroup * ( total - inGroup ) );
                         }
@@ -894,7 +825,7 @@ public class TrackView {
                 Set<String> grp = timelineGroups.get( term );
                 if ( evs != null ) {
                     for ( EvidenceReference ev : evs ) {
-                        grp.add( ev.getCategory() );
+                        grp.add( ev.getEvidence().getCategory() );
                     }
                 }
 
@@ -918,7 +849,7 @@ public class TrackView {
                         for ( String grp : grps ) {
                             EvidenceReference foundEV = null;
                             for ( EvidenceReference ev : evs ) {
-                                if ( ev.getCategory().equals( grp ) ) {
+                                if ( ev.getEvidence().getCategory().equals( grp ) ) {
                                     foundEV = ev;
                                     break;
                                 }
@@ -926,8 +857,8 @@ public class TrackView {
 
                             if ( foundEV != null ) {
                                 TimelineEvent event = new TimelineEvent( foundEV.getReference() + "(|)"
-                                        + foundEV.getEvidence(), currentEdition.getDate(), nextEdition.getDate(),
-                                        false, grp, "timeline-true timeline-hidden" );
+                                        + foundEV.getEvidence().getEvidence(), currentEdition.getDate(),
+                                        nextEdition.getDate(), false, grp, "timeline-true timeline-hidden" );
                                 timeline.add( event );
                             }
 
@@ -959,7 +890,7 @@ public class TrackView {
                     for ( String grp : grps ) {
                         EvidenceReference foundEV = null;
                         for ( EvidenceReference ev : evs ) {
-                            if ( ev.getCategory().equals( grp ) ) {
+                            if ( ev.getEvidence().getCategory().equals( grp ) ) {
                                 foundEV = ev;
                                 break;
                             }
@@ -967,8 +898,8 @@ public class TrackView {
 
                         if ( foundEV != null ) {
                             TimelineEvent event = new TimelineEvent( foundEV.getReference() + "(|)"
-                                    + foundEV.getEvidence(), currentEdition.getDate(), cal.getTime(), false, grp,
-                                    "timeline-true timeline-hidden" );
+                                    + foundEV.getEvidence().getEvidence(), currentEdition.getDate(), cal.getTime(),
+                                    false, grp, "timeline-true timeline-hidden" );
                             timeline.add( event );
                         }
 
@@ -1295,10 +1226,6 @@ public class TrackView {
         this.currentSpeciesId = currentSpeciesId;
     }
 
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
-    }
-
     public void setFilteredTerms( Collection<GeneOntologyTerm> filteredTerms ) {
         this.filteredTerms = filteredTerms;
     }
@@ -1339,8 +1266,8 @@ public class TrackView {
         return chartEmpty;
     }
 
-    public void setStats( Stats stats ) {
-        this.stats = stats;
+    public void setStatsService( StatsService statsService ) {
+        this.statsService = statsService;
     }
 
     public void setSessionManager( SessionManager sessionManager ) {
@@ -1349,6 +1276,10 @@ public class TrackView {
 
     public void setSettingsCache( SettingsCache settingsCache ) {
         this.settingsCache = settingsCache;
+    }
+
+    public void setAnnotationService( AnnotationService annotationService ) {
+        this.annotationService = annotationService;
     }
 
 }

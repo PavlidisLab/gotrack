@@ -44,40 +44,45 @@ public class GeneOntology {
 
     private static final Logger log = Logger.getLogger( GeneOntology.class );
 
-    private TIntObjectHashMap<Term> termMap;
+    private TIntObjectHashMap<GeneOntologyTerm> termMap = new TIntObjectHashMap<>();
 
     // private Map<String, Term> termMapLarge = new HashMap<>();
 
     public GeneOntology() {
     }
 
-    public GeneOntology( Set<Term> goTerms, Set<Relationship> goAdjacency ) {
-        termMap = new TIntObjectHashMap<>();
+    public void addTerm( GeneOntologyTerm t ) {
+        termMap.put( t.getId(), t );
+    }
 
-        for ( Term t : goTerms ) {
-            termMap.put( t.getId(), t );
+    public void addRelationship( String child, String parent, RelationshipType type ) {
+        GeneOntologyTerm term = termMap.get( convertGOId( child ) );
+
+        if ( term == null ) {
+            log.warn( "Relationship (" + child + ") child not found in term map!" );
         }
 
-        for ( Relationship rel : goAdjacency ) {
+        GeneOntologyTerm parentTerm = termMap.get( convertGOId( parent ) );
+        if ( parentTerm == null ) {
+            log.warn( "Relationship (" + parent + ") parent not found in term map!" );
+        }
 
-            Term term = termMap.get( rel.getChildId() );
+        term.getParents().add( new Parent( parentTerm, type ) );
+    }
 
-            if ( term == null ) {
-                log.warn( "Relationship (" + rel + ") child not found in term map!" );
-            }
-
-            Term parentTerm = termMap.get( rel.getParentId() );
-            if ( parentTerm == null ) {
-                log.warn( "Relationship (" + rel + ") parent not found in term map!" );
-            }
-
-            term.addParent( new Link( parentTerm, rel.getType() ) );
-
+    public void freeze() {
+        for ( GeneOntologyTerm t : termMap.valueCollection() ) {
+            t.freezeParents();
         }
     }
 
-    public Term getTerm( String goid ) {
+    public GeneOntologyTerm getTerm( String goid ) {
         int id = Integer.parseInt( goid.substring( goid.length() - 7 ) );
+        return termMap.get( id );
+
+    }
+
+    public GeneOntologyTerm getTerm( int id ) {
         return termMap.get( id );
 
     }
@@ -111,19 +116,15 @@ public class GeneOntology {
 
     public Set<GeneOntologyTerm> propagate( Collection<GeneOntologyTerm> goSet, boolean includePartOf ) {
         Set<GeneOntologyTerm> allPropagations = new HashSet<>();
-        for ( GeneOntologyTerm go : new HashSet<GeneOntologyTerm>( goSet ) ) {
+        for ( GeneOntologyTerm go : goSet ) {
             allPropagations.add( go );
-            Term term = termMap.get( convertGOId( go.getGoId() ) );
-            if ( term != null ) {
-                Set<Link> propagations = getAncestors( term, includePartOf );
-                for ( Link termLink : propagations ) {
-                    Term t = termLink.getLink();
-                    GeneOntologyTerm propagatedGO = new GeneOntologyTerm( convertGOId( t.getId() ), t.getName(), t
-                            .getAspect().toString() );
-                    allPropagations.add( propagatedGO );
 
-                }
+            Set<Parent> propagations = getAncestors( go, includePartOf );
+            for ( Parent parent : propagations ) {
+                allPropagations.add( parent.getParent() );
+
             }
+
         }
         return Collections.unmodifiableSet( allPropagations );
 
@@ -150,47 +151,40 @@ public class GeneOntology {
 
             evidence.addAll( ev );
 
-            Term term = termMap.get( convertGOId( goEntry.getKey().getGoId() ) );
-            if ( term != null ) {
-                Set<Link> propagations = getAncestors( term, includePartOf );
-                for ( Link termLink : propagations ) {
-                    Term t = termLink.getLink();
-                    GeneOntologyTerm propagatedGO = new GeneOntologyTerm( convertGOId( t.getId() ), t.getName(), t
-                            .getAspect().toString() );
-                    evidence = propagatedAnnotations.get( propagatedGO );
-                    if ( evidence == null ) {
-                        evidence = new HashSet<>();
-                        propagatedAnnotations.put( propagatedGO, evidence );
-                    }
-
-                    evidence.addAll( ev );
+            Set<Parent> propagations = getAncestors( go, includePartOf );
+            for ( Parent parent : propagations ) {
+                evidence = propagatedAnnotations.get( parent.getParent() );
+                if ( evidence == null ) {
+                    evidence = new HashSet<>();
+                    propagatedAnnotations.put( parent.getParent(), evidence );
                 }
-            } else {
-                log.warn( "Could not find GO Term (" + goEntry.getKey() + ") while propagating!" );
+
+                evidence.addAll( ev );
             }
+
         }
 
         return propagatedAnnotations;
     }
 
-    public Set<Link> getAncestors( String goid, boolean includePartOf ) throws IllegalArgumentException {
+    public Set<Parent> getAncestors( String goid, boolean includePartOf ) throws IllegalArgumentException {
         return getAncestors( convertGOId( goid ), includePartOf );
     }
 
-    public Set<Link> getAncestors( int id, boolean includePartOf ) {
+    public Set<Parent> getAncestors( int id, boolean includePartOf ) {
         return getAncestors( termMap.get( id ), includePartOf );
     }
 
-    private Set<Link> getAncestors( Term t, boolean includePartOf ) {
-        Set<Link> ancestors = new HashSet<>();
+    private Set<Parent> getAncestors( GeneOntologyTerm t, boolean includePartOf ) {
+        Set<Parent> ancestors = new HashSet<>();
 
-        Set<Link> parents = getParents( t );
+        Set<Parent> parents = getParents( t );
 
-        for ( Link parent : parents ) {
+        for ( Parent parent : parents ) {
 
             if ( includePartOf || parent.getType().equals( RelationshipType.IS_A ) ) {
                 ancestors.add( parent );
-                ancestors.addAll( getAncestors( parent.getLink(), includePartOf ) );
+                ancestors.addAll( getAncestors( parent.getParent(), includePartOf ) );
             }
 
         }
@@ -199,15 +193,15 @@ public class GeneOntology {
 
     }
 
-    public Set<Link> getParents( String goid ) throws IllegalArgumentException {
+    public Set<Parent> getParents( String goid ) throws IllegalArgumentException {
         return getParents( convertGOId( goid ) );
     }
 
-    public Set<Link> getParents( int id ) {
+    public Set<Parent> getParents( int id ) {
         return getParents( termMap.get( id ) );
     }
 
-    private Set<Link> getParents( Term t ) {
+    private Set<Parent> getParents( GeneOntologyTerm t ) {
         return t.getParents();
     }
 
