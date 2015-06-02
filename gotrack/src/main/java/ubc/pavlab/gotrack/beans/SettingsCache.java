@@ -52,6 +52,7 @@ public class SettingsCache implements Serializable {
     private static final String PROPERTIES_FILE = "/usr/local/tomcat/gotrack.properties";
 
     private static final String SPECIES_RESTRICTIONS_PROPERTY = "gotrack.speciesRestrictions";
+    private static final String UPDATE_POP_TABLE = "gotrack.updatePopularTable";
 
     private Properties prop = new Properties();
 
@@ -114,6 +115,10 @@ public class SettingsCache implements Serializable {
         }
 
         return speciesRestrictions;
+    }
+
+    public boolean isPopularTableUpdateable() {
+        return prop.getProperty( UPDATE_POP_TABLE ).equals( "true" );
     }
 
     public boolean contains( String key ) {

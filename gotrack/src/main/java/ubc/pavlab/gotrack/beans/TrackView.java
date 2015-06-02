@@ -55,6 +55,7 @@ import org.primefaces.model.chart.LineChartModel;
 import org.primefaces.model.chart.LineChartSeries;
 
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.beans.service.StatsService;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.CustomTimelineModel;
@@ -91,8 +92,8 @@ public class TrackView {
     @ManagedProperty("#{cache}")
     private Cache cache;
 
-    @ManagedProperty("#{stats}")
-    private Stats stats;
+    @ManagedProperty("#{statsService}")
+    private StatsService statsService;
 
     @ManagedProperty("#{sessionManager}")
     private SessionManager sessionManager;
@@ -198,7 +199,7 @@ public class TrackView {
             // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
 
             // Obtain AnnotationDAO.
-            stats.countHit( query );
+            statsService.countHit( currentGene );
             log.info( "symbol: " + currentGene.getSymbol() );
             log.info( "synonyms: " + currentGene.getSynonyms() );
             log.info( "accessions: " + currentGene.getAccessions() );
@@ -209,11 +210,7 @@ public class TrackView {
             // allEditions = cache.getAllEditions( currentSpeciesId );
             allEditions = cache.getAllEditions( currentSpeciesId );
 
-            for ( Species s : cache.getSpeciesList() ) {
-                if ( s.getId().equals( currentSpeciesId ) ) {
-                    currentSpecies = s;
-                }
-            }
+            currentSpecies = cache.getSpecies( currentSpeciesId );
 
             return null;
 
@@ -1269,8 +1266,8 @@ public class TrackView {
         return chartEmpty;
     }
 
-    public void setStats( Stats stats ) {
-        this.stats = stats;
+    public void setStatsService( StatsService statsService ) {
+        this.statsService = statsService;
     }
 
     public void setSessionManager( SessionManager sessionManager ) {

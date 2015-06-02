@@ -85,7 +85,7 @@ public class Cache implements Serializable {
     private static final Logger log = Logger.getLogger( Cache.class );
 
     private final int MAX_DATA_ENTRIES = 20;
-    private final int MAX_ENRICHMENT_ENTRIES = 2000;
+    private final int MAX_ENRICHMENT_ENTRIES = 1000;
 
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
@@ -96,7 +96,7 @@ public class Cache implements Serializable {
     @ManagedProperty("#{speciesService}")
     private SpeciesService speciesService;
 
-    private List<Species> speciesList;
+    private Map<Integer, Species> speciesCache = new ConcurrentHashMap<>();
     private Map<Integer, Edition> currentEditions = new ConcurrentHashMap<>();
     private Map<Integer, Map<Integer, Edition>> allEditions = new ConcurrentHashMap<>();
     private Map<Integer, Map<String, Gene>> speciesToCurrentGenes = new ConcurrentHashMap<>();
@@ -169,9 +169,13 @@ public class Cache implements Serializable {
             log.info( "restriction species to: " + Arrays.toString( speciesRestrictions ) );
         }
 
-        speciesList = speciesService.list();
+        List<Species> speciesList = speciesService.list();
 
-        log.info( "Species List successfully obtained: " + speciesList );
+        for ( Species species : speciesList ) {
+            speciesCache.put( species.getId(), species );
+        }
+
+        log.info( "Species Cache successfully created: " + speciesCache );
 
         // Obtain CacheDAO
         CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
@@ -368,7 +372,8 @@ public class Cache implements Serializable {
             Map<String, Set<String>> synMap = allSynMap.get( species );
 
             for ( String symbol : speciesEntry.getValue().keySet() ) {
-                m.put( symbol.toUpperCase(), new Gene( symbol, species, accMap.get( symbol ), synMap.get( symbol ) ) );
+                m.put( symbol.toUpperCase(), new Gene( symbol, speciesCache.get( species ), accMap.get( symbol ),
+                        synMap.get( symbol ) ) );
             }
 
         }
@@ -456,8 +461,8 @@ public class Cache implements Serializable {
 
     }
 
-    public List<Species> getSpeciesList() {
-        return Collections.unmodifiableList( speciesList );
+    public Collection<Species> getSpeciesList() {
+        return Collections.unmodifiableCollection( speciesCache.values() );
     }
 
     public Edition getCurrentEditions( Integer speciesId ) {
@@ -651,6 +656,12 @@ public class Cache implements Serializable {
     public Accession getAccession( String acc ) {
         if ( acc == null ) return null;
         return primaryAccession.get( acc );
+
+    }
+
+    public Species getSpecies( Integer id ) {
+        if ( id == null ) return null;
+        return speciesCache.get( id );
 
     }
 

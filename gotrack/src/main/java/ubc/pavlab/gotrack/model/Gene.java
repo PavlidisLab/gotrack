@@ -33,11 +33,11 @@ import com.google.common.collect.ImmutableSet;
 public final class Gene {
 
     private final String symbol;
-    private final Integer species;
+    private final Species species;
     private final Set<Accession> accessions;
     private final Set<String> synonyms;
 
-    public Gene( String symbol, Integer species, Set<Accession> accessions, Set<String> synonyms ) {
+    public Gene( String symbol, Species species, Set<Accession> accessions, Set<String> synonyms ) {
         super();
         this.symbol = symbol;
         this.species = species;
@@ -77,10 +77,13 @@ public final class Gene {
         return synonyms;
     }
 
+    public Species getSpecies() {
+        return species;
+    }
+
     @Override
     public String toString() {
-        return "Gene [symbol=" + symbol + ", species=" + species + ", accessions=" + accessions + ", synonyms="
-                + synonyms + "]";
+        return "Gene [symbol=" + symbol + ", species=" + species.getCommonName() + "]";
     }
 
     @Override

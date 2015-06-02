@@ -168,6 +168,10 @@ public abstract class DAOFactory {
         return new AnnotationDAOImpl( this );
     }
 
+    public StatsDAO getStatsDAO() {
+        return new StatsDAOImpl( this );
+    }
+
     // You can add more DAO implementation getters here.
 
 }
