@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.beans;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -107,7 +108,7 @@ public class TrackView {
     private static final Logger log = Logger.getLogger( TrackView.class );
 
     // Query params
-    private Integer currentSpeciesId;
+    private Integer speciesId;
     private Species currentSpecies;
     private String query;
 
@@ -171,11 +172,23 @@ public class TrackView {
         scale = "linear";
     }
 
-    public String init() throws GeneNotFoundException {
+    public String init() throws GeneNotFoundException, IOException {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
             return null; // Skip ajax requests.
         }
-        log.info( "TrackView init: " + currentSpeciesId + ": " + query );
+        log.info( "TrackView init: " + speciesId + ": " + query );
+
+        if ( speciesId == null && query == null ) {
+            // no parameters; show search form
+            currentGene = null;
+            return null;
+        } else if ( !( speciesId != null && query != null ) ) {
+            // malformed input if only one parameter is specified
+            FacesContext facesContext = FacesContext.getCurrentInstance();
+            facesContext.getExternalContext().responseSendError( 400, "The param 'yourParam' is missing" );
+            facesContext.responseComplete();
+            return null;
+        }
 
         if ( FacesContext.getCurrentInstance().getApplication().getProjectStage() == ProjectStage.Development ) {
             FacesContext.getCurrentInstance()
@@ -185,9 +198,9 @@ public class TrackView {
                                     "This is the DEVELOPMENT version of GOTrack!", null ) );
         }
 
-        currentGene = cache.getCurrentGene( currentSpeciesId, query );
+        currentGene = cache.getCurrentGene( speciesId, query );
         if ( currentGene == null ) {
-
+            // gene symbol not found
             throw new GeneNotFoundException();
             /*
              * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
@@ -206,11 +219,11 @@ public class TrackView {
 
             log.info( "Gene: " + currentGene );
 
-            currentEdition = cache.getCurrentEditions( currentSpeciesId );
+            currentEdition = cache.getCurrentEditions( speciesId );
             // allEditions = cache.getAllEditions( currentSpeciesId );
-            allEditions = cache.getAllEditions( currentSpeciesId );
+            allEditions = cache.getAllEditions( speciesId );
 
-            currentSpecies = cache.getSpecies( currentSpeciesId );
+            currentSpecies = cache.getSpecies( speciesId );
 
             return null;
 
@@ -305,7 +318,7 @@ public class TrackView {
         Map<Edition, Double> geneAvg = new HashMap<>();
         Map<Edition, Double> accessionAvg = new HashMap<>();
 
-        for ( Entry<Edition, StatsEntry> editionEntry : cache.getAggregates( currentSpeciesId ).entrySet() ) {
+        for ( Entry<Edition, StatsEntry> editionEntry : cache.getAggregates( speciesId ).entrySet() ) {
             Edition edition = editionEntry.getKey();
             StatsEntry se = editionEntry.getValue();
             geneAvg.put( edition, se.getAvgDirectByGene() );
@@ -508,12 +521,12 @@ public class TrackView {
 
                 Double multi = 0.0;
                 Edition ed = editionEntry.getKey();
-                Integer total = cache.getGeneCount( currentSpeciesId, ed );
+                Integer total = cache.getGeneCount( speciesId, ed );
                 // Integer total = cache.getAccessionSize( currentSpeciesId, ed );
                 Set<GeneOntologyTerm> goSet = editionEntry.getValue().keySet();
                 if ( total != null ) {
                     for ( GeneOntologyTerm term : goSet ) {
-                        Integer inGroup = cache.getGoSetSizes( currentSpeciesId, ed, term );
+                        Integer inGroup = cache.getGoSetSizes( speciesId, ed, term );
                         if ( inGroup != null ) {
                             multi += 1.0 / ( inGroup * ( total - inGroup ) );
                         }
@@ -1143,7 +1156,8 @@ public class TrackView {
     }
 
     public ArrayList<Accession> getCurrentPrimaryAccessionsValues() {
-        return new ArrayList<Accession>( currentGene.getAccessions() );
+        return currentGene != null ? new ArrayList<Accession>( currentGene.getAccessions() )
+                : new ArrayList<Accession>();
     }
 
     public Species getCurrentSpecies() {
@@ -1154,8 +1168,8 @@ public class TrackView {
         return currentGene;
     }
 
-    public Integer getCurrentSpeciesId() {
-        return currentSpeciesId;
+    public Integer getSpeciesId() {
+        return speciesId;
     }
 
     public Collection<GeneOntologyTerm> getFilteredTerms() {
@@ -1222,8 +1236,8 @@ public class TrackView {
         this.cache = cache;
     }
 
-    public void setCurrentSpeciesId( Integer currentSpeciesId ) {
-        this.currentSpeciesId = currentSpeciesId;
+    public void setSpeciesId( Integer speciesId ) {
+        this.speciesId = speciesId;
     }
 
     public void setFilteredTerms( Collection<GeneOntologyTerm> filteredTerms ) {

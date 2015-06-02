@@ -7,20 +7,7 @@
 <h:head>
 	<title>UBC-CHiBi|GOtrack</title>
 	<h:outputStylesheet library="css" name="style.css" />
-	<h:outputStylesheet library="css" name="styles3.css" />
-	<h:outputStylesheet library="css" name="custom.css" />
-	<!--     <script src='https://rawgithub.com/Polychart/polychart2/develop/polychart2.standalone.js' type='text/javascript'></script>
- -->
 
-	<style>
-.rChart {
-	display: block;
-	margin-left: auto;
-	margin-right: auto;
-	width: 1000px;
-	height: 140px;
-}
-</style>
 	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 	<!-- Prevents caching at the Proxy Server -->
 
@@ -30,34 +17,9 @@
 		content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
 
 	<meta name="keywords"
-		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software" />
-	<meta name="author" content="GOtrack admin (asedeno@chibi.ubc.ca)" />
-	<!-- 
-    <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization',
-    'version':'1','packages':['timeline']}]}"></script>   
-    <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization',
-    'version':'1','packages':['motionchart']}]}"></script>  -->
+		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software,enrichment,GO" />
+	<meta name="author" content="GOtrack admin (jacobsonmt+gotrack@gmail.com)" />
 
-	<!--Load the AJAX API-->
-	<!--     <script type="text/javascript" src="https://www.google.com/jsapi"></script> -->
-
-	<!--     <script>
-      (function(i, s, o, g, r, a, m) {
-        i['GoogleAnalyticsObject'] = r;
-        i[r] = i[r] || function() {
-          (i[r].q = i[r].q || []).push(arguments)
-        }, i[r].l = 1 * new Date();
-        a = s.createElement(o),
-                m = s.getElementsByTagName(o)[0];
-        a.async = 1;
-        a.src = g;
-        m.parentNode.insertBefore(a, m)
-      })(window, document, 'script', '//www.google-analytics.com/analytics.js', 'ga');
-
-      ga('create', 'UA-53596112-1', 'auto');
-      ga('send', 'pageview');
-
-    </script> -->
 </h:head>
 
 <h:body>
@@ -65,13 +27,13 @@
 		<div id="header">
 			<div id="top">
 				<div class="left" id="logo">
-					<h:graphicImage library="img" width="130" height="110"
-						name="logo1.png" />
+					<h:graphicImage library="img" width="130" height="110" name="logo1.png" />
 				</div>
 				<div class="left navigation" id="main-nav">
 					<ul class="tabbed">
 						<li class="current-tab"><h:link value="Home"
 								outcome="index.xhtml" /></li>
+						<li><h:link value="Track Gene" outcome="track.xhtml" /></li>
 						<li><h:link value="Global Trends"
 								outcome="trends.xhtml" /></li>
 						<li><h:link value="Enrichment" outcome="enrichment.xhtml" /></li>
@@ -88,96 +50,86 @@
 
 		<!-- Middle splash -->
 		<div id="splash">
-			<div class="col3 left">
-				<h2 class="label label-green">Description</h2>
-				<p class="quiet large"></p>
-				<p>GOtrack is a simple, user-friendly web interface built to
-					browse changes in gene product annotations over time.</p>
-				<p>GOtrack currently supports annotation data for 14 different
-					organisms.</p>
-			</div>
+			<div class="ui-grid ui-grid-responsive">
 
-			<div class="col3-mid left">
-				<h2 class="label label-orange">Explore</h2>
-				<p class="quiet large"></p>
-				<ul>
-					<li><p>Changes in the number of Gene Ontology (GO) terms
-						associated to a gene product or the number of gene products
-						associated to a GO term</p></li>
-					<li><p>Changes in the evidence codes used and measures of
-						semantic similarity and multifunctionality</p></li>
-					<li><p>Identify general changes occurring in an organism or
-						compare them against other species</p></li>
-				</ul>
-				<!-- <p><h:graphicImage library="images"  width="260" height="150" name="example.png" /></p> -->
-			</div>
 
-			<div class="col3 right">
-				<h2 class="label label-blue">Contact Us</h2>
-				<p>Please give us some feedback! In case you have any questions,
-					you can contact us at:</p>
-				<p>asedeno@chibi.ubc.ca</p>
+				<div class="ui-grid-row">
+					<div class="ui-grid-col-4">
+						<h2 class="label label-green">Description</h2>
+						<p class="quiet large"></p>
+						<p>GOtrack is a simple, user-friendly web interface built to
+							browse changes in gene product annotations over time.</p>
+						<p>GOtrack currently supports annotation data for 14 different
+							organisms.</p>
+					</div>
+
+					<div class="ui-grid-col-4">
+						<h2 class="label label-orange">Explore</h2>
+						<p class="quiet large"></p>
+						<ul>
+							<li><p>Changes in the number of Gene Ontology (GO) terms
+									associated to a gene product or the number of gene products
+									associated to a GO term</p></li>
+							<li><p>Changes in the evidence codes used and measures
+									of semantic similarity and multifunctionality</p></li>
+							<li><p>Identify general changes occurring in an organism
+									or compare them against other species</p></li>
+						</ul>
+						<!-- <p><h:graphicImage library="images"  width="260" height="150" name="example.png" /></p> -->
+					</div>
+
+					<div class="ui-grid-col-4">
+						<h2 class="label label-blue">Contact Us</h2>
+						<p>Please give us some feedback! In case you have any
+							questions, you can contact us at:</p>
+						<p>jacobsonmt+gotrack (at) gmail (dot) com</p>
+					</div>
+					<div class="clearer">&nbsp;</div>
+				</div>
 			</div>
-			<div class="clearer">&nbsp;</div>
 		</div>
+		
+		<div id="content">
 
-		<!-- This is the delimiter for the menu nav bar, not implementing the sub-nav -->
+		<div class="ui-grid ui-grid-responsive" style="margin-top:50px;">
 
-		<!-- Beginning of the two main columns -->
 
-		<div class="main" id="main-two-columns">
-			<div class="right" id="sidebar">
+			<div class="ui-grid-row">
+				<div class="ui-grid-col-2">
+					<div class="section">
 
-				<!-- VOLATILES -->
-				<div class="section">
+						<div class="section-title">Examples</div>
 
-					<div class="section-title">Top popular genes (based on user
-						queries)</div>
-
-					<div class="nice-list">
-
-						<p:dataList value="#{statsService.popularGenes}" var="gene"
-							type="ordered">  
-                #{gene.symbol} [#{gene.species.scientificName}]  
-              </p:dataList>
-
-					</div>
-
+				<p:lightBox styleClass="imagebox" id="lighbox1"> 
+					
+				    <h:outputLink value="/gotrack/javax.faces.resource/top_25.png?ln=img" title="Enrichment Top 25">  
+				    	<h:graphicImage library="img" width="100" height="56" name="top_25.png" />  
+				    </h:outputLink>
+				    <h:outputLink value="/gotrack/javax.faces.resource/current_similarity.png?ln=img" title="Similarity Analysis">  
+				    	<h:graphicImage library="img" width="100" height="56" name="current_similarity.png" />  
+				    </h:outputLink>
+				    <h:outputLink value="/gotrack/javax.faces.resource/RB1-Details.png?ln=img" title="Gene Tracking Details">  
+				    	<h:graphicImage library="img" width="100" height="56" name="RB1-Details.png" />  
+				    </h:outputLink>
+				    <h:outputLink value="/gotrack/javax.faces.resource/FOXP2-Evidence.png?ln=img" title="Gene Tracking Evidence">  
+				    	<h:graphicImage library="img" width="100" height="56" name="FOXP2-Evidence.png" />  
+				    </h:outputLink>
+				    
+				</p:lightBox>
 				</div>
-
-				<!-- MULTIFUNCTIONAL -->
-				<div class="section">
-
-					<div class="section-title">Top multifunctional genes (in the
-						latest edition)</div>
-
-					<div class="nice-list">
-						<h:form>
-							<p:dataGrid value="#{statsService.topMultifunc}" var="gene"
-								columns="1">
-                  #{gene}
-                </p:dataGrid>
-						</h:form>
-					</div>
-
 				</div>
-			</div>
-
-			<!-- MAIN -->
-			<div class="left" id="main-content">
-				<div class="section">
-					<div class="section-title">Start browsing your gene product
-						or GOterm of interest!</div>
+				<div class="ui-grid-col-8">
+				
+					<div class="section-title" style="text-align:center;">Start exploring!</div>
 
 					<div class="post">
 						<div class="post-body">
 
 							<!-- PUT THE ACTUAL CONTENT -->
-							<hgroup> <!-- <p>Don't forget to read the documentation!</p> -->
+
 							<h:form id="initial">
 
-								<h:panelGrid id="usrinp" columns="3"
-									style="border:none;margin:0 auto;width:700px;">
+								<p:panelGrid id="usrinp" columns="3" style="border:none;margin:0 auto;">
 								
 								<f:event listener="#{geneSearchView.validateQuery}" type="postValidate" />
 								
@@ -191,36 +143,66 @@
 									<p:tooltip id="toolTip2" for="selectspecies"
 										value="Select the species of interest" />
 
-									<h:outputLabel for="geneInput"
-										value="Write the gene product ID or GO term to visualize:" />
+									<h:outputText 
+										value="Write a gene symbol or GO term to begin: &nbsp;" />
 
 									<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
-										completeMethod="#{geneSearchView.complete}" queryDelay="600"
+										completeMethod="#{geneSearchView.completeGeneOrGO}" queryDelay="600"
 										minQueryLength="2" forceSelection="true" maxResults="10"
 										label="ID"
 										emptyMessage="No gene suggestions available, please try again."/>
 
 									<p:tooltip id="toolTip1" for="geneInput"
-										value="Write the gene symbol to visualize" />
-
-								</h:panelGrid>
+										value="Write the gene symbol or GO Term (starting with 'GO:') to begin" />
+									<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
+								</p:panelGrid>
 								<p></p>
-
-								<p:messages id="messages" showDetail="false" autoUpdate="true"
-									closable="true" />
-								<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
+								
 
 
-							</h:form></hgroup>
+							</h:form>
 							<!-- End of the FUNCTIONALITY CONTENT -->
 						</div>
 					</div>
+				
 				</div>
-				<div class="content-separator"></div>
-			</div>
+				<div class="ui-grid-col-2">
+					<div class="section">
 
-			<div class="clearer">&nbsp;</div>
+						<div class="section-title">Most Popular Genes Searches</div>
+
+						<div class="nice-list">
+
+							<p:dataList value="#{statsService.popularGenes}" var="gene"
+								type="ordered">  
+		                #{gene.symbol} [#{gene.species.scientificName}]  
+		              </p:dataList>
+
+						</div>
+
+					</div>
+					<div class="section">
+
+						<div class="section-title">Top Multifunctional Genes</div>
+
+						<div class="nice-list">
+						
+							<p:dataList value="#{statsService.topMultifunc}" var="gene"
+									type="ordered">  
+			                #{gene}  
+			              </p:dataList>
+						
+						</div>
+
+					</div>
+				</div>
+			</div>
 		</div>
+		 </div>
+
+
+	<div class="push"></div>
+
 	</div>
 
 	<!-- This is the end of the two main columns -->

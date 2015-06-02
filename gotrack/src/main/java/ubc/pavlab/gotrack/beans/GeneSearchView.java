@@ -115,7 +115,7 @@ public class GeneSearchView implements Serializable {
 
     public String go() {
         // return "track?faces-redirect=true&includeViewParams=true";
-        return "track?faces-redirect=true&query=" + query + "&currentSpeciesId=" + speciesId;
+        return "track?faces-redirect=true&query=" + query + "&speciesId=" + speciesId;
     }
 
     public String getQuery() {
@@ -127,7 +127,19 @@ public class GeneSearchView implements Serializable {
     }
 
     public List<String> complete( String query ) {
+
         return this.cache.complete( query, speciesId, MAX_RESULTS );
+
+    }
+
+    public List<String> completeGeneOrGO( String query ) {
+        if ( query.toUpperCase().startsWith( "GO:" ) ) {
+            log.info( "GO" );
+            // TODO finish me
+            return this.cache.complete( query, speciesId, MAX_RESULTS );
+        } else {
+            return this.cache.complete( query, speciesId, MAX_RESULTS );
+        }
     }
 
     public void setCache( Cache cache ) {

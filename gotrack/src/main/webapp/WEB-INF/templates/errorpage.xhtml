@@ -1,28 +1,46 @@
-<ui:composition template="/WEB-INF/templates/layout.xhtml"
+<ui:composition template="/WEB-INF/templates/mainLayout.xhtml"
 	xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:f="http://java.sun.com/jsf/core"
 	xmlns:h="http://java.sun.com/jsf/html"
 	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
 	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:o="http://omnifaces.org/ui"
 	xmlns:of="http://omnifaces.org/functions"
 >
 
 	<ui:define name="pageTitle">Error 500</ui:define>
-	<ui:define name="contentTitle">Error 500: Internal Server Error</ui:define>
-
-	<ui:define name="content">
-		<ui:insert name="errorContent">
-			<ul>
-				<li>Date/time: #{of:formatDate(now, 'yyyy-MM-dd HH:mm:ss')}</li>
-				<li>User agent: #{header['user-agent']}</li>
-				<li>User IP: #{empty header['x-forwarded-for'] ? request.remoteAddr : fn:split(header['x-forwarded-for'], ',')[0]}</li>
-				<li>Request URI: <a href="#{requestScope['javax.servlet.error.request_uri']}">#{requestScope['javax.servlet.error.request_uri']}</a></li>
-				<li>Ajax request: #{facesContext.partialViewContext.ajaxRequest ? 'Yes' : 'No'}</li>
-				<li>Status code: #{requestScope['javax.servlet.error.status_code']}</li>
-				<li>Exception type: #{requestScope['javax.servlet.error.exception_type']}</li>
-				<li>Exception message: #{requestScope['javax.servlet.error.message']}</li>
-				<!-- <li>Stack trace: <pre><code>#{of:printStackTrace(requestScope['javax.servlet.error.exception'])}</code></pre></li> -->
-			</ul>
-		</ui:insert>
-		<h:outputScript rendered="#{facesContext.partialViewContext.ajaxRequest}">scrollTo(0, 0);</h:outputScript>
+	
+	<ui:define name="center_layout">
+		<div class="main" id="main-two-columns">
+	
+	
+			<!-- MAIN -->
+					<div class="left" id="logo">
+						<h:graphicImage library="img" width="250"
+							name="error.png" />
+					</div>
+					<p:panel id="content" styleClass="no-border">
+						<h2 id="contentTitle"><ui:insert name="contentTitle">Error 500: Internal Server Error</ui:insert></h2>
+							<ui:insert name="errorContent">
+							<ul>
+								<li>Date/time: #{of:formatDate(now, 'yyyy-MM-dd HH:mm:ss')}</li>
+								<li>User agent: #{header['user-agent']}</li>
+								<li>User IP: #{empty header['x-forwarded-for'] ? request.remoteAddr : fn:split(header['x-forwarded-for'], ',')[0]}</li>
+								<li>Request URI: <a href="#{requestScope['javax.servlet.error.request_uri']}">#{requestScope['javax.servlet.error.request_uri']}</a></li>
+								<li>Ajax request: #{facesContext.partialViewContext.ajaxRequest ? 'Yes' : 'No'}</li>
+								<li>Status code: #{requestScope['javax.servlet.error.status_code']}</li>
+								<li>Exception type: #{requestScope['javax.servlet.error.exception_type']}</li>
+								<li>Exception message: #{requestScope['javax.servlet.error.message']}</li>
+								<!-- <li>Stack trace: <pre><code>#{of:printStackTrace(requestScope['javax.servlet.error.exception'])}</code></pre></li> -->
+							</ul>
+						</ui:insert>
+						<h:outputScript rendered="#{facesContext.partialViewContext.ajaxRequest}">scrollTo(0, 0);</h:outputScript>
+					</p:panel>
+	
+				<div class="clearer">&#160;</div>
+		</div>
 	</ui:define>
+
 </ui:composition>

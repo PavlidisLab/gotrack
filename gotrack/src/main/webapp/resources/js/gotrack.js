@@ -1,10 +1,15 @@
 var plot;
 
+function onLoad() {
+   $("#left-toggler").append('<span class="vertical toggled-header">Options</span>');
+   $("#right-toggler").append('<span class="vertical toggled-header">Functionality</span>');
+}
+
+
 var hideLoadingSpinner = function() {
   $('#loading-spinner').hide();
   //console.log($("#left-toggler"))
-  $("#left-toggler").append('<span class="vertical toggled-header">Options</span>');
-  $("#right-toggler").append('<span class="vertical toggled-header">Functionality</span>');
+
   plot = PrimeFaces.widgets.chart.plot;
 //  console.log($('table.jqplot-table-legend'));
 //  addToggleToLegend();
@@ -31,8 +36,12 @@ function getWidgetVarById(id) {
 }
 
 function centerResize() {
-   PrimeFaces.widgets.chart.plot.replot( {resetAxes:true} );
-   PrimeFaces.widgets.funcTable.render();
+   try {
+      PrimeFaces.widgets.chart.plot.replot( {resetAxes:true} );
+      PrimeFaces.widgets.funcTable.render();
+   } catch(e) {
+      
+   }
 }
 
 function changeGraphScale() {
@@ -165,8 +174,8 @@ function chartExtender() {
 
 $(document).ready(function() {
    //calling remoteCommands
-   $('#loading-spinner').show();
-   fetchCharts();
+   //$('#loading-spinner').show();
+   //fetchCharts();
    
    $('body').on('click', function(e) {
       if ( $(e.target).hasClass('jqplot-table-legend-swatch') ) {

@@ -119,11 +119,13 @@ public class SettingsCache implements Serializable {
     }
 
     public boolean isPopularTableUpdateable() {
-        return prop.getProperty( UPDATE_POP_TABLE ).equals( "true" );
+        String r = prop.getProperty( UPDATE_POP_TABLE );
+        return r != null && r.equals( "true" );
     }
 
     public boolean isDryRun() {
-        return prop.getProperty( DRY_RUN ).equals( "true" );
+        String r = prop.getProperty( DRY_RUN );
+        return r != null && r.equals( "true" );
     }
 
     public boolean contains( String key ) {
