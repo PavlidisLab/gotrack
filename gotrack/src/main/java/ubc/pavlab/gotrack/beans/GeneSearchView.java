@@ -33,6 +33,8 @@ import javax.faces.event.ComponentSystemEvent;
 
 import org.apache.log4j.Logger;
 
+import ubc.pavlab.gotrack.model.table.GeneMatches;
+
 /**
  * TODO Document Me
  * 
@@ -49,7 +51,7 @@ public class GeneSearchView implements Serializable {
     private static final long serialVersionUID = -3038133837848883737L;
 
     private static final Logger log = Logger.getLogger( GeneSearchView.class );
-    private static final Integer MAX_RESULTS = 10;
+    private static final Integer MAX_RESULTS = 15;
 
     private Integer speciesId = 7;
     private String query;
@@ -126,20 +128,10 @@ public class GeneSearchView implements Serializable {
         this.query = query;
     }
 
-    public List<String> complete( String query ) {
+    public List<GeneMatches> complete( String query ) {
 
         return this.cache.complete( query, speciesId, MAX_RESULTS );
 
-    }
-
-    public List<String> completeGeneOrGO( String query ) {
-        if ( query.toUpperCase().startsWith( "GO:" ) ) {
-            log.info( "GO" );
-            // TODO finish me
-            return this.cache.complete( query, speciesId, MAX_RESULTS );
-        } else {
-            return this.cache.complete( query, speciesId, MAX_RESULTS );
-        }
     }
 
     public void setCache( Cache cache ) {

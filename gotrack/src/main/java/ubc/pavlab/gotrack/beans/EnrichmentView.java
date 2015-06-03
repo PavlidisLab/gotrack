@@ -81,7 +81,7 @@ public class EnrichmentView implements Serializable {
     private static final long serialVersionUID = 166880636358923147L;
 
     private static final Logger log = Logger.getLogger( EnrichmentView.class );
-    private static final Integer MAX_RESULTS = 10;
+    private static final Integer MAX_RESULTS = 15;
     private static final int MAX_GENESET_SIZE = 300;
 
     @ManagedProperty("#{settingsCache}")
@@ -907,10 +907,8 @@ public class EnrichmentView implements Serializable {
         FacesContext.getCurrentInstance().addMessage( null, message );
     }
 
-    public List<String> complete( String query ) {
-        if ( StringUtils.isEmpty( query.trim() ) || currentSpeciesId == null ) {
-            return new ArrayList<String>();
-        }
+    public List<GeneMatches> complete( String query ) {
+        if ( StringUtils.isEmpty( query.trim() ) || currentSpeciesId == null ) return new ArrayList<>();
         return this.cache.complete( query, currentSpeciesId, MAX_RESULTS );
     }
 

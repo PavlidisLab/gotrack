@@ -264,9 +264,10 @@
 				<h:outputText value="Write the gene symbol to visualize: " />
 				<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
 					completeMethod="#{geneSearchView.complete}" queryDelay="600"
-					minQueryLength="2" forceSelection="true" maxResults="10" label="ID"
+					minQueryLength="2" forceSelection="true" label="ID"
 					emptyMessage="No gene suggestions available, please try again."
-					style="margin-right:8px;" />
+					var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
+					groupBy="#{gene.type.label}" style="margin-right:8px;"/>
 				<p:commandButton type="submit" value="Go"
 					action="#{geneSearchView.go}" />
 					</h:panelGrid>

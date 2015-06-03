@@ -31,8 +31,8 @@ public class GeneMatches {
 
     public enum MatchType {
 
-        EXACT("Exact"), EXACT_SYNONYM("Exact Synonym"), MULTIPLE_EXACT_SYNONYMS("Multiple Exact Synonyms"), NO_MATCH(
-                "No Match");
+        EXACT("Exact"), EXACT_SYNONYM("Exact Synonym"), MULTIPLE_EXACT_SYNONYMS("Multiple Exact Synonyms"), PREFIX(
+                "Prefix"), SIMILAR("Similar"), NO_MATCH("No Match");
 
         private String label;
 
@@ -68,8 +68,18 @@ public class GeneMatches {
         return querySymbol;
     }
 
+    public String getSymbol() {
+        return selectedGene == null ? null : selectedGene.getSymbol();
+    }
+
     public MatchType getType() {
         return type;
+    }
+
+    @Override
+    public String toString() {
+        return "GeneMatches [querySymbol=" + querySymbol + ", selectedGene=" + selectedGene.getSymbol() + ", type="
+                + type + "]";
     }
 
 }

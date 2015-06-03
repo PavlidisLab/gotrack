@@ -639,9 +639,10 @@
 						<p:column>
 							<p:autoComplete id="geneInput" value="#{enrichmentView.query}"
 								completeMethod="#{enrichmentView.complete}" minQueryLength="2"
-								forceSelection="true" maxResults="10" label="ID"
+								forceSelection="true" label="ID"
 								emptyMessage="No gene suggestions available,  please try again."
-								placeholder="BRCA1">
+								var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
+								groupBy="#{gene.type.label}" placeholder="BRCA1">
 								<p:ajax event="itemSelect" process="@this" />
 							</p:autoComplete>
 						</p:column>
@@ -707,9 +708,10 @@
 							<f:facet name="input">
 								<p:autoComplete id="geneInput" value="#{gm.selectedGene}"
 									completeMethod="#{enrichmentView.complete}" minQueryLength="2"
-									forceSelection="true" maxResults="10" label="ID"
+									forceSelection="true" label="ID"
 									emptyMessage="No gene suggestions available,  please try again."
-									placeholder="BRCA1" converter="geneConverter">
+									var="gm2" itemLabel="#{gm2.symbol}" itemValue="#{gm2}" groupBy="#{gm2.type.label}"
+									placeholder="BRCA1" converter="geneMatchConverter">
 									<f:attribute name="species"
 										value="#{enrichmentView.currentSpeciesId}" />
 								</p:autoComplete>

@@ -147,10 +147,12 @@
 										value="Write a gene symbol or GO term to begin: &nbsp;" />
 
 									<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
-										completeMethod="#{geneSearchView.completeGeneOrGO}" queryDelay="600"
+										completeMethod="#{geneSearchView.complete}" queryDelay="600"
 										minQueryLength="2" forceSelection="true" maxResults="10"
 										label="ID"
-										emptyMessage="No gene suggestions available, please try again."/>
+										emptyMessage="No gene suggestions available, please try again."
+										var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
+										groupBy="#{gene.type.label}"/>
 
 									<p:tooltip id="toolTip1" for="geneInput"
 										value="Write the gene symbol or GO Term (starting with 'GO:') to begin" />
@@ -210,7 +212,7 @@
 	<div id="footer">
 		<div class="center" id="footer-left">
 			<p>
-				&copy; UBC, Centre of High-throughput Biology, 2014
+				&copy; UBC, Centre for High-Throughput Biology, 2015
 				<h:link value="Terms and Conditions" outcome="terms.xhtml" />
 			</p>
 		</div>

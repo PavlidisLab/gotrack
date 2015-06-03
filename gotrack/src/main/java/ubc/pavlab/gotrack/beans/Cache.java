@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +66,14 @@ import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntology;
 import ubc.pavlab.gotrack.model.go.RelationshipType;
+import ubc.pavlab.gotrack.model.table.GeneMatches;
+import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Multimap;
+import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
+import com.googlecode.concurrenttrees.radix.RadixTree;
+import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -99,7 +108,13 @@ public class Cache implements Serializable {
     private Map<Integer, Species> speciesCache = new ConcurrentHashMap<>();
     private Map<Integer, Edition> currentEditions = new ConcurrentHashMap<>();
     private Map<Integer, Map<Integer, Edition>> allEditions = new ConcurrentHashMap<>();
-    private Map<Integer, Map<String, Gene>> speciesToCurrentGenes = new ConcurrentHashMap<>();
+    private Map<Integer, Map<String, Gene>> speciesToSymbolGenes = new ConcurrentHashMap<>();
+
+    // These are used for autocompletion
+    private Map<Integer, Multimap<String, Gene>> speciesToSecondarySymbolGenes = new ConcurrentHashMap<>();
+    // TODO Consider replacing speciesToSymbolGenes with this
+    private Map<Integer, RadixTree<Gene>> speciesToRadixGenes = new ConcurrentHashMap<>();
+
     private Map<String, Accession> primaryAccession = new ConcurrentHashMap<>();
 
     private Map<Integer, Map<Edition, StatsEntry>> aggregates = new ConcurrentHashMap<>();
@@ -366,26 +381,28 @@ public class Cache implements Serializable {
 
         for ( Entry<Integer, Map<String, Set<String>>> speciesEntry : allSynMap.entrySet() ) {
             Integer species = speciesEntry.getKey();
-            Map<String, Gene> m = speciesToCurrentGenes.get( species );
+            Map<String, Gene> m = speciesToSymbolGenes.get( species );
+
             if ( m == null ) {
                 m = new ConcurrentHashMap<>();
-                speciesToCurrentGenes.put( species, m );
+                speciesToSymbolGenes.put( species, m );
             }
 
             Map<String, Set<Accession>> accMap = allAccMap.get( species );
             Map<String, Set<String>> synMap = allSynMap.get( species );
 
             for ( String symbol : speciesEntry.getValue().keySet() ) {
-                m.put( symbol.toUpperCase(), new Gene( symbol, speciesCache.get( species ), accMap.get( symbol ),
-                        synMap.get( symbol ) ) );
+                Gene g = new Gene( symbol, speciesCache.get( species ), accMap.get( symbol ), synMap.get( symbol ) );
+                m.put( symbol.toUpperCase(), g );
             }
 
         }
         log.info( "Done loading current genes..." );
+
         for ( Species species : speciesList ) {
-            if ( speciesToCurrentGenes.keySet().contains( species.getId() ) ) {
+            if ( speciesToSymbolGenes.keySet().contains( species.getId() ) ) {
                 log.info( "Current gene size for species (" + species + "): "
-                        + speciesToCurrentGenes.get( species.getId() ).size() );
+                        + speciesToSymbolGenes.get( species.getId() ).size() );
             }
         }
 
@@ -393,11 +410,119 @@ public class Cache implements Serializable {
                 / 1000000 + " MB" );
         // ****************************
 
+        // Gene caches for auto-completion
+        // ****************************
+        // secondary cache
+        for ( Entry<Integer, Map<String, Gene>> spEntry : speciesToSymbolGenes.entrySet() ) {
+            Integer speciesId = spEntry.getKey();
+            Multimap<String, Gene> msec = speciesToSecondarySymbolGenes.get( speciesId );
+            if ( msec == null ) {
+                msec = HashMultimap.create();
+                speciesToSecondarySymbolGenes.put( speciesId, msec );
+            }
+            for ( Gene g : spEntry.getValue().values() ) {
+                for ( String syn : g.getSynonyms() ) {
+                    msec.put( syn.toUpperCase(), g );
+                }
+
+            }
+        }
+
+        // radix trie for symbols
+        for ( Entry<Integer, Map<String, Gene>> spEntry : speciesToSymbolGenes.entrySet() ) {
+            Integer speciesId = spEntry.getKey();
+            RadixTree<Gene> rt = new ConcurrentRadixTree<Gene>( new DefaultCharArrayNodeFactory() );
+            for ( Entry<String, Gene> symEntry : spEntry.getValue().entrySet() ) {
+                rt.put( symEntry.getKey(), symEntry.getValue() );
+            }
+            speciesToRadixGenes.put( speciesId, rt );
+        }
+
+        log.info( "Done loading Gene caches for autocompletion..." );
+        // ****************************
+
         log.info( "Cache Completed" );
 
     }
 
-    public List<String> complete( String query, Integer species, Integer maxResults ) {
+    public List<GeneMatches> complete( String query, Integer species, Integer maxResults ) {
+        List<GeneMatches> results = new ArrayList<>();
+        Set<String> duplicateChecker = new HashSet<>();
+        if ( query == null || maxResults < 1 ) return results;
+
+        String queryUpper = query.toUpperCase();
+
+        // Find exact match
+        Map<String, Gene> m = speciesToSymbolGenes.get( species );
+        if ( m != null ) {
+            Gene g = m.get( queryUpper );
+            if ( g != null ) {
+                results.add( new GeneMatches( query, g, MatchType.EXACT ) );
+                duplicateChecker.add( g.getSymbol() );
+            }
+        }
+
+        if ( results.size() >= maxResults ) {
+            return results;
+        }
+
+        // Find exact synonyms
+        Multimap<String, Gene> msec = speciesToSecondarySymbolGenes.get( species );
+        if ( msec != null ) {
+            Collection<Gene> gs = msec.get( queryUpper );
+            MatchType type = gs.size() > 1 ? MatchType.MULTIPLE_EXACT_SYNONYMS : MatchType.EXACT_SYNONYM;
+            for ( Gene gene : gs ) {
+                if ( !duplicateChecker.contains( gene.getSymbol() ) ) {
+                    results.add( new GeneMatches( query, gene, type ) );
+                    duplicateChecker.add( gene.getSymbol() );
+                }
+                if ( results.size() >= maxResults ) {
+                    return results;
+                }
+            }
+        }
+
+        // Find prefix matches
+        RadixTree<Gene> rt = speciesToRadixGenes.get( species );
+        boolean findSimilarMatches = true;
+        if ( rt != null ) {
+            Iterable<Gene> gs = rt.getValuesForKeysStartingWith( queryUpper );
+            if ( gs.iterator().hasNext() ) {
+                // If prefix matches were found, do not return similar matches
+                findSimilarMatches = false;
+            }
+            for ( Iterator<Gene> iterator = gs.iterator(); iterator.hasNext(); ) {
+                Gene gene = iterator.next();
+                if ( !duplicateChecker.contains( gene.getSymbol() ) ) {
+                    results.add( new GeneMatches( query, gene, MatchType.PREFIX ) );
+                    duplicateChecker.add( gene.getSymbol() );
+                }
+                if ( results.size() >= maxResults ) {
+                    return results;
+                }
+            }
+
+            // Find similar matches
+            if ( findSimilarMatches ) {
+                gs = rt.getValuesForClosestKeys( queryUpper );
+                for ( Iterator<Gene> iterator = gs.iterator(); iterator.hasNext(); ) {
+                    Gene gene = iterator.next();
+                    if ( !duplicateChecker.contains( gene.getSymbol() ) ) {
+                        results.add( new GeneMatches( query, gene, MatchType.SIMILAR ) );
+                        duplicateChecker.add( gene.getSymbol() );
+                    }
+                    if ( results.size() >= maxResults ) {
+                        return results;
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+
+    @Deprecated
+    public List<String> completeBruteForce( String query, Integer species, Integer maxResults ) {
 
         if ( query == null ) return new ArrayList<String>();
         String queryUpper = query.toUpperCase();
@@ -407,7 +532,7 @@ public class Cache implements Serializable {
         // Map<GOTerm, Long> results = new HashMap<GOTerm, Long>();
         // log.info( "search: " + queryString );
         // Map<String, Accession> gs = currrentAccessions.get( species );
-        Map<String, Gene> gs = speciesToCurrentGenes.get( species );
+        Map<String, Gene> gs = speciesToSymbolGenes.get( species );
 
         if ( gs != null ) {
 
@@ -502,7 +627,7 @@ public class Cache implements Serializable {
     }
 
     public Map<String, Gene> getSpeciesToCurrentGenes( Integer speciesId ) {
-        Map<String, Gene> tmp = speciesToCurrentGenes.get( speciesId );
+        Map<String, Gene> tmp = speciesToSymbolGenes.get( speciesId );
         if ( tmp != null ) {
             return Collections.unmodifiableMap( tmp );
         } else {
@@ -524,7 +649,7 @@ public class Cache implements Serializable {
         if ( speciesId == null || symbol == null ) {
             return null;
         }
-        Map<String, Gene> map2 = speciesToCurrentGenes.get( speciesId );
+        Map<String, Gene> map2 = speciesToSymbolGenes.get( speciesId );
         if ( map2 != null ) {
             return map2.get( symbol.toUpperCase() );
         }
@@ -539,22 +664,9 @@ public class Cache implements Serializable {
         String symbolUpper = symbol.toUpperCase();
         Set<Gene> exactSynonym = new HashSet<>();
 
-        Map<String, Gene> gs = speciesToCurrentGenes.get( speciesId );
-
+        Multimap<String, Gene> gs = speciesToSecondarySymbolGenes.get( speciesId );
         if ( gs != null ) {
-
-            for ( Gene gene : gs.values() ) {
-
-                Set<String> synonyms = gene.getSynonyms();
-
-                for ( String s : synonyms ) {
-                    if ( symbolUpper.equals( s.toUpperCase() ) ) {
-                        exactSynonym.add( gene );
-                    }
-                }
-
-            }
-
+            exactSynonym = new HashSet<>( gs.get( symbolUpper ) );
         }
 
         if ( exactSynonym.size() > 1 ) {
@@ -568,7 +680,7 @@ public class Cache implements Serializable {
         if ( speciesId == null || symbol == null ) {
             return false;
         }
-        Map<String, Gene> map2 = speciesToCurrentGenes.get( speciesId );
+        Map<String, Gene> map2 = speciesToSymbolGenes.get( speciesId );
         if ( map2 != null ) {
             return map2.containsKey( symbol.toUpperCase() );
         }
