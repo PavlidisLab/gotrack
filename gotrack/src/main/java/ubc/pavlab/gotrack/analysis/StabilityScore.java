@@ -22,7 +22,7 @@ package ubc.pavlab.gotrack.analysis;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
  * scores which attempt to explore the impact that annotation stability has on the performance of gene set enrichment

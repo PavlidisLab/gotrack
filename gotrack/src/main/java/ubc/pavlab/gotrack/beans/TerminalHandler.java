@@ -55,8 +55,8 @@ import ubc.pavlab.gotrack.analysis.StabilityScore;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import com.google.common.base.Joiner;
 

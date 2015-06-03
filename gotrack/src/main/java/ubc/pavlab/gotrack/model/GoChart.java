@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+
 /**
  * X Should be some series identifier (like Accession)
  * 

@@ -19,7 +19,6 @@
 
 package ubc.pavlab.gotrack.model.go;
 
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 
 /**
  * TODO Document Me

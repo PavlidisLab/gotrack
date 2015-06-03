@@ -37,7 +37,7 @@ import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
  * Runs enrichment analysis over all editions given geneset data and term population data

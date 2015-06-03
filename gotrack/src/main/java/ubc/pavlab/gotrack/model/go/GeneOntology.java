@@ -32,7 +32,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.EvidenceReference;
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 
 /**
  * Memory efficient Directed Acyclic Graph representing a Gene Ontology Structure

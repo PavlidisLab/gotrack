@@ -17,15 +17,15 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.model.go;
 
 import gnu.trove.set.hash.THashSet;
 
 import java.util.HashSet;
 import java.util.Set;
 
+import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
-import ubc.pavlab.gotrack.model.go.Parent;
 
 import com.google.common.collect.ImmutableSet;
 

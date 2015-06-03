@@ -21,7 +21,7 @@ package ubc.pavlab.gotrack.model.table;
 
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
  * TODO Document Me

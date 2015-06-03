@@ -64,12 +64,12 @@ import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.GoChart;
 import ubc.pavlab.gotrack.model.GraphType;
 import ubc.pavlab.gotrack.model.GraphTypeKey;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.StatsEntry;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
