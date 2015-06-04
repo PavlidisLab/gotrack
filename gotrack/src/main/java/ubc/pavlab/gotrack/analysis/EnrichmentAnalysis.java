@@ -19,6 +19,8 @@
 
 package ubc.pavlab.gotrack.analysis;
 
+import gnu.trove.map.hash.TObjectDoubleHashMap;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -38,6 +40,7 @@ import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.hashkey.HyperUCFKey;
 
 /**
  * Runs enrichment analysis over all editions given geneset data and term population data
@@ -73,6 +76,12 @@ public class EnrichmentAnalysis {
     // Holds those unmodifiable terms which are significant in its own edition
     private Map<Edition, Set<GeneOntologyTerm>> termsSignificant = new HashMap<>();
 
+    // ********************
+    // Log Probability Memoization Cache
+    private TObjectDoubleHashMap<HyperUCFKey> logProbCache = new TObjectDoubleHashMap<>();
+
+    // ********************
+
     /**
      * @param geneGOMap Map containing raw data from db
      * @param sampleSizes Map containing sample size data from db
@@ -85,6 +94,8 @@ public class EnrichmentAnalysis {
     public EnrichmentAnalysis( Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap,
             Map<Edition, Integer> sampleSizes, int min, int max, MultipleTestCorrection test, double threshold,
             Cache cache, int currentSpeciesId ) {
+
+        double noEntryValue = logProbCache.getNoEntryValue();
 
         this.rawData = geneGOMap;
         this.minAnnotatedPopulation = min;
@@ -125,8 +136,14 @@ public class EnrichmentAnalysis {
                 if ( populationAnnotated != null && populationAnnotated >= minAnnotatedPopulation
                         && populationAnnotated <= maxAnnotatedPopulation ) {
                     Integer sampleAnnotated = termEntry.getValue().size();
-                    double p = upperCumulativeProbabilityLogMethod( sampleAnnotated, populationAnnotated, sampleSize,
-                            populationSize );
+                    HyperUCFKey key = new HyperUCFKey( sampleAnnotated, populationAnnotated, sampleSize, populationSize );
+                    double p = logProbCache.get( key );
+                    if ( p == noEntryValue ) {
+                        p = upperCumulativeProbabilityLogMethod( sampleAnnotated, populationAnnotated, sampleSize,
+                                populationSize );
+                        logProbCache.put( key, p );
+                    }
+
                     resultsInEdition.put( term, new EnrichmentResult( p, sampleAnnotated, populationAnnotated,
                             sampleSize, populationSize ) );
                     totalResults++;
@@ -239,6 +256,7 @@ public class EnrichmentAnalysis {
         this.totalGenes = totalGenes.size();
         this.totalTerms = totalTerms.size();
         this.totalResults = totalResults;
+
     }
 
     /**
