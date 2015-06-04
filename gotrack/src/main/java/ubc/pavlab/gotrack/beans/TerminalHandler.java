@@ -441,7 +441,7 @@ public class TerminalHandler implements Serializable {
             Map<Edition, Set<GeneOntologyTerm>> series = geneEntry.getValue();
             for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
                 Edition ed = editionEntry.getKey();
-                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed.getGoEditionId() );
+                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed );
 
                 if ( propagatedTerms == null ) {
                     // No ontology exists for this edition

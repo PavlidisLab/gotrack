@@ -44,6 +44,7 @@ import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
@@ -255,7 +256,9 @@ public class EnrichmentView implements Serializable {
                 // timer.resume();//
 
                 // fromTime = timer.getNanoTime();//
+                log.info( "Propagating GO Terms..." );
                 Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> prop = propagate( geneGOMapFromDB );
+                log.info( "Propagating GO Terms... COMPLETE ");
                 // timer.suspend();//
                 // timerMap.put( "propagate", timer.getNanoTime() - fromTime );//
                 // timer.resume();//
@@ -339,7 +342,7 @@ public class EnrichmentView implements Serializable {
             Map<Edition, Set<GeneOntologyTerm>> series = geneEntry.getValue();
             for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
                 Edition ed = editionEntry.getKey();
-                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed.getGoEditionId() );
+                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed );
 
                 if ( propagatedTerms == null ) {
                     // No ontology exists for this edition
@@ -350,6 +353,7 @@ public class EnrichmentView implements Serializable {
             }
 
         }
+        // cache.ontologyStats();
         return propagatedData;
     }
 

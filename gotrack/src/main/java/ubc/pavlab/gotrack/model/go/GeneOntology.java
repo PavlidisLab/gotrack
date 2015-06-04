@@ -45,7 +45,26 @@ public class GeneOntology {
 
     private TIntObjectHashMap<GeneOntologyTerm> termMap = new TIntObjectHashMap<>();
 
-    // private Map<String, Term> termMapLarge = new HashMap<>();
+    // private LoadingCache<GeneOntologyTerm, ImmutableSet<GeneOntologyTerm>> ancestorsCache = CacheBuilder.newBuilder()
+    // .maximumWeight( 10000 ).weigher( new Weigher<GeneOntologyTerm, ImmutableSet<GeneOntologyTerm>>() {
+    // public int weigh( GeneOntologyTerm k, ImmutableSet<GeneOntologyTerm> g ) {
+    // return g.size();
+    // }
+    // } ).build( new CacheLoader<GeneOntologyTerm, ImmutableSet<GeneOntologyTerm>>() {
+    // public ImmutableSet<GeneOntologyTerm> load( GeneOntologyTerm key ) {
+    // return ImmutableSet.copyOf( getAncestors( key, true ) );
+    // }
+    // } );
+    //
+    //
+    // public void getCacheStats() {
+    // // Need .recordStats() on CacheBuilder for these work
+    // CacheStats s = ancestorsCache.stats();
+    // log.info( "hitRate: " + s.hitRate() );
+    // log.info( "averageLoadPenalty: " + s.averageLoadPenalty() );
+    // log.info( "evictionCount: " + s.evictionCount() );
+    // log.info( "hitCount: " + s.hitCount() );
+    // }
 
     public GeneOntology() {
     }
@@ -115,14 +134,14 @@ public class GeneOntology {
 
     public Set<GeneOntologyTerm> propagate( Collection<GeneOntologyTerm> goSet, boolean includePartOf ) {
         Set<GeneOntologyTerm> allPropagations = new HashSet<>();
+        Map<GeneOntologyTerm, Set<GeneOntologyTerm>> cache = new HashMap<>();
         for ( GeneOntologyTerm go : goSet ) {
             allPropagations.add( go );
 
-            Set<Parent> propagations = getAncestors( go, includePartOf );
-            for ( Parent parent : propagations ) {
-                allPropagations.add( parent.getParent() );
+            // allPropagations.addAll( ancestorsCache.getUnchecked( go ) );
 
-            }
+            // TODO this cache method might be a really bad idea, check back later
+            allPropagations.addAll( getAncestors( go, includePartOf, cache ) );
 
         }
         return Collections.unmodifiableSet( allPropagations );
@@ -150,12 +169,12 @@ public class GeneOntology {
 
             evidence.addAll( ev );
 
-            Set<Parent> propagations = getAncestors( go, includePartOf );
-            for ( Parent parent : propagations ) {
-                evidence = propagatedAnnotations.get( parent.getParent() );
+            Set<GeneOntologyTerm> propagations = getAncestors( go, includePartOf, null );
+            for ( GeneOntologyTerm parent : propagations ) {
+                evidence = propagatedAnnotations.get( parent );
                 if ( evidence == null ) {
                     evidence = new HashSet<>();
-                    propagatedAnnotations.put( parent.getParent(), evidence );
+                    propagatedAnnotations.put( parent, evidence );
                 }
 
                 evidence.addAll( ev );
@@ -166,42 +185,67 @@ public class GeneOntology {
         return propagatedAnnotations;
     }
 
-    public Set<Parent> getAncestors( String goid, boolean includePartOf ) throws IllegalArgumentException {
-        return getAncestors( convertGOId( goid ), includePartOf );
+    public Set<GeneOntologyTerm> getAncestors( String goid, boolean includePartOf,
+            Map<GeneOntologyTerm, Set<GeneOntologyTerm>> cache ) throws IllegalArgumentException {
+        return getAncestors( convertGOId( goid ), includePartOf, cache );
     }
 
-    public Set<Parent> getAncestors( int id, boolean includePartOf ) {
-        return getAncestors( termMap.get( id ), includePartOf );
+    public Set<GeneOntologyTerm> getAncestors( int id, boolean includePartOf,
+            Map<GeneOntologyTerm, Set<GeneOntologyTerm>> cache ) {
+        return getAncestors( termMap.get( id ), includePartOf, cache );
     }
 
-    private Set<Parent> getAncestors( GeneOntologyTerm t, boolean includePartOf ) {
-        Set<Parent> ancestors = new HashSet<>();
+    private Set<GeneOntologyTerm> getAncestors( GeneOntologyTerm t, boolean includePartOf,
+            Map<GeneOntologyTerm, Set<GeneOntologyTerm>> cache ) {
 
-        Set<Parent> parents = getParents( t );
+        Set<GeneOntologyTerm> a;
+        if ( cache != null && ( a = cache.get( t ) ) != null ) {
+            return a;
+        }
 
-        for ( Parent parent : parents ) {
+        Set<GeneOntologyTerm> ancestors = new HashSet<>();
 
-            if ( includePartOf || parent.getType().equals( RelationshipType.IS_A ) ) {
-                ancestors.add( parent );
-                ancestors.addAll( getAncestors( parent.getParent(), includePartOf ) );
-            }
+        for ( Parent parent : getParents( t, includePartOf ) ) {
+
+            ancestors.add( parent.getParent() );
+            // ancestors.addAll( ancestorsCache.getUnchecked( parent.getParent() ) );
+            ancestors.addAll( getAncestors( parent.getParent(), includePartOf, cache ) );
 
         }
 
-        return Collections.unmodifiableSet( ancestors );
+        cache.put( t, ancestors );
+
+        return ancestors;
 
     }
 
-    public Set<Parent> getParents( String goid ) throws IllegalArgumentException {
-        return getParents( convertGOId( goid ) );
+    public Set<Parent> getParents( String goid, boolean includePartOf ) throws IllegalArgumentException {
+        return getParents( convertGOId( goid ), includePartOf );
     }
 
-    public Set<Parent> getParents( int id ) {
-        return getParents( termMap.get( id ) );
+    public Set<Parent> getParents( int id, boolean includePartOf ) {
+        return getParents( termMap.get( id ), includePartOf );
     }
 
-    private Set<Parent> getParents( GeneOntologyTerm t ) {
-        return t.getParents();
+    private Set<Parent> getParents( GeneOntologyTerm t, boolean includePartOf ) {
+        if ( includePartOf ) {
+            return t.getParents();
+        } else {
+            Set<Parent> parents = new HashSet<>();
+            for ( Parent p : t.getParents() ) {
+                if ( p.getType().equals( RelationshipType.IS_A ) ) {
+                    parents.add( p );
+                }
+            }
+
+            return parents;
+
+        }
+
     }
+
+    // private ImmutableCollection<GeneOntologyTerm> getParents2( GeneOntologyTerm t ) {
+    // return t.getParents2();
+    // }
 
 }

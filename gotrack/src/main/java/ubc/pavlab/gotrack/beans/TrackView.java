@@ -389,7 +389,7 @@ public class TrackView {
             for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : series.entrySet() ) {
                 Edition ed = editionEntry.getKey();
                 Map<GeneOntologyTerm, Set<EvidenceReference>> propagatedAnnotations = cache.propagate(
-                        editionEntry.getValue(), ed.getGoEditionId() );
+                        editionEntry.getValue(), ed );
 
                 if ( propagatedAnnotations == null ) {
                     // No ontology exists for this edition

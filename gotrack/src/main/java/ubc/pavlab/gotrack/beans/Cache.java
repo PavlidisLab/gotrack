@@ -248,6 +248,11 @@ public class Cache implements Serializable {
             }
             log.info( "GO Adjacencies fetched" );
 
+            for ( GeneOntology go : ontologies.values() ) {
+                go.freeze();
+            }
+            log.info( "GO Ontologies frozen" );
+
             System.gc();
             log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() );
             log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
@@ -718,27 +723,34 @@ public class Cache implements Serializable {
     }
 
     public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
-            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations, Integer goEdition ) {
-        if ( goAnnotations == null || goEdition == null ) {
+            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations, Edition ed ) {
+        if ( goAnnotations == null || ed == null ) {
             return null;
         }
-        GeneOntology o = ontologies.get( goEdition );
+        GeneOntology o = ontologies.get( ed.getGoEditionId() );
         if ( o != null ) {
             return o.propagate( goAnnotations );
         }
         return null;
     }
 
-    public Set<GeneOntologyTerm> propagate( Set<GeneOntologyTerm> terms, Integer goEdition ) {
-        if ( terms == null || goEdition == null ) {
+    public Set<GeneOntologyTerm> propagate( Set<GeneOntologyTerm> terms, Edition ed ) {
+        if ( terms == null || ed == null ) {
             return null;
         }
-        GeneOntology o = ontologies.get( goEdition );
+        GeneOntology o = ontologies.get( ed.getGoEditionId() );
         if ( o != null ) {
             return o.propagate( terms );
         }
         return null;
     }
+
+    // public void ontologyStats() {
+    // for ( GeneOntology o : ontologies.values() ) {
+    // o.getCacheStats();
+    // }
+    //
+    // }
 
     public GeneOntologyTerm getTerm( Edition ed, Integer id ) {
         if ( id == null || ed == null ) {

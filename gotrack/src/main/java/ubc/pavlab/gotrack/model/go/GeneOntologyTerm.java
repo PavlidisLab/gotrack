@@ -21,7 +21,6 @@ package ubc.pavlab.gotrack.model.go;
 
 import gnu.trove.set.hash.THashSet;
 
-import java.util.HashSet;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Aspect;
@@ -46,7 +45,6 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
 
     public void freezeParents() {
         this.parents = ImmutableSet.copyOf( this.parents );
-        // this.parents = Collections.unmodifiableSet( this.parents );
     }
 
     private int convertGOId( String goId ) {
@@ -86,7 +84,7 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         this.goId = t.getGoId();
         this.name = t.getName();
         this.aspect = t.getAspect();
-        this.parents = ImmutableSet.copyOf( new HashSet<Parent>() );
+        freezeParents();
     }
 
     public int getId() {

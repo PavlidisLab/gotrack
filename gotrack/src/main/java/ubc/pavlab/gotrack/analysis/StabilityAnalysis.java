@@ -81,7 +81,7 @@ public class StabilityAnalysis {
         }
         Set<GeneOntologyTerm> compareTopParents = null;
         if ( cache != null ) {
-            compareTopParents = cache.propagate( compareTopTerms, compareEdition.getGoEditionId() );
+            compareTopParents = cache.propagate( compareTopTerms, compareEdition );
         }
 
         for ( Edition testingEdition : orderedEditions ) {
@@ -109,7 +109,7 @@ public class StabilityAnalysis {
             Set<GeneOntologyTerm> testingTopParents = new HashSet<>();
             Double topParentsJaccard = null;
             if ( cache != null ) {
-                testingTopParents = cache.propagate( testingTopTerms, testingEdition.getGoEditionId() );
+                testingTopParents = cache.propagate( testingTopTerms, testingEdition );
 
                 topParentsJaccard = Jaccard.similarity( testingTopParents, compareTopParents );
             }
