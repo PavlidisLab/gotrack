@@ -48,6 +48,7 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
+import ubc.pavlab.gotrack.analysis.CombinedAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
@@ -57,6 +58,7 @@ import ubc.pavlab.gotrack.analysis.StabilityScore;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.StatusPoller;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
@@ -122,8 +124,7 @@ public class EnrichmentView implements Serializable {
     private double fdr = 0.05;
 
     // Enrichment Feedback
-    private int enrichmentProgress;
-    private List<String> enrichmentStatus = new ArrayList<>();
+    private StatusPoller statusPoller = new StatusPoller( " completed" );
 
     // Enrichment Data
     private EnrichmentAnalysis analysis;
@@ -133,9 +134,6 @@ public class EnrichmentView implements Serializable {
     // Stability Settings
     private static final int TOP_N_JACCARD = 5;
     private SimilarityCompareMethod similarityCompareMethod = SimilarityCompareMethod.PROXIMAL;
-
-    // Stability Data
-    private Map<Edition, StabilityScore> stabilityScores = new HashMap<>();
 
     // Enrichment Table Select
     private Map<Integer, Edition> enrichmentTableAllEditions = new HashMap<>();
@@ -189,97 +187,55 @@ public class EnrichmentView implements Serializable {
         return null;
     }
 
-    private Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> retrieveData( Set<Gene> genes, Integer currentSpeciesId ) {
-        // StopWatch timer = new StopWatch();//
-        // timer.start();//
-        // long fromTime;//
-        // Long prevTime;//
-        // Map<String, Long> timerMap = new HashMap<>();//
+    private Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> retrieveData( Set<Gene> genes, Integer currentSpeciesId,
+            StatusPoller statusPoller ) {
 
         if ( genes != null && !genes.isEmpty() ) {
             log.info( "Current species: " + currentSpeciesId );
             log.info( "Geneset Size: " + genes.size() );
-            String status;
+
             if ( genes.size() > MAX_GENESET_SIZE ) {
-                status = "Gene Hit List too large; maximum geneset size is " + MAX_GENESET_SIZE + "!";
-                enrichmentStatus.add( status );
-                enrichmentProgress = 50;
-                addMessage( "Maximum geneset size is " + MAX_GENESET_SIZE + "!", FacesMessage.SEVERITY_ERROR );
+                statusPoller.newStatus( "Gene Hit List too large; maximum geneset size is " + MAX_GENESET_SIZE + "!",
+                        50 );
                 return null;
             }
 
             log.info( "retrieving gene data..." );
-            status = "Retrieving Gene Information from cache...";
-            enrichmentStatus.add( status );
-            enrichmentProgress = 5;
+            statusPoller.newStatus( "Retrieving Gene Information from cache...", 5 );
 
             Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = new HashMap<>();
             Set<Gene> genesToLoad = new HashSet<>();
             for ( Gene gene : genes ) {
-                // fromTime = timer.getNanoTime();//
                 Map<Edition, Set<GeneOntologyTerm>> cachedGeneData = cache.getEnrichmentData( gene );
-                // timer.suspend();//
-                // prevTime = timerMap.get( "getFromCache" );//
-                // timerMap.put( "getFromCache", ( prevTime == null ? 0 : prevTime ) + timer.getNanoTime() - fromTime
-                // );//
-                // timer.resume();//
                 if ( cachedGeneData != null ) {
-                    // fromTime = timer.getNanoTime();//
                     addGeneData( gene, cachedGeneData, geneGOMap );
-                    // timer.suspend();//
-                    // prevTime = timerMap.get( "addGeneDataFromCache" );//
-                    // timerMap.put( "addGeneDataFromCache", ( prevTime == null ? 0 : prevTime ) + timer.getNanoTime()
-                    // - fromTime );//
-                    // timer.resume();//
                 } else {
                     genesToLoad.add( gene );
                 }
             }
-            enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+            statusPoller.completeStatus();
 
-            status = "Retrieving Gene Information from database...";
-            enrichmentStatus.add( status );
-            enrichmentProgress = 10;
+            statusPoller.newStatus( "Retrieving Gene Information from database...", 10 );
 
             if ( !genesToLoad.isEmpty() ) {
 
                 Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB;
 
-                enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
-                status = "Propagating GO Terms...";
-                enrichmentStatus.add( status );
-                enrichmentProgress = 40;
-                // fromTime = timer.getNanoTime();//
-                geneGOMapFromDB = annotationService.fetchEnrichmentData( currentSpeciesId, genesToLoad );
-                // timer.suspend();//
-                // timerMap.put( "getFromDB", timer.getNanoTime() - fromTime );//
-                // timer.resume();//
+                statusPoller.completeStatus();
+                statusPoller.newStatus( "Propagating GO Terms...", 30 );
 
-                // fromTime = timer.getNanoTime();//
+                geneGOMapFromDB = annotationService.fetchEnrichmentData( currentSpeciesId, genesToLoad );
+
                 log.info( "Propagating GO Terms..." );
                 Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> prop = propagate( geneGOMapFromDB );
-                log.info( "Propagating GO Terms... COMPLETE ");
-                // timer.suspend();//
-                // timerMap.put( "propagate", timer.getNanoTime() - fromTime );//
-                // timer.resume();//
+                log.info( "Propagating GO Terms... COMPLETE " );
 
                 for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : prop.entrySet() ) {
-                    // fromTime = timer.getNanoTime();//
+
                     addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
-                    // timer.suspend();//
-                    // prevTime = timerMap.get( "addGeneDataFromDB" );//
-                    // timerMap.put( "addGeneDataFromDB", ( prevTime == null ? 0 : prevTime ) + timer.getNanoTime()
-                    // - fromTime );//
-                    // timer.resume();//
-                    // fromTime = timer.getNanoTime();//
                     cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
-                    // timer.suspend();//
-                    // prevTime = timerMap.get( "addGeneDataToCache" );//
-                    // timerMap.put( "addGeneDataToCache", ( prevTime == null ? 0 : prevTime ) + timer.getNanoTime()
-                    // - fromTime );//
-                    // timer.resume();//
                 }
-                enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+                statusPoller.completeStatus();
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
                         + ( genes.size() - genesToLoad.size() ) + ") from cache" );
@@ -358,27 +314,67 @@ public class EnrichmentView implements Serializable {
     }
 
     public void enrich() {
-        String status = "";
-        enrichmentStatus = new ArrayList<>();
-        status = "Starting Enrichment Analysis";
-        enrichmentStatus.add( status );
-        enrichmentProgress = 0;
-        Set<Gene> genes = new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) );
+        StopWatch timer = new StopWatch();
+        timer.start();
+        enrichmentSuccess = false;
+        statusPoller = new StatusPoller( " completed" );
+        double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
+        CombinedAnalysis ca = enrich( new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ),
+                currentSpeciesId, multipleTestCorrection, thresh, minAnnotatedPopulation, maxAnnotatedPopulation,
+                similarityCompareMethod, TOP_N_JACCARD, statusPoller );
+        enrichmentSuccess = ca.isSuccess();
+        analysis = ca.getEnrichmentAnalysis();
+        enrichmentResults = analysis.getResults();
 
-        Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, currentSpeciesId );
+        statusPoller.newStatus( "Creating tables and charts...", 90 );
 
-        // TODO
+        createTables();
+
+        createSimilarityChart( ca.getStabilityAnalysis() );
+
+        statusPoller.completeStatus();
+        timer.stop();
+        statusPoller.newStatus( "Finished in: " + timer.getTime() / 1000.0 + " seconds", 100 );
+
+    }
+
+    public CombinedAnalysis enrich( Set<Gene> genes, int spId, MultipleTestCorrection mtc, double thresh, int min,
+            int max, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
+        statusPoller.newStatus( "Starting Enrichment Analysis", 0 );
+
+        Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, spId, statusPoller );
+
         if ( geneGOMap == null || geneGOMap.isEmpty() ) {
-            enrichmentStatus.add( "Failed" );
-            enrichmentProgress = 100;
-            enrichmentSuccess = false;
-            return;
+            statusPoller.newStatus( "Failed", 100 );
+            return new CombinedAnalysis( null, null, false );
         }
 
+        statusPoller.newStatus( "Retrieving Sample Sizes...", 50 );
+        Map<Edition, Integer> sampleSizes = calculateSampleSizes( geneGOMap );
+        statusPoller.completeStatus();
+
+        statusPoller.newStatus( "Running Overrepresentation Analyses on all editions...", 55 );
+        log.info( "Running enrichment analysis" );
+
+        EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, min, max, mtc, thresh, cache,
+                spId );
+
+        statusPoller.completeStatus();
+
+        log.info( "Running stability analysis" );
+
+        statusPoller.newStatus( "Running Stability Analyses on all editions...", 85 );
+
+        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, topN, scm, cache );
+        statusPoller.completeStatus();
+
+        return new CombinedAnalysis( analysis, stabilityAnalysis, true );
+
+    }
+
+    private Map<Edition, Integer> calculateSampleSizes( Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap ) {
         log.info( "Retrieving sample sizes" );
-        status = "Retrieving Sample Sizes...";
-        enrichmentStatus.add( status );
-        enrichmentProgress = 50;
+
         // Map<Edition, Integer> sampleSizes = annotationDAO.enrichmentSampleSizes( currentSpeciesId, genes );
         Map<Edition, Integer> sampleSizes = new HashMap<>();
         Map<Edition, Set<Gene>> testMap = new HashMap<>();
@@ -396,37 +392,26 @@ public class EnrichmentView implements Serializable {
         for ( Entry<Edition, Set<Gene>> editionEntry : testMap.entrySet() ) {
             sampleSizes.put( editionEntry.getKey(), editionEntry.getValue().size() );
         }
-        testMap = null;
 
-        enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+        return sampleSizes;
+    }
 
-        log.info( "Running enrichment analysis" );
-        status = "Running Overrepresentation Analyses on all editions...";
-        enrichmentStatus.add( status );
-        enrichmentProgress = 60;
-        double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
-        analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, minAnnotatedPopulation, maxAnnotatedPopulation,
-                multipleTestCorrection, thresh, cache, currentSpeciesId );
+    private void createTables() {
+        enrichmentTableEdition = Collections.max( enrichmentResults.keySet() ).getEdition();
+        enrichmentTableAllEditions = new LinkedHashMap<>();
+        ArrayList<Edition> eds = new ArrayList<>( enrichmentResults.keySet() );
+        Collections.sort( eds, Collections.reverseOrder() );
+        for ( Edition ed : eds ) {
+            enrichmentTableAllEditions.put( ed.getEdition(), ed );
+        }
 
-        enrichmentResults = analysis.getResults();
-        enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+        loadEnrichmentTableData();
 
-        log.info( "Running stability analysis" );
+    }
 
-        status = "Running Stability Analyses on all editions...";
-        enrichmentStatus.add( status );
-        enrichmentProgress = 80;
-        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, TOP_N_JACCARD, similarityCompareMethod,
-                cache );
-        stabilityScores = stabilityAnalysis.getStabilityScores();
-        enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
+    // Similarity Charts ---------------------------------------------------------------------------------------
 
-        status = "Creating tables and charts...";
-        enrichmentStatus.add( status );
-        enrichmentProgress = 90;
-
-        createTables();
-
+    private void createSimilarityChart( StabilityAnalysis stabilityAnalysis ) {
         // Create Similarity Chart
         ChartValues cv = new ChartValues();
 
@@ -435,7 +420,7 @@ public class EnrichmentView implements Serializable {
         Series topGeneJaccard = new Series( "Genes Backing Top Terms" );
         Series topParentsJaccard = new Series( "Parents of Top Terms" );
 
-        for ( Entry<Edition, StabilityScore> editionEntry : stabilityScores.entrySet() ) {
+        for ( Entry<Edition, StabilityScore> editionEntry : stabilityAnalysis.getStabilityScores().entrySet() ) {
             StabilityScore score = editionEntry.getValue();
             Date date = editionEntry.getKey().getDate();
             completeTermJaccard.addDataPoint( date, score.getCompleteTermJaccard() );
@@ -464,25 +449,6 @@ public class EnrichmentView implements Serializable {
                                         : "Current" ) + " Edition" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Index" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-
-        enrichmentStatus.set( enrichmentStatus.size() - 1, status + " COMPLETE" );
-
-        enrichmentSuccess = true;
-        enrichmentStatus.add( "Finished" );
-        enrichmentProgress = 100;
-
-    }
-
-    private void createTables() {
-        enrichmentTableEdition = Collections.max( enrichmentResults.keySet() ).getEdition();
-        enrichmentTableAllEditions = new LinkedHashMap<>();
-        ArrayList<Edition> eds = new ArrayList<>( enrichmentResults.keySet() );
-        Collections.sort( eds, Collections.reverseOrder() );
-        for ( Edition ed : eds ) {
-            enrichmentTableAllEditions.put( ed.getEdition(), ed );
-        }
-
-        loadEnrichmentTableData();
 
     }
 
@@ -754,7 +720,6 @@ public class EnrichmentView implements Serializable {
 
     // Enrichment Table ---------------------------------------------------------------------------------------
 
-    @SuppressWarnings("unused")
     public void loadEnrichmentTableData() {
         filteredEnrichmentTableValues = null;
         enrichmentTableValues = new ArrayList<>();
@@ -1120,11 +1085,11 @@ public class EnrichmentView implements Serializable {
     }
 
     public List<String> getEnrichmentStatus() {
-        return enrichmentStatus;
+        return statusPoller.getStatuses();
     }
 
     public int getEnrichmentProgress() {
-        return enrichmentProgress;
+        return statusPoller.getProgress();
     }
 
     public SimilarityCompareMethod getSimilarityCompareMethod() {

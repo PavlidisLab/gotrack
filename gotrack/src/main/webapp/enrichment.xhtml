@@ -221,7 +221,7 @@
 								</ui:repeat>
 							</ul>
 						</p:outputPanel>
-
+						<p:outputPanel autoUpdate="true">
 						<p:panelGrid style="margin-bottom:10px;margin-top:50px"
 							cellpadding="5" styleClass="no-border"
 							rendered="#{enrichmentView.enrichmentSuccess}">
@@ -266,6 +266,7 @@
 								</p:column>
 							</p:row>
 						</p:panelGrid>
+						</p:outputPanel>
 					</h:form>
 				</p:tab>
 				<p:tab title="Similarity"

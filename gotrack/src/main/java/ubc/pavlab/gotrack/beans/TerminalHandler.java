@@ -47,7 +47,6 @@ import org.dom4j.Element;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
 
-import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
@@ -56,7 +55,7 @@ import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.StatusPoller;
 
 import com.google.common.base.Joiner;
 
@@ -79,10 +78,6 @@ public class TerminalHandler implements Serializable {
     private static final List<String> OPEN_COMMANDS = Arrays.asList( "greet", "auth", "help", "genes" );
     private static final List<String> AUTH_COMMANDS = Arrays.asList( "greet", "auth", "help", "genes",
             "reload_settings" );
-
-    private Map<String, StabilityAnalysis> stabilityResults = new HashMap<>();
-    private Map<String, Set<String>> missingGenes = new HashMap<>();
-    private Map<String, Map<String, Gene>> mappedToSecondary = new HashMap<>();
 
     @ManagedProperty("#{sessionManager}")
     private SessionManager sessionManager;
@@ -225,8 +220,8 @@ public class TerminalHandler implements Serializable {
 
                         }
                     }
-
-                    StabilityAnalysis sa = enrich( hitList, species );
+                    StabilityAnalysis sa = enrichmentView.enrich( hitList, species, MultipleTestCorrection.BH, 0.05, 5,
+                            200, SimilarityCompareMethod.CURRENT, 5, new StatusPoller() ).getStabilityAnalysis();
 
                     String outputFile = outputFolder + "/" + systematicName + "_results.txt";
 
@@ -281,7 +276,7 @@ public class TerminalHandler implements Serializable {
                 timer.start();
                 if ( params.length == 0 ) {
 
-                    enrich( new HashSet<>( enrichmentView.getSelectedGenes() ), enrichmentView.getCurrentSpeciesId() );
+                    enrichmentView.enrich();
 
                 } else if ( params.length > 2 ) {
 
@@ -306,8 +301,9 @@ public class TerminalHandler implements Serializable {
                             returnString += "Could not find " + geneInput + "<br/>";
                         }
                     }
+                    enrichmentView.enrich( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200,
+                            SimilarityCompareMethod.CURRENT, 5, new StatusPoller() );
 
-                    enrich( hitList, currentSpeciesId );
                 } else {
                     timer.stop();
                     return "Malformed Input : speciesId gene1 gene2 ... OR speciesId path/to/hitlists";
@@ -319,140 +315,6 @@ public class TerminalHandler implements Serializable {
         }
 
         return command + " not found";
-    }
-
-    public StabilityAnalysis enrich( Set<Gene> genes, Integer currentSpeciesId ) {
-
-        Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, currentSpeciesId );
-
-        if ( geneGOMap == null ) {
-            return null;
-        }
-
-        Map<Edition, Integer> sampleSizes = new HashMap<>();
-        Map<Edition, Set<Gene>> testMap = new HashMap<>();
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Gene>>> editionEntry : geneGOMap.entrySet() ) {
-            Edition ed = editionEntry.getKey();
-            Set<Gene> gset = new HashSet<>();
-            testMap.put( ed, gset );
-            for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : editionEntry.getValue().entrySet() ) {
-                gset.addAll( termEntry.getValue() );
-
-            }
-
-        }
-
-        for ( Entry<Edition, Set<Gene>> editionEntry : testMap.entrySet() ) {
-            sampleSizes.put( editionEntry.getKey(), editionEntry.getValue().size() );
-        }
-        testMap = null;
-
-        log.info( "Running enrichment analysis" );
-
-        EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, 5, 200,
-                MultipleTestCorrection.BH, 0.05, cache, currentSpeciesId );
-        log.info( "Similarity Analysis" );
-
-        return new StabilityAnalysis( analysis, 5, SimilarityCompareMethod.CURRENT, cache );
-
-    }
-
-    private Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> retrieveData( Set<Gene> genes, Integer currentSpeciesId ) {
-        if ( genes != null && !genes.isEmpty() ) {
-            log.info( "Current species: " + currentSpeciesId );
-            log.info( "Geneset Size: " + genes.size() );
-
-            log.info( "retrieving gene data..." );
-
-            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = new HashMap<>();
-            Set<Gene> genesToLoad = new HashSet<>();
-            for ( Gene gene : genes ) {
-                Map<Edition, Set<GeneOntologyTerm>> cachedGeneData = cache.getEnrichmentData( gene );
-                if ( cachedGeneData != null ) {
-                    addGeneData( gene, cachedGeneData, geneGOMap );
-                } else {
-                    genesToLoad.add( gene );
-                }
-            }
-
-            if ( !genesToLoad.isEmpty() ) {
-
-                Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB;
-
-                geneGOMapFromDB = annotationService.fetchEnrichmentData( currentSpeciesId, genesToLoad );
-                for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : propagate( geneGOMapFromDB )
-                        .entrySet() ) {
-                    addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
-                    cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
-                }
-
-                log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
-                        + ( genes.size() - genesToLoad.size() ) + ") from cache" );
-            } else {
-                log.info( "Retrieved all (" + genes.size() + ") genes from cache" );
-
-            }
-
-            return geneGOMap;
-
-        } else {
-            log.info( "Empty geneset" );
-            return null;
-        }
-    }
-
-    private void addGeneData( Gene g, Map<Edition, Set<GeneOntologyTerm>> cachedGeneData,
-            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data ) {
-
-        for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : cachedGeneData.entrySet() ) {
-            Edition ed = editionEntry.getKey();
-
-            Map<GeneOntologyTerm, Set<Gene>> m1 = data.get( ed );
-
-            if ( m1 == null ) {
-                // Previously had no data for this edition
-                m1 = new HashMap<>();
-                data.put( ed, m1 );
-            }
-
-            for ( GeneOntologyTerm term : editionEntry.getValue() ) {
-                Set<Gene> geneSet = m1.get( term );
-
-                if ( geneSet == null ) {
-                    // Previously had no genes for this term in this edition
-                    geneSet = new HashSet<>();
-                    m1.put( term, geneSet );
-                }
-
-                geneSet.add( g );
-
-            }
-
-        }
-    }
-
-    private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> propagate(
-            Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB ) {
-        Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> propagatedData = new HashMap<>();
-        for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : geneGOMapFromDB.entrySet() ) {
-            Gene g = geneEntry.getKey();
-            Map<Edition, Set<GeneOntologyTerm>> propagatedSeries = new HashMap<>();
-            propagatedData.put( g, propagatedSeries );
-            Map<Edition, Set<GeneOntologyTerm>> series = geneEntry.getValue();
-            for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
-                Edition ed = editionEntry.getKey();
-                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed );
-
-                if ( propagatedTerms == null ) {
-                    // No ontology exists for this edition
-                } else {
-                    propagatedSeries.put( ed, propagatedTerms );
-                }
-
-            }
-
-        }
-        return propagatedData;
     }
 
     public void setSessionManager( SessionManager sessionManager ) {

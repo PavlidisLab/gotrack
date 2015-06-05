@@ -52,7 +52,7 @@ public class StabilityAnalysis {
     private static final Logger log = Logger.getLogger( StabilityAnalysis.class );
 
     private final Map<Edition, StabilityScore> stabilityScores;
-    private final EnrichmentAnalysis analysis;
+    private final SimilarityCompareMethod similarityCompareMethod;
 
     /**
      * @param analysis results of enrichment analysis
@@ -62,7 +62,7 @@ public class StabilityAnalysis {
      *        similarity
      */
     public StabilityAnalysis( EnrichmentAnalysis analysis, int TOP_N_JACCARD, SimilarityCompareMethod scm, Cache cache ) {
-        this.analysis = analysis;
+        this.similarityCompareMethod = scm;
         Map<Edition, StabilityScore> stabilityScores = new LinkedHashMap<>();
         Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults = analysis.getSignificantResults();
 
@@ -136,6 +136,10 @@ public class StabilityAnalysis {
 
     public Map<Edition, StabilityScore> getStabilityScores() {
         return stabilityScores;
+    }
+
+    public SimilarityCompareMethod getSimilarityCompareMethod() {
+        return similarityCompareMethod;
     }
 
 }
