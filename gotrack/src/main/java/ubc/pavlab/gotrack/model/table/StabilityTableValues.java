@@ -21,7 +21,6 @@ package ubc.pavlab.gotrack.model.table;
 
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.StabilityScore;
-import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
@@ -30,28 +29,23 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
  * @author mjacobson
  * @version $Id$
  */
-public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> {
+public class StabilityTableValues implements Comparable<StabilityTableValues> {
 
-    // private final String rowKey;
-    private final Edition edition;
     private final GeneOntologyTerm term;
     private final EnrichmentResult result;
-    private final StabilityScore score;
-    private final boolean significant;
+    private final StabilityScore stability;
+    private final int quantileAvg;
+    private final int quantile;
 
-    public EnrichmentTableValues( Edition edition, GeneOntologyTerm term, EnrichmentResult result,
-            StabilityScore score, boolean significant ) {
+    public StabilityTableValues( GeneOntologyTerm term, EnrichmentResult result, StabilityScore stability,
+            int quantile, int quantileAvg ) {
         super();
-        this.edition = edition;
         this.term = term;
         this.result = result;
-        this.significant = significant;
-        this.score = score;
+        this.stability = stability;
+        this.quantileAvg = quantileAvg;
+        this.quantile = quantile;
         // this.rowKey = edition.getEdition().toString() + term.getGoId();
-    }
-
-    public Edition getEdition() {
-        return edition;
     }
 
     public GeneOntologyTerm getTerm() {
@@ -62,24 +56,28 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
         return result;
     }
 
-    public StabilityScore getScore() {
-        return score;
+    public StabilityScore getStability() {
+        return stability;
     }
 
-    public boolean isSignificant() {
-        return significant;
+    public int getQuantileAvg() {
+        return quantileAvg;
+    }
+
+    public int getQuantile() {
+        return quantile;
     }
 
     @Override
     public String toString() {
-        return "EnrichmentTableValues [edition=" + edition + ", term=" + term + ", result=" + result + "]";
+        return "StabilityTableValues [term=" + term + ", result=" + result + ", stability=" + stability + ", quantile="
+                + quantileAvg + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( edition == null ) ? 0 : edition.hashCode() );
         result = prime * result + ( ( term == null ) ? 0 : term.hashCode() );
         return result;
     }
@@ -89,10 +87,7 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        EnrichmentTableValues other = ( EnrichmentTableValues ) obj;
-        if ( edition == null ) {
-            if ( other.edition != null ) return false;
-        } else if ( !edition.equals( other.edition ) ) return false;
+        StabilityTableValues other = ( StabilityTableValues ) obj;
         if ( term == null ) {
             if ( other.term != null ) return false;
         } else if ( !term.equals( other.term ) ) return false;
@@ -100,9 +95,9 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
     }
 
     @Override
-    public int compareTo( EnrichmentTableValues o ) {
-        // sort according to rank, if ranks are the same sort by goId
-        int comparison = Double.compare( this.result.getRank(), o.getResult().getRank() );
+    public int compareTo( StabilityTableValues o ) {
+        // sort according to stability, if stability is the same sort by goId
+        int comparison = Double.compare( this.stability.getAverageScore(), o.getStability().getAverageScore() );
 
         return comparison == 0 ? this.term.compareTo( o.getTerm() ) : comparison;
     }

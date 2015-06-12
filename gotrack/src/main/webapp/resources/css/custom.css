@@ -143,16 +143,8 @@ body div.ui-tabs {
 	border:none;
 }
 
-tr.ui-widget-content.significant {
-	background:#DCF9D4;
-}
-
 tr.ui-widget-content.green-row {
 	background:#DCF9D4;
-}
-
-tr.ui-widget-content.not-significant {
-	background:#EDCCCC;
 }
 
 tr.ui-widget-content.red-row {

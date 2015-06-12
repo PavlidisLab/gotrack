@@ -59,8 +59,9 @@ public class EnrichmentAnalysis {
     private final int totalGenes;
     private final int totalTerms;
     private final int totalResults;
+    private final Map<Edition, Double> cutoffs;
 
-    private Double threshold = null;
+    private final double threshold;
 
     private final Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> rawData;
 
@@ -101,7 +102,6 @@ public class EnrichmentAnalysis {
         this.minAnnotatedPopulation = min;
         this.maxAnnotatedPopulation = max == 0 ? Integer.MAX_VALUE : max;
         this.currentSpeciesId = currentSpeciesId;
-        this.threshold = threshold;
         this.totalEditions = geneGOMap.keySet().size();
         Set<Gene> totalGenes = new HashSet<>();
         Set<GeneOntologyTerm> totalTerms = new HashSet<>();
@@ -112,6 +112,7 @@ public class EnrichmentAnalysis {
         Map<Edition, Set<GeneOntologyTerm>> rejectedTerms = new HashMap<>();
         Set<GeneOntologyTerm> termsSignificantInAnyEdition = new HashSet<>();
         Map<Edition, Set<GeneOntologyTerm>> termsSignificant = new HashMap<>();
+        Map<Edition, Double> cutoffs = new HashMap<>();
 
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Gene>>> editionEntry : geneGOMap.entrySet() ) {
             Edition ed = editionEntry.getKey();
@@ -172,6 +173,14 @@ public class EnrichmentAnalysis {
 
             LinkedHashSet<GeneOntologyTerm> termsSortedByRank = EnrichmentAnalysis
                     .getSortedKeySetByValue( resultsInEdition );
+
+            if ( test.equals( MultipleTestCorrection.BH ) ) {
+                // set lowest pvalue as cutoff for now;
+                cutoffs.put( ed, resultsInEdition.get( termsSortedByRank.iterator().next() ).getPvalue() );
+            } else {
+                cutoffs.put( ed, threshold );
+            }
+
             int rank = -1;
             int k = 0;
             EnrichmentResult previousResult = null;
@@ -182,16 +191,16 @@ public class EnrichmentAnalysis {
                 EnrichmentResult er = resultsInEdition.get( term );
                 if ( test.equals( MultipleTestCorrection.BONFERRONI ) ) {
                     er.setPvalue( Math.min( er.getPvalue() * testSetSize, 1 ) );
-                    if ( er.getPvalue() <= this.threshold ) {
+                    if ( er.getPvalue() <= threshold ) {
                         termsSignificantInAnyEdition.add( term );
                         sig.add( term );
                     }
 
                 } else if ( test.equals( MultipleTestCorrection.BH ) ) {
                     // Single pass method of BH step-up
-                    double qTresh = ( k ) * this.threshold / testSetSize;
+                    double qTresh = ( k ) * threshold / testSetSize;
                     if ( er.getPvalue() <= qTresh ) {
-
+                        cutoffs.put( ed, er.getPvalue() );
                         // add this term and all terms in maybe pile
                         termsSignificantInAnyEdition.add( term );
                         sig.add( term );
@@ -253,10 +262,21 @@ public class EnrichmentAnalysis {
         this.rejectedTerms = Collections.unmodifiableMap( rejectedTerms );
         this.termsSignificantInAnyEdition = Collections.unmodifiableSet( termsSignificantInAnyEdition );
         this.termsSignificant = Collections.unmodifiableMap( termsSignificant );
+        this.cutoffs = Collections.unmodifiableMap( cutoffs );
         this.totalGenes = totalGenes.size();
         this.totalTerms = totalTerms.size();
         this.totalResults = totalResults;
 
+        this.threshold = threshold;
+
+    }
+
+    public Double getThreshold() {
+        return threshold;
+    }
+
+    public Map<Edition, Double> getCutoffs() {
+        return cutoffs;
     }
 
     /**
@@ -440,6 +460,26 @@ public class EnrichmentAnalysis {
             }
         }
         return top;
+    }
+
+    /**
+     * Keep in mind this is not the most efficient method if doing all terms
+     * 
+     * @param t
+     * @return
+     */
+    public Map<Edition, EnrichmentResult> getResults( GeneOntologyTerm t ) {
+        if ( t == null ) return null;
+        Map<Edition, EnrichmentResult> data = new HashMap<>();
+        for ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> editionEntry : rawResults.entrySet() ) {
+            Edition ed = editionEntry.getKey();
+            EnrichmentResult er = editionEntry.getValue().get( t );
+            if ( t != null ) {
+                data.put( ed, er );
+            }
+        }
+
+        return Collections.unmodifiableMap( data );
     }
 
     public int getTotalEditions() {

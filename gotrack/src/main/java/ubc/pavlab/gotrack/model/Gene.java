@@ -19,10 +19,7 @@
 
 package ubc.pavlab.gotrack.model;
 
-import java.util.Iterator;
 import java.util.Set;
-
-import org.apache.commons.lang3.StringUtils;
 
 import com.google.common.collect.ImmutableSet;
 
@@ -43,26 +40,6 @@ public final class Gene {
         this.species = species;
         this.accessions = ImmutableSet.copyOf( accessions );
         this.synonyms = ImmutableSet.copyOf( synonyms );
-    }
-
-    public String viewSynonyms() {
-        return StringUtils.join( synonyms, "|" );
-    }
-
-    public String viewAccessions() {
-        String result = null;
-        if ( accessions != null ) {
-            StringBuilder sb = new StringBuilder();
-            Iterator<Accession> it = accessions.iterator();
-            if ( it.hasNext() ) {
-                sb.append( it.next().getAccession() );
-            }
-            while ( it.hasNext() ) {
-                sb.append( "|" ).append( it.next().getAccession() );
-            }
-            result = sb.toString();
-        }
-        return result;
     }
 
     public String getSymbol() {

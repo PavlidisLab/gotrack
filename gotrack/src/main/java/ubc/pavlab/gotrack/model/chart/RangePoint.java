@@ -19,14 +19,39 @@
 
 package ubc.pavlab.gotrack.model.chart;
 
+import java.sql.Date;
+
 /**
  * TODO Document Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-public interface Point extends Comparable<Point> {
-    public long getX();
+public class RangePoint implements Point {
+    private final long x;
+    private final Range y;
 
-    public Object getY();
+    public RangePoint( long x, Number left, Number right ) {
+        super();
+        this.x = x;
+        this.y = new Range( left, right );
+    }
+
+    public RangePoint( Date date, Number left, Number right ) {
+        this.x = date.getTime();
+        this.y = new Range( left, right );
+    }
+
+    public long getX() {
+        return x;
+    }
+
+    public Range getY() {
+        return y;
+    }
+
+    @Override
+    public int compareTo( Point o ) {
+        return Long.compare( this.getX(), o.getX() );
+    }
 }

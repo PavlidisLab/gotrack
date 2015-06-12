@@ -19,14 +19,39 @@
 
 package ubc.pavlab.gotrack.model.chart;
 
+import java.sql.Date;
+
 /**
  * TODO Document Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-public interface Point extends Comparable<Point> {
-    public long getX();
+public class CartesianPoint implements Point {
+    private final long x;
+    private final Number y;
 
-    public Object getY();
+    public CartesianPoint( long x, Number y ) {
+        super();
+        this.x = x;
+        this.y = y;
+    }
+
+    public CartesianPoint( Date date, Number y ) {
+        this.x = date.getTime();
+        this.y = y;
+    }
+
+    public long getX() {
+        return x;
+    }
+
+    public Number getY() {
+        return y;
+    }
+
+    @Override
+    public int compareTo( Point o ) {
+        return Long.compare( this.getX(), o.getX() );
+    }
 }

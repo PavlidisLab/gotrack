@@ -19,74 +19,60 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.Set;
-
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-
 /**
- * scores which attempt to explore the impact that annotation stability has on the performance of gene set enrichment
- * analyses
+ * TODO Document Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-public class StabilityScore {
+public final class StabilityScore {
 
-    private final Double completeTermJaccard;
-    private final Double topTermJaccard;
-    private final Double topGeneJaccard;
-    private final Double topParentsJaccard;
-    private final Set<GeneOntologyTerm> topTerms;
-    private final Set<Gene> topGenes;
-    private final Set<GeneOntologyTerm> topParents;
+    private final double sampleSigma;
+    private final double populationSigma;
+    private final double minPvalue;
+    private final double maxPvalue;
+    private final double score;
+    private final double averageScore;
 
-    /**
-     * @param completeTermJaccard
-     * @param topTermJaccard
-     * @param topGeneJaccard
-     * @param topTerms
-     * @param topGenes
-     */
-    public StabilityScore( Double completeTermJaccard, Double topTermJaccard, Double topGeneJaccard,
-            Double topParentsJaccard, Set<GeneOntologyTerm> topTerms, Set<Gene> topGenes,
-            Set<GeneOntologyTerm> topParents ) {
+    public StabilityScore( double sampleSigma, double populationSigma, double minPvalue, double maxPvalue,
+            double score, double averageScore ) {
         super();
-        this.completeTermJaccard = completeTermJaccard;
-        this.topTermJaccard = topTermJaccard;
-        this.topGeneJaccard = topGeneJaccard;
-        this.topParentsJaccard = topParentsJaccard;
-        this.topTerms = topTerms;
-        this.topGenes = topGenes;
-        this.topParents = topParents;
+        this.sampleSigma = sampleSigma;
+        this.populationSigma = populationSigma;
+        this.minPvalue = minPvalue;
+        this.maxPvalue = maxPvalue;
+        this.score = score; // Math.log( ( maxPvalue - minPvalue ) / pvalue );
+        this.averageScore = averageScore;
     }
 
-    public Double getCompleteTermJaccard() {
-        return completeTermJaccard;
+    public double getSampleSigma() {
+        return sampleSigma;
     }
 
-    public Double getTopTermJaccard() {
-        return topTermJaccard;
+    public double getPopulationSigma() {
+        return populationSigma;
     }
 
-    public Double getTopGeneJaccard() {
-        return topGeneJaccard;
+    public double getMinPvalue() {
+        return minPvalue;
     }
 
-    public Double getTopParentsJaccard() {
-        return topParentsJaccard;
+    public double getMaxPvalue() {
+        return maxPvalue;
     }
 
-    public Set<GeneOntologyTerm> getTopTerms() {
-        return topTerms;
+    public double getScore() {
+        return score;
     }
 
-    public Set<Gene> getTopGenes() {
-        return topGenes;
+    public double getAverageScore() {
+        return averageScore;
     }
 
-    public Set<GeneOntologyTerm> getTopParents() {
-        return topParents;
+    @Override
+    public String toString() {
+        return "StabilityScore [sampleSigma=" + sampleSigma + ", populationSigma=" + populationSigma + ", minPvalue="
+                + minPvalue + ", maxPvalue=" + maxPvalue + ", score=" + score + "]";
     }
 
 }

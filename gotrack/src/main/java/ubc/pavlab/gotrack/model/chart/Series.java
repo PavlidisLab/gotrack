@@ -45,12 +45,17 @@ public class Series {
 
     public boolean addDataPoint( long x, Number y ) {
         this.sorted = false;
-        return this.data.add( new Point( x, y ) );
+        return this.data.add( new CartesianPoint( x, y ) );
     }
 
     public boolean addDataPoint( Date d, Number y ) {
         this.sorted = false;
-        return this.data.add( new Point( d, y ) );
+        return this.data.add( new CartesianPoint( d, y ) );
+    }
+
+    public boolean addDataPoint( Date d, Number left, Number right ) {
+        this.sorted = false;
+        return this.data.add( new RangePoint( d, left, right ) );
     }
 
     public void addDataPoint( List<Point> ps ) {
@@ -85,23 +90,6 @@ public class Series {
 
     public void setExtra( Object extra ) {
         this.extra = extra;
-    }
-
-    public Number maxY() {
-        // This does not cover the case where Number is a very large BigDecimal or BigInteger that cannot be expressed
-        // as a double. To cover these cases you'd need to do instanceOf checks too.
-        if ( data.size() > 0 ) {
-            Number max = data.iterator().next().getY();
-            for ( Point point : data ) {
-                Number y = point.getY();
-                if ( y.doubleValue() > max.doubleValue() ) {
-                    max = y;
-                }
-            }
-            return max;
-        } else {
-            return null;
-        }
     }
 
     @Override

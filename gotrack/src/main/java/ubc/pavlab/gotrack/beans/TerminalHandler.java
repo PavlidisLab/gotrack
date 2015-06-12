@@ -50,7 +50,7 @@ import org.dom4j.io.SAXReader;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
-import ubc.pavlab.gotrack.analysis.StabilityScore;
+import ubc.pavlab.gotrack.analysis.SimilarityScore;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
@@ -230,9 +230,9 @@ public class TerminalHandler implements Serializable {
                         writer = new PrintWriter( outputFile, "UTF-8" );
 
                         writer.println( "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard\tTopParentsJaccard" );
-                        for ( Entry<Edition, StabilityScore> editionEntry : sa.getStabilityScores().entrySet() ) {
+                        for ( Entry<Edition, SimilarityScore> editionEntry : sa.getSimilarityScores().entrySet() ) {
                             Edition ed = editionEntry.getKey();
-                            StabilityScore score = editionEntry.getValue();
+                            SimilarityScore score = editionEntry.getValue();
                             writer.println( ed.getEdition() + "\t" + ed.getDate() + "\t"
                                     + score.getCompleteTermJaccard() + "\t" + score.getTopTermJaccard() + "\t"
                                     + score.getTopGeneJaccard() + "\t" + score.getTopParentsJaccard() );

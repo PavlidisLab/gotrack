@@ -186,7 +186,7 @@
 						actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
 						update=":formEnrich, :formSelect"
 						onclick="PF('runEnrichmentBtnWdg').disable();PF('enrichmentProgressBarWdg').start();window.progressBarId=PF('enrichmentProgressBarWdg').progressPoll;"
-						oncomplete="handleEnrichmentComplete(xhr, status, args);"
+						oncomplete="reInitializeCharts();handleEnrichmentComplete(xhr, status, args);"
 						disabled="#{fn:length(enrichmentView.selectedGenes) == 0}" />
 				</div>
 
@@ -205,7 +205,7 @@
 		<h:form id="formEnrich">
 			<p:remoteCommand name="updateCenterPanel" update=":formEnrich" />
 
-			<p:tabView id="tabEnrich" onTabShow="tabShowed(index)">
+			<p:tabView id="tabEnrich" onTabShow="tabShowed(index)" dynamic="true" cache="true">
 				<p:tab title="Overview">
 
 					<h:form>
@@ -274,14 +274,138 @@
 					<p:outputPanel id="similarityChartPanel">
 						<div id="hc_similarity_container"
 							style="width: 100%; height: 600px;"></div>
-
-						<p:remoteCommand
-							oncomplete="PF('itemSelectSimilarityDlg').show();"
-							update=":termDetail" name="openitemSelectSimilarityDlg" />
 					</p:outputPanel>
 				</p:tab>
-				<p:tab title="Enrichment"
-					rendered="#{enrichmentView.enrichmentSuccess}">
+				<p:tab title="Stability" rendered="#{enrichmentView.enrichmentSuccess}">
+						<p:contextMenu for="tableStability">
+							<p:menuitem value="View" icon="ui-icon-search"
+								actionListener="#{enrichmentView.viewStabilityTableValue()}"
+								update=":enrichmentResultDetailsDlg"
+								oncomplete="PF('enrichmentResultDetailsWdg').show()" />
+						</p:contextMenu>
+					<p:dataTable id="tableStability" widgetVar="tableStabilityWdg"
+							var="entry" value="#{enrichmentView.stabilityTableValues}"
+							sortMode="multiple" style="margin-bottom:0"
+							emptyMessage="No stability data found"
+							filteredValue="#{enrichmentView.filteredStabilityTableValues}"
+							styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
+							scrollable="true" scrollHeight="450"
+							selectionMode="single"
+							selection="#{enrichmentView.selectedStabilityTableValue}"
+							rowKey="#{entry.term.goId}">
+							
+							<p:ajax event="filter"
+								oncomplete="postAjaxSortTable(PF('tableStabilityWdg'))" />
+							<f:facet name="footer">
+								<span class="footer-graph"> 
+									<p:commandButton
+										value="Graph Selected Term"
+										actionListener="#{enrichmentView.createStabilityChartFromSelected()}"
+										icon="fa fa-line-chart"
+										oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();" />
+								</span>
+								<h:commandLink>
+									<h:graphicImage library="img" name="excel.png" width="24" />
+									<p:dataExporter type="xls" target="tableStability"
+										fileName="stability" />
+								</h:commandLink>
+
+								<h:commandLink>
+									<h:graphicImage library="img" name="pdf.png" width="24" />
+									<p:dataExporter type="pdf" target="tableStability"
+										fileName="stability" />
+								</h:commandLink>
+
+								<h:commandLink>
+									<h:graphicImage library="img" name="csv.png" width="24" />
+									<p:dataExporter type="csv" target="tableStability"
+										fileName="stability" />
+								</h:commandLink>
+
+								<h:commandLink>
+									<h:graphicImage library="img" name="xml.png" width="24" />
+									<p:dataExporter type="xml" target="tableStability"
+										fileName="stability" />
+								</h:commandLink>
+							</f:facet>
+
+							<p:column style="width:10px;" exportable="false">
+								<a
+									href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.term.goId}"
+									target="_blank"><i class="fa fa-external-link fa-sm"
+									style="font-size: 0.7em;" /> </a>
+							</p:column>
+							<p:column filterBy="#{entry.term.goId}"
+								filterMatchMode="contains" sortBy="#{entry.term.goId}"
+								headerText="Id" style="width:120px;">
+								<h:outputText value="#{entry.term.goId}" />
+							</p:column>
+							<p:column filterBy="#{entry.term.aspect}" filterMatchMode="in"
+								sortBy="#{entry.term.aspect}" headerText="Aspect"
+								style="width:150px;">
+								<f:facet name="filter">
+									<p:selectManyButton
+										onchange="PF('tableEnrichmentWdg').filter()"
+										style="font-size: 75%">
+										<f:selectItem itemLabel="BP" itemValue="BP" />
+										<f:selectItem itemLabel="MF" itemValue="MF" />
+										<f:selectItem itemLabel="CC" itemValue="CC" />
+									</p:selectManyButton>
+								</f:facet>
+								<h:outputText value="Biological Process"
+									rendered="#{entry.term.aspect == 'BP'}" />
+								<h:outputText value="Molecular Function"
+									rendered="#{entry.term.aspect == 'MF'}" />
+								<h:outputText value="Cellular Component"
+									rendered="#{entry.term.aspect == 'CC'}" />
+							</p:column>
+							<p:column filterBy="#{entry.term.name}"
+								filterMatchMode="contains" sortBy="#{entry.term.name}"
+								headerText="Name">
+								<h:outputText value="#{entry.term.name}" />
+							</p:column>
+							
+							<p:column filterBy="#{entry.stability.sampleSigma}"
+								headerText="Sample Sigma" sortBy="#{entry.stability.sampleSigma}"
+								filterFunction="#{enrichmentView.filterByNumberLT}"
+								style="width:120px;">
+								<h:outputText value="#{entry.stability.sampleSigma}">
+									<f:convertNumber type="number" />
+								</h:outputText>
+							</p:column>
+							
+							<p:column filterBy="#{entry.stability.populationSigma}"
+								headerText="Population Sigma" sortBy="#{entry.stability.populationSigma}"
+								filterFunction="#{enrichmentView.filterByNumberLT}"
+								style="width:160px;">
+								<h:outputText value="#{entry.stability.populationSigma}">
+									<f:convertNumber type="number" />
+								</h:outputText>
+							</p:column>
+							
+							<p:column filterBy="#{entry.stability.score}" headerText="Stability Score"
+								sortBy="#{entry.stability.score}"
+								filterFunction="#{enrichmentView.filterByNumberLT}"
+								style="width:120px;" styleClass="stability-gradient stability-gradient#{entry.quantile}">
+								<h:outputText value="#{entry.stability.score}">
+									<f:convertNumber type="number" />
+								</h:outputText>
+							</p:column>
+							
+							<p:column filterBy="#{entry.stability.averageScore}" headerText="Stability Score Avg"
+								sortBy="#{entry.stability.averageScore}"
+								filterFunction="#{enrichmentView.filterByNumberLT}"
+								style="width:160px;" styleClass="stability-gradient stability-gradient#{entry.quantileAvg}">
+								<h:outputText value="#{entry.stability.averageScore}">
+									<f:convertNumber type="number" />
+								</h:outputText>
+							</p:column>
+
+
+
+						</p:dataTable>
+				</p:tab>
+				<p:tab title="Enrichment" rendered="#{enrichmentView.enrichmentSuccess}">
 					<p:outputPanel id="tablePanel">
 						<p:contextMenu for="tableEnrichment">
 							<p:menuitem value="View" icon="ui-icon-search"
@@ -296,8 +420,7 @@
 							filteredValue="#{enrichmentView.filteredEnrichmentTableValues}"
 							rowStyleClass="#{entry.significant == true ? 'significant' : 'not-significant'}"
 							styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
-							paginatorTemplate="{Graph} {CurrentPageReport}  {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {Exporters}"
-							paginator="true" paginatorPosition="bottom" rows="20"
+							scrollable="true" scrollHeight="450"
 							selectionMode="multiple"
 							selection="#{enrichmentView.selectedEnrichmentTableValues}"
 							rowKey="#{entry.term.goId}">
@@ -324,30 +447,30 @@
 
 								</h:panelGrid>
 							</f:facet>
-							<f:facet name="{Graph}">
-								<span class="footer-graph"> <p:commandButton
-										value="Graph Selected"
-										actionListener="#{enrichmentView.createChartFromSelected()}"
+
+							<f:facet name="footer">
+
+								<span class="footer-graph"> 
+								<span class="text"><h:outputText value="Graph" /></span>
+								<p:selectOneMenu value="#{enrichmentView.enrichmentChartType}">
+									<p:ajax event="change" update="topNSpinner" />
+									<f:selectItems value="#{enrichmentView.enrichmentChartTypes}"
+										var="test" itemValue="#{test}" itemLabel="#{test.label}" />
+								</p:selectOneMenu>
+								<p:outputPanel id="topNSpinner">
+								<p:spinner  value="#{enrichmentView.enrichmentChartTopN}" min="0" max="100" rendered="#{enrichmentView.enrichmentChartType == 'TOP'}"/>
+								</p:outputPanel>
+								<span class="text"><h:outputText value="Terms By" /></span>
+								<p:selectOneMenu value="#{enrichmentView.enrichmentChartMeasure}">
+									<f:selectItems value="#{enrichmentView.enrichmentChartMeasures}"
+										var="test" itemValue="#{test}" itemLabel="#{test.label}" />
+								</p:selectOneMenu>
+								<p:commandButton
+										value="GO"
+										actionListener="#{enrichmentView.createChart()}"
 										icon="fa fa-line-chart"
 										oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();" />
-									<span class="text-separator"><h:outputText value="OR" /></span>
-									<p:commandButton value="Graph"
-										actionListener="#{enrichmentView.createChartFromTop()}"
-										icon="fa fa-line-chart"
-										oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();" />
-									<span class="text"><h:outputText value="Top" /></span> <p:spinner
-										value="#{enrichmentView.enrichmentChartTopN}" min="0"
-										max="100" /> <span class="text"><h:outputText
-											value="Terms By" /></span> <p:selectOneMenu
-										value="#{enrichmentView.enrichmentChartMeasureScale}">
-										<f:selectItem itemLabel="Rank" itemValue="rank" />
-										<f:selectItem itemLabel="P-Value" itemValue="pvalue" />
-									</p:selectOneMenu>
 								</span>
-							</f:facet>
-
-							<f:facet name="{Exporters}">
-
 								<h:commandLink>
 									<h:graphicImage library="img" name="excel.png" width="24" />
 									<p:dataExporter type="xls" target="tableEnrichment"
@@ -371,7 +494,6 @@
 									<p:dataExporter type="xml" target="tableEnrichment"
 										fileName="enrichment" />
 								</h:commandLink>
-
 							</f:facet>
 
 							<p:column style="width:10px;" exportable="false">
@@ -459,18 +581,44 @@
 		<p:dialog header="Gene Info" widgetVar="geneDialog" modal="false"
 			showEffect="fade" hideEffect="fade" resizable="false">
 			<p:outputPanel id="geneDetail" style="text-align:center;">
-				<p:panelGrid columns="2">
-					<h:outputText value="Symbol" />
-					<h:outputText value="#{enrichmentView.viewGene.symbol}"
-						styleClass="sqlDialogText" />
+				<p:panelGrid>
+					<p:row>
+						<p:column>
+						<h:outputText value="Symbol" />
+						</p:column>
+						<p:column>
+						<h:outputText value="#{enrichmentView.viewGene.symbol}"
+							styleClass="sqlDialogText" />
+							</p:column>
+					</p:row>
+					<p:row>
+					<p:column>
+						<h:outputText value="Synonyms" />
+						</p:column>
+						<p:column>
+						<span class="sqlDialogText"> <ui:repeat
+								value="#{enrichmentView.viewGene.synonyms.toArray()}"
+								var="syn" varStatus="loop"> #{syn}#{!loop.last ? ', ' : ''}
+							</ui:repeat>
+						</span>
 
-					<h:outputText value="Synonyms" />
-					<h:outputText value="#{(enrichmentView.viewGene.viewSynonyms())}"
-						styleClass="sqlDialogText" />
+							</p:column>
+					</p:row>
 
-					<h:outputText value="Accessions" />
-					<h:outputText value="#{(enrichmentView.viewGene.viewAccessions())}"
-						styleClass="sqlDialogText" />
+					<p:row>
+					<p:column>
+						<h:outputText value="Accessions" />
+						</p:column>
+						<p:column>
+						<span class="sqlDialogText"> <ui:repeat
+								value="#{enrichmentView.viewGene.accessions.toArray()}"
+								var="acc" varStatus="loop">
+								<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
+									target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
+							</ui:repeat>
+						</span>
+						</p:column>
+					</p:row>
 				</p:panelGrid>
 			</p:outputPanel>
 		</p:dialog>
@@ -529,6 +677,11 @@
 								styleClass="sqlDialogText">
 								<f:convertNumber type="number" pattern="#.##E0" />
 							</h:outputText>
+							
+							<h:outputText value="Rank" />
+							<h:outputText
+								value="#{enrichmentView.viewEnrichmentRow.result.fractionalRank}"
+								styleClass="sqlDialogText" />
 
 							<h:outputText value="P-Value" />
 							<h:outputText
@@ -536,26 +689,115 @@
 								styleClass="sqlDialogText">
 								<f:convertNumber type="number" pattern="#.##E0" />
 							</h:outputText>
-
-							<h:outputText value="Rank" />
+							
+							<h:outputText value="Stability Score" />
 							<h:outputText
-								value="#{enrichmentView.viewEnrichmentRow.result.fractionalRank}"
+								value="#{enrichmentView.viewEnrichmentRow.score.score}"
 								styleClass="sqlDialogText" />
+								
+							<h:outputText value="Stability Score Avg" />
+							<h:outputText
+								value="#{enrichmentView.viewEnrichmentRow.score.averageScore}"
+								styleClass="sqlDialogText" />
+
 						</p:panelGrid>
 					</p:tab>
 					<p:tab title="Genes">
-						<p:dataGrid id="annotatedGenesList"
-							value="#{enrichmentView.viewEnrichmentRowGeneSet}" var="gene"
-							layout="grid" columns="8">
-							<p:panel style="text-align:center">
-								<h:outputText value="#{gene.symbol}"
-									style="display:inline-block" />
-							</p:panel>
-						</p:dataGrid>
+						<p:dataTable var="gene" value="#{enrichmentView.viewEnrichmentRowGeneSet}" style="width:784px;" scrollHeight="300" scrollable="true">
+						    <p:column headerText="Symbol">
+						        <h:outputText value="#{gene.symbol}" />
+						    </p:column>
+						 
+						    <p:column headerText="Accession(s)">
+						    	<span>
+						        <ui:repeat
+									value="#{gene.accessions.toArray()}"
+									var="acc" varStatus="loop">
+									<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
+										target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
+								</ui:repeat>
+								</span>
+						    </p:column>
+						</p:dataTable>
 					</p:tab>
 				</p:tabView>
 			</p:outputPanel>
 		</p:dialog>
+
+		<p:dialog id="itemSelectSimilarityDlg" header="Data Point Information"
+			widgetVar="itemSelectSimilarityWdg" modal="false" showEffect="fade"
+			hideEffect="fade" resizable="false" dynamic="true" height="500px;">
+			<h:form>
+			<p:outputPanel>
+				<p:tabView id="enrichmentResultDetailsTabView">
+					<p:tab title="Top N Terms">
+					<p:dataTable var="term" value="#{enrichmentView.selectedSimilarityScore.topTerms}" style="width:800px;" scrollHeight="350" scrollable="true">
+							<p:column style="width:10px;">
+								<a
+									href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
+									target="_blank"><i class="fa fa-external-link fa-sm"
+									style="font-size: 0.7em;" /> </a>
+							</p:column>
+							<p:column headerText="Id" style="width:120px;">
+								<h:outputText value="#{term.goId}" />
+							</p:column>
+							<p:column headerText="Aspect" style="width:80px;">
+								<h:outputText value="#{term.aspect}" />
+							</p:column>
+							<p:column headerText="Name">
+								<h:outputText value="#{term.name}" />
+							</p:column>
+					</p:dataTable>
+				</p:tab>
+				<p:tab title="Parents of Top Terms">
+					<p:dataTable var="term" value="#{enrichmentView.selectedSimilarityScore.topParents}" style="width:800px;" scrollHeight="350" scrollable="true">
+							<p:column style="width:10px;">
+								<a
+									href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
+									target="_blank"><i class="fa fa-external-link fa-sm"
+									style="font-size: 0.7em;" /> </a>
+							</p:column>
+							<p:column headerText="Id" style="width:120px;">
+								<h:outputText value="#{term.goId}" />
+							</p:column>
+							<p:column headerText="Aspect" style="width:80px;">
+								<h:outputText value="#{term.aspect}" />
+							</p:column>
+							<p:column headerText="Name">
+								<h:outputText value="#{term.name}" />
+							</p:column>
+					</p:dataTable>
+				</p:tab>
+				<p:tab title="Genes Backing Top Terms">
+					<p:dataTable var="gene" value="#{enrichmentView.selectedSimilarityScore.topGenes}" style="width:800px;" scrollHeight="350" scrollable="true">
+					    <p:column headerText="Symbol">
+					        <h:outputText value="#{gene.symbol}" />
+					    </p:column>
+					 
+					    <p:column headerText="Accession(s)">
+					    	<span>
+					        <ui:repeat
+								value="#{gene.accessions.toArray()}"
+								var="acc" varStatus="loop">
+								<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
+									target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
+							</ui:repeat>
+							</span>
+					    </p:column>
+					</p:dataTable>
+				</p:tab>
+				</p:tabView>
+			</p:outputPanel>
+			</h:form>
+		</p:dialog>
+		
+		<h:form>
+			<p:remoteCommand name="fetchSimilarityInformation"
+				update=":itemSelectSimilarityDlg"
+				oncomplete="PF('itemSelectSimilarityWdg').show()"
+				actionListener="#{enrichmentView.fetchSimilarityInformation}" />
+
+		</h:form>
 
 		<p:dialog id="itemSelectEnrichmentDlg" header="Data Point Information"
 			widgetVar="itemSelectEnrichmentWdg" modal="false" showEffect="fade"
@@ -598,11 +840,21 @@
 					<h:outputText value="#{enrichmentView.selectedValue}"
 						styleClass="sqlDialogText"
 						rendered="#{enrichmentView.selectedValueName != null}" />
+						
+					<h:outputText value="Stability Score" />
+					<h:outputText
+						value="#{enrichmentView.selectedStabilityScore.score}"
+						styleClass="sqlDialogText" />
+						
+					<h:outputText value="Stability Score Avg" />
+					<h:outputText
+						value="#{enrichmentView.selectedStabilityScore.averageScore}"
+						styleClass="sqlDialogText" />
+						
 				</p:panelGrid>
 			</p:outputPanel>
 		</p:dialog>
-		<p:dialog id="enrichmentChartDlg" header="Enrichment Chart"
-			widgetVar="enrichmentChartWdg" modal="true" showEffect="fade"
+		<p:dialog id="enrichmentChartDlg" widgetVar="enrichmentChartWdg" modal="true" showEffect="fade"
 			hideEffect="fade" resizable="true" height="800" width="1200"
 			fitViewport="true" closeOnEscape="true" maximizable="true"
 			onHide="enrichmentChartHide()">
