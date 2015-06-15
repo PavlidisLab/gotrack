@@ -3,7 +3,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
 	xmlns:h="http://java.sun.com/jsf/html"
 	xmlns:f="http://java.sun.com/jsf/core"
-	xmlns:p="http://primefaces.org/ui">
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:of="http://omnifaces.org/functions">
 <h:head>
 	<title>UBC-CHiBi|GOtrack</title>
 	<h:outputStylesheet library="css" name="style.css" />
@@ -57,31 +58,23 @@
 					<div class="ui-grid-col-4">
 						<h2 class="label label-green">Description</h2>
 						<p class="quiet large"></p>
-						<p>GOtrack is a simple, user-friendly web interface built to
-							browse changes in gene product annotations over time.</p>
-						<p>GOtrack currently supports annotation data for 14 different
-							organisms.</p>
+						<p>GOtrack is a user-friendly tool to browse the development of gene product annotations</p>
+						<p>GOtrack currently supports annotation data for 14 different organisms</p>
 					</div>
 
 					<div class="ui-grid-col-4">
 						<h2 class="label label-orange">Explore</h2>
 						<p class="quiet large"></p>
 						<ul>
-							<li><p>Changes in the number of Gene Ontology (GO) terms
-									associated to a gene product or the number of gene products
-									associated to a GO term</p></li>
-							<li><p>Changes in the evidence codes used and measures
-									of semantic similarity and multifunctionality</p></li>
-							<li><p>Identify general changes occurring in an organism
-									or compare them against other species</p></li>
+							<li><p>Changes in the Gene Ontology (GO) terms associated to a gene product</p></li>
+							<li><p>Changes in the gene products associated to a GO term</p></li>
+							<li><p>Measures of semantic similarity and multifunctionality between years</p></li>
 						</ul>
-						<!-- <p><h:graphicImage library="images"  width="260" height="150" name="example.png" /></p> -->
 					</div>
 
 					<div class="ui-grid-col-4">
 						<h2 class="label label-blue">Contact Us</h2>
-						<p>Please give us some feedback! In case you have any
-							questions, you can contact us at:</p>
+						<p>Please give us some feedback! In case you have any questions, you can contact us at:</p>
 						<p>jacobsonmt+gotrack (at) gmail (dot) com</p>
 					</div>
 					<div class="clearer">&nbsp;</div>
@@ -119,50 +112,115 @@
 				</div>
 				</div>
 				<div class="ui-grid-col-8">
-				
-					<div class="section-title" style="text-align:center;">Start exploring!</div>
+					<div class="section" style="width:50%;margin: 0 auto;"/>
 
 					<div class="post">
 						<div class="post-body">
 
 							<!-- PUT THE ACTUAL CONTENT -->
+							
+							
 
-							<h:form id="initial">
-
-								<p:panelGrid id="usrinp" columns="3" style="border:none;margin:0 auto;">
+							
 								
+								<p:panelGrid style="border:none;margin:0 auto;">
+								<h:form>
 								<f:event listener="#{geneSearchView.validateQuery}" type="postValidate" />
 								
-								<h:outputText
-										value="Select the species of interest (required): " />
-									<p:selectOneMenu id="selectspecies" value="#{geneSearchView.speciesId}">
-										<p:ajax event="change" process="@this"/>
-										<f:selectItems value="#{cache.speciesList}" var="spec"
-											itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
-									</p:selectOneMenu>
-									<p:tooltip id="toolTip2" for="selectspecies"
-										value="Select the species of interest" />
-
-									<h:outputText 
-										value="Write a gene symbol or GO term to begin: &nbsp;" />
-
-									<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
-										completeMethod="#{geneSearchView.complete}" queryDelay="600"
-										minQueryLength="2" forceSelection="true" maxResults="10"
-										label="ID"
-										emptyMessage="No gene suggestions available, please try again."
-										var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
-										groupBy="#{gene.type.label}"/>
-
-									<p:tooltip id="toolTip1" for="geneInput"
-										value="Write the gene symbol or GO Term (starting with 'GO:') to begin" />
-									<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
-								</p:panelGrid>
-								<p></p>
+								<p:row>
+									<p:column colspan="3" style="text-align:center;">
+										<div class="section-title" style="text-align:center;">Genes</div>
+									</p:column>
+								</p:row>
 								
-
-
-							</h:form>
+								<p:row>
+									<p:column>
+										<h:outputText value="Select species of interest: " />
+									</p:column>
+									<p:column>
+										<p:selectOneMenu id="selectspecies" value="#{geneSearchView.speciesId}">
+											<p:ajax event="change" process="@this"/>
+											<f:selectItems value="#{cache.speciesList}" var="spec"
+												itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
+										</p:selectOneMenu>
+									</p:column>
+									<p:column rowspan="2">
+										<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
+									</p:column>
+								</p:row>
+								
+								<p:row>
+									<p:column>
+										<h:outputText value="Enter a gene symbol: &nbsp;" />
+									</p:column>
+									<p:column>
+										<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
+											completeMethod="#{geneSearchView.complete}" queryDelay="600"
+											minQueryLength="2" forceSelection="true" maxResults="10"
+											label="ID"
+											emptyMessage="No gene suggestions available, please try again."
+											var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
+											groupBy="#{gene.type.label}"/>
+									</p:column>
+								</p:row>
+								</h:form>
+								<p:row>
+									<p:column colspan="3">
+										<p:separator/>
+									</p:column>
+								</p:row>
+								
+								<p:row>
+									<p:column colspan="3" style="text-align:center;">
+										<div class="section-title" style="text-align:center;">Gene Ontology Terms</div>
+									</p:column>
+								</p:row>
+								<h:form>
+								<p:row>
+									<p:column>
+										<h:outputText value="Enter a GO Term ID or Name: &nbsp;" />
+									</p:column>
+									<p:column>
+										<p:autoComplete value="#{termSearchView.query}"
+											completeMethod="#{termSearchView.complete}" queryDelay="600"
+											minQueryLength="2" forceSelection="true" maxResults="10"
+											label="ID" panelStyleClass="autocomplete-largepanel"
+											emptyMessage="No term suggestions available, please try again."
+											var="term" itemLabel="#{term.goId}" itemValue="#{term.goId}">
+								            <p:column>
+								                <h:outputText value="#{term.goId} - #{term.name}" />
+								            </p:column>
+								            </p:autoComplete>
+									</p:column>
+									<p:column>
+										<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
+									</p:column>
+								</p:row>
+								</h:form>
+								<p:row>
+									<p:column colspan="3">
+										<p:separator/>
+									</p:column>
+								</p:row>
+								
+								<p:row>
+									<p:column colspan="3" style="text-align:center;">
+										<div class="section-title" style="text-align:center;">Enrichment</div>
+									</p:column>
+								</p:row>
+								
+								<p:row>
+									<p:column colspan="3" style="text-align:center;">
+										<p:link value="Explore the stability and reliability of your GO Enrichment hit lists!" outcome="enrichment.xhtml" />
+									</p:column>
+								</p:row>
+									
+									
+									
+								</p:panelGrid>
+								
+								
+								
 							<!-- End of the FUNCTIONALITY CONTENT -->
 						</div>
 					</div>

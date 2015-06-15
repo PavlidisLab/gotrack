@@ -69,6 +69,10 @@ public class GeneOntology {
     public GeneOntology() {
     }
 
+    public Collection<GeneOntologyTerm> getAllTerms() {
+        return termMap.valueCollection();
+    }
+
     public void addTerm( GeneOntologyTerm t ) {
         termMap.put( t.getId(), t );
     }
@@ -95,8 +99,12 @@ public class GeneOntology {
     }
 
     public GeneOntologyTerm getTerm( String goid ) {
-        int id = Integer.parseInt( goid.substring( goid.length() - 7 ) );
-        return termMap.get( id );
+        try {
+            int id = Integer.parseInt( goid.substring( goid.length() - 7 ) );
+            return termMap.get( id );
+        } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
+            return null;
+        }
 
     }
 

@@ -70,6 +70,8 @@ import ubc.pavlab.gotrack.model.table.GeneMatches;
 import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
 
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
 import com.googlecode.concurrenttrees.radix.RadixTree;
@@ -111,9 +113,18 @@ public class Cache implements Serializable {
     private Map<Integer, Map<String, Gene>> speciesToSymbolGenes = new ConcurrentHashMap<>();
 
     // These are used for autocompletion
+    // *********************************
     private Map<Integer, Multimap<String, Gene>> speciesToSecondarySymbolGenes = new ConcurrentHashMap<>();
     // TODO Consider replacing speciesToSymbolGenes with this
     private Map<Integer, RadixTree<Gene>> speciesToRadixGenes = new ConcurrentHashMap<>();
+    // These two together create the (slightly hacky) term autocompletion
+    // private RadixTree<String> radixWords = new ConcurrentRadixTree<String>( new DefaultCharArrayNodeFactory() );
+    // private Map<String, ImmutableSet<GeneOntologyTerm>> wordsToTerm = new ConcurrentHashMap<>();
+    private RadixTree<ImmutableSet<GeneOntologyTerm>> radixTerms = new ConcurrentRadixTree<ImmutableSet<GeneOntologyTerm>>(
+            new DefaultCharArrayNodeFactory() );
+    // *********************************
+
+    private GeneOntology currentOntology;
 
     private Map<String, Accession> primaryAccession = new ConcurrentHashMap<>();
 
@@ -443,11 +454,110 @@ public class Cache implements Serializable {
             speciesToRadixGenes.put( speciesId, rt );
         }
 
+        // Raddix trie for terms
+        if ( !settingsCache.isDryRun() ) {
+            Integer currentGOEdition = currentEditions.get( 7 ).getGoEditionId();
+            currentOntology = ontologies.get( currentGOEdition );
+            Multimap<String, GeneOntologyTerm> wordsToTerms = HashMultimap.create();
+            for ( GeneOntologyTerm t : currentOntology.getAllTerms() ) {
+                String name = t.getName();
+                String[] words = name.split( "\\s" );
+                for ( int i = 0; i < words.length; i++ ) {
+                    String w = words[i];
+                    if ( w.length() > 2 ) {
+                        wordsToTerms.put( w.toUpperCase(), t );
+                        // radixWords.put( w.toUpperCase(), t );
+                    }
+
+                }
+
+            }
+            for ( Entry<String, Collection<GeneOntologyTerm>> entry : wordsToTerms.asMap().entrySet() ) {
+                radixTerms.put( entry.getKey(), ImmutableSet.copyOf( entry.getValue() ) );
+
+            }
+        }
+
         log.info( "Done loading Gene caches for autocompletion..." );
         // ****************************
 
         log.info( "Cache Completed" );
 
+    }
+
+    public List<GeneOntologyTerm> completeTerm( String query, int maxResults, boolean retain ) {
+        if ( query == null || maxResults < 1 ) return Lists.newArrayList();
+        Set<GeneOntologyTerm> results = new HashSet<>();
+        String queryUpper = query.toUpperCase();
+        // Find exact match
+        GeneOntologyTerm t = null;
+        if ( queryUpper.startsWith( "GO:" ) ) {
+            t = currentOntology.getTerm( queryUpper );
+        } else {
+            try {
+                int id = Integer.parseInt( queryUpper );
+                t = currentOntology.getTerm( id );
+            } catch ( NumberFormatException e ) {
+                // pass
+            }
+
+        }
+
+        if ( t != null ) {
+            results.add( t );
+            return new ArrayList<>( results );
+        }
+
+        // split into words
+        String[] words = queryUpper.split( "\\s" );
+
+        for ( String w : words ) {
+            Set<GeneOntologyTerm> currentWordResults = new HashSet<>();
+            // Find prefix matches
+            boolean findSimilarMatches = true;
+            if ( radixTerms != null ) {
+                Iterable<ImmutableSet<GeneOntologyTerm>> gs = radixTerms.getValuesForKeysStartingWith( w );
+                if ( gs.iterator().hasNext() ) {
+                    // If prefix matches were found, do not return similar matches
+                    findSimilarMatches = false;
+                }
+                for ( Iterator<ImmutableSet<GeneOntologyTerm>> iterator = gs.iterator(); iterator.hasNext(); ) {
+                    ImmutableSet<GeneOntologyTerm> terms = iterator.next();
+                    for ( GeneOntologyTerm term : terms ) {
+                        currentWordResults.add( term );
+                    }
+
+                }
+
+                // Find similar matches
+                if ( retain || findSimilarMatches ) {
+                    gs = radixTerms.getValuesForClosestKeys( w );
+                    for ( Iterator<ImmutableSet<GeneOntologyTerm>> iterator = gs.iterator(); iterator.hasNext(); ) {
+                        ImmutableSet<GeneOntologyTerm> terms = iterator.next();
+                        for ( GeneOntologyTerm term : terms ) {
+                            currentWordResults.add( term );
+                        }
+                    }
+                }
+
+                if ( !retain || results.isEmpty() ) {
+                    results.addAll( currentWordResults );
+                } else if ( retain && !currentWordResults.isEmpty() ) {
+                    results.retainAll( currentWordResults );
+                }
+
+            }
+        }
+
+        List<GeneOntologyTerm> p = new ArrayList<>( results );
+        Collections.sort( p, new LevenshteinComparator( query ) );
+
+        if ( p.size() > maxResults ) {
+            // If there are more than maxResults, remove the excess range
+            p.subList( maxResults, p.size() ).clear();
+        }
+
+        return p;
     }
 
     public List<GeneMatches> complete( String query, Integer species, Integer maxResults ) {
@@ -524,75 +634,6 @@ public class Cache implements Serializable {
         }
 
         return results;
-    }
-
-    @Deprecated
-    public List<String> completeBruteForce( String query, Integer species, Integer maxResults ) {
-
-        if ( query == null ) return new ArrayList<String>();
-        String queryUpper = query.toUpperCase();
-        Collection<String> exact = new HashSet<String>();
-        Collection<String> exactSynonym = new HashSet<String>();
-        Collection<String> possible = new HashSet<String>();
-        // Map<GOTerm, Long> results = new HashMap<GOTerm, Long>();
-        // log.info( "search: " + queryString );
-        // Map<String, Accession> gs = currrentAccessions.get( species );
-        Map<String, Gene> gs = speciesToSymbolGenes.get( species );
-
-        if ( gs != null ) {
-
-            for ( Gene gene : gs.values() ) {
-                if ( queryUpper.equals( gene.getSymbol().toUpperCase() ) ) {
-                    exact.add( gene.getSymbol() );
-                    continue;
-                }
-
-                Set<String> synonyms = gene.getSynonyms();
-
-                for ( String symbol : synonyms ) {
-                    if ( queryUpper.equals( symbol.toUpperCase() ) ) {
-                        exactSynonym.add( gene.getSymbol() );
-                        continue;
-                    }
-                }
-
-                String pattern = "(.*)" + queryUpper + "(.*)";
-                // Pattern r = Pattern.compile(pattern);
-                String m = gene.getSymbol().toUpperCase();
-                // Matcher m = r.matcher( term.getTerm() );
-                if ( m.matches( pattern ) ) {
-                    possible.add( gene.getSymbol() );
-                    continue;
-                }
-
-            }
-
-        }
-
-        log.debug( "Found " + ( exact.size() + exactSynonym.size() + possible.size() ) + " matches." );
-
-        List<String> orderedResults = new ArrayList<>();
-
-        orderedResults.addAll( exact );
-        orderedResults.addAll( exactSynonym );
-
-        if ( maxResults != null && orderedResults.size() >= maxResults ) {
-            // Return early for performance reasons if enough results have been obtained
-            return orderedResults;
-        }
-
-        ArrayList<String> p = new ArrayList<String>( possible );
-        Collections.sort( p, new LevenshteinComparator( query ) );
-
-        orderedResults.addAll( p );
-
-        if ( maxResults != null && orderedResults.size() > maxResults ) {
-            // If there are more than maxResults, remove the excess range
-            orderedResults.subList( maxResults, orderedResults.size() ).clear();
-        }
-
-        return orderedResults;
-
     }
 
     public Collection<Species> getSpeciesList() {
@@ -837,7 +878,7 @@ public class Cache implements Serializable {
 
 }
 
-class LevenshteinComparator implements Comparator<String> {
+class LevenshteinComparator implements Comparator<GeneOntologyTerm> {
 
     private String compareTo;
 
@@ -847,9 +888,9 @@ class LevenshteinComparator implements Comparator<String> {
     }
 
     @Override
-    public int compare( String a, String b ) {
-        int d1 = StringUtils.getLevenshteinDistance( a, compareTo );
-        int d2 = StringUtils.getLevenshteinDistance( b, compareTo );
+    public int compare( GeneOntologyTerm a, GeneOntologyTerm b ) {
+        int d1 = StringUtils.getLevenshteinDistance( a.getName(), compareTo );
+        int d2 = StringUtils.getLevenshteinDistance( b.getName(), compareTo );
         return d1 < d2 ? -1 : d1 == d2 ? 0 : 1;
     }
 }

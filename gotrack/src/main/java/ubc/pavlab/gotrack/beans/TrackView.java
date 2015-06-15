@@ -1026,7 +1026,7 @@ public class TrackView {
         orderedResults.addAll( exact );
 
         ArrayList<String> p = new ArrayList<String>( possible );
-        Collections.sort( p, new LevenshteinComparator( query ) );
+        // Collections.sort( p, new LevenshteinComparator( query ) );
 
         orderedResults.addAll( p );
         return orderedResults;

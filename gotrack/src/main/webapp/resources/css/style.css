@@ -77,7 +77,7 @@ a.more:hover {color: #234;}
 
 /* Text elements */
 
-p {margin-bottom: 1em;line-height:1.5;}
+p {margin-bottom: 0.5em;line-height:1.5;}
 
 
 abbr, acronym {border-bottom: 1px dotted #666;}
@@ -733,4 +733,8 @@ div.simpleCarousel .ui-carousel-header{
 	padding:5px;
 	border-color: #e1e1e1;
 	
+}
+
+div.autocomplete-largepanel {
+	width: 500px !important
 }
