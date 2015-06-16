@@ -112,3 +112,8 @@ button.icon-only {
 .left, .alignleft {
 	float: left;
 }
+
+#top {
+	border:0;
+	padding:0;
+}

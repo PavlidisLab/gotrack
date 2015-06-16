@@ -65,6 +65,7 @@ public class GeneSearchView implements Serializable {
                 / 1000000 + " MB" );
     }
 
+    @Deprecated
     public void validateQuery( ComponentSystemEvent event ) {
 
         FacesContext fc = FacesContext.getCurrentInstance();
@@ -116,6 +117,9 @@ public class GeneSearchView implements Serializable {
     }
 
     public String go() {
+        if ( !cache.currentSymbolExists( speciesId, query ) ) {
+            return null;
+        }
         // return "track?faces-redirect=true&includeViewParams=true";
         return "track?faces-redirect=true&query=" + query + "&speciesId=" + speciesId;
     }

@@ -36,6 +36,7 @@ import ubc.pavlab.gotrack.model.dto.AggregateDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
+import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
 
@@ -55,15 +56,13 @@ public class CacheDAOImpl implements CacheDAO {
             + "from (select species_id, edition, edition.date, go_edition.date as go_date, edition.go_edition_id_fk "
             + "from edition INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id order by edition DESC) "
             + "as temp group by species_id";
-    private static final String SQL_ALL_EDITIONS = "select species_id, edition, edition.date, go_edition.date as go_date, go_edition_id_fk "
-            + "from edition left join go_edition on edition.go_edition_id_fk=go_edition.id order by edition";
-    private static final String SQL_ALL_EDITIONS_RESTRICT = "select species_id, edition, edition.date, go_edition.date as go_date, go_edition_id_fk "
-            + "from edition left join go_edition on edition.go_edition_id_fk=go_edition.id WHERE edition.species_id in (%s) order by edition";
+    private static final String SQL_ALL_EDITIONS = "select species_id, edition, edition.date, go_edition_id_fk from edition order by edition";
+    private static final String SQL_ALL_EDITIONS_RESTRICT = "select species_id, edition, edition.date, go_edition_id_fk from edition WHERE edition.species_id in (%s) order by edition";
     private static final String SQL_ALL_GO_SIZES = "select species_id, edition, go_id, annotation_count from goa_go_aggregate";
     private static final String SQL_ALL_GO_SIZES_RESTRICT = "select species_id, edition, go_id, annotation_count from goa_go_aggregate WHERE species_id in (%s)";
     private static final String SQL_AGGREGATE = "select aggregate.species_id, aggregate.edition, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate";
     private static final String SQL_AGGREGATE_RESTRICT = "select aggregate.species_id, aggregate.edition, avg_directs_by_gene, count_genes, avg_directs_by_accession, count_accessions from aggregate WHERE aggregate.species_id in (%s)";
-    private static final String SQL_GO_EDITIONS = "SELECT distinct id from go_edition";
+    private static final String SQL_ALL_GO_EDITIONS = "SELECT id, date from go_edition";
 
     private static final String SQL_ACCESSIONS = "select distinct accession, sec, acindex.symbol IS NOT NULL as sp from current_genes left join acindex using (accession) LEFT JOIN sec_ac on accession=ac";
     private static final String SQL_ACCESSIONS_RESTRICT = "select distinct accession, sec, acindex.symbol IS NOT NULL as sp from current_genes left join acindex using (accession) LEFT JOIN sec_ac on accession=ac WHERE species_id in (%s)";
@@ -140,6 +139,35 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
+    public List<GOEditionDTO> getAllGOEditions() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        List<GOEditionDTO> results = new ArrayList<>();
+
+        String sql = SQL_ALL_GO_EDITIONS;
+
+        log.debug( sql );
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( sql );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+
+            while ( resultSet.next() ) {
+                results.add( new GOEditionDTO( resultSet.getInt( "id" ), resultSet.getDate( "date" ) ) );
+
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
     public List<EditionDTO> getAllEditions( int[] speciesRestrictions ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
@@ -165,7 +193,7 @@ public class CacheDAOImpl implements CacheDAO {
 
             while ( resultSet.next() ) {
                 results.add( new EditionDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ), resultSet
-                        .getDate( "date" ), resultSet.getDate( "go_date" ), resultSet.getInt( "go_edition_id_fk" ) ) );
+                        .getDate( "date" ), resultSet.getInt( "go_edition_id_fk" ) ) );
 
             }
         } catch ( SQLException e ) {

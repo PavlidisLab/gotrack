@@ -53,13 +53,15 @@ public class TermSearchView implements Serializable {
     private Cache cache;
 
     public TermSearchView() {
-        log.debug( "TermSearchView created" );
-        log.debug( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
+        log.info( "TermSearchView created" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
                 / 1000000 + " MB" );
     }
 
     public String go() {
-        // return "track?faces-redirect=true&includeViewParams=true";
+        if ( !cache.termExists( query ) ) {
+            return null;
+        }
         return "trends?faces-redirect=true&query=" + query;
     }
 
@@ -72,7 +74,6 @@ public class TermSearchView implements Serializable {
     }
 
     public List<GeneOntologyTerm> complete( String query ) {
-
         return cache.completeTerm( query, MAX_RESULTS, true );
 
     }

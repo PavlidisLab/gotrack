@@ -27,6 +27,7 @@ import ubc.pavlab.gotrack.model.dto.AggregateDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
+import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
 
@@ -57,5 +58,7 @@ public interface CacheDAO {
     public List<EvidenceDTO> getEvidence() throws DAOException;
 
     public List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException;
+
+    public List<GOEditionDTO> getAllGOEditions() throws DAOException;
 
 }

@@ -1,7 +1,7 @@
 /*
  * The gotrack project
  * 
- * Copyright (c) 2014 University of British Columbia
+ * Copyright (c) 2015 University of British Columbia
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,27 +21,22 @@ package ubc.pavlab.gotrack.model;
 
 import java.sql.Date;
 
-import ubc.pavlab.gotrack.model.dto.EditionDTO;
+import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 
 /**
- * Immutable representation of an edition of gene annotations
+ * TODO Document Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-public class Edition implements Comparable<Edition> {
+public final class GOEdition implements Comparable<GOEdition> {
 
     private final Integer edition;
     private final Date date;
-    private final GOEdition goEdition;
 
-    /**
-     * 
-     */
-    public Edition( EditionDTO dto, GOEdition goEdition ) {
+    public GOEdition( GOEditionDTO dto ) {
         this.edition = dto.getEdition();
         this.date = dto.getDate();
-        this.goEdition = goEdition;
     }
 
     public Integer getEdition() {
@@ -50,24 +45,6 @@ public class Edition implements Comparable<Edition> {
 
     public Date getDate() {
         return date;
-    }
-
-    public Date getGoDate() {
-        return goEdition.getDate();
-    }
-
-    public Integer getGoEditionId() {
-        return goEdition.getEdition();
-    }
-
-    public GOEdition getGoEdition() {
-        return goEdition;
-    }
-
-    @Override
-    public String toString() {
-        return "Edition [edition=" + edition + ", date=" + date + ", goDate=" + goEdition.getDate() + ", goEditionId="
-                + goEdition.getEdition() + "]";
     }
 
     @Override
@@ -83,7 +60,7 @@ public class Edition implements Comparable<Edition> {
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        Edition other = ( Edition ) obj;
+        GOEdition other = ( GOEdition ) obj;
         if ( edition == null ) {
             if ( other.edition != null ) return false;
         } else if ( !edition.equals( other.edition ) ) return false;
@@ -91,8 +68,14 @@ public class Edition implements Comparable<Edition> {
     }
 
     @Override
-    public int compareTo( Edition o ) {
-        return this.getEdition().compareTo( o.getEdition() );
+    public String toString() {
+        return "GOEdition [edition=" + edition + ", date=" + date + "]";
+    }
+
+    @Override
+    public int compareTo( GOEdition o ) {
+        // TODO Auto-generated method stub
+        return this.date.compareTo( o.getDate() );
     }
 
 }

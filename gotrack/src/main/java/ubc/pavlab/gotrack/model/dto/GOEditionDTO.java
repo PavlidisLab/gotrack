@@ -27,22 +27,14 @@ import java.sql.Date;
  * @author mjacobson
  * @version $Id$
  */
-public final class EditionDTO {
-    private final Integer species;
+public final class GOEditionDTO {
     private final Integer edition;
     private final Date date;
-    private final Integer goEditionId;
 
-    public EditionDTO( Integer species, Integer edition, Date date, Integer goEditionId ) {
+    public GOEditionDTO( Integer edition, Date date ) {
         super();
-        this.species = species;
         this.edition = edition;
         this.date = date;
-        this.goEditionId = goEditionId;
-    }
-
-    public Integer getSpecies() {
-        return species;
     }
 
     public Integer getEdition() {
@@ -53,7 +45,4 @@ public final class EditionDTO {
         return date;
     }
 
-    public Integer getGoEditionId() {
-        return goEditionId;
-    }
 }

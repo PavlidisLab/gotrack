@@ -52,6 +52,7 @@ import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Evidence;
 import ubc.pavlab.gotrack.model.EvidenceReference;
+import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.StatsEntry;
@@ -61,6 +62,7 @@ import ubc.pavlab.gotrack.model.dto.AggregateDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
+import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntology;
@@ -110,6 +112,8 @@ public class Cache implements Serializable {
     private Map<Integer, Species> speciesCache = new ConcurrentHashMap<>();
     private Map<Integer, Edition> currentEditions = new ConcurrentHashMap<>();
     private Map<Integer, Map<Integer, Edition>> allEditions = new ConcurrentHashMap<>();
+    private Map<Integer, GOEdition> allGOEditions = new ConcurrentHashMap<>();
+    private GOEdition currentGOEdition;
     private Map<Integer, Map<String, Gene>> speciesToSymbolGenes = new ConcurrentHashMap<>();
 
     // These are used for autocompletion
@@ -133,7 +137,7 @@ public class Cache implements Serializable {
     // Map<species, Map<edition, Map<go_id, count>>>
     private Map<MultiKey, Integer> goSetSizes = new ConcurrentHashMap<>();
 
-    private Map<Integer, GeneOntology> ontologies = new ConcurrentHashMap<>();
+    private Map<GOEdition, GeneOntology> ontologies = new ConcurrentHashMap<>();
 
     // Static
     private Map<String, Evidence> evidenceCache = new ConcurrentHashMap<>();
@@ -207,6 +211,16 @@ public class Cache implements Serializable {
         CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
         log.info( "CacheDAO successfully obtained: " + cacheDAO );
 
+        // GOEdition Cache creation
+        // ****************************
+        for ( GOEditionDTO dto : cacheDAO.getAllGOEditions() ) {
+            allGOEditions.put( dto.getEdition(), new GOEdition( dto ) );
+        }
+
+        currentGOEdition = Collections.max( allGOEditions.values() );
+
+        // ****************************
+
         // Edition Cache creation
         // ****************************
 
@@ -218,7 +232,9 @@ public class Cache implements Serializable {
                 allEditions.put( dto.getSpecies(), m );
             }
 
-            Edition ed = new Edition( dto );
+            GOEdition goEdition = allGOEditions.get( dto.getGoEditionId() );
+
+            Edition ed = new Edition( dto, goEdition );
             m.put( dto.getEdition(), ed );
             // Since getAllEditions is ordered by edition the final put will always be the most current
             currentEditions.put( dto.getSpecies(), ed );
@@ -243,18 +259,30 @@ public class Cache implements Serializable {
         // ****************************
         if ( !settingsCache.isDryRun() ) {
             for ( GOTermDTO dto : cacheDAO.getGoTerms() ) {
-                GeneOntology go = ontologies.get( dto.getGoEdition() );
+
+                GOEdition goEdition = allGOEditions.get( dto.getGoEdition() );
+
+                if ( goEdition == null ) {
+                    log.error( "Cannot find GO Edition for: " + dto.getGoEdition() );
+                }
+
+                GeneOntology go = ontologies.get( goEdition );
 
                 if ( go == null ) {
-                    go = new GeneOntology();
-                    ontologies.put( dto.getGoEdition(), go );
+                    go = new GeneOntology( goEdition );
+                    ontologies.put( goEdition, go );
                 }
                 go.addTerm( new GeneOntologyTerm( dto ) );
             }
             log.info( "GO Terms fetched" );
 
             for ( AdjacencyDTO dto : cacheDAO.getAdjacencies() ) {
-                GeneOntology go = ontologies.get( dto.getGoEdition() );
+                GOEdition goEdition = allGOEditions.get( dto.getGoEdition() );
+
+                if ( goEdition == null ) {
+                    log.error( "Cannot find GO Edition for: " + dto.getGoEdition() );
+                }
+                GeneOntology go = ontologies.get( goEdition );
                 go.addRelationship( dto.getChild(), dto.getParent(), RelationshipType.valueOf( dto.getType() ) );
             }
             log.info( "GO Adjacencies fetched" );
@@ -456,7 +484,6 @@ public class Cache implements Serializable {
 
         // Raddix trie for terms
         if ( !settingsCache.isDryRun() ) {
-            Integer currentGOEdition = currentEditions.get( 7 ).getGoEditionId();
             currentOntology = ontologies.get( currentGOEdition );
             Multimap<String, GeneOntologyTerm> wordsToTerms = HashMultimap.create();
             for ( GeneOntologyTerm t : currentOntology.getAllTerms() ) {
@@ -682,12 +709,23 @@ public class Cache implements Serializable {
     }
 
     public Map<Edition, StatsEntry> getAggregates( Integer speciesId ) {
+        if ( speciesId == null ) return null;
         Map<Edition, StatsEntry> tmp = aggregates.get( speciesId );
         if ( tmp != null ) {
             return Collections.unmodifiableMap( tmp );
         } else {
             return null;
         }
+
+    }
+
+    public StatsEntry getAggregates( Integer speciesId, Edition ed ) {
+        if ( speciesId == null || ed == null ) return null;
+        Map<Edition, StatsEntry> tmp = aggregates.get( speciesId );
+        if ( tmp != null ) {
+            return tmp.get( ed );
+        }
+        return null;
 
     }
 
@@ -768,7 +806,7 @@ public class Cache implements Serializable {
         if ( goAnnotations == null || ed == null ) {
             return null;
         }
-        GeneOntology o = ontologies.get( ed.getGoEditionId() );
+        GeneOntology o = ontologies.get( ed.getGoEdition() );
         if ( o != null ) {
             return o.propagate( goAnnotations );
         }
@@ -779,7 +817,7 @@ public class Cache implements Serializable {
         if ( terms == null || ed == null ) {
             return null;
         }
-        GeneOntology o = ontologies.get( ed.getGoEditionId() );
+        GeneOntology o = ontologies.get( ed.getGoEdition() );
         if ( o != null ) {
             return o.propagate( terms );
         }
@@ -793,26 +831,8 @@ public class Cache implements Serializable {
     //
     // }
 
-    public GeneOntologyTerm getTerm( Edition ed, Integer id ) {
-        if ( id == null || ed == null ) {
-            return null;
-        }
-        GeneOntology o = ontologies.get( ed.getGoEditionId() );
-        if ( o != null ) {
-            return o.getTerm( id );
-        }
-        return null;
-    }
-
-    public GeneOntologyTerm getTerm( Edition ed, String goId ) {
-        if ( goId == null || ed == null ) {
-            return null;
-        }
-        GeneOntology o = ontologies.get( ed.getGoEditionId() );
-        if ( o != null ) {
-            return o.getTerm( goId );
-        }
-        return null;
+    public GOEdition getCurrentGOEdition() {
+        return currentGOEdition;
     }
 
     // cache retrieval getters
@@ -832,6 +852,61 @@ public class Cache implements Serializable {
         if ( id == null ) return null;
         return speciesCache.get( id );
 
+    }
+
+    public GeneOntologyTerm getTerm( Edition ed, Integer id ) {
+        if ( id == null || ed == null ) {
+            return null;
+        }
+        GeneOntology o = ontologies.get( ed.getGoEdition() );
+        if ( o != null ) {
+            return o.getTerm( id );
+        }
+        return null;
+    }
+
+    public GeneOntologyTerm getTerm( Edition ed, String goId ) {
+        if ( goId == null || ed == null ) {
+            return null;
+        }
+        GeneOntology o = ontologies.get( ed.getGoEdition() );
+        if ( o != null ) {
+            return o.getTerm( goId );
+        }
+        return null;
+    }
+
+    public Map<GOEdition, GeneOntologyTerm> getTerm( String goId ) {
+        if ( goId == null ) {
+            return null;
+        }
+
+        Map<GOEdition, GeneOntologyTerm> termsMap = new HashMap<>();
+
+        for ( Entry<GOEdition, GeneOntology> entry : ontologies.entrySet() ) {
+            GeneOntologyTerm term = entry.getValue().getTerm( goId );
+            // yes we want null values
+            termsMap.put( entry.getKey(), term );
+
+        }
+
+        return termsMap;
+    }
+
+    public boolean termExists( String goId ) {
+        if ( goId == null ) {
+            return false;
+        }
+
+        for ( Entry<GOEdition, GeneOntology> entry : ontologies.entrySet() ) {
+            GeneOntologyTerm term = entry.getValue().getTerm( goId );
+            if ( term != null ) {
+                return true;
+            }
+
+        }
+
+        return false;
     }
 
     // Application Level Caching get/set

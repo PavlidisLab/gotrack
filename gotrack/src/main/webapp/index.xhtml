@@ -125,7 +125,7 @@
 								
 								<p:panelGrid style="border:none;margin:0 auto;">
 								<h:form>
-								<f:event listener="#{geneSearchView.validateQuery}" type="postValidate" />
+								
 								
 								<p:row>
 									<p:column colspan="3" style="text-align:center;">
@@ -163,7 +163,7 @@
 											groupBy="#{gene.type.label}"/>
 									</p:column>
 								</p:row>
-								</h:form>
+								
 								<p:row>
 									<p:column colspan="3">
 										<p:separator/>
@@ -175,7 +175,7 @@
 										<div class="section-title" style="text-align:center;">Gene Ontology Terms</div>
 									</p:column>
 								</p:row>
-								<h:form>
+								
 								<p:row>
 									<p:column>
 										<h:outputText value="Enter a GO Term ID or Name: &nbsp;" />
@@ -193,7 +193,7 @@
 								            </p:autoComplete>
 									</p:column>
 									<p:column>
-										<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
+										<p:commandButton type="submit" value="Continue" action="#{termSearchView.go}"/>
 									</p:column>
 								</p:row>
 								</h:form>

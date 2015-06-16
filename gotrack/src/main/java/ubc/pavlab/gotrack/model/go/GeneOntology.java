@@ -32,6 +32,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.EvidenceReference;
+import ubc.pavlab.gotrack.model.GOEdition;
 
 /**
  * Memory efficient Directed Acyclic Graph representing a Gene Ontology Structure
@@ -42,6 +43,8 @@ import ubc.pavlab.gotrack.model.EvidenceReference;
 public class GeneOntology {
 
     private static final Logger log = Logger.getLogger( GeneOntology.class );
+
+    private final GOEdition edition;
 
     private TIntObjectHashMap<GeneOntologyTerm> termMap = new TIntObjectHashMap<>();
 
@@ -66,7 +69,8 @@ public class GeneOntology {
     // log.info( "hitCount: " + s.hitCount() );
     // }
 
-    public GeneOntology() {
+    public GeneOntology( GOEdition edition ) {
+        this.edition = edition;
     }
 
     public Collection<GeneOntologyTerm> getAllTerms() {
@@ -221,7 +225,9 @@ public class GeneOntology {
 
         }
 
-        cache.put( t, ancestors );
+        if ( cache != null ) {
+            cache.put( t, ancestors );
+        }
 
         return ancestors;
 
@@ -250,6 +256,10 @@ public class GeneOntology {
 
         }
 
+    }
+
+    public GOEdition getEdition() {
+        return edition;
     }
 
     // private ImmutableCollection<GeneOntologyTerm> getParents2( GeneOntologyTerm t ) {

@@ -313,7 +313,9 @@ function handleEnrichmentComplete(xhr, status, args) {
    
    //This will fail the first time around since the tabs in tab view are dynamic. This means
    // that the container for the chart does not yet exist. We will create the chart on tab switch.
-   //HC.charts.similarity.recreate(options);
+   if ($('#hc_similarity_container').length != 0) {
+      HC.charts.similarity.recreate(options);
+   }
    //PF('tableEnrichmentWdg').filter()
    }
 
