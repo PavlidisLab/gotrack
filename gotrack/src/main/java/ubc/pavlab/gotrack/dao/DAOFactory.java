@@ -152,14 +152,10 @@ public abstract class DAOFactory {
     // DAO implementation getters -----------------------------------------------------------------
 
     /**
-     * Returns the User DAO associated with the current DAOFactory.
+     * Returns the Species DAO associated with the current DAOFactory.
      * 
-     * @return The User DAO associated with the current DAOFactory.
+     * @return The Species DAO associated with the current DAOFactory.
      */
-    public UserDAO getUserDAO() {
-        return new UserDAOImpl( this );
-    }
-
     public SpeciesDAO getSpeciesDAO() {
         return new SpeciesDAOImpl( this );
     }
@@ -170,6 +166,10 @@ public abstract class DAOFactory {
 
     public AnnotationDAO getAnnotationDAO() {
         return new AnnotationDAOImpl( this );
+    }
+
+    public StatsDAO getStatsDAO() {
+        return new StatsDAOImpl( this );
     }
 
     // You can add more DAO implementation getters here.

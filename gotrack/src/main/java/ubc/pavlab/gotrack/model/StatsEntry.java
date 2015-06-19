@@ -19,34 +19,50 @@
 
 package ubc.pavlab.gotrack.model;
 
+import ubc.pavlab.gotrack.model.dto.AggregateDTO;
+
 /**
  * TODO Immutable entry of aggregate table
  * 
  * @author mjacobson
  * @version $Id$
  */
-public class StatsEntry {
+public final class StatsEntry {
 
-    private final Integer uniqueAccesions;
-    private final Double averageDirects;
+    private final Integer accessionCount;
+    private final Double avgDirectByAccession;
 
-    public StatsEntry( Integer uniqueAccesions, Double averageDirects ) {
+    private final Integer geneCount;
+    private final Double avgDirectByGene;
+
+    public StatsEntry( AggregateDTO dto ) {
         super();
-        this.uniqueAccesions = uniqueAccesions;
-        this.averageDirects = averageDirects;
+        this.accessionCount = dto.getAccessionCount();
+        this.avgDirectByAccession = dto.getAccessionAverage();
+        this.geneCount = dto.getGeneCount();
+        this.avgDirectByGene = dto.getGeneAverage();
     }
 
-    public Integer getUniqueAccesions() {
-        return uniqueAccesions;
+    public Integer getAccessionCount() {
+        return accessionCount;
     }
 
-    public Double getAverageDirects() {
-        return averageDirects;
+    public Double getAvgDirectByAccession() {
+        return avgDirectByAccession;
+    }
+
+    public Integer getGeneCount() {
+        return geneCount;
+    }
+
+    public Double getAvgDirectByGene() {
+        return avgDirectByGene;
     }
 
     @Override
     public String toString() {
-        return "StatsEntry [uniqueAccesions=" + uniqueAccesions + ", averageDirects=" + averageDirects + "]";
+        return "StatsEntry [accessionCount=" + accessionCount + ", avgDirectByAccession=" + avgDirectByAccession
+                + ", geneCount=" + geneCount + ", avgDirectByGene=" + avgDirectByGene + "]";
     }
 
 }

@@ -20,7 +20,8 @@
 package ubc.pavlab.gotrack.model;
 
 import java.util.Collection;
-import java.util.HashSet;
+
+import com.google.common.collect.ImmutableSet;
 
 /**
  * TODO Document Me
@@ -28,60 +29,46 @@ import java.util.HashSet;
  * @author mjacobson
  * @version $Id$
  */
-public class Accession {
+public final class Accession {
 
-    private String accession;
-    private String symbol;
-    private Collection<String> secondary = new HashSet<String>();
+    private final String accession;
+    private final Dataset dataset;
+    private final Collection<String> secondary;
 
-    /**
-     * 
-     */
-    public Accession() {
-    }
-
+    // TODO this should be removed but it is necessary atm
     public Accession( String accession ) {
         super();
         this.accession = accession;
+        this.dataset = null;
+        this.secondary = null;
     }
 
-    public Accession( String accession, String symbol ) {
+    public Accession( String accession, boolean sp, Collection<String> secondary ) {
         super();
         this.accession = accession;
-        this.symbol = symbol;
+        if ( sp ) {
+            this.dataset = Dataset.SwissProt;
+        } else {
+            this.dataset = Dataset.TrEMBL;
+        }
+        this.secondary = ImmutableSet.copyOf( secondary );
     }
 
     public String getAccession() {
         return accession;
     }
 
-    public void setAccession( String accession ) {
-        this.accession = accession;
-    }
-
-    public String getSymbol() {
-        return symbol;
-    }
-
-    public void setSymbol( String symbol ) {
-        this.symbol = symbol;
-    }
-
     public Collection<String> getSecondary() {
         return secondary;
     }
 
-    public void setSecondary( Collection<String> secondary ) {
-        this.secondary = secondary;
-    }
-
-    public boolean addSecondary( String secondary ) {
-        return this.secondary.add( secondary );
+    public Dataset getDataset() {
+        return dataset;
     }
 
     @Override
     public String toString() {
-        return "GeneSymbol [accession=" + accession + ", symbol=" + symbol + "]";
+        return accession;
     }
 
     @Override

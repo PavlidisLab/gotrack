@@ -19,93 +19,55 @@
 
 package ubc.pavlab.gotrack.model;
 
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.commons.lang3.StringUtils;
+import com.google.common.collect.ImmutableSet;
 
 /**
- * TODO Document Me
- * 
  * @author mjacobson
  * @version $Id$
  */
-public class Gene {
+public final class Gene {
 
-    String symbol;
-    Set<Accession> accessions = new HashSet<>();
-    Set<String> synonyms = new HashSet<>();
+    private final String symbol;
+    private final Species species;
+    private final Set<Accession> accessions;
+    private final Set<String> synonyms;
 
-    public Gene() {
-        super();
-    }
-
-    public Gene( String symbol ) {
+    public Gene( String symbol, Species species, Set<Accession> accessions, Set<String> synonyms ) {
         super();
         this.symbol = symbol;
-    }
-
-    public Gene( String symbol, Set<Accession> accessions, Set<String> synonyms ) {
-        super();
-        this.symbol = symbol;
-        this.accessions = accessions;
-        this.synonyms = synonyms;
-    }
-
-    public String viewSynonyms() {
-        return StringUtils.join( synonyms, "|" );
-    }
-
-    public String viewAccessions() {
-        String result = null;
-        if ( accessions != null ) {
-            StringBuilder sb = new StringBuilder();
-            Iterator<Accession> it = accessions.iterator();
-            if ( it.hasNext() ) {
-                sb.append( it.next().getAccession() );
-            }
-            while ( it.hasNext() ) {
-                sb.append( "|" ).append( it.next().getAccession() );
-            }
-            result = sb.toString();
-        }
-        return result;
+        this.species = species;
+        this.accessions = ImmutableSet.copyOf( accessions );
+        this.synonyms = ImmutableSet.copyOf( synonyms );
     }
 
     public String getSymbol() {
         return symbol;
     }
 
-    public void setSymbol( String symbol ) {
-        this.symbol = symbol;
-    }
-
     public Set<Accession> getAccessions() {
         return accessions;
-    }
-
-    public void setAccessions( Set<Accession> accessions ) {
-        this.accessions = accessions;
     }
 
     public Set<String> getSynonyms() {
         return synonyms;
     }
 
-    public void setSynonyms( Set<String> synonyms ) {
-        this.synonyms = synonyms;
+    public Species getSpecies() {
+        return species;
     }
 
     @Override
     public String toString() {
-        return "Gene [symbol=" + symbol + ", accessions=" + accessions + ", synonyms=" + synonyms + "]";
+        return "Gene [symbol=" + symbol + ", species=" + species.getCommonName() + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
+        result = prime * result + ( ( species == null ) ? 0 : species.hashCode() );
         result = prime * result + ( ( symbol == null ) ? 0 : symbol.hashCode() );
         return result;
     }
@@ -116,6 +78,9 @@ public class Gene {
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
         Gene other = ( Gene ) obj;
+        if ( species == null ) {
+            if ( other.species != null ) return false;
+        } else if ( !species.equals( other.species ) ) return false;
         if ( symbol == null ) {
             if ( other.symbol != null ) return false;
         } else if ( !symbol.equals( other.symbol ) ) return false;

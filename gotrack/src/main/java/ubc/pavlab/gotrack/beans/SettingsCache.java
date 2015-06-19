@@ -30,6 +30,7 @@ import javax.annotation.PostConstruct;
 import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 /**
@@ -50,7 +51,14 @@ public class SettingsCache implements Serializable {
 
     private static final String PROPERTIES_FILE = "/usr/local/tomcat/gotrack.properties";
 
+    private static final String SPECIES_RESTRICTIONS_PROPERTY = "gotrack.speciesRestrictions";
+    private static final String UPDATE_POP_TABLE = "gotrack.updatePopularTable";
+    private static final String DRY_RUN = "gotrack.dryRun";
+
     private Properties prop = new Properties();
+
+    // Individual settings caches
+    private int[] speciesRestrictions = null;
 
     @PostConstruct
     public void init() {
@@ -91,6 +99,33 @@ public class SettingsCache implements Serializable {
 
     public String getProperty( String key ) {
         return prop.getProperty( key );
+    }
+
+    public int[] getSpeciesRestrictions() {
+        if ( speciesRestrictions == null ) {
+            String sr = prop.getProperty( SPECIES_RESTRICTIONS_PROPERTY );
+            if ( StringUtils.isBlank( sr ) ) {
+                speciesRestrictions = new int[] {};
+            } else {
+                String[] tokens = sr.split( "," );
+                speciesRestrictions = new int[tokens.length];
+                for ( int i = 0; i < tokens.length; i++ ) {
+                    speciesRestrictions[i] = Integer.parseInt( tokens[i] );
+                }
+            }
+        }
+
+        return speciesRestrictions;
+    }
+
+    public boolean isPopularTableUpdateable() {
+        String r = prop.getProperty( UPDATE_POP_TABLE );
+        return r != null && r.equals( "true" );
+    }
+
+    public boolean isDryRun() {
+        String r = prop.getProperty( DRY_RUN );
+        return r != null && r.equals( "true" );
     }
 
     public boolean contains( String key ) {

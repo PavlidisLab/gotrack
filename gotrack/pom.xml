@@ -106,11 +106,6 @@
 		
 		<dependency>
 			<groupId>org.primefaces.themes</groupId>
-			<artifactId>redmond</artifactId>
-			<version>1.0.10</version>
-		</dependency>
-		<dependency>
-			<groupId>org.primefaces.themes</groupId>
 			<artifactId>bluesky</artifactId>
 			<version>1.0.10</version>
 		</dependency>
@@ -120,15 +115,25 @@
 			<version>1.0.10</version>
 		</dependency>
 		<dependency>
-			<groupId>org.primefaces.themes</groupId>
-			<artifactId>sam</artifactId>
-			<version>1.0.10</version>
-		</dependency>
-		<dependency>
 			<groupId>org.primefaces.extensions</groupId>
 			<artifactId>primefaces-extensions</artifactId>
 			<version>3.0.0</version>
 		</dependency>
+		
+		<!-- PDF Exporting -->
+		<dependency>
+			<groupId>com.lowagie</groupId>
+			<artifactId>itext</artifactId>
+			<version>4.2.1</version>
+		</dependency>
+
+		<!-- XLS Exporting -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi</artifactId>
+			<version>3.11</version>
+		</dependency>
+
 
 		
 		<!-- Omnifaces -->
@@ -228,7 +233,20 @@
 			<version>0.3m</version>
 		</dependency>
 		
-        
+		<!-- dom4j Dependency -->
+		
+        <dependency>
+			<groupId>jaxen</groupId>
+			<artifactId>jaxen</artifactId>
+			<version>1.1.6</version>
+		</dependency>
+		
+		<!-- google concurrent-trees -->
+        <dependency>
+		    <groupId>com.googlecode.concurrent-trees</groupId>
+		    <artifactId>concurrent-trees</artifactId>
+		    <version>2.4.0</version>
+		</dependency>
 
 	</dependencies>
 

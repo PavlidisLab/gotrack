@@ -1,6 +1,6 @@
 $(document).ready(function() {
 
-$('#allChartsDiv').on('jqplotMouseMove', function(event, xy, axesData, neighbor, plot) {
+$('#chartForm\\:allCharts').on('jqplotMouseMove', function(event, xy, axesData, neighbor, plot) {
         var drawingCanvas = $(".jqplot-highlight-canvas")[0];
         var context = drawingCanvas.getContext('2d');
         context.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);     

@@ -22,6 +22,17 @@ div.ui-selectonemenu {
     height: 100px;
 }
 
+.loading-small {
+    background-image: url(img/spinner.gif);
+    background-position: center center;
+    background-repeat: no-repeat;
+    height: 18px;
+    background-size: 18px auto;
+	width: 18px;
+	height: 18px;
+	position: relative;
+}
+
 /* .toggleSplit {
 	cursor: pointer;
 	text-align: center;
@@ -119,4 +130,27 @@ div.timeline-event-selected {
     width: 600px; /* Optional, depends otherwise on parent. */
     overflow: auto;
 }
-            
+
+ul.ui-tabs-nav {
+    border-bottom: 1px solid #a8a8a8; 
+}     
+
+body .ui-tabs.ui-tabs-top > .ui-tabs-nav {
+	padding-left:0;
+}
+
+body div.ui-tabs {
+	border:none;
+}
+
+tr.ui-widget-content.green-row {
+	background:#DCF9D4;
+}
+
+tr.ui-widget-content.red-row {
+	background:#EDCCCC;
+}
+
+div.ui-dialog.center-footer div.ui-dialog-footer {
+	text-align:center;
+}

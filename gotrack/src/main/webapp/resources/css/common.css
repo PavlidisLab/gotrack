@@ -1,0 +1,119 @@
+/* Common  */
+body {
+	background-color: #FFFFFF;
+	/*background-color: #B7D897;*/
+}
+
+a:focus, a:hover {
+	color: #039;
+}
+
+a {
+	color: #456;
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+#bottom-footer {
+	color: #777;
+	font: normal 90% sans-serif;
+}
+
+.center {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	text-align: center;
+}
+
+.right-border {
+	border-right: 1px solid #A8A8A8 !important;
+}
+
+.vertical {
+	writing-mode: tb-rl;
+	-webkit-transform: rotate(90deg);
+	-moz-transform: rotate(90deg);
+	-o-transform: rotate(90deg);
+	-ms-transform: rotate(90deg);
+	white-space: nowrap;
+	display: block;
+	bottom: 0;
+	width: 20px;
+	height: 20px;
+}
+
+.toggled-header {
+	position: relative;
+	top: 30px;
+	font-size: initial;
+}
+
+#left-toggler, #right-toggler {
+	overflow: visible !important;
+}
+
+td {
+	position: relative;
+}
+
+div.ui-terminal {
+	background: black;
+	color: white;
+}
+
+button.icon-only {
+	height: 0px;
+	width: 0px;
+	top: 14px;
+	left: 5px;
+}
+
+#body tr.ui-state-highlight td {
+	text-shadow: none;
+}
+
+#top span.ui-menuitem-icon {
+	font-size: 15px;
+}
+
+.ui-layout-north {
+	z-index: 20 !important;
+	overflow: visible !important;;
+}
+
+.ui-layout-north .ui-layout-unit-content {
+	overflow: visible !important;
+}
+
+.ui-layout-unit-footer {
+	background: white;
+	border: none;
+	border-top: 1px solid #a8a8a8;
+}
+
+/* .ui-layout-resizer {
+	border: 1px solid #B7D897 !important;
+} */
+
+.ui-layout-resizer.ui-draggable-handle {
+	border: 1px solid #A8A8A8 !important;
+}
+
+
+
+#body .ui-layout-unit .ui-layout-unit-content {
+	padding: 0;
+}
+
+.left, .alignleft {
+	float: left;
+}
+
+#top {
+	border:0;
+	padding:0;
+}

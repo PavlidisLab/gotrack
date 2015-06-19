@@ -27,22 +27,17 @@ package ubc.pavlab.gotrack.model;
  */
 public class EvidenceReference {
 
-    private final String evidence;
+    private Evidence evidence;
     private final String reference;
-    private final String category;
+    private final Dataset dataset;
 
-    // public EvidenceReference( String evidence, String reference ) {
-    // this( evidence, reference, null );
-    // }
-
-    public EvidenceReference( String evidence, String reference, String category ) {
-        super();
+    public EvidenceReference( Evidence evidence, String reference, Dataset dataset ) {
         this.evidence = evidence;
         this.reference = reference;
-        this.category = category;
+        this.dataset = dataset;
     }
 
-    public String getEvidence() {
+    public Evidence getEvidence() {
         return evidence;
     }
 
@@ -50,19 +45,20 @@ public class EvidenceReference {
         return reference;
     }
 
-    public String getCategory() {
-        return category;
+    public Dataset getDataset() {
+        return dataset;
     }
 
     @Override
     public String toString() {
-        return "EvidenceReference [evidence=" + evidence + ", reference=" + reference + ", category=" + category + "]";
+        return "EvidenceReference [evidence=" + evidence + ", reference=" + reference + ", dataset=" + dataset + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
+        result = prime * result + ( ( dataset == null ) ? 0 : dataset.hashCode() );
         result = prime * result + ( ( evidence == null ) ? 0 : evidence.hashCode() );
         result = prime * result + ( ( reference == null ) ? 0 : reference.hashCode() );
         return result;
@@ -74,6 +70,7 @@ public class EvidenceReference {
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
         EvidenceReference other = ( EvidenceReference ) obj;
+        if ( dataset != other.dataset ) return false;
         if ( evidence == null ) {
             if ( other.evidence != null ) return false;
         } else if ( !evidence.equals( other.evidence ) ) return false;

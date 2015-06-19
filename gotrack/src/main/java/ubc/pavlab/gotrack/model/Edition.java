@@ -21,6 +21,8 @@ package ubc.pavlab.gotrack.model;
 
 import java.sql.Date;
 
+import ubc.pavlab.gotrack.model.dto.EditionDTO;
+
 /**
  * Immutable representation of an edition of gene annotations
  * 
@@ -31,34 +33,15 @@ public class Edition implements Comparable<Edition> {
 
     private final Integer edition;
     private final Date date;
-    private final Date goDate;
-    private final Integer goEditionId;
+    private final GOEdition goEdition;
 
     /**
      * 
      */
-    public Edition() {
-        this( null, null, null, null );
-    }
-
-    public Edition( Integer edition ) {
-        this( edition, null, null, null );
-    }
-
-    public Edition( Integer edition, Date date ) {
-        this( edition, date, null, null );
-    }
-
-    public Edition( Integer edition, Date date, Integer goEditionId ) {
-        this( edition, date, null, goEditionId );
-    }
-
-    public Edition( Integer edition, Date date, Date goDate, Integer goEditionId ) {
-        super();
-        this.edition = edition;
-        this.date = date;
-        this.goDate = goDate;
-        this.goEditionId = goEditionId;
+    public Edition( EditionDTO dto, GOEdition goEdition ) {
+        this.edition = dto.getEdition();
+        this.date = dto.getDate();
+        this.goEdition = goEdition;
     }
 
     public Integer getEdition() {
@@ -70,17 +53,21 @@ public class Edition implements Comparable<Edition> {
     }
 
     public Date getGoDate() {
-        return goDate;
+        return goEdition.getDate();
     }
 
     public Integer getGoEditionId() {
-        return goEditionId;
+        return goEdition.getEdition();
+    }
+
+    public GOEdition getGoEdition() {
+        return goEdition;
     }
 
     @Override
     public String toString() {
-        return "Edition [edition=" + edition + ", date=" + date + ", goDate=" + goDate + ", goEditionId=" + goEditionId
-                + "]";
+        return "Edition [edition=" + edition + ", date=" + date + ", goDate=" + goEdition.getDate() + ", goEditionId="
+                + goEdition.getEdition() + "]";
     }
 
     @Override

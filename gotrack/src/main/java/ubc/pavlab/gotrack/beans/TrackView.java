@@ -19,8 +19,7 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -47,27 +46,30 @@ import javax.faces.context.FacesContext;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.primefaces.context.RequestContext;
 import org.primefaces.event.ItemSelectEvent;
 import org.primefaces.extensions.model.timeline.TimelineEvent;
-import org.primefaces.extensions.model.timeline.TimelineGroup;
 import org.primefaces.extensions.model.timeline.TimelineModel;
 import org.primefaces.model.chart.AxisType;
 import org.primefaces.model.chart.DateAxis;
 import org.primefaces.model.chart.LineChartModel;
 import org.primefaces.model.chart.LineChartSeries;
 
-import ubc.pavlab.gotrack.dao.AnnotationDAO;
+import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.beans.service.StatsService;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.CustomTimelineModel;
+import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.GoChart;
+import ubc.pavlab.gotrack.model.GraphType;
 import ubc.pavlab.gotrack.model.GraphTypeKey;
-import ubc.pavlab.gotrack.model.GraphTypeKey.GraphType;
 import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.StatsEntry;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
@@ -80,41 +82,49 @@ import ubc.pavlab.gotrack.utilities.Jaccard;
 @ViewScoped
 public class TrackView {
 
+    // Static
+    private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
+    private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
+    private static final List<GraphType> filterEnabledGraphs = Arrays.asList( GraphType.annotation );
+    private static final List<GraphType> dataEnabledGraphs = Arrays.asList( GraphType.annotation, GraphType.lossgain,
+            GraphType.multifunctionality, GraphType.jaccard );
+    private static final String COMBINED_TITLE = "All Accessions";
+
     @ManagedProperty("#{cache}")
     private Cache cache;
 
-    @ManagedProperty("#{stats}")
-    private Stats stats;
+    @ManagedProperty("#{statsService}")
+    private StatsService statsService;
 
     @ManagedProperty("#{sessionManager}")
     private SessionManager sessionManager;
 
-    @ManagedProperty("#{daoFactoryBean}")
-    private DAOFactoryBean daoFactoryBean;
+    @ManagedProperty("#{settingsCache}")
+    private SettingsCache settingsCache;
+
+    @ManagedProperty("#{annotationService}")
+    private AnnotationService annotationService;
 
     private static final Logger log = Logger.getLogger( TrackView.class );
 
-    // DAO
-    private AnnotationDAO annotationDAO;
-
     // Query params
-    private Integer currentSpeciesId;
+    private Integer speciesId;
     private Species currentSpecies;
     private String query;
 
     // View static data
     private Gene currentGene;
     private Edition currentEdition;
-    private List<Edition> allEditions = new ArrayList<>();
+    private Collection<Edition> allEditions = new ArrayList<>();
     private Map<GeneOntologyTerm, Set<EvidenceReference>> allAnnotations = new HashMap<>();
 
     // All charts
     private Map<GraphTypeKey, LineChartModel> lineChartModelMap = new HashMap<>();
-    private Map<GraphTypeKey, GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> goChartMap = new HashMap<>();
+    private Map<GraphTypeKey, GoChart<Accession>> goChartMap = new HashMap<>();
 
     /* Current Chart Stuff */
     private LineChartModel currentChart; // Current chart
-    private GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> currentGoChart;
+    private GoChart<Accession> currentGoChart;
 
     // Select Data Point functionality
     private String selectedDate;
@@ -137,20 +147,15 @@ public class TrackView {
     private String graphType = "annotation";
     private String scale;
     private boolean chartsReady = false;
+    private boolean chartEmpty = false;
     private List<String> filterAspect;
+    private List<Dataset> filterDataset;
     private String filterId;
     private String filterName;
     private boolean filterEnabled = true;
     private boolean dataEnabled = true;
-    // private boolean firstChartReady = false;
 
-    // Static
-    private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
-    private static final List<String> graphs = Arrays.asList( "direct", "propagated" );
-    private static final List<GraphType> filterEnabledGraphs = Arrays.asList( GraphType.annotation );
-    private static final List<GraphType> dataEnabledGraphs = Arrays.asList( GraphType.annotation, GraphType.lossgain,
-            GraphType.multifunctionality, GraphType.jaccard );
-    private static final String COMBINED_TITLE = "All Accessions";
+    // private boolean firstChartReady = false;
 
     public TrackView() {
         log.info( "TrackView created" );
@@ -162,14 +167,28 @@ public class TrackView {
     @PostConstruct
     public void postConstruct() {
         filterAspect = new ArrayList<>( aspects );
+        // Silly jsf quibbles require me to double wrap this collection
+        filterDataset = new ArrayList<>( Arrays.asList( Dataset.values() ) );
         scale = "linear";
     }
 
-    public String init() throws GeneNotFoundException {
+    public String init() throws GeneNotFoundException, IOException {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
             return null; // Skip ajax requests.
         }
-        log.info( "TrackView init: " + currentSpeciesId + ": " + query );
+        log.info( "TrackView init: " + speciesId + ": " + query );
+
+        if ( speciesId == null && query == null ) {
+            // no parameters; show search form
+            currentGene = null;
+            return null;
+        } else if ( !( speciesId != null && query != null ) ) {
+            // malformed input if only one parameter is specified
+            FacesContext facesContext = FacesContext.getCurrentInstance();
+            facesContext.getExternalContext().responseSendError( 400, "The param 'yourParam' is missing" );
+            facesContext.responseComplete();
+            return null;
+        }
 
         if ( FacesContext.getCurrentInstance().getApplication().getProjectStage() == ProjectStage.Development ) {
             FacesContext.getCurrentInstance()
@@ -179,9 +198,9 @@ public class TrackView {
                                     "This is the DEVELOPMENT version of GOTrack!", null ) );
         }
 
-        currentGene = cache.getCurrentGene( currentSpeciesId, query );
+        currentGene = cache.getCurrentGene( speciesId, query );
         if ( currentGene == null ) {
-
+            // gene symbol not found
             throw new GeneNotFoundException();
             /*
              * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
@@ -193,22 +212,18 @@ public class TrackView {
             // Map<String, Collection<String>> primaryToSecondary = new HashMap<String, Collection<String>>();
 
             // Obtain AnnotationDAO.
-            stats.countHit( query );
+            statsService.countHit( currentGene );
             log.info( "symbol: " + currentGene.getSymbol() );
             log.info( "synonyms: " + currentGene.getSynonyms() );
             log.info( "accessions: " + currentGene.getAccessions() );
 
             log.info( "Gene: " + currentGene );
 
-            annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-            currentEdition = cache.getCurrentEditions( currentSpeciesId );
+            currentEdition = cache.getCurrentEditions( speciesId );
             // allEditions = cache.getAllEditions( currentSpeciesId );
-            allEditions = cache.getAllEditions( currentSpeciesId );
-            for ( Species s : cache.getSpeciesList() ) {
-                if ( s.getId().equals( currentSpeciesId ) ) {
-                    currentSpecies = s;
-                }
-            }
+            allEditions = cache.getAllEditions( speciesId );
+
+            currentSpecies = cache.getSpecies( speciesId );
 
             return null;
 
@@ -252,11 +267,11 @@ public class TrackView {
     public void fetchAll() {
         log.info( "fetch Annotation Data" );
         // <PrimaryAccession, <Edition, <GOID, annotations>>>
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = cache.getData( currentGene );
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = cache.getData( currentGene );
 
         if ( data == null ) {
 
-            data = annotationDAO.track( currentSpeciesId, query );
+            data = annotationService.fetchTrackData( currentSpecies, currentGene );
 
             // data = annotationDAO.trackBySymbolOnly( currentSpeciesId, query );
 
@@ -267,10 +282,15 @@ public class TrackView {
 
         }
 
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData = propagate( data );
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> directData = new HashMap<>();
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData = new HashMap<>();
+
+        directData = data;
+        propagatedData = propagate( data );
+
         log.info( "Annotation Data fetched" );
-        createDirectCharts( data, "Direct Annotations vs Time", "Dates", "Direct Annotations" );
-        createAllTerms( data );
+        createDirectCharts( directData, "Direct Annotations vs Time", "Dates", "Direct Annotations" );
+        createAllTerms( directData );
         createPropagatedChart( propagatedData, "Propagated Annotations vs Time", "Dates", "Propagated Annotations" );
         createJaccardChart( "Jaccard Similarity vs Time", "Dates", "Jaccard Similarity" );
         createMultiChart( "Multifunctionality vs Time", "Dates", "Multifunctionality" );
@@ -281,6 +301,7 @@ public class TrackView {
 
         currentGoChart = goChartMap.get( gtk );
         currentChart = lineChartModelMap.get( gtk );
+        currentChart.setAnimate( true );
 
         log.info( "size: " + currentGoChart );
 
@@ -288,30 +309,44 @@ public class TrackView {
 
     }
 
-    private void createDirectCharts( Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data,
+    private void createDirectCharts( Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data,
             String title, String xLabel, String yLabel ) {
         log.info( "Creating Direct Chart" );
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart = new GoChart<>( title, xLabel, yLabel,
-                data );
 
         Map<String, Map<Edition, Double>> staticData = new HashMap<>();
-        staticData.put( "Species Avg", cache.getSpeciesAverage( currentSpeciesId ) );
+
+        Map<Edition, Double> geneAvg = new HashMap<>();
+        Map<Edition, Double> accessionAvg = new HashMap<>();
+
+        for ( Entry<Edition, StatsEntry> editionEntry : cache.getAggregates( speciesId ).entrySet() ) {
+            Edition edition = editionEntry.getKey();
+            StatsEntry se = editionEntry.getValue();
+            geneAvg.put( edition, se.getAvgDirectByGene() );
+            accessionAvg.put( edition, se.getAvgDirectByAccession() );
+        }
+
+        staticData.put( "Species Avg", accessionAvg );
+        GoChart<Accession> goChart = new GoChart<>( title, xLabel, yLabel, data, staticData );
 
         GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, false );
 
         // Base Chart
-        initChart( gtk, goChart, new GoChart<Edition, Double>( title, xLabel, yLabel, staticData ) );
+        initChart( gtk, goChart );
 
         // Combined Chart
         GraphTypeKey combinedGtk = new GraphTypeKey( GraphType.annotation, false, false );
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> combinedGOChart = new GoChart<>( title, xLabel,
-                yLabel, combineDataByEdition( COMBINED_TITLE, data ) );
-        initChart( combinedGtk, combinedGOChart, null );
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> combinedData = new HashMap<>();
+        combinedData.put( new Accession( COMBINED_TITLE ), combineDataByEdition( data ) );
+
+        staticData = new HashMap<>();
+        staticData.put( "Species Avg", geneAvg );
+        GoChart<Accession> combinedGOChart = new GoChart<>( title, xLabel, yLabel, combinedData, staticData );
+        initChart( combinedGtk, combinedGOChart );
 
         log.info( "Direct Chart Created" );
     }
 
-    private void createAllTerms( Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
+    private void createAllTerms( Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
         log.info( "fetch All Terms" );
         allAnnotations.clear();
 
@@ -341,20 +376,20 @@ public class TrackView {
 
     }
 
-    private Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagate(
-            Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData = new HashMap<>();
+    private Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagate(
+            Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData = new HashMap<>();
 
-        for ( Entry<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> accessionEntry : data
+        for ( Entry<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> accessionEntry : data
                 .entrySet() ) {
-            String acc = accessionEntry.getKey();
+            Accession acc = accessionEntry.getKey();
             Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> propagatedSeries = new HashMap<>();
             propagatedData.put( acc, propagatedSeries );
             Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = accessionEntry.getValue();
             for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : series.entrySet() ) {
                 Edition ed = editionEntry.getKey();
                 Map<GeneOntologyTerm, Set<EvidenceReference>> propagatedAnnotations = cache.propagate(
-                        editionEntry.getValue(), ed.getGoEditionId() );
+                        editionEntry.getValue(), ed );
 
                 if ( propagatedAnnotations == null ) {
                     // No ontology exists for this edition
@@ -369,25 +404,25 @@ public class TrackView {
     }
 
     private void createPropagatedChart(
-            Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData, String title,
+            Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> propagatedData, String title,
             String xLabel, String yLabel ) {
         log.info( "Creating Propagated Chart" );
 
         // First we need to propagate the directly annotated GeneOntologyTerms
 
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart = new GoChart<>( title, xLabel, yLabel,
-                propagatedData );
+        GoChart<Accession> goChart = new GoChart<>( title, xLabel, yLabel, propagatedData );
 
         GraphTypeKey gtk = new GraphTypeKey( GraphType.annotation, true, true );
 
         // Base Chart
-        initChart( gtk, goChart, new GoChart<Edition, Double>( title, xLabel, yLabel, null ) );
+        initChart( gtk, goChart );
 
         // Combined Chart
         GraphTypeKey combinedGtk = new GraphTypeKey( GraphType.annotation, false, true );
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> combinedGOChart = new GoChart<>( title, xLabel,
-                yLabel, combineDataByEdition( COMBINED_TITLE, propagatedData ) );
-        initChart( combinedGtk, combinedGOChart, null );
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> combinedData = new HashMap<>();
+        combinedData.put( new Accession( COMBINED_TITLE ), combineDataByEdition( propagatedData ) );
+        GoChart<Accession> combinedGOChart = new GoChart<>( title, xLabel, yLabel, combinedData );
+        initChart( combinedGtk, combinedGOChart );
 
         log.info( "Propagated Chart Created" );
 
@@ -396,29 +431,25 @@ public class TrackView {
     private void createJaccardChart( String title, String xLabel, String yLabel ) {
         log.info( "Creating Jaccard Chart" );
 
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> template = new GoChart<>( title, xLabel, yLabel );
-        template.setMin( 0 );
-        template.setMax( 1 );
-
         Map<String, Map<Edition, Double>> staticData = calculateJaccardData( goChartMap.get(
-                new GraphTypeKey( GraphType.annotation, true, false ) ).getSeries() );
+                new GraphTypeKey( GraphType.annotation, true, false ) ).getAllDetailedSeries() );
         GraphTypeKey gtk = new GraphTypeKey( GraphType.jaccard, true, false );
-        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, 0.0, 1.0, null, staticData ) );
 
         staticData = calculateJaccardData( goChartMap.get( new GraphTypeKey( GraphType.annotation, true, true ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.jaccard, true, true );
-        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, 0.0, 1.0, null, staticData ) );
 
         staticData = calculateJaccardData( goChartMap.get( new GraphTypeKey( GraphType.annotation, false, false ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.jaccard, false, false );
-        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, 0.0, 1.0, null, staticData ) );
 
         staticData = calculateJaccardData( goChartMap.get( new GraphTypeKey( GraphType.annotation, false, true ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.jaccard, false, true );
-        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, 0.0, 1.0, null, staticData ) );
 
         // copyChart( gtk, new GraphTypeKey( GraphType.jaccard, true, true ) );
 
@@ -427,12 +458,12 @@ public class TrackView {
     }
 
     private Map<String, Map<Edition, Double>> calculateJaccardData(
-            Map<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
+            Map<Accession, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
         Map<String, Map<Edition, Double>> staticData = new HashMap<>();
 
-        for ( Entry<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : data
+        for ( Entry<Accession, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : data
                 .entrySet() ) {
-            String seriesAccession = seriesEntry.getKey();
+            String seriesAccession = seriesEntry.getKey().getAccession();
             Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = seriesEntry.getValue();
             Set<GeneOntologyTerm> currentGoSet = series.get( currentEdition ).keySet();
 
@@ -453,36 +484,35 @@ public class TrackView {
         log.info( "Creating Multifunctionality Chart" );
 
         Map<String, Map<Edition, Double>> staticData = calculateMultiData( goChartMap.get(
-                new GraphTypeKey( GraphType.annotation, true, false ) ).getSeries() );
+                new GraphTypeKey( GraphType.annotation, true, false ) ).getAllDetailedSeries() );
         GraphTypeKey gtk = new GraphTypeKey( GraphType.multifunctionality, true, false );
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> template = new GoChart<>( title, xLabel, yLabel );
-        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, null, staticData ) );
 
         staticData = calculateMultiData( goChartMap.get( new GraphTypeKey( GraphType.annotation, false, false ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.multifunctionality, false, false );
-        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, null, staticData ) );
 
         staticData = calculateMultiData( goChartMap.get( new GraphTypeKey( GraphType.annotation, true, true ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.multifunctionality, true, true );
-        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, null, staticData ) );
 
         staticData = calculateMultiData( goChartMap.get( new GraphTypeKey( GraphType.annotation, false, true ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.multifunctionality, false, true );
-        initChart( gtk, template, new GoChart<Edition, Double>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, null, staticData ) );
 
         // copyChart( gtk, new GraphTypeKey( GraphType.multifunctionality, true, true ) );
         log.info( "Multifunctionality Chart Created" );
     }
 
     private Map<String, Map<Edition, Double>> calculateMultiData(
-            Map<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
+            Map<Accession, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
         Map<String, Map<Edition, Double>> staticData = new HashMap<>();
-        for ( Entry<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : data
+        for ( Entry<Accession, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : data
                 .entrySet() ) {
-            String seriesAccession = seriesEntry.getKey();
+            String seriesAccession = seriesEntry.getKey().getAccession();
             Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = seriesEntry.getValue();
 
             Map<Edition, Double> multiSeries = new HashMap<>();
@@ -491,12 +521,12 @@ public class TrackView {
 
                 Double multi = 0.0;
                 Edition ed = editionEntry.getKey();
-                Integer total = cache.getGenePopulation( currentSpeciesId, ed );
+                Integer total = cache.getGeneCount( speciesId, ed );
                 // Integer total = cache.getAccessionSize( currentSpeciesId, ed );
                 Set<GeneOntologyTerm> goSet = editionEntry.getValue().keySet();
                 if ( total != null ) {
                     for ( GeneOntologyTerm term : goSet ) {
-                        Integer inGroup = cache.getGoSetSizes( currentSpeciesId, ed.getEdition(), term.getGoId() );
+                        Integer inGroup = cache.getGoSetSizes( speciesId, ed, term );
                         if ( inGroup != null ) {
                             multi += 1.0 / ( inGroup * ( total - inGroup ) );
                         }
@@ -517,26 +547,25 @@ public class TrackView {
         log.info( "Creating Loss / Gain Chart" );
 
         Map<String, Map<Edition, Integer>> staticData = calculateLossGainData( goChartMap.get(
-                new GraphTypeKey( GraphType.annotation, false, false ) ).getSeries() );
+                new GraphTypeKey( GraphType.annotation, false, false ) ).getAllDetailedSeries() );
 
         GraphTypeKey gtk = new GraphTypeKey( GraphType.lossgain, false, false );
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> template = new GoChart<>( title, xLabel, yLabel );
-        initChart( gtk, template, new GoChart<Edition, Integer>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, null, staticData ) );
 
         staticData = calculateLossGainData( goChartMap.get( new GraphTypeKey( GraphType.annotation, true, false ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.lossgain, true, false );
-        initChart( gtk, template, new GoChart<Edition, Integer>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, null, staticData ) );
 
         staticData = calculateLossGainData( goChartMap.get( new GraphTypeKey( GraphType.annotation, true, true ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.lossgain, true, true );
-        initChart( gtk, template, new GoChart<Edition, Integer>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, null, staticData ) );
 
         staticData = calculateLossGainData( goChartMap.get( new GraphTypeKey( GraphType.annotation, false, true ) )
-                .getSeries() );
+                .getAllDetailedSeries() );
         gtk = new GraphTypeKey( GraphType.lossgain, false, true );
-        initChart( gtk, template, new GoChart<Edition, Integer>( staticData ) );
+        initChart( gtk, new GoChart<Accession>( title, xLabel, yLabel, null, staticData ) );
 
         // copyChart( gtk, new GraphTypeKey( GraphType.lossgain, true, false ) );
 
@@ -545,12 +574,12 @@ public class TrackView {
     }
 
     private Map<String, Map<Edition, Integer>> calculateLossGainData(
-            Map<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> map ) {
+            Map<Accession, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> map ) {
         Map<String, Map<Edition, Integer>> staticData = new HashMap<String, Map<Edition, Integer>>();
 
-        for ( Entry<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : map
+        for ( Entry<Accession, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : map
                 .entrySet() ) {
-            String seriesAccession = seriesEntry.getKey();
+            String seriesAccession = seriesEntry.getKey().getAccession();
             Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = seriesEntry.getValue();
 
             Map<Edition, Integer> lossSeries = new HashMap<Edition, Integer>();
@@ -579,11 +608,10 @@ public class TrackView {
         return tmp.size();
     }
 
-    private <T extends Number> void initChart( GraphTypeKey graphTypeKey,
-            GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart, GoChart<Edition, T> staticData ) {
+    private void initChart( GraphTypeKey graphTypeKey, GoChart<Accession> goChart ) {
 
         /* Base chart */
-        lineChartModelMap.put( graphTypeKey, createChart( goChart, staticData ) );
+        lineChartModelMap.put( graphTypeKey, createChart( goChart ) );
         goChartMap.put( graphTypeKey, goChart );
 
         /*
@@ -595,35 +623,27 @@ public class TrackView {
         log.info( graphTypeKey + " chart initialized" );
     }
 
-    private <T extends Number> LineChartModel createChart(
-            GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart ) {
+    private LineChartModel createChart( GoChart<?> goChart ) {
 
-        return createChart( goChart, null, false );
-
-    }
-
-    private <T extends Number> LineChartModel createChart(
-            GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart, GoChart<Edition, T> staticData ) {
-
-        return createChart( goChart, staticData, false );
+        return createChart( goChart, false );
 
     }
 
-    private <T extends Number> LineChartModel createChart(
-            GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart, GoChart<Edition, T> staticData,
-            boolean logAxis ) {
+    private <T extends Number> LineChartModel createChart( GoChart<?> goChart, boolean logAxis ) {
         LineChartModel dateModel = new LineChartModel();
 
-        if ( staticData != null ) {
-            for ( Entry<String, LinkedHashMap<Edition, T>> es : staticData.getSeries().entrySet() ) {
+        Map<String, LinkedHashMap<Edition, ? extends Number>> staticData = goChart.getAllStaticSeries();
+
+        if ( staticData != null && !staticData.isEmpty() ) {
+            for ( Entry<String, LinkedHashMap<Edition, ? extends Number>> es : staticData.entrySet() ) {
                 String label = es.getKey();
-                Map<Edition, T> sData = es.getValue();
+                Map<Edition, ? extends Number> sData = es.getValue();
 
                 LineChartSeries series = new LineChartSeries();
                 series.setLabel( label );
                 series.setShowMarker( false );
 
-                for ( Entry<Edition, T> dataPoint : sData.entrySet() ) {
+                for ( Entry<Edition, ? extends Number> dataPoint : sData.entrySet() ) {
                     String date = dataPoint.getKey().getDate().toString();
                     Number val = logAxis ? Math.log10( ( double ) dataPoint.getValue() ) : dataPoint.getValue();
                     series.set( date, val );
@@ -633,22 +653,27 @@ public class TrackView {
             }
         }
 
-        for ( Entry<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> es : goChart
-                .getSeries().entrySet() ) {
-            String primary = es.getKey();
-            Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> sData = es.getValue();
+        Map<?, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> detailedData = goChart
+                .getAllDetailedSeries();
 
-            LineChartSeries series = new LineChartSeries();
-            series.setLabel( primary );
-            series.setMarkerStyle( "filledDiamond" );
+        if ( detailedData != null && !detailedData.isEmpty() ) {
 
-            for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> dataPoint : sData.entrySet() ) {
-                String date = dataPoint.getKey().getDate().toString();
-                Integer count = dataPoint.getValue().size();
-                series.set( date, logAxis ? Math.log10( count ) : count );
+            for ( Entry<?, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> es : detailedData
+                    .entrySet() ) {
+                Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> sData = es.getValue();
+
+                LineChartSeries series = new LineChartSeries();
+                series.setLabel( String.valueOf( es.getKey() ) );
+                series.setMarkerStyle( "filledDiamond" );
+
+                for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> dataPoint : sData.entrySet() ) {
+                    String date = dataPoint.getKey().getDate().toString();
+                    Integer count = dataPoint.getValue().size();
+                    series.set( date, logAxis ? Math.log10( count ) : count );
+                }
+
+                dateModel.addSeries( series );
             }
-
-            dateModel.addSeries( series );
         }
 
         dateModel.setTitle( goChart.getTitle() );
@@ -685,8 +710,8 @@ public class TrackView {
         goChartMap.put( toGraphTypeKey, goChartMap.get( fromGraphTypeKey ) );
     }
 
-    private static Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> combineDataByEdition(
-            String seriesLabel, Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
+    private static Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> combineDataByEdition(
+            Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
         Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> combinedSeries = new HashMap<>();
         for ( Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> s : data.values() ) {
             for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : s.entrySet() ) {
@@ -713,10 +738,7 @@ public class TrackView {
             }
         }
 
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> combinedData = new HashMap<>();
-        combinedData.put( seriesLabel, combinedSeries );
-
-        return combinedData;
+        return combinedSeries;
     }
 
     public void itemSelect( ItemSelectEvent event ) {
@@ -747,7 +769,8 @@ public class TrackView {
 
             if ( ed.size() > 1 ) log.warn( "Found more than one edition for date (" + date + ")" );
 
-            Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = currentGoChart.get( label );
+            Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = currentGoChart
+                    .getDetailedSeries( new Accession( label ) );
 
             if ( series == null ) {
                 log.debug( "Could not find series for  (" + label + ")" );
@@ -795,7 +818,8 @@ public class TrackView {
         Collection<GeneOntologyTerm> selected = fromPanel ? selectedTerms : itemSelectViewTerms;
 
         Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> allCombinedDirectSeries = goChartMap.get(
-                new GraphTypeKey( GraphType.annotation, false, false ) ).get( COMBINED_TITLE );
+                new GraphTypeKey( GraphType.annotation, false, false ) ).getDetailedSeries(
+                new Accession( COMBINED_TITLE ) );
 
         Map<GeneOntologyTerm, CustomTimelineModel<GeneOntologyTerm>> timelineMap = new HashMap<>();
         Map<GeneOntologyTerm, Set<String>> timelineGroups = new HashMap<>();
@@ -814,7 +838,7 @@ public class TrackView {
                 Set<String> grp = timelineGroups.get( term );
                 if ( evs != null ) {
                     for ( EvidenceReference ev : evs ) {
-                        grp.add( ev.getCategory() );
+                        grp.add( ev.getEvidence().getCategory() );
                     }
                 }
 
@@ -838,7 +862,7 @@ public class TrackView {
                         for ( String grp : grps ) {
                             EvidenceReference foundEV = null;
                             for ( EvidenceReference ev : evs ) {
-                                if ( ev.getCategory().equals( grp ) ) {
+                                if ( ev.getEvidence().getCategory().equals( grp ) ) {
                                     foundEV = ev;
                                     break;
                                 }
@@ -846,8 +870,8 @@ public class TrackView {
 
                             if ( foundEV != null ) {
                                 TimelineEvent event = new TimelineEvent( foundEV.getReference() + "(|)"
-                                        + foundEV.getEvidence(), currentEdition.getDate(), nextEdition.getDate(),
-                                        false, grp, "timeline-true timeline-hidden" );
+                                        + foundEV.getEvidence().getEvidence(), currentEdition.getDate(),
+                                        nextEdition.getDate(), false, grp, "timeline-true timeline-hidden" );
                                 timeline.add( event );
                             }
 
@@ -879,7 +903,7 @@ public class TrackView {
                     for ( String grp : grps ) {
                         EvidenceReference foundEV = null;
                         for ( EvidenceReference ev : evs ) {
-                            if ( ev.getCategory().equals( grp ) ) {
+                            if ( ev.getEvidence().getCategory().equals( grp ) ) {
                                 foundEV = ev;
                                 break;
                             }
@@ -887,8 +911,8 @@ public class TrackView {
 
                         if ( foundEV != null ) {
                             TimelineEvent event = new TimelineEvent( foundEV.getReference() + "(|)"
-                                    + foundEV.getEvidence(), currentEdition.getDate(), cal.getTime(), false, grp,
-                                    "timeline-true timeline-hidden" );
+                                    + foundEV.getEvidence().getEvidence(), currentEdition.getDate(), cal.getTime(),
+                                    false, grp, "timeline-true timeline-hidden" );
                             timeline.add( event );
                         }
 
@@ -903,106 +927,60 @@ public class TrackView {
 
     }
 
-    /**
-     * create timeline based on data
-     * 
-     * @param timelineData timeline data, map of terms to map of date to boolean representing whether the term existed
-     *        on that date
-     * @param timelineGroups
-     * @return
-     */
-    private List<CustomTimelineModel<GeneOntologyTerm>> createTimelines(
-            Map<GeneOntologyTerm, Map<Date, Set<String>>> timelineData,
-            Map<GeneOntologyTerm, Set<String>> timelineGroups ) {
-        List<CustomTimelineModel<GeneOntologyTerm>> timelines = new ArrayList<>();
-        DateFormat df = new SimpleDateFormat( "yyyy-MM-dd" );
-        Calendar cal = Calendar.getInstance();
+    private void filter( GraphTypeKey gtk, boolean idBypass, boolean nameBypass, boolean aspectBypass,
+            boolean datasetBypass ) {
+        log.info( "Filter: " + gtk + ", ID: " + filterId + " Name: " + filterName + " Aspects: " + filterAspect
+                + " Datasets: " + filterDataset );
 
-        // Categories
-
-        for ( Entry<GeneOntologyTerm, Map<Date, Set<String>>> esTermData : timelineData.entrySet() ) {
-
-            GeneOntologyTerm term = esTermData.getKey();
-
-            CustomTimelineModel<GeneOntologyTerm> model = new CustomTimelineModel<>( term );
-
-            Map<Date, Set<String>> data = esTermData.getValue();
-            Set<String> setGroups = timelineGroups.get( term );
-
-            List<TimelineGroup> groups = new ArrayList<TimelineGroup>();
-            List<TimelineEvent> events = new ArrayList<TimelineEvent>();
-
-            for ( String grp : setGroups ) {
-                groups.add( new TimelineGroup( grp, grp ) );
-            }
-
-            SortedSet<Date> dates = new TreeSet<Date>( data.keySet() );
-            Date prevDate = null;
-            for ( Date date : dates ) {
-                if ( prevDate != null ) {
-
-                    for ( String grp : setGroups ) {
-                        boolean exists = data.get( prevDate ).contains( grp );
-                        TimelineEvent event = new TimelineEvent( df.format( prevDate ), prevDate, date, false, grp,
-                                exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                        // model.add( event );
-                        events.add( event );
-                    }
-
-                }
-
-                prevDate = date;
-            }
-
-            // give the last edition a span of 1 month
-            if ( dates.size() > 1 ) {
-                for ( String grp : setGroups ) {
-                    boolean exists = data.get( prevDate ).contains( grp );
-                    cal.setTime( prevDate );
-                    cal.add( Calendar.MONTH, 1 );
-                    TimelineEvent event = new TimelineEvent( df.format( prevDate ), prevDate, cal.getTime(), false,
-                            grp, exists ? "timeline-true timeline-hidden" : "timeline-false timeline-hidden" );
-                    // model.add( event );
-                    events.add( event );
-                }
-            }
-
-            model.setGroups( groups );
-            model.addAll( events );
-
-            timelines.add( model );
-
-        }
-
-        return timelines;
-
-    }
-
-    private void filter( GraphTypeKey gtk, boolean idBypass, boolean nameBypass, boolean filterBypass ) {
-        log.info( "Filter: " + gtk + ", ID: " + filterId + " Name: " + filterName + " Aspects: " + filterAspect );
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> goChart = goChartMap.get( gtk );
-        Map<String, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = new HashMap<>();
-        for ( Entry<String, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : goChart
-                .getSeries().entrySet() ) {
+        GoChart<Accession> goChart = goChartMap.get( gtk );
+        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data = new HashMap<>();
+        for ( Entry<Accession, LinkedHashMap<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> seriesEntry : goChart
+                .getAllDetailedSeries().entrySet() ) {
+            Accession acc = seriesEntry.getKey();
             Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionMap = new HashMap<>();
-            data.put( seriesEntry.getKey(), editionMap );
+            boolean emptySeries = true;
             for ( Entry<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> editionEntry : seriesEntry.getValue()
                     .entrySet() ) {
                 Map<GeneOntologyTerm, Set<EvidenceReference>> termMap = new HashMap<>();
                 editionMap.put( editionEntry.getKey(), termMap );
                 for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> termEntry : editionEntry.getValue().entrySet() ) {
-                    if ( ( filterBypass || filterAspect.contains( termEntry.getKey().getAspect() ) )
-                            && ( idBypass || termEntry.getKey().getGoId().equals( filterId ) )
-                            && ( nameBypass || StringUtils
-                                    .containsIgnoreCase( termEntry.getKey().getName(), filterName ) ) ) {
-                        termMap.put( termEntry.getKey(), termEntry.getValue() );
+                    GeneOntologyTerm t = termEntry.getKey();
+
+                    if ( ( aspectBypass || filterAspect.contains( t.getAspect() ) )
+                            && ( idBypass || t.getGoId().equals( filterId ) )
+                            && ( nameBypass || StringUtils.containsIgnoreCase( t.getName(), filterName ) ) ) {
+
+                        Set<EvidenceReference> evidenceSet = new HashSet<>();
+
+                        if ( !datasetBypass ) {
+                            for ( EvidenceReference er : termEntry.getValue() ) {
+                                if ( filterDataset.contains( er.getDataset() ) ) {
+                                    evidenceSet.add( er );
+                                }
+
+                            }
+
+                        } else {
+                            evidenceSet = termEntry.getValue();
+                        }
+
+                        if ( !evidenceSet.isEmpty() ) {
+                            emptySeries = false;
+                            termMap.put( t, evidenceSet );
+                        }
+
                     }
                 }
+
             }
+            if ( !emptySeries ) {
+                data.put( acc, editionMap );
+            }
+
         }
 
-        GoChart<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> newChart = new GoChart<>( "Filtered "
-                + goChart.getTitle(), goChart.getxLabel(), goChart.getyLabel(), data );
+        GoChart<Accession> newChart = new GoChart<>( "Filtered " + goChart.getTitle(), goChart.getxLabel(),
+                goChart.getyLabel(), data );
 
         // Base Chart
         currentChart = createChart( newChart );
@@ -1013,6 +991,7 @@ public class TrackView {
     public void clearOptionFilters() {
         log.info( "Option Filters Cleared." );
         filterAspect = new ArrayList<>( aspects );
+        filterDataset = new ArrayList<>( Arrays.asList( Dataset.values() ) );
         filterId = null;
         filterName = null;
         reloadGraph();
@@ -1047,7 +1026,7 @@ public class TrackView {
         orderedResults.addAll( exact );
 
         ArrayList<String> p = new ArrayList<String>( possible );
-        Collections.sort( p, new LevenshteinComparator( query ) );
+        // Collections.sort( p, new LevenshteinComparator( query ) );
 
         orderedResults.addAll( p );
         return orderedResults;
@@ -1080,12 +1059,21 @@ public class TrackView {
         // log.info( graphType + ( splitAccessions ? "" : COMBINED_SUFFIX ) );
         boolean idBypass = StringUtils.isEmpty( filterId );
         boolean nameBypass = StringUtils.isEmpty( filterName );
-        boolean filterBypass = filterAspect.containsAll( aspects );
-        if ( filterEnabled && ( !idBypass || !nameBypass || !filterBypass ) ) {
-            filter( gtk, idBypass, nameBypass, filterBypass );
+        boolean aspectBypass = filterAspect.containsAll( aspects );
+        boolean datasetBypass = filterDataset.containsAll( Arrays.asList( Dataset.values() ) );
+        if ( filterEnabled && ( !idBypass || !nameBypass || !aspectBypass || !datasetBypass ) ) {
+            filter( gtk, idBypass, nameBypass, aspectBypass, datasetBypass );
         } else {
             currentChart = lineChartModelMap.get( gtk );
             currentGoChart = goChartMap.get( gtk );
+        }
+
+        if ( currentGoChart.isEmpty() ) {
+            log.info( "Empty Chart" );
+            chartEmpty = true;
+            RequestContext.getCurrentInstance().addCallbackParam( "chartEmpty", true );
+        } else {
+            chartEmpty = false;
         }
 
         // if ( scale.equals( "log" ) ) {
@@ -1117,6 +1105,14 @@ public class TrackView {
 
     public void setFilterAspect( List<String> filterAspect ) {
         this.filterAspect = filterAspect;
+    }
+
+    public List<Dataset> getFilterDataset() {
+        return filterDataset;
+    }
+
+    public void setFilterDataset( List<Dataset> filterDataset ) {
+        this.filterDataset = filterDataset;
     }
 
     public String getFilterId() {
@@ -1160,7 +1156,8 @@ public class TrackView {
     }
 
     public ArrayList<Accession> getCurrentPrimaryAccessionsValues() {
-        return new ArrayList<Accession>( currentGene.getAccessions() );
+        return currentGene != null ? new ArrayList<Accession>( currentGene.getAccessions() )
+                : new ArrayList<Accession>();
     }
 
     public Species getCurrentSpecies() {
@@ -1171,8 +1168,8 @@ public class TrackView {
         return currentGene;
     }
 
-    public Integer getCurrentSpeciesId() {
-        return currentSpeciesId;
+    public Integer getSpeciesId() {
+        return speciesId;
     }
 
     public Collection<GeneOntologyTerm> getFilteredTerms() {
@@ -1239,12 +1236,8 @@ public class TrackView {
         this.cache = cache;
     }
 
-    public void setCurrentSpeciesId( Integer currentSpeciesId ) {
-        this.currentSpeciesId = currentSpeciesId;
-    }
-
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
+    public void setSpeciesId( Integer speciesId ) {
+        this.speciesId = speciesId;
     }
 
     public void setFilteredTerms( Collection<GeneOntologyTerm> filteredTerms ) {
@@ -1283,12 +1276,24 @@ public class TrackView {
         return chartsReady;
     }
 
-    public void setStats( Stats stats ) {
-        this.stats = stats;
+    public boolean isChartEmpty() {
+        return chartEmpty;
+    }
+
+    public void setStatsService( StatsService statsService ) {
+        this.statsService = statsService;
     }
 
     public void setSessionManager( SessionManager sessionManager ) {
         this.sessionManager = sessionManager;
+    }
+
+    public void setSettingsCache( SettingsCache settingsCache ) {
+        this.settingsCache = settingsCache;
+    }
+
+    public void setAnnotationService( AnnotationService annotationService ) {
+        this.annotationService = annotationService;
     }
 
 }

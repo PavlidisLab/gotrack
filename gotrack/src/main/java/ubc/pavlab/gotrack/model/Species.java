@@ -27,17 +27,11 @@ package ubc.pavlab.gotrack.model;
  */
 public class Species {
 
-    private Integer id;
-    private String commonName;
-    private String scientificName;
-    private Integer taxon;
-    private Integer interactingTaxon;
-
-    /**
-     * 
-     */
-    public Species() {
-    }
+    private final Integer id;
+    private final String commonName;
+    private final String scientificName;
+    private final Integer taxon;
+    private final Integer interactingTaxon;
 
     public Species( Integer id, String commonName, String scientificName, Integer taxon, Integer interactingTaxon ) {
         super();
@@ -52,40 +46,20 @@ public class Species {
         return id;
     }
 
-    public void setId( Integer id ) {
-        this.id = id;
-    }
-
     public String getCommonName() {
         return commonName;
-    }
-
-    public void setCommonName( String commonName ) {
-        this.commonName = commonName;
     }
 
     public String getScientificName() {
         return scientificName;
     }
 
-    public void setScientificName( String scientificName ) {
-        this.scientificName = scientificName;
-    }
-
     public Integer getTaxon() {
         return taxon;
     }
 
-    public void setTaxon( Integer taxon ) {
-        this.taxon = taxon;
-    }
-
     public Integer getInteractingTaxon() {
         return interactingTaxon;
-    }
-
-    public void setInteractingTaxon( Integer interactingTaxon ) {
-        this.interactingTaxon = interactingTaxon;
     }
 
     @Override

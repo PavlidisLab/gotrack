@@ -19,16 +19,17 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
-import ubc.pavlab.gotrack.go.GeneOntology;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Relationship;
-import ubc.pavlab.gotrack.model.StatsEntry;
+import ubc.pavlab.gotrack.model.dto.AccessionDTO;
+import ubc.pavlab.gotrack.model.dto.AdjacencyDTO;
+import ubc.pavlab.gotrack.model.dto.AggregateDTO;
+import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
+import ubc.pavlab.gotrack.model.dto.EditionDTO;
+import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
+import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
+import ubc.pavlab.gotrack.model.dto.GOTermDTO;
+import ubc.pavlab.gotrack.model.dto.GeneDTO;
 
 /**
  * Holds methods for retrieving data that is meant to be cached
@@ -38,28 +39,26 @@ import ubc.pavlab.gotrack.model.StatsEntry;
  */
 public interface CacheDAO {
 
-    public Map<Integer, Edition> getCurrentEditions() throws DAOException;
-
     /**
      * @return Map of species to ordered linkedlist of editions
      * @throws DAOException
      */
-    public Map<Integer, List<Edition>> getAllEditions() throws DAOException;
+    public List<EditionDTO> getAllEditions( int[] speciesRestrictions ) throws DAOException;
 
-    public Map<Integer, Map<Integer, Map<String, Integer>>> getGOSizes() throws DAOException;
+    public List<AnnotationCountDTO> getGOSizes( int[] speciesRestrictions ) throws DAOException;
 
-    public Map<Integer, Map<Edition, StatsEntry>> getAggregates() throws DAOException;
+    public List<AggregateDTO> getAggregates( int[] speciesRestrictions ) throws DAOException;
 
-    public Set<Integer> getGOEditions() throws DAOException;
+    public List<GeneDTO> getCurrentGenes( int[] speciesRestrictions ) throws DAOException;
 
-    public Map<Integer, GeneOntology> getOntologies() throws DAOException;
+    public List<GOTermDTO> getGoTerms() throws DAOException;
 
-    public Map<Integer, Set<Relationship>> getOntologies( Collection<Integer> range ) throws DAOException;
+    public List<AdjacencyDTO> getAdjacencies() throws DAOException;
 
-    public Map<String, String> getEvidenceCategories() throws DAOException;
+    public List<EvidenceDTO> getEvidence() throws DAOException;
 
-    public Map<Integer, Map<Edition, Integer>> getPopulations() throws DAOException;
+    public List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException;
 
-    public Map<Integer, Map<String, Gene>> getCurrentGenes() throws DAOException;
+    public List<GOEditionDTO> getAllGOEditions() throws DAOException;
 
 }
