@@ -207,7 +207,7 @@ public class GeneOntology {
         return getAncestors( termMap.get( id ), includePartOf, cache );
     }
 
-    private Set<GeneOntologyTerm> getAncestors( GeneOntologyTerm t, boolean includePartOf,
+    public Set<GeneOntologyTerm> getAncestors( GeneOntologyTerm t, boolean includePartOf,
             Map<GeneOntologyTerm, Set<GeneOntologyTerm>> cache ) {
 
         Set<GeneOntologyTerm> a;

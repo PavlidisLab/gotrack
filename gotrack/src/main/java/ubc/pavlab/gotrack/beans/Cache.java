@@ -824,6 +824,17 @@ public class Cache implements Serializable {
         return null;
     }
 
+    public Set<GeneOntologyTerm> propagate( GeneOntologyTerm term, GOEdition goEd ) {
+        if ( term == null || goEd == null ) {
+            return null;
+        }
+        GeneOntology o = ontologies.get( goEd );
+        if ( o != null ) {
+            return o.getAncestors( term, true, null );
+        }
+        return null;
+    }
+
     // public void ontologyStats() {
     // for ( GeneOntology o : ontologies.values() ) {
     // o.getCacheStats();
@@ -893,6 +904,18 @@ public class Cache implements Serializable {
         return termsMap;
     }
 
+    public GeneOntologyTerm getCurrentTerm( String goId ) {
+        if ( goId == null ) {
+            return null;
+        }
+        if ( currentOntology != null ) {
+            return currentOntology.getTerm( goId );
+        }
+
+        return null;
+
+    }
+
     public boolean termExists( String goId ) {
         if ( goId == null ) {
             return false;
@@ -907,6 +930,11 @@ public class Cache implements Serializable {
         }
 
         return false;
+    }
+
+    public GOEdition getGOEdition( Integer edId ) {
+        if ( edId == null ) return null;
+        return allGOEditions.get( edId );
     }
 
     // Application Level Caching get/set
