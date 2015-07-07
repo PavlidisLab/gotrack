@@ -43,6 +43,7 @@ public class SpeciesDAOImpl implements SpeciesDAO {
 
     private static final String SQL_FIND_BY_ID = "SELECT * FROM species WHERE id = ?";
     private static final String SQL_LIST_ORDER_BY_NAME = "SELECT * FROM species ORDER BY common_name";
+    private static final String SQL_LIST_ORDER_BY_ID = "SELECT * FROM species ORDER BY id";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -81,7 +82,7 @@ public class SpeciesDAOImpl implements SpeciesDAO {
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_LIST_ORDER_BY_NAME );
+            preparedStatement = connection.prepareStatement( SQL_LIST_ORDER_BY_ID );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
                 list.add( map( resultSet ) );

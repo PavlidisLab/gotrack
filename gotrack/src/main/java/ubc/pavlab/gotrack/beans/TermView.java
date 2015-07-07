@@ -53,7 +53,7 @@ import ubc.pavlab.gotrack.model.cytoscape.Edge;
 import ubc.pavlab.gotrack.model.cytoscape.Graph;
 import ubc.pavlab.gotrack.model.cytoscape.Node;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.go.Parent;
+import ubc.pavlab.gotrack.model.go.Relation;
 
 import com.google.gson.Gson;
 
@@ -263,10 +263,10 @@ public class TermView {
             nodes.add( new Node( term.getId(), term.getName() ) );
             discovered.add( term );
 
-            for ( Parent p : term.getParents() ) {
-                edges.add( new Edge( term.getId(), p.getParent().getId(), p.getType() ) );
-                if ( !discovered.contains( p.getParent() ) ) {
-                    termQ.add( p.getParent() );
+            for ( Relation p : term.getParents() ) {
+                edges.add( new Edge( term.getId(), p.getRelation().getId(), p.getType() ) );
+                if ( !discovered.contains( p.getRelation() ) ) {
+                    termQ.add( p.getRelation() );
                 }
             }
 

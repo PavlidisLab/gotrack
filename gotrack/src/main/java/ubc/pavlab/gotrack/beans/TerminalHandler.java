@@ -49,13 +49,14 @@ import org.dom4j.io.SAXReader;
 
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
-import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
+import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.StatusPoller;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import com.google.common.base.Joiner;
 
@@ -118,6 +119,41 @@ public class TerminalHandler implements Serializable {
             return enrichmentView.getSelectedGenes().toString();
         } else if ( command.equals( "help" ) ) {
             return sessionManager.getAuthenticated() ? AUTH_COMMANDS.toString() : OPEN_COMMANDS.toString();
+        } else if ( command.equals( "term" ) ) {
+            Edition ed;
+            String goId;
+            Integer speciesId;
+            if ( params.length > 1 ) {
+                try {
+                    speciesId = Integer.valueOf( params[0] );
+                } catch ( NumberFormatException e ) {
+                    return "Malformed Input : speciesId, term [, GO Edition]";
+                }
+                goId = params[1];
+                if ( params.length > 2 ) {
+                    Integer editionId;
+                    try {
+                        editionId = Integer.valueOf( params[2] );
+                    } catch ( NumberFormatException e ) {
+                        return "Malformed Input : speciesId, term [, GO Edition]";
+                    }
+                    ed = cache.getEdition( speciesId, editionId );
+                } else {
+                    ed = cache.getCurrentEditions( speciesId );
+                }
+
+            } else
+                return "Malformed Input : speciesId, term [, GO Edition]";
+
+            GeneOntologyTerm t = cache.getTerm( ed, goId );
+
+            if ( t == null ) {
+                return "Term not found.";
+            }
+
+            Integer val = cache.getGoSetSizes( speciesId, ed, t );
+
+            return t.toString() + "<br/>" + "GO Set Size: " + ( val == null ? "" : val.toString() );
         } else if ( command.equals( "" ) ) {
             return "";
         }

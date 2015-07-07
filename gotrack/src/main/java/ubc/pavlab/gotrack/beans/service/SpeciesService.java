@@ -45,6 +45,11 @@ import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
 @ApplicationScoped
 public class SpeciesService implements Serializable {
 
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -3894579931798244757L;
+
     private static final Logger log = Logger.getLogger( SpeciesService.class );
 
     @ManagedProperty("#{daoFactoryBean}")

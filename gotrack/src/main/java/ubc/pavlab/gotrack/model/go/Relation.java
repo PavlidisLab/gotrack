@@ -19,25 +19,24 @@
 
 package ubc.pavlab.gotrack.model.go;
 
-
 /**
  * TODO Document Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-public final class Parent {
-    private final GeneOntologyTerm parent;
+public final class Relation {
+    private final GeneOntologyTerm relation;
     private final RelationshipType type;
 
-    public Parent( GeneOntologyTerm parent, RelationshipType type ) {
+    public Relation( GeneOntologyTerm relation, RelationshipType type ) {
         super();
-        this.parent = parent;
+        this.relation = relation;
         this.type = type;
     }
 
-    public GeneOntologyTerm getParent() {
-        return parent;
+    public GeneOntologyTerm getRelation() {
+        return relation;
     }
 
     public RelationshipType getType() {
@@ -46,14 +45,14 @@ public final class Parent {
 
     @Override
     public String toString() {
-        return "Parent [parent=" + parent + ", type=" + type + "]";
+        return "Relation [relation=" + relation.getGoId() + ", type=" + type + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( parent == null ) ? 0 : parent.hashCode() );
+        result = prime * result + ( ( relation == null ) ? 0 : relation.hashCode() );
         result = prime * result + ( ( type == null ) ? 0 : type.hashCode() );
         return result;
     }
@@ -63,10 +62,10 @@ public final class Parent {
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        Parent other = ( Parent ) obj;
-        if ( parent == null ) {
-            if ( other.parent != null ) return false;
-        } else if ( !parent.equals( other.parent ) ) return false;
+        Relation other = ( Relation ) obj;
+        if ( relation == null ) {
+            if ( other.relation != null ) return false;
+        } else if ( !relation.equals( other.relation ) ) return false;
         if ( type != other.type ) return false;
         return true;
     }
