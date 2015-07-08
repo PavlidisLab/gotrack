@@ -20,6 +20,7 @@
 package ubc.pavlab.gotrack.model.cytoscape;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 
 /**
  * TODO Document Me
@@ -36,6 +37,10 @@ public class Graph {
         super();
         this.nodes = nodes;
         this.edges = edges;
+    }
+
+    public Graph() {
+        this( new LinkedHashSet<Node>(), new LinkedHashSet<Edge>() );
     }
 
     public Collection<Node> getNodes() {

@@ -137,7 +137,8 @@ public class Cache implements Serializable {
     private Map<Integer, Map<Edition, StatsEntry>> aggregates = new ConcurrentHashMap<>();
 
     // Map<species, Map<edition, Map<go_id, count>>>
-    private Map<MultiKey, Integer> goSetSizes = new ConcurrentHashMap<>();
+    private Map<MultiKey, Integer> inferredAnnotationCount = new ConcurrentHashMap<>();
+    private Map<MultiKey, Integer> directAnnotationCount = new ConcurrentHashMap<>();
 
     private Map<GOEdition, GeneOntology> ontologies = new ConcurrentHashMap<>();
 
@@ -328,6 +329,8 @@ public class Cache implements Serializable {
                             if ( ++i % 10 == 0 ) log.info( i + "/" + total );
                             List<SimpleAnnotationDTO> results = cacheDAO.getSimpleAnnotations( speciesId, ed );
 
+                            Map<GeneOntologyTerm, Integer> tempDirectAnnotationCount = new HashMap<>();
+
                             Map<GeneOntologyTerm, Set<String>> tempAnnotationSets = new HashMap<>();
 
                             Map<GeneOntologyTerm, Set<GeneOntologyTerm>> ancestorCache = new HashMap<>();
@@ -341,6 +344,13 @@ public class Cache implements Serializable {
                                 GeneOntologyTerm t = o.getTerm( goId );
 
                                 if ( t != null ) {
+
+                                    // Deal with direct annotation count
+
+                                    Integer directCnt = tempDirectAnnotationCount.get( t );
+                                    tempDirectAnnotationCount.put( t, ( directCnt == null ) ? 1 : directCnt + 1 );
+
+                                    // Deal with inferred annotation count
 
                                     Set<GeneOntologyTerm> propagate = o.getAncestors( t, true, ancestorCache );
                                     propagate.add( t );
@@ -362,7 +372,11 @@ public class Cache implements Serializable {
                             // Convert sets into counts
                             for ( Entry<GeneOntologyTerm, Set<String>> entry : tempAnnotationSets.entrySet() ) {
                                 MultiKey k = new MultiKey( speciesId, ed, entry.getKey() );
-                                this.goSetSizes.put( k, entry.getValue().size() );
+                                this.inferredAnnotationCount.put( k, entry.getValue().size() );
+                                Integer cnt = tempDirectAnnotationCount.get( entry.getKey() );
+                                if ( cnt != null ) {
+                                    this.directAnnotationCount.put( k, cnt );
+                                }
 
                             }
                         }
@@ -756,10 +770,17 @@ public class Cache implements Serializable {
         }
     }
 
-    public Integer getGoSetSizes( Integer speciesId, Edition ed, GeneOntologyTerm t ) {
+    public Integer getInferredAnnotationCount( Integer speciesId, Edition ed, GeneOntologyTerm t ) {
         if ( speciesId == null || ed == null || t == null ) return null;
         MultiKey k = new MultiKey( speciesId, ed, t );
-        return goSetSizes.get( k );
+        return inferredAnnotationCount.get( k );
+
+    }
+
+    public Integer getDirectAnnotationCount( Integer speciesId, Edition ed, GeneOntologyTerm t ) {
+        if ( speciesId == null || ed == null || t == null ) return null;
+        MultiKey k = new MultiKey( speciesId, ed, t );
+        return directAnnotationCount.get( k );
 
     }
 

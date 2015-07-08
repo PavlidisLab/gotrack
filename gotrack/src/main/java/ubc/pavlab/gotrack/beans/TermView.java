@@ -129,7 +129,12 @@ public class TermView {
             log.info( trackedTerms.size() );
 
             currentTerm = trackedTerms.get( currentGOEdition );
-            allGOEditions = new ArrayList<>( trackedTerms.keySet() );
+            allGOEditions = new ArrayList<>();
+            for ( Entry<GOEdition, GeneOntologyTerm> entry : trackedTerms.entrySet() ) {
+                if ( entry.getValue() != null ) {
+                    allGOEditions.add( entry.getKey() );
+                }
+            }
             Collections.sort( allGOEditions );
 
         }
@@ -163,7 +168,9 @@ public class TermView {
         // Create the 'Gene Count' chart
         ChartValues geneChart = new ChartValues();
         Map<Species, Series> series = new HashMap<>();
+        Map<Species, Series> directSeries = new HashMap<>();
         Map<Long, Integer> totalSeriesData = new HashMap<>();
+        Map<Long, Integer> directTotalSeriesData = new HashMap<>();
         for ( Species sp : species ) {
 
             Collection<Edition> eds = cache.getAllEditions( sp.getId() );
@@ -171,7 +178,9 @@ public class TermView {
             if ( eds != null ) {
 
                 Series s = new Series( sp.getScientificName() );
+                Series s2 = new Series( sp.getScientificName() + " Direct" );
                 series.put( sp, s );
+                directSeries.put( sp, s2 );
                 for ( Edition ed : eds ) {
                     GeneOntologyTerm t = trackedTerms.get( ed.getGoEdition() );
                     if ( t != null ) {
@@ -180,11 +189,27 @@ public class TermView {
                             // if this returns null it means the edition has no data in it
                             // most likely missing data
 
-                            Integer cnt = cache.getGoSetSizes( sp.getId(), ed, t );
+                            // Inferred annotations
+
+                            Integer cnt = cache.getInferredAnnotationCount( sp.getId(), ed, t );
                             cnt = ( cnt == null ) ? 0 : cnt;
                             s.addDataPoint( ed.getDate(), cnt );
+
+                            // Total Inferred
+
                             Integer totalCnt = totalSeriesData.get( ed.getDate().getTime() );
                             totalSeriesData.put( ed.getDate().getTime(), totalCnt == null ? cnt : totalCnt + cnt );
+
+                            // Direct annotations
+
+                            cnt = cache.getDirectAnnotationCount( sp.getId(), ed, t );
+                            cnt = ( cnt == null ) ? 0 : cnt;
+                            s2.addDataPoint( ed.getDate(), cnt );
+
+                            // Total Direct
+
+                            totalCnt = directTotalSeriesData.get( ed.getDate().getTime() );
+                            directTotalSeriesData.put( ed.getDate().getTime(), totalCnt == null ? cnt : totalCnt + cnt );
                         }
 
                     }
@@ -192,15 +217,29 @@ public class TermView {
             }
         }
 
+        // Inferred
         for ( Series s : series.values() ) {
             geneChart.addSeries( s );
         }
+
         Series totalSeries = new Series( "Total" );
         for ( Entry<Long, Integer> entry : totalSeriesData.entrySet() ) {
             totalSeries.addDataPoint( entry.getKey(), entry.getValue() );
         }
 
         geneChart.addSeries( totalSeries );
+
+        // Direct
+        for ( Series s : directSeries.values() ) {
+            geneChart.addSeries( s );
+        }
+
+        Series directTotalSeries = new Series( "Total Direct" );
+        for ( Entry<Long, Integer> entry : directTotalSeriesData.entrySet() ) {
+            directTotalSeries.addDataPoint( entry.getKey(), entry.getValue() );
+        }
+
+        geneChart.addSeries( directTotalSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_success", true );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_title",
@@ -248,6 +287,10 @@ public class TermView {
     }
 
     private Graph calcElements( GeneOntologyTerm t ) {
+
+        if ( t == null ) {
+            return new Graph();
+        }
 
         Set<Node> nodes = new LinkedHashSet<>();
         Set<Edge> edges = new LinkedHashSet<>();

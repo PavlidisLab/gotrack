@@ -526,7 +526,7 @@ public class TrackView {
                 Set<GeneOntologyTerm> goSet = editionEntry.getValue().keySet();
                 if ( total != null ) {
                     for ( GeneOntologyTerm term : goSet ) {
-                        Integer inGroup = cache.getGoSetSizes( speciesId, ed, term );
+                        Integer inGroup = cache.getInferredAnnotationCount( speciesId, ed, term );
                         if ( inGroup != null ) {
                             multi += 1.0 / ( inGroup * ( total - inGroup ) );
                         }

@@ -122,8 +122,25 @@
 											<ui:repeat
 												value="#{termView.currentTerm.parents.toArray()}"
 												var="parent" varStatus="loop">
-												<p:link value="#{parent.parent.goId}" outcome="trends" target="_blank">
-													<f:param name="query" value="#{parent.parent.goId}" />
+												<p:link value="#{parent.relation.goId}" outcome="trends" target="_blank">
+													<f:param name="query" value="#{parent.relation.goId}" />
+												</p:link>#{!loop.last ? ', ' : ''}
+											</ui:repeat>
+										</span>
+									</p:column>
+								</p:row>
+								
+								<p:row>
+									<p:column>
+										<h:outputText value="Children" />
+									</p:column>
+									<p:column>
+										<span class="sqlDialogText"> 
+											<ui:repeat
+												value="#{termView.currentTerm.children.toArray()}"
+												var="children" varStatus="loop">
+												<p:link value="#{children.relation.goId}" outcome="trends" target="_blank">
+													<f:param name="query" value="#{children.relation.goId}" />
 												</p:link>#{!loop.last ? ', ' : ''}
 											</ui:repeat>
 										</span>

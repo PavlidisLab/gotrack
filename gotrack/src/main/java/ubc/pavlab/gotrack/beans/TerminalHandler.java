@@ -151,7 +151,7 @@ public class TerminalHandler implements Serializable {
                 return "Term not found.";
             }
 
-            Integer val = cache.getGoSetSizes( speciesId, ed, t );
+            Integer val = cache.getInferredAnnotationCount( speciesId, ed, t );
 
             return t.toString() + "<br/>" + "GO Set Size: " + ( val == null ? "" : val.toString() );
         } else if ( command.equals( "" ) ) {
