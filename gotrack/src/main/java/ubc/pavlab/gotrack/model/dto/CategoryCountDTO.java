@@ -17,11 +17,9 @@
  *
  */
 
-package ubc.pavlab.gotrack.model.chart;
+package ubc.pavlab.gotrack.model.dto;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.sql.Date;
 
 /**
  * TODO Document Me
@@ -29,27 +27,28 @@ import java.util.Set;
  * @author mjacobson
  * @version $Id$
  */
-public class ChartValues {
+public final class CategoryCountDTO {
+    private final Date date;
+    private final String category;
+    private final int count;
 
-    Set<Series> series = new LinkedHashSet<>();
-
-    public ChartValues() {
+    public CategoryCountDTO( Date date, String category, int count ) {
         super();
+        this.date = date;
+        this.category = category;
+        this.count = count;
     }
 
-    public boolean addSeries( Series s ) {
-        return series.add( s );
+    public Date getDate() {
+        return date;
     }
 
-    public Series addSeries( String name, List<Point> ps ) {
-        Series s = new Series( name );
-        s.addDataPoint( ps );
-        series.add( s );
-        return s;
+    public String getCategory() {
+        return category;
     }
 
-    public Set<Series> getSeries() {
-        return series;
+    public int getCount() {
+        return count;
     }
 
 }

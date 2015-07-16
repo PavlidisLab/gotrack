@@ -19,11 +19,14 @@
 
 package ubc.pavlab.gotrack.beans;
 
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -43,6 +46,9 @@ import javax.faces.context.FacesContext;
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
+import com.google.gson.Gson;
+
+import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GOEdition;
@@ -54,8 +60,6 @@ import ubc.pavlab.gotrack.model.cytoscape.Graph;
 import ubc.pavlab.gotrack.model.cytoscape.Node;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.Relation;
-
-import com.google.gson.Gson;
 
 /**
  * TODO Document Me
@@ -72,18 +76,25 @@ public class TermView {
     @ManagedProperty("#{cache}")
     private Cache cache;
 
+    @ManagedProperty("#{annotationService}")
+    private AnnotationService annotationService;
+
     private String query;
     private GOEdition currentGOEdition;
     private GeneOntologyTerm currentTerm;
-    private Map<GOEdition, GeneOntologyTerm> trackedTerms = null;
+
     private Integer compareEditionId;
     private List<GOEdition> allGOEditions;
+
+    // Data
+
+    private Map<GOEdition, GeneOntologyTerm> trackedTerms = null;
 
     public TermView() {
         log.info( "TermView created" );
         // System.gc();
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
     }
 
     @PostConstruct
@@ -115,9 +126,11 @@ public class TermView {
 
         }
 
-        trackedTerms = cache.getTerm( query );
+        // Get ordered map
 
-        if ( trackedTerms == null || trackedTerms.isEmpty() ) {
+        Map<GOEdition, GeneOntologyTerm> temp = cache.getTerm( query );
+
+        if ( temp == null || temp.isEmpty() ) {
             // gene symbol not found
             throw new GeneNotFoundException();
             /*
@@ -126,7 +139,16 @@ public class TermView {
              * null, "error400?faces-redirect=true" );
              */
         } else {
-            log.info( trackedTerms.size() );
+
+            List<GOEdition> sortedKeySet = new ArrayList<>( temp.keySet() );
+            Collections.sort( sortedKeySet );
+
+            trackedTerms = new LinkedHashMap<>();
+
+            for ( GOEdition goEdition : sortedKeySet ) {
+                GeneOntologyTerm t = temp.get( goEdition );
+                trackedTerms.put( goEdition, t );
+            }
 
             currentTerm = trackedTerms.get( currentGOEdition );
             allGOEditions = new ArrayList<>();
@@ -142,30 +164,83 @@ public class TermView {
         return null;
     }
 
-    public void fetchCharts() {
+    public void fetchDAGData() {
+        // make some data for cyto.js
 
+        Graph eles = calcElements( currentTerm );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "cyto_graph", new Gson().toJson( eles ) );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "current_id", currentTerm.getId() );
+    }
+
+    public void fetchOverviewChart() {
         // Going to need this
-        Collection<Species> species = cache.getSpeciesList();
         Map<Long, Integer> dateToEdition = new HashMap<>();
+        Map<Long, String[]> dateToNameChange = new HashMap<>();
 
         // Create the 'did this term exist' chart
         ChartValues existChart = new ChartValues();
-        Series existSeries = new Series( query );
+        Series existSeries = new Series( "Existence" );
+        Series structureSeries = new Series( "Structure Change" );
+        Series nameChange = new Series( "Name Change" );
+        Graph prevEles = null;
+        String prevName = null;
         for ( Entry<GOEdition, GeneOntologyTerm> entry : trackedTerms.entrySet() ) {
             GeneOntologyTerm t = entry.getValue();
             existSeries.addDataPoint( entry.getKey().getDate().getTime(), t != null ? 1 : 0 );
             dateToEdition.put( entry.getKey().getDate().getTime(), entry.getKey().getEdition() );
+            if ( t != null ) {
+
+                Graph eles = calcElements( t );
+
+                if ( prevEles != null ) {
+                    Map<String, Graph> diff = graphDiff( prevEles, eles );
+                    structureSeries.addDataPoint( entry.getKey().getDate().getTime(), diff != null ? 1 : 0 );
+                } else {
+                    structureSeries.addDataPoint( entry.getKey().getDate().getTime(), -1 );
+                }
+
+                if ( prevName != null ) {
+                    int changed = t.getName().equals( prevName ) ? 0 : 1;
+                    nameChange.addDataPoint( entry.getKey().getDate().getTime(), changed );
+                    if ( changed == 1 ) {
+                        dateToNameChange.put( entry.getKey().getDate().getTime(),
+                                new String[] { prevName, t.getName() } );
+                    }
+
+                } else {
+                    nameChange.addDataPoint( entry.getKey().getDate().getTime(), -1 );
+                }
+
+                prevEles = eles;
+                prevName = t.getName();
+
+            } else {
+                structureSeries.addDataPoint( entry.getKey().getDate().getTime(), -1 );
+                nameChange.addDataPoint( entry.getKey().getDate().getTime(), -1 );
+            }
         }
 
         existChart.addSeries( existSeries );
+        existChart.addSeries( structureSeries );
+        existChart.addSeries( nameChange );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_exist_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_exist_title", "Existence of " + query + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_exist_ylabel", "Exists" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_exist_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_exist_data", existChart );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_success", true );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_title",
+                "Overview of " + query + " vs Time" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_ylabel", "Exists" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_xlabel", "Date" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_data", existChart );
 
+        RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "dateToNameChange",
+                new Gson().toJson( dateToNameChange ) );
+    }
+
+    public void fetchGeneChart() {
         // Create the 'Gene Count' chart
+        Collection<Species> species = cache.getSpeciesList();
         ChartValues geneChart = new ChartValues();
         Map<Species, Series> series = new HashMap<>();
         Map<Species, Series> directSeries = new HashMap<>();
@@ -209,7 +284,8 @@ public class TermView {
                             // Total Direct
 
                             totalCnt = directTotalSeriesData.get( ed.getDate().getTime() );
-                            directTotalSeriesData.put( ed.getDate().getTime(), totalCnt == null ? cnt : totalCnt + cnt );
+                            directTotalSeriesData.put( ed.getDate().getTime(),
+                                    totalCnt == null ? cnt : totalCnt + cnt );
                         }
 
                     }
@@ -217,22 +293,13 @@ public class TermView {
             }
         }
 
-        // Inferred
-        for ( Series s : series.values() ) {
-            geneChart.addSeries( s );
-        }
-
+        // Totals
         Series totalSeries = new Series( "Total" );
         for ( Entry<Long, Integer> entry : totalSeriesData.entrySet() ) {
             totalSeries.addDataPoint( entry.getKey(), entry.getValue() );
         }
 
         geneChart.addSeries( totalSeries );
-
-        // Direct
-        for ( Series s : directSeries.values() ) {
-            geneChart.addSeries( s );
-        }
 
         Series directTotalSeries = new Series( "Total Direct" );
         for ( Entry<Long, Integer> entry : directTotalSeriesData.entrySet() ) {
@@ -241,35 +308,89 @@ public class TermView {
 
         geneChart.addSeries( directTotalSeries );
 
+        // Direct & Inferred
+
+        for ( Species sp : series.keySet() ) {
+            geneChart.addSeries( series.get( sp ) );
+            geneChart.addSeries( directSeries.get( sp ) );
+        }
+
         RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_success", true );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_title",
-                "Gene Annotation Count of " + query + " vs Time" );
+                "Genes Annotated to " + query + " vs Time" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_ylabel", "Gene Count" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_data", geneChart );
+    }
 
-        // make some data for vis.js
+    public void fetchEvidenceChart() {
+        // Make evidence charts
 
-        Graph eles = calcElements( currentTerm );
+        Map<String, Map<Date, Integer>> evidenceCounts = annotationService.fetchCategoryCounts( currentTerm );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "cyto_graph", new Gson().toJson( eles ) );
+        ChartValues evidenceChart = new ChartValues();
 
-        RequestContext.getCurrentInstance().addCallbackParam( "current_id", currentTerm.getId() );
+        // Done in this manner to keep order and color of categories constant
+        for ( String category : cache.getEvidenceCategories() ) {
+            Series s = new Series( category );
+            Map<Date, Integer> m = evidenceCounts.get( category );
+            if ( m != null ) {
+                for ( Entry<Date, Integer> entry : m.entrySet() ) {
+                    s.addDataPoint( entry.getKey(), entry.getValue() );
+                }
+            }
+            evidenceChart.addSeries( s );
+        }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
-
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_title",
+                "Annotation Count of " + query + " vs Time" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_ylabel", "Annotation Count" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_xlabel", "Date" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_data", evidenceChart );
     }
 
     public void fetchGraph() {
 
-        Integer goEditionId = Integer.valueOf( FacesContext.getCurrentInstance().getExternalContext()
-                .getRequestParameterMap().get( "edition" ) );
+        Integer goEditionId = Integer.valueOf(
+                FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
+
+        Boolean showDiff = Boolean.valueOf(
+                FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "showDiff" ) );
 
         GOEdition selectedEdition = cache.getGOEdition( goEditionId );
 
         GeneOntologyTerm selectedTerm = trackedTerms.get( selectedEdition );
 
         Graph graph = calcElements( selectedTerm );
+
+        if ( showDiff ) {
+
+            GOEdition compareEdition = null;
+
+            for ( Iterator<GOEdition> iterator = trackedTerms.keySet().iterator(); iterator.hasNext(); ) {
+                GOEdition goEdition = iterator.next();
+
+                if ( goEdition.equals( selectedEdition ) ) {
+                    break;
+                }
+
+                compareEdition = goEdition;
+
+            }
+
+            if ( compareEdition != null ) {
+
+                Graph oldGraph = calcElements( trackedTerms.get( compareEdition ) );
+
+                Map<String, Graph> diff = graphDiff( oldGraph, graph );
+                RequestContext.getCurrentInstance().addCallbackParam( "vis_diff", new Gson().toJson( diff ) );
+                // if there is a difference then we want to graph the old one and draw over the changes,
+                // if there is no difference then we just graph the new one
+                if ( diff != null ) {
+                    graph = oldGraph;
+                }
+            }
+        }
 
         RequestContext.getCurrentInstance().addCallbackParam( "cyto_graph", new Gson().toJson( graph ) );
 
@@ -326,10 +447,13 @@ public class TermView {
         Set<Edge> newEdges = new HashSet<>();
         Set<Edge> deletedEdges = new HashSet<>();
 
+        boolean changed = false;
+
         // Find new nodes
         for ( Node n : newGraph.getNodes() ) {
             if ( !baseGraph.getNodes().contains( n ) ) {
                 newNodes.add( n );
+                changed = true;
             }
         }
 
@@ -337,6 +461,7 @@ public class TermView {
         for ( Node n : baseGraph.getNodes() ) {
             if ( !newGraph.getNodes().contains( n ) ) {
                 deletedNodes.add( n );
+                changed = true;
             }
         }
 
@@ -344,6 +469,7 @@ public class TermView {
         for ( Edge n : newGraph.getEdges() ) {
             if ( !baseGraph.getEdges().contains( n ) ) {
                 newEdges.add( n );
+                changed = true;
             }
         }
 
@@ -351,7 +477,12 @@ public class TermView {
         for ( Edge n : baseGraph.getEdges() ) {
             if ( !newGraph.getEdges().contains( n ) ) {
                 deletedEdges.add( n );
+                changed = true;
             }
+        }
+
+        if ( !changed ) {
+            return null;
         }
 
         Map<String, Graph> results = new HashMap<>();
@@ -392,6 +523,10 @@ public class TermView {
 
     public void setCache( Cache cache ) {
         this.cache = cache;
+    }
+
+    public void setAnnotationService( AnnotationService annotationService ) {
+        this.annotationService = annotationService;
     }
 
 }

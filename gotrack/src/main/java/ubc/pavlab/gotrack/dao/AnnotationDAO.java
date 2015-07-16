@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
 import ubc.pavlab.gotrack.model.dto.TrackDTO;
 
@@ -35,5 +36,7 @@ public interface AnnotationDAO {
     public List<TrackDTO> track( Integer species, String symbol ) throws DAOException;
 
     public List<EnrichmentDTO> enrich( Integer species, Set<Gene> genes ) throws DAOException;
+
+    public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException;
 
 }

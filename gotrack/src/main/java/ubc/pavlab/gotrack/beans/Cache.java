@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.PostConstruct;
@@ -43,6 +44,14 @@ import javax.faces.bean.ManagedProperty;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
+import com.googlecode.concurrenttrees.radix.RadixTree;
+import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
 
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
@@ -72,14 +81,6 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.RelationshipType;
 import ubc.pavlab.gotrack.model.table.GeneMatches;
 import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
-import com.googlecode.concurrenttrees.radix.RadixTree;
-import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -142,26 +143,28 @@ public class Cache implements Serializable {
 
     private Map<GOEdition, GeneOntology> ontologies = new ConcurrentHashMap<>();
 
-    // Static
     private Map<String, Evidence> evidenceCache = new ConcurrentHashMap<>();
+    private ImmutableSet<String> evidenceCategoryCache = null;
+
+    // Page specific caches
 
     private Map<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> applicationLevelDataCache = new LinkedHashMap<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>>(
-            MAX_DATA_ENTRIES + 1, 0.75F, true ) {
+            MAX_DATA_ENTRIES + 1, 0.75F, true) {
         // This method is called just after a new entry has been added
         @Override
         public boolean removeEldestEntry(
                 Map.Entry<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> eldest ) {
-            return size() > MAX_DATA_ENTRIES;
+            return size( ) > MAX_DATA_ENTRIES;
         }
     };
 
     // TODO This should be changed to an LFU cache instead of LRU
     private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> applicationLevelEnrichmentCache = new LinkedHashMap<Gene, Map<Edition, Set<GeneOntologyTerm>>>(
-            MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true ) {
+            MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true) {
         // This method is called just after a new entry has been added
         @Override
         public boolean removeEldestEntry( Map.Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> eldest ) {
-            return size() > MAX_ENRICHMENT_ENTRIES;
+            return size( ) > MAX_ENRICHMENT_ENTRIES;
         }
     };
 
@@ -193,8 +196,8 @@ public class Cache implements Serializable {
 
         applicationLevelDataCache = Collections.synchronizedMap( applicationLevelDataCache );
 
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
 
         int[] speciesRestrictions = settingsCache.getSpeciesRestrictions();
 
@@ -254,9 +257,20 @@ public class Cache implements Serializable {
         }
         // ****************************
 
+        // Evidence Category cache creation
+        // ****************************
+        Set<String> tmpCategories = new TreeSet<>();
+        for ( Evidence e : evidenceCache.values() ) {
+            tmpCategories.add( e.getCategory() );
+        }
+
+        evidenceCategoryCache = ImmutableSet.copyOf( tmpCategories );
+
+        // ****************************
+
         // System.gc();
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
 
         // GOTerm creation
         // ****************************
@@ -297,8 +311,8 @@ public class Cache implements Serializable {
 
             System.gc();
             log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() );
-            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                    / 1000000 + " MB" );
+            log.info( "Used Memory: "
+                    + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
         }
         // ****************************
 
@@ -391,8 +405,8 @@ public class Cache implements Serializable {
 
             log.info( "GO Set sizes successfully obtained" );
             // System.gc();();
-            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                    / 1000000 + " MB" );
+            log.info( "Used Memory: "
+                    + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
         }
         // ****************************
 
@@ -414,8 +428,8 @@ public class Cache implements Serializable {
             }
             log.info( "Aggregates successfully obtained" );
 
-            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                    / 1000000 + " MB" );
+            log.info( "Used Memory: "
+                    + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
         }
         // ****************************
 
@@ -444,8 +458,8 @@ public class Cache implements Serializable {
 
         }
         for ( String accession : spMap.keySet() ) {
-            primaryAccession
-                    .put( accession, new Accession( accession, spMap.get( accession ), secMap.get( accession ) ) );
+            primaryAccession.put( accession,
+                    new Accession( accession, spMap.get( accession ), secMap.get( accession ) ) );
         }
         spMap.clear();
         secMap.clear();
@@ -528,8 +542,9 @@ public class Cache implements Serializable {
             }
         }
 
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
+
         // ****************************
 
         // Gene caches for auto-completion
@@ -936,6 +951,10 @@ public class Cache implements Serializable {
     public Evidence getEvidence( String evidence ) {
         if ( evidence == null ) return null;
         return evidenceCache.get( evidence );
+    }
+
+    public Set<String> getEvidenceCategories() {
+        return evidenceCategoryCache;
     }
 
     public Accession getAccession( String acc ) {

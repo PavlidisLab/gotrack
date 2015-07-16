@@ -20,9 +20,11 @@
 package ubc.pavlab.gotrack.beans.service;
 
 import java.io.Serializable;
+import java.sql.Date;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -35,6 +37,9 @@ import javax.faces.bean.ManagedProperty;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Multimap;
+
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.beans.DAOFactoryBean;
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
@@ -44,12 +49,10 @@ import ubc.pavlab.gotrack.model.Evidence;
 import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
 import ubc.pavlab.gotrack.model.dto.TrackDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
 
 /**
  * TODO Document Me
@@ -155,7 +158,8 @@ public class AnnotationService implements Serializable {
 
     }
 
-    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> fetchEnrichmentData( Integer speciesId, Collection<Gene> genes ) {
+    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> fetchEnrichmentData( Integer speciesId,
+            Collection<Gene> genes ) {
         Set<Gene> geneSet = new HashSet<>( genes );
 
         Map<String, Gene> givenGenes = new HashMap<>();
@@ -270,6 +274,24 @@ public class AnnotationService implements Serializable {
 
         return data;
 
+    }
+
+    public Map<String, Map<Date, Integer>> fetchCategoryCounts( GeneOntologyTerm t ) {
+        return fetchCategoryCounts( t.getGoId() );
+    }
+
+    public Map<String, Map<Date, Integer>> fetchCategoryCounts( String goId ) {
+        Map<String, Map<Date, Integer>> results = new LinkedHashMap<>();
+        List<CategoryCountDTO> resultset = annotationDAO.categoryCounts( goId );
+        for ( CategoryCountDTO dto : resultset ) {
+            Map<Date, Integer> m2 = results.get( dto.getCategory() );
+            if ( m2 == null ) {
+                m2 = new HashMap<>();
+                results.put( dto.getCategory(), m2 );
+            }
+            m2.put( dto.getDate(), dto.getCount() );
+        }
+        return results;
     }
 
     public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {

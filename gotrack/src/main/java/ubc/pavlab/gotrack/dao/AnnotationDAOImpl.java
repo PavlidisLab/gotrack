@@ -34,6 +34,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
 import ubc.pavlab.gotrack.model.dto.TrackDTO;
 
@@ -53,6 +54,9 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_TRACK = "select distinct edition, primary_accession as `primary`, go_id, evidence, reference from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where symbol=? and species_id=?";
 
     private static final String SQL_ENRICH = "select edition.date, goa_symbol.edition, edition.go_edition_id_fk, edition.date go_date, goa_annot.go_id parent, goa_symbol.symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id INNER JOIN edition on edition.edition=goa_symbol.edition and edition.species_id =goa_symbol.species_id where goa_symbol.species_id=? and goa_symbol.symbol in (%s) GROUP BY goa_symbol.edition, parent, goa_symbol.symbol ORDER BY NULL";
+
+    // Collect evidence breakdown for a specific term
+    private static final String SQL_CATEGORY_BREAKDOWN_FOR_TERM = "select date, evidence_categories.category , COUNT(*) count from goa_symbol inner join goa_annot on goa_symbol.id = goa_annot.goa_symbol_id inner join edition on edition.edition=goa_symbol.edition and edition.species_id = goa_symbol.species_id inner join evidence_categories on evidence_categories.evidence  = goa_annot.evidence where go_id=? group by date, evidence_categories.category order by date";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -108,8 +112,9 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
             startTime = System.currentTimeMillis();
             while ( resultSet.next() ) {
-                results.add( new TrackDTO( resultSet.getInt( "edition" ), resultSet.getString( "primary" ), resultSet
-                        .getString( "go_id" ), resultSet.getString( "evidence" ), resultSet.getString( "reference" ) ) );
+                results.add( new TrackDTO( resultSet.getInt( "edition" ), resultSet.getString( "primary" ),
+                        resultSet.getString( "go_id" ), resultSet.getString( "evidence" ),
+                        resultSet.getString( "reference" ) ) );
             }
             endTime = System.currentTimeMillis();
             log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
@@ -166,6 +171,55 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
                 results.add( enrichmentMap( resultSet ) );
 
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
+    public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException {
+
+        List<Object> params = new ArrayList<Object>();
+
+        // species, symbol,species
+        params.add( goId );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<CategoryCountDTO> results = new ArrayList<>();
+        String sql = SQL_CATEGORY_BREAKDOWN_FOR_TERM;
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+                results.add( new CategoryCountDTO( resultSet.getDate( "date" ), resultSet.getString( "category" ),
+                        resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();
             log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );

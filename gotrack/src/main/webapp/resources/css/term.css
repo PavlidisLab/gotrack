@@ -7,7 +7,7 @@ table.no-border tr, table.no-border td {
 	border: none !important;
 }
 
-#mynetwork {
+#currentAncestry {
     margin-top:25px;
     border: 1px solid grey;
 }
