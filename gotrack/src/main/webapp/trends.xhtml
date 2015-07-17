@@ -41,9 +41,10 @@
 		$(document).ready(function() {
 			$('.loading').show();
 			fetchDAGData();
+			fetchEvidenceChart();
 			fetchOverviewChart();
 			fetchGeneChart();
-			fetchEvidenceChart();
+			
 		});
 		</h:outputScript>  
 	</ui:define>
@@ -55,16 +56,16 @@
 	<ui:define name="center_layout">
 		<p:outputPanel rendered="#{termView.trackedTerms != null}">
 				<h:form style="margin:0 25px 0 25px;">
-					<p:remoteCommand name="fetchDAGData"
+					<p:remoteCommand name="fetchDAGData" async="true"
 						oncomplete="handleFetchDAGData(xhr, status, args);"
 						actionListener="#{termView.fetchDAGData()}" />
-					<p:remoteCommand name="fetchOverviewChart"
+					<p:remoteCommand name="fetchOverviewChart" async="true"
 						oncomplete="handleFetchOverviewChart(xhr, status, args);"
 						actionListener="#{termView.fetchOverviewChart()}" />
-					<p:remoteCommand name="fetchGeneChart"
+					<p:remoteCommand name="fetchGeneChart" async="true"
 						oncomplete="handleFetchGeneChart(xhr, status, args);"
 						actionListener="#{termView.fetchGeneChart()}" />
-					<p:remoteCommand name="fetchEvidenceChart"
+					<p:remoteCommand name="fetchEvidenceChart" async="true"
 						oncomplete="handleFetchEvidenceChart(xhr, status, args);"
 						actionListener="#{termView.fetchEvidenceChart()}" />
 					<p:remoteCommand name="fetchGraph"

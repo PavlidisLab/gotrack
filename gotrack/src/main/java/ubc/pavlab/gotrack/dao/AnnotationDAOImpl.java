@@ -34,6 +34,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
 import ubc.pavlab.gotrack.model.dto.TrackDTO;
@@ -57,6 +58,9 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     // Collect evidence breakdown for a specific term
     private static final String SQL_CATEGORY_BREAKDOWN_FOR_TERM = "select date, evidence_categories.category , COUNT(*) count from goa_symbol inner join goa_annot on goa_symbol.id = goa_annot.goa_symbol_id inner join edition on edition.edition=goa_symbol.edition and edition.species_id = goa_symbol.species_id inner join evidence_categories on evidence_categories.evidence  = goa_annot.evidence where go_id=? group by date, evidence_categories.category order by date";
+
+    // Collect unique ,directly annotated gene counts for a term
+    private static final String SQL_DIRECT_GENE_COUNTS_FOR_TERM = "select species_id, edition, COUNT(distinct symbol) count from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where go_id = ? group by species_id, edition";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -220,6 +224,55 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             while ( resultSet.next() ) {
                 results.add( new CategoryCountDTO( resultSet.getDate( "date" ), resultSet.getString( "category" ),
                         resultSet.getInt( "count" ) ) );
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
+    public List<AnnotationCountDTO> directGeneCounts( String goId ) throws DAOException {
+
+        List<Object> params = new ArrayList<Object>();
+
+        // species, symbol,species
+        params.add( goId );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<AnnotationCountDTO> results = new ArrayList<>();
+        String sql = SQL_DIRECT_GENE_COUNTS_FOR_TERM;
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+                results.add( new AnnotationCountDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
+                        "", resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();
             log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
