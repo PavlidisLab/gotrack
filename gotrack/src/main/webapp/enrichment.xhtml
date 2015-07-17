@@ -34,8 +34,8 @@
 		<h:outputScript library="js" name="common.js" />
 	</ui:define>
 	<ui:define name="left_right_layout">
-		<p:layoutUnit id="left" position="west" size="325" resizable="true"
-			collapsible="true" header="Options" minSize="325">
+		<p:layoutUnit id="left" position="west" size="350" resizable="true"
+			collapsible="true" header="Options" minSize="350">
 			<h:form id="formSelect">
 
 				<h3 class="center">Global Settings</h3>
@@ -91,6 +91,20 @@
 				<h3 class="center">Enrichment Settings</h3>
 				<p:panelGrid id="enrichmentSettingsPanel" style="margin-bottom:10px"
 					cellpadding="5" styleClass="no-border">
+					
+					<p:row>
+						<p:column>
+							<i class="fa fa-info-circle"
+								title="Which aspects (Cellular Component, Biological Process, Molecular Function) to include in the analysis.">&#160;
+								Dataset:</i>
+						</p:column>
+						<p:column>
+							<p:selectManyButton value="#{enrichmentView.aspects}" converter="aspectConverter">
+								<f:selectItems value="#{cache.aspects}"
+									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
+							</p:selectManyButton>
+						</p:column>
+					</p:row>
 
 					<p:row>
 						<p:column>
@@ -136,7 +150,7 @@
 						<p:column>
 							<i class="fa fa-info-circle"
 								title="Select only those terms with at least this number of genes associated with them">&#160;
-								Geneset size min:</i>
+								Min Geneset:</i>
 						</p:column>
 						<p:column>
 							<p:spinner id="annotatedPopulationMinInput"
@@ -148,7 +162,7 @@
 						<p:column>
 							<i class="fa fa-info-circle"
 								title="Select only those terms with at most this number of genes associated with them (0 for disabled)">&#160;
-								Geneset size max:</i>
+								Max Geneset:</i>
 						</p:column>
 						<p:column>
 							<p:spinner id="annotatedPopulationMaxInput"

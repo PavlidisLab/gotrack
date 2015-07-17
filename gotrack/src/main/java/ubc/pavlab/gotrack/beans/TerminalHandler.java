@@ -47,6 +47,8 @@ import org.dom4j.Element;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
 
+import com.google.common.base.Joiner;
+
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
@@ -57,8 +59,6 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.StatusPoller;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-
-import com.google.common.base.Joiner;
 
 /**
  * TODO Document Me
@@ -97,8 +97,8 @@ public class TerminalHandler implements Serializable {
 
     public TerminalHandler() {
         log.info( "TerminalHandler created" );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
 
     }
 
@@ -204,7 +204,7 @@ public class TerminalHandler implements Serializable {
                     return "Error parsing XML!";
                 }
 
-                List<? extends Node> genesets = ( List<? extends Node> ) document.selectNodes( "//MSIGDB/GENESET" );
+                List<? extends Node> genesets = document.selectNodes( "//MSIGDB/GENESET" );
 
                 log.info( "Total Genesets: " + genesets.size() );
 
@@ -257,7 +257,7 @@ public class TerminalHandler implements Serializable {
                         }
                     }
                     StabilityAnalysis sa = enrichmentView.enrich( hitList, species, MultipleTestCorrection.BH, 0.05, 5,
-                            200, SimilarityCompareMethod.CURRENT, 5, new StatusPoller() ).getStabilityAnalysis();
+                            200, null, SimilarityCompareMethod.CURRENT, 5, new StatusPoller() ).getStabilityAnalysis();
 
                     String outputFile = outputFolder + "/" + systematicName + "_results.txt";
 
@@ -265,7 +265,8 @@ public class TerminalHandler implements Serializable {
                     try {
                         writer = new PrintWriter( outputFile, "UTF-8" );
 
-                        writer.println( "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard\tTopParentsJaccard" );
+                        writer.println(
+                                "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard\tTopParentsJaccard" );
                         for ( Entry<Edition, SimilarityScore> editionEntry : sa.getSimilarityScores().entrySet() ) {
                             Edition ed = editionEntry.getKey();
                             SimilarityScore score = editionEntry.getValue();
@@ -337,7 +338,7 @@ public class TerminalHandler implements Serializable {
                             returnString += "Could not find " + geneInput + "<br/>";
                         }
                     }
-                    enrichmentView.enrich( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200,
+                    enrichmentView.enrich( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200, null,
                             SimilarityCompareMethod.CURRENT, 5, new StatusPoller() );
 
                 } else {

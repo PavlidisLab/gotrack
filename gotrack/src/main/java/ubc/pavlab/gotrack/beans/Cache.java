@@ -58,6 +58,7 @@ import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.beans.service.SpeciesService;
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Evidence;
@@ -187,6 +188,10 @@ public class Cache implements Serializable {
 
     public SimilarityCompareMethod[] getSimilarityCompareMethods() {
         return SimilarityCompareMethod.values();
+    }
+
+    public Aspect[] getAspects() {
+        return Aspect.values();
     }
 
     @PostConstruct

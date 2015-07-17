@@ -299,14 +299,15 @@ public class TermView {
             totalSeries.addDataPoint( entry.getKey(), entry.getValue() );
         }
 
-        geneChart.addSeries( totalSeries );
+        //TODO show totals or no? Ask Paul.
+        //geneChart.addSeries( totalSeries );
 
         Series directTotalSeries = new Series( "Total Direct" );
         for ( Entry<Long, Integer> entry : directTotalSeriesData.entrySet() ) {
             directTotalSeries.addDataPoint( entry.getKey(), entry.getValue() );
         }
 
-        geneChart.addSeries( directTotalSeries );
+        //geneChart.addSeries( directTotalSeries );
 
         // Direct & Inferred
 
