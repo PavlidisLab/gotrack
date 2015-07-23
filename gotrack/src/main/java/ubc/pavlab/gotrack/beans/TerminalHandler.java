@@ -54,6 +54,7 @@ import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.model.Aggregate;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
@@ -119,6 +120,29 @@ public class TerminalHandler implements Serializable {
             return enrichmentView.getSelectedGenes().toString();
         } else if ( command.equals( "help" ) ) {
             return sessionManager.getAuthenticated() ? AUTH_COMMANDS.toString() : OPEN_COMMANDS.toString();
+        } else if ( command.equals( "aggregate" ) ) {
+            if ( params.length == 2 ) {
+                Integer speciesId;
+                try {
+                    speciesId = Integer.valueOf( params[0] );
+                } catch ( NumberFormatException e ) {
+                    return "Malformed Input : speciesId, edition";
+                }
+                Integer editionId;
+                try {
+                    editionId = Integer.valueOf( params[1] );
+                } catch ( NumberFormatException e ) {
+                    return "Malformed Input : speciesId, edition";
+                }
+                Edition ed = cache.getEdition( speciesId, editionId );
+                Aggregate agg = cache.getAggregates( speciesId, ed );
+                if ( agg == null ) {
+                    return "Null";
+                }
+                return agg.toString();
+            } else {
+                return "Malformed Input : speciesId, edition";
+            }
         } else if ( command.equals( "term" ) ) {
             Edition ed;
             String goId;

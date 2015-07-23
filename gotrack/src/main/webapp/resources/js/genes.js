@@ -498,7 +498,7 @@ function createGenericLineChart(renderTo, args) {
                                 this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
                                 this.yAxis[0].update({ type: 'linear'});
                              } else {
-                                this.exportSVGElements[3].element.nextSibling.innerHTML = "Logarithmic";
+                                this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
                                 this.yAxis[0].update({ type: 'logarithmic'});
                              }
                              

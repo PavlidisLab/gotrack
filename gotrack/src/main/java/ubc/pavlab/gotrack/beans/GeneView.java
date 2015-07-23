@@ -50,12 +50,12 @@ import com.google.gson.Gson;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.beans.service.StatsService;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
+import ubc.pavlab.gotrack.model.Aggregate;
 import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.AnnotationType;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.StatsEntry;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
@@ -271,29 +271,42 @@ public class GeneView {
         log.debug( "fetchAnnotationChart" );
 
         // Collect data from cache about species aggregates
-        Map<Edition, StatsEntry> aggregates = cache.getAggregates( species.getId() );
+        //        Map<Edition, Aggregate> aggregates = cache.getAggregates( species.getId() );
 
         ChartValues chart = new ChartValues();
 
-        // Create series for species aggregates
-        Series aggregateSeries = new Series( "Species Direct Avg" );
-        for ( Entry<Edition, StatsEntry> entry : aggregates.entrySet() ) {
-            aggregateSeries.addDataPoint( entry.getKey().getDate(), entry.getValue().getAvgDirectByGene() );
-        }
-        chart.addSeries( aggregateSeries );
+        //        // Create series for species aggregates
+        //        Series aggregateSeries = new Series( "Species Direct Avg" );
+        //        for ( Entry<Edition, Aggregate> entry : aggregates.entrySet() ) {
+        //            aggregateSeries.addDataPoint( entry.getKey().getDate(), entry.getValue().getAvgDirectByGene() );
+        //        }
+        //        chart.addSeries( aggregateSeries );
 
         //Create series for direct annotations count
         Series directCountSeries = new Series( "Direct Annotation Count" );
+        Series aggregateSeries = new Series( "Species Direct Avg" );
+        Series aggregateInferredSeries = new Series( "Species Inferred Avg" );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.DIRECT )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             int count = entry.getValue().size();
             directCountSeries.addDataPoint( ed.getDate(), count );
+
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                aggregateSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
+                aggregateInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
+            }
+
         }
+        chart.addSeries( aggregateSeries );
+        chart.addSeries( aggregateInferredSeries );
         chart.addSeries( directCountSeries );
 
         // Create series for inferred annotations count
         Series inferredCountSeries = new Series( "Inferred Annotation Count" );
+
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.INFERRED )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
@@ -303,7 +316,8 @@ public class GeneView {
         chart.addSeries( inferredCountSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Annotations vs Time" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
+                "Terms Annotated to " + gene.getSymbol() + " vs Time" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Annotations Count" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
@@ -350,7 +364,8 @@ public class GeneView {
         chart.addSeries( inferredSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Similarity vs Time" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
+                "Similarity of " + gene.getSymbol() + " vs Time" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Similarity Index" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
@@ -387,7 +402,8 @@ public class GeneView {
         chart.addSeries( multiSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Multifunctionality vs Time" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
+                "Multifunctionality of " + gene.getSymbol() + " vs Time" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Multifunctionality" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
@@ -461,7 +477,8 @@ public class GeneView {
         chart.addSeries( inferredLossSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Loss/Gain vs Time" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
+                "Loss/Gain of " + gene.getSymbol() + " vs Time" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Change" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
@@ -550,7 +567,8 @@ public class GeneView {
         }
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Annotation Category vs Time" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
+                "Annotation Categories of " + gene.getSymbol() + " vs Time" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );

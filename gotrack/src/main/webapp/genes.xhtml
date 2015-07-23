@@ -276,6 +276,9 @@
 					<p:column headerText="Reference">
 						<h:outputText value="#{annot.reference}" />
 					</p:column>
+			        <f:facet name="footer">
+			        	<h:outputText value="Date: #{geneView.clickEdition.date}, Edition: #{geneView.clickEdition.edition}, GO Term:  #{geneView.viewTerm.goId}"/>
+			        </f:facet>
 					
 				</p:dataTable>
 			</h:form>
