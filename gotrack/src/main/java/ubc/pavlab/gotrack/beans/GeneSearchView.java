@@ -61,8 +61,8 @@ public class GeneSearchView implements Serializable {
 
     public GeneSearchView() {
         log.info( "GeneSearchView created" );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
     }
 
     @Deprecated
@@ -121,7 +121,7 @@ public class GeneSearchView implements Serializable {
             return null;
         }
         // return "track?faces-redirect=true&includeViewParams=true";
-        return "track?faces-redirect=true&query=" + query + "&speciesId=" + speciesId;
+        return "genes?faces-redirect=true&query=" + query + "&speciesId=" + speciesId;
     }
 
     public String getQuery() {

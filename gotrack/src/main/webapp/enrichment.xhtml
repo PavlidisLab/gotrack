@@ -29,7 +29,6 @@
 		<h:outputScript library="js" name="export-csv.js" />
 		<!-- <h:outputScript library="js" name="broken-axis.js" /> -->
 
-		<!-- <h:outputScript library="js" name="gotrack.js" /> -->
 		<h:outputScript library="js" name="enrichment.js" />
 		<h:outputScript library="js" name="common.js" />
 	</ui:define>
@@ -359,19 +358,13 @@
 								style="width:150px;">
 								<f:facet name="filter">
 									<p:selectManyButton
-										onchange="PF('tableEnrichmentWdg').filter()"
-										style="font-size: 75%">
-										<f:selectItem itemLabel="BP" itemValue="BP" />
-										<f:selectItem itemLabel="MF" itemValue="MF" />
-										<f:selectItem itemLabel="CC" itemValue="CC" />
+										onchange="PF('tableStabilityWdg').filter()"
+										style="font-size: 75%" converter="aspectConverter">
+										<f:selectItems value="#{cache.aspects}"
+											var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 									</p:selectManyButton>
 								</f:facet>
-								<h:outputText value="Biological Process"
-									rendered="#{entry.term.aspect == 'BP'}" />
-								<h:outputText value="Molecular Function"
-									rendered="#{entry.term.aspect == 'MF'}" />
-								<h:outputText value="Cellular Component"
-									rendered="#{entry.term.aspect == 'CC'}" />
+								<h:outputText value="#{entry.term.aspect.label}"/>
 							</p:column>
 							<p:column filterBy="#{entry.term.name}"
 								filterMatchMode="contains" sortBy="#{entry.term.name}"
@@ -527,18 +520,12 @@
 								<f:facet name="filter">
 									<p:selectManyButton
 										onchange="PF('tableEnrichmentWdg').filter()"
-										style="font-size: 75%">
-										<f:selectItem itemLabel="BP" itemValue="BP" />
-										<f:selectItem itemLabel="MF" itemValue="MF" />
-										<f:selectItem itemLabel="CC" itemValue="CC" />
+										style="font-size: 75%" converter="aspectConverter">
+										<f:selectItems value="#{cache.aspects}"
+											var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 									</p:selectManyButton>
 								</f:facet>
-								<h:outputText value="Biological Process"
-									rendered="#{entry.term.aspect == 'BP'}" />
-								<h:outputText value="Molecular Function"
-									rendered="#{entry.term.aspect == 'MF'}" />
-								<h:outputText value="Cellular Component"
-									rendered="#{entry.term.aspect == 'CC'}" />
+								<h:outputText value="#{entry.term.aspect.label}"/>
 							</p:column>
 							<p:column filterBy="#{entry.term.name}"
 								filterMatchMode="contains" sortBy="#{entry.term.name}"

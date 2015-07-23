@@ -25,16 +25,21 @@ package ubc.pavlab.gotrack.model;
  * @author mjacobson
  * @version $Id$
  */
-public class EvidenceReference {
+public final class Annotation {
 
-    private Evidence evidence;
+    private final String qualifier;
+    private final Evidence evidence;
     private final String reference;
-    private final Dataset dataset;
 
-    public EvidenceReference( Evidence evidence, String reference, Dataset dataset ) {
+    public Annotation( String qualifier, Evidence evidence, String reference ) {
+        super();
+        this.qualifier = qualifier;
         this.evidence = evidence;
         this.reference = reference;
-        this.dataset = dataset;
+    }
+
+    public String getQualifier() {
+        return qualifier;
     }
 
     public Evidence getEvidence() {
@@ -45,21 +50,12 @@ public class EvidenceReference {
         return reference;
     }
 
-    public Dataset getDataset() {
-        return dataset;
-    }
-
-    @Override
-    public String toString() {
-        return "EvidenceReference [evidence=" + evidence + ", reference=" + reference + ", dataset=" + dataset + "]";
-    }
-
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( dataset == null ) ? 0 : dataset.hashCode() );
         result = prime * result + ( ( evidence == null ) ? 0 : evidence.hashCode() );
+        result = prime * result + ( ( qualifier == null ) ? 0 : qualifier.hashCode() );
         result = prime * result + ( ( reference == null ) ? 0 : reference.hashCode() );
         return result;
     }
@@ -69,11 +65,13 @@ public class EvidenceReference {
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        EvidenceReference other = ( EvidenceReference ) obj;
-        if ( dataset != other.dataset ) return false;
+        Annotation other = ( Annotation ) obj;
         if ( evidence == null ) {
             if ( other.evidence != null ) return false;
         } else if ( !evidence.equals( other.evidence ) ) return false;
+        if ( qualifier == null ) {
+            if ( other.qualifier != null ) return false;
+        } else if ( !qualifier.equals( other.qualifier ) ) return false;
         if ( reference == null ) {
             if ( other.reference != null ) return false;
         } else if ( !reference.equals( other.reference ) ) return false;

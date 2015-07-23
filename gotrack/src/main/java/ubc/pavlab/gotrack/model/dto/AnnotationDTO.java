@@ -25,19 +25,18 @@ package ubc.pavlab.gotrack.model.dto;
  * @author mjacobson
  * @version $Id$
  */
-public final class TrackDTO {
-
+public final class AnnotationDTO {
     private final Integer edition;
-    private final String accession;
     private final String goId;
+    private final String qualifier;
     private final String evidence;
     private final String reference;
 
-    public TrackDTO( Integer edition, String accession, String goId, String evidence, String reference ) {
+    public AnnotationDTO( Integer edition, String goId, String qualifier, String evidence, String reference ) {
         super();
         this.edition = edition;
-        this.accession = accession;
         this.goId = goId;
+        this.qualifier = qualifier;
         this.evidence = evidence;
         this.reference = reference;
     }
@@ -46,12 +45,12 @@ public final class TrackDTO {
         return edition;
     }
 
-    public String getAccession() {
-        return accession;
-    }
-
     public String getGoId() {
         return goId;
+    }
+
+    public String getQualifier() {
+        return qualifier;
     }
 
     public String getEvidence() {

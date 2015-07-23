@@ -19,8 +19,6 @@
 
 package ubc.pavlab.gotrack.model.go;
 
-import gnu.trove.map.hash.TIntObjectHashMap;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +29,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import ubc.pavlab.gotrack.model.EvidenceReference;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.GOEdition;
 
 /**
@@ -161,20 +160,18 @@ public class GeneOntology {
 
     }
 
-    public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
-            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations ) {
-        return propagate( goAnnotations, true );
+    public Map<GeneOntologyTerm, Set<Annotation>> propagateAnnotations( Map<GeneOntologyTerm, Set<Annotation>> map ) {
+        return propagateAnnotations( map, true );
     }
 
-    public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
-            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations, boolean includePartOf ) {
-
-        Map<GeneOntologyTerm, Set<EvidenceReference>> propagatedAnnotations = new HashMap<>();
-        for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> goEntry : goAnnotations.entrySet() ) {
+    public Map<GeneOntologyTerm, Set<Annotation>> propagateAnnotations(
+            Map<GeneOntologyTerm, Set<Annotation>> goAnnotations, boolean includePartOf ) {
+        Map<GeneOntologyTerm, Set<Annotation>> propagatedAnnotations = new HashMap<>();
+        for ( Entry<GeneOntologyTerm, Set<Annotation>> goEntry : goAnnotations.entrySet() ) {
             GeneOntologyTerm go = goEntry.getKey();
-            Set<EvidenceReference> ev = goEntry.getValue();
+            Set<Annotation> ev = goEntry.getValue();
             // Add current terms annotations
-            Set<EvidenceReference> evidence = propagatedAnnotations.get( go );
+            Set<Annotation> evidence = propagatedAnnotations.get( go );
             if ( evidence == null ) {
                 evidence = new HashSet<>();
                 propagatedAnnotations.put( go, evidence );

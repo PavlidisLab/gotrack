@@ -1,0 +1,23 @@
+#page-title h1 {
+	color: #888;
+	margin: auto;
+}
+
+#page-title {
+	text-align: center;
+}
+
+tr.datatable-red {
+	background-color: #fcc;
+	background-image: none;
+	color: #000000;
+}
+
+table.geneSearchTable {
+	margin:0 auto;
+	/* border: 1px solid #A8A8A8; */
+}
+
+div.ui-datatable button.ui-button.ui-widget.ui-state-default.ui-corner-all.ui-button-icon-only {
+	height: 16px;
+}

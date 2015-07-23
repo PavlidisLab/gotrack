@@ -19,30 +19,12 @@
 
 package ubc.pavlab.gotrack.model;
 
-import org.primefaces.extensions.model.timeline.TimelineModel;
-
 /**
  * TODO Document Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-public class CustomTimelineModel<T> extends TimelineModel {
-
-    /**
-     * 
-     */
-    private static final long serialVersionUID = -2774559777621029334L;
-
-    private final T title;
-
-    public CustomTimelineModel( T title ) {
-        super();
-        this.title = title;
-    }
-
-    public T getTitle() {
-        return title;
-    }
-
+public enum AnnotationType {
+    DIRECT, INFERRED;
 }

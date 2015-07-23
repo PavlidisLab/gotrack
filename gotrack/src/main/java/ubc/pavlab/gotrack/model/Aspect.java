@@ -26,5 +26,16 @@ package ubc.pavlab.gotrack.model;
  * @version $Id$
  */
 public enum Aspect {
-    CC, BP, MF
+    CC("Cellular Component"), BP("Biological Process"), MF("Molecular Function");
+
+    private String label;
+
+    private Aspect( String label ) {
+        this.label = label;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
 }

@@ -1,0 +1,286 @@
+<ui:composition template="/WEB-INF/templates/mainLayout.xhtml"
+	xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+	xmlns:pe="http://primefaces.org/ui/extensions"
+	xmlns:of="http://omnifaces.org/functions"
+	xmlns:o="http://omnifaces.org/ui">
+
+	<ui:define name="metadata">
+		<f:metadata>
+			<o:viewParam name="speciesId" value="#{geneView.species}" converter="speciesConverter"/>
+			<o:viewParam id="query" name="query" value="#{geneView.query}" />
+			<f:event type="preRenderView" listener="#{geneView.init}" />
+		</f:metadata>
+	</ui:define>
+	<ui:define name="pageTitle">UBC-CHiBi|GOtrack</ui:define>
+	<ui:define name="css">
+		<h:outputStylesheet library="css" name="genes.css" />
+	</ui:define>
+	<ui:define name="js">
+		<h:outputScript library="js" name="utility.js" />
+		
+		<!-- Highcharts stuff -->
+
+		<h:outputScript library="js" name="highcharts.js" />
+		<h:outputScript library="js" name="highcharts-more.js" />
+		<h:outputScript library="js" name="exporting.js" />
+		<h:outputScript library="js" name="export-csv.js" />
+		
+		<h:outputScript library="js" name="genes.js" />
+		<h:outputScript rendered="#{geneView.gene != null}">
+		$(document).ready(function() {
+			$('.loading').show();
+			fetchData();
+		});
+		</h:outputScript>
+		   
+   
+	</ui:define>
+
+	<ui:define name="left_right_layout">
+
+		<p:layoutUnit id="right" position="east" size="40%" minSize="300"
+			header="Functionality" resizable="true" collapsible="true"
+			style="text-align:center" collapsed="#{geneView.gene == null}">
+			<h:form id="rightForm" style="height:100%;">
+				<p:dataTable id="funcTable" widgetVar="funcTable" var="term"
+					value="#{geneView.allTerms}" scrollable="true" sortMode="multiple"
+					style="margin-bottom:0"
+					emptyMessage="No annotations found with given criteria"
+					filteredValue="#{geneView.filteredAllTerms}" selection="#{geneView.selectedTerms}"
+					rowKey="#{term.goId}" scrollHeight="100%"
+					rowStyleClass="#{ term.obsolete == 'true' ? 'datatable-red' : null}">
+					<p:column selectionMode="multiple" style="width:16px;text-align:center"/>
+					<p:column filterBy="#{term.goId}" filterMatchMode="contains"
+						headerText="Id" width="25%">
+						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
+							target="_blank"><i class="fa fa-external-link fa-sm"
+							style="font-size: 0.7em;" /> </a>#{term.goId}
+					</p:column>
+					<p:column filterBy="#{term.aspect}" filterMatchMode="in"
+						headerText="Aspect" style="width:150px;">
+						<f:facet name="filter">
+							<p:selectManyButton
+								onchange="PF('funcTable').filter()"
+								style="font-size: 75%" converter="aspectConverter">
+								<f:selectItems value="#{cache.aspects}"
+									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
+							</p:selectManyButton>
+						</f:facet>
+						<h:outputText value="#{term.aspect.label}"/>
+					</p:column>
+					<p:column filterBy="#{term.name}" filterMatchMode="contains"
+						headerText="Name" width="55%">
+						<h:outputText value="#{term.name}" />
+					</p:column>
+					<f:facet name="footer">
+						<p:commandButton icon="ui-icon-search"
+							value="View Terms" oncomplete="fetchTimeline()" />
+						<p:commandButton icon="fa fa-filter" 
+							value="Filter Charts" oncomplete="filterCharts()"/>
+						<p:commandButton icon="fa fa-trash" 
+							value="Reset Charts" oncomplete="handleFilterCharts(xhr, status, args);"
+							actionListener="#{geneView.resetCharts()}"/>
+					</f:facet>
+				</p:dataTable>
+			</h:form>
+		</p:layoutUnit>
+	</ui:define>
+
+	<ui:define name="center_layout">
+		<p:outputPanel rendered="#{geneView.gene != null}">
+			<div id="page-title">
+				<h1>#{geneView.gene.symbol} -
+					#{geneView.species.scientificName}</h1>
+				<h:form>
+					<p>
+						<ui:repeat
+							value="#{geneView.gene.accessions.toArray()}"
+							var="acc" varStatus="loop">
+							<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
+								target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
+				</ui:repeat>
+					</p>
+				</h:form>
+				
+			</div>
+			<p:separator style="max-width:400px" />
+			<h:form>
+				<p:tabView widgetVar="centerTabWdg" onTabShow="tabShowed(index)">
+					<p:tab title="Annotation">	
+						<div id="loading-spinner-annotation" class="loading" style="display: none;" />					
+						<div id="hc_annotation_container" style="width: 100%; height: 600px;"/>
+					</p:tab>
+					<p:tab title="Similarity">	
+						<div id="loading-spinner-similarity" class="loading" style="display: none;" />					
+						<div id="hc_similarity_container" style="width: 100%; height: 600px;"/>
+					</p:tab>
+					<p:tab title="Multifunctionality">	
+						<div id="loading-spinner-multifunctionality" class="loading" style="display: none;" />					
+						<div id="hc_multi_container" style="width: 100%; height: 600px;"/>
+					</p:tab>
+					<p:tab title="Loss/Gain">	
+						<div id="loading-spinner-lossgain" class="loading" style="display: none;" />					
+						<div id="hc_lossgain_container" style="width: 100%; height: 600px;"/>
+					</p:tab>
+					
+				</p:tabView>
+			</h:form>
+			
+			
+
+		</p:outputPanel>
+		<p:outputPanel rendered="#{geneView.gene == null}">
+			<h:form>
+				<h3 style="text-align: center;">Track a Gene</h3>
+				<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5" styleClass="geneSearchTable">
+
+					<h:outputText value="Select the species of interest (required): " />
+				<p:selectOneMenu id="selectspecies"
+					value="#{geneSearchView.speciesId}" style="margin-right:5px;">
+					<p:ajax event="change" process="@this" />
+					<f:selectItems value="#{cache.speciesList}" var="spec"
+						itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
+				</p:selectOneMenu>
+				<h:outputText value="Write the gene symbol to visualize: " />
+				<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
+					completeMethod="#{geneSearchView.complete}" queryDelay="600"
+					minQueryLength="2" forceSelection="true" label="ID"
+					emptyMessage="No gene suggestions available, please try again."
+					var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
+					groupBy="#{gene.type.label}" style="margin-right:8px;"/>
+				<p:commandButton type="submit" value="Go"
+					action="#{geneSearchView.go}" />
+					</h:panelGrid>
+			</h:form>
+			 
+		</p:outputPanel>
+	</ui:define>
+	<ui:define name="dialogs">
+		<h:form >
+			<p:remoteCommand name="fetchData"
+				oncomplete="handleFetchData(xhr, status, args);fetchCharts();"
+				update=":rightForm"
+				actionListener="#{geneView.fetchData()}" />
+			<p:remoteCommand name="fetchAnnotationChart"  async="true"
+				oncomplete="handleFetchAnnotationChart(xhr, status, args);"
+				actionListener="#{geneView.fetchAnnotationChart()}" />
+			<p:remoteCommand name="fetchSimilarityChart"  async="true"
+				oncomplete="handleFetchSimilarityChart(xhr, status, args);"
+				actionListener="#{geneView.fetchJaccardChart()}" />
+			<p:remoteCommand name="fetchMultiChart"  async="true"
+				oncomplete="handleFetchMultiChart(xhr, status, args);"
+				actionListener="#{geneView.fetchMultifunctionalityChart()}" />
+			<p:remoteCommand name="fetchLossGainChart"  async="true"
+				oncomplete="handleFetchLossGainChart(xhr, status, args);"
+				actionListener="#{geneView.fetchLossGainChart()}" />
+			<p:remoteCommand name="filterCharts"
+				oncomplete="handleFilterCharts(xhr, status, args);"
+				actionListener="#{geneView.filterCharts()}" />
+			<p:remoteCommand name="fetchTimeline"
+				oncomplete="handleFetchTimeline(xhr, status, args);PF('timelineDlgWdg').show();"
+				actionListener="#{geneView.fetchTimeline()}" />
+			<p:remoteCommand name="fetchAnnotationPointData"
+				oncomplete="PF('clickTermsTableWdg').clearFilters();PF('clickTermsDlgWdg').show();"
+				update=":clickTermsForm:clickTermsTable"
+				actionListener="#{geneView.fetchAnnotationPointData()}" />
+			<p:remoteCommand name="fetchTimelinePointData"
+				update=":viewAnnotationsForm:viewAnnotationsTable" 
+				oncomplete="PF('viewAnnotationsDlgWdg').show()"
+				action="#{geneView.fetchTimelinePointData()}" />
+				
+		</h:form>
+		
+		<p:dialog id="timelineDlg" widgetVar="timelineDlgWdg" modal="true" showEffect="fade"
+			hideEffect="fade" height="800" width="1200"
+			fitViewport="true" closeOnEscape="true"
+			onHide="timelineDlgHide()">
+			<!-- return false so that the ajax request is not executed. -->
+			<p:ajax event="maximize"
+				onstart="timelineDlgResize();return false;" />
+			<p:ajax event="minimize"
+				onstart="timelineDlgResize();return false;" />
+			<div id="hc_timeline_container" style="width: 100%; height: 100%;"/>
+
+		</p:dialog>
+		
+		<p:dialog id="clickTermsDlg" header="Terms"
+			widgetVar="clickTermsDlgWdg" modal="false" showEffect="fade"
+			hideEffect="fade" width="900"
+			fitViewport="true" closeOnEscape="true">
+			<h:form id="clickTermsForm">
+				<p:dataTable id="clickTermsTable" widgetVar="clickTermsTableWdg" var="term"
+					value="#{geneView.clickTerms}" scrollable="true" sortMode="multiple"
+					style="margin-bottom:0"
+					emptyMessage="No annotations found with given criteria"
+					filteredValue="#{geneView.filteredClickTerms}" scrollHeight="600">
+					<p:column filterBy="#{term.goId}" filterMatchMode="contains"
+						headerText="Id" width="25%">
+						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
+							target="_blank"><i class="fa fa-external-link fa-sm"
+							style="font-size: 0.7em;" /> </a>#{term.goId}
+					</p:column>
+					<p:column filterBy="#{term.aspect}" filterMatchMode="in"
+						headerText="Aspect" style="width:150px;">
+						<f:facet name="filter">
+							<p:selectManyButton
+								onchange="PF('clickTermsTableWdg').filter()"
+								style="font-size: 75%" converter="aspectConverter">
+								<f:selectItems value="#{cache.aspects}"
+									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
+							</p:selectManyButton>
+						</f:facet>
+						<h:outputText value="#{term.aspect.label}"/>
+					</p:column>
+					<p:column filterBy="#{term.name}" filterMatchMode="contains"
+						headerText="Name" width="55%">
+						<h:outputText value="#{term.name}" />
+					</p:column>
+			        <p:column style="width:32px;text-align: center">
+			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="PF('viewAnnotationsDlgWdg').show()" icon="ui-icon-search" title="View">
+			                <f:setPropertyActionListener value="#{term}" target="#{geneView.viewTerm}" />
+			            </p:commandButton>
+			        </p:column>
+			        <f:facet name="footer">
+			        	<h:outputText value="Date: #{geneView.clickEdition.date}, Edition: #{geneView.clickEdition.edition} "/>
+			        </f:facet>
+				</p:dataTable>
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="viewAnnotationsDlg" header="Annotations"
+			widgetVar="viewAnnotationsDlgWdg" modal="false" showEffect="fade"
+			hideEffect="fade" width="900"
+			fitViewport="true" closeOnEscape="true" >
+			<h:form id="viewAnnotationsForm">
+				<p:dataTable id="viewAnnotationsTable" widgetVar="viewAnnotationsTableWdg" var="annot"
+					value="#{geneView.viewAnnotations}" scrollable="true" sortMode="multiple"
+					style="margin-bottom:0"
+					emptyMessage="No annotations found with given criteria" scrollHeight="250">
+					<p:column headerText="Qualifier">
+						<h:outputText value="#{annot.qualifier}" />
+					</p:column>
+					<p:column headerText="Evidence">
+						<h:outputText value="#{annot.evidence.evidence}" />
+					</p:column>
+					<p:column headerText="Category">
+						<h:outputText value="#{annot.evidence.category}" />
+					</p:column>
+					<p:column headerText="Description">
+						<h:outputText value="#{annot.evidence.description}" />
+					</p:column>
+					<p:column headerText="Reference">
+						<h:outputText value="#{annot.reference}" />
+					</p:column>
+					
+				</p:dataTable>
+			</h:form>
+		</p:dialog>
+
+	</ui:define>
+
+</ui:composition>

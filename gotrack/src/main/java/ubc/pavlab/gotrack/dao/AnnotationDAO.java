@@ -24,9 +24,9 @@ import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
+import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
-import ubc.pavlab.gotrack.model.dto.TrackDTO;
 
 /**
  * This interface represents a contract for a DAO for the {@link AnnotationDetailed} model. Note that all methods are
@@ -34,12 +34,12 @@ import ubc.pavlab.gotrack.model.dto.TrackDTO;
  */
 public interface AnnotationDAO {
     // Actions ------------------------------------------------------------------------------------
-    public List<TrackDTO> track( Integer species, String symbol ) throws DAOException;
-
     public List<EnrichmentDTO> enrich( Integer species, Set<Gene> genes ) throws DAOException;
 
     public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException;
 
     public List<AnnotationCountDTO> directGeneCounts( String goId ) throws DAOException;
+
+    public List<AnnotationDTO> track( Integer speciesId, String symbol ) throws DAOException;
 
 }

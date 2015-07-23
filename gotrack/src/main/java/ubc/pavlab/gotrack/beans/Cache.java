@@ -47,6 +47,7 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimap;
 import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
@@ -58,11 +59,12 @@ import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.beans.service.SpeciesService;
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.AnnotationType;
 import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Evidence;
-import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
@@ -149,16 +151,6 @@ public class Cache implements Serializable {
 
     // Page specific caches
 
-    private Map<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> applicationLevelDataCache = new LinkedHashMap<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>>(
-            MAX_DATA_ENTRIES + 1, 0.75F, true) {
-        // This method is called just after a new entry has been added
-        @Override
-        public boolean removeEldestEntry(
-                Map.Entry<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> eldest ) {
-            return size( ) > MAX_DATA_ENTRIES;
-        }
-    };
-
     // TODO This should be changed to an LFU cache instead of LRU
     private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> applicationLevelEnrichmentCache = new LinkedHashMap<Gene, Map<Edition, Set<GeneOntologyTerm>>>(
             MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true) {
@@ -166,6 +158,17 @@ public class Cache implements Serializable {
         @Override
         public boolean removeEldestEntry( Map.Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> eldest ) {
             return size( ) > MAX_ENRICHMENT_ENTRIES;
+        }
+    };
+
+    // Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>
+    private Map<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>> applicationLevelGeneCache = new LinkedHashMap<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>>(
+            MAX_DATA_ENTRIES + 1, 0.75F, true) {
+        // This method is called just after a new entry has been added
+        @Override
+        public boolean removeEldestEntry(
+                Map.Entry<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>> eldest ) {
+            return size( ) > MAX_DATA_ENTRIES;
         }
     };
 
@@ -199,7 +202,8 @@ public class Cache implements Serializable {
         // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "Cache init" );
 
-        applicationLevelDataCache = Collections.synchronizedMap( applicationLevelDataCache );
+        applicationLevelEnrichmentCache = Collections.synchronizedMap( applicationLevelEnrichmentCache );
+        applicationLevelGeneCache = Collections.synchronizedMap( applicationLevelGeneCache );
 
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
                 + " MB" );
@@ -906,14 +910,14 @@ public class Cache implements Serializable {
         return null;
     }
 
-    public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
-            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations, Edition ed ) {
-        if ( goAnnotations == null || ed == null ) {
+    public Map<GeneOntologyTerm, Set<Annotation>> propagateAnnotations( Map<GeneOntologyTerm, Set<Annotation>> map,
+            Edition ed ) {
+        if ( map == null || ed == null ) {
             return null;
         }
         GeneOntology o = ontologies.get( ed.getGoEdition() );
         if ( o != null ) {
-            return o.propagate( goAnnotations );
+            return o.propagateAnnotations( map );
         }
         return null;
     }
@@ -1048,16 +1052,17 @@ public class Cache implements Serializable {
 
     // Application Level Caching get/set
 
-    public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> getData( Gene g ) {
+    public Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> getGeneData( Gene g ) {
         // TODO not sure if necessary, not a big deal either way
-        synchronized ( applicationLevelDataCache ) {
-            return applicationLevelDataCache.get( g );
+        synchronized ( applicationLevelGeneCache ) {
+            return applicationLevelGeneCache.get( g );
         }
     }
 
-    public void addData( Gene g, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
-        synchronized ( applicationLevelDataCache ) {
-            applicationLevelDataCache.put( g, data );
+    public void addGeneData( Gene g,
+            Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> data ) {
+        synchronized ( applicationLevelGeneCache ) {
+            applicationLevelGeneCache.put( g, data );
         }
     }
 

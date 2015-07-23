@@ -43,16 +43,15 @@ import com.google.common.collect.Multimap;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.beans.DAOFactoryBean;
 import ubc.pavlab.gotrack.dao.AnnotationDAO;
-import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Evidence;
-import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
+import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
-import ubc.pavlab.gotrack.model.dto.TrackDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
@@ -94,21 +93,13 @@ public class AnnotationService implements Serializable {
 
     }
 
-    public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> fetchTrackData( Species species,
-            Gene g ) {
+    public Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> fetchTrackData( Species species, Gene g ) {
 
-        Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> allSeries = new HashMap<>();
+        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> trackData = new LinkedHashMap<>();
 
-        List<TrackDTO> resultset = annotationDAO.track( species.getId(), g.getSymbol() );
+        List<AnnotationDTO> resultset = annotationDAO.track( species.getId(), g.getSymbol() );
 
-        for ( TrackDTO dto : resultset ) {
-
-            Accession acc = cache.getAccession( dto.getAccession() );
-
-            if ( acc == null ) {
-                log.warn( "Accession (" + dto.getAccession() + ") not found!" );
-                continue;
-            }
+        for ( AnnotationDTO dto : resultset ) {
 
             Edition ed = cache.getEdition( species.getId(), dto.getEdition() );
 
@@ -131,31 +122,24 @@ public class AnnotationService implements Serializable {
                 continue;
             }
 
-            EvidenceReference er = new EvidenceReference( evidence, dto.getReference(), acc.getDataset() );
-
-            Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>> series = allSeries.get( acc );
-            if ( series == null ) {
-                series = new HashMap<>();
-                allSeries.put( acc, series );
+            Map<GeneOntologyTerm, Set<Annotation>> goMap = trackData.get( ed );
+            if ( goMap == null ) {
+                goMap = new HashMap<>();
+                trackData.put( ed, goMap );
             }
 
-            Map<GeneOntologyTerm, Set<EvidenceReference>> goIdMap = series.get( ed );
-            if ( goIdMap == null ) {
-                goIdMap = new HashMap<>();
-                series.put( ed, goIdMap );
+            Set<Annotation> annotationSet = goMap.get( go );
+
+            if ( annotationSet == null ) {
+                annotationSet = new HashSet<>();
+                goMap.put( go, annotationSet );
             }
 
-            Set<EvidenceReference> ers = goIdMap.get( go );
-            if ( ers == null ) {
-                ers = new HashSet<>();
-                goIdMap.put( go, ers );
-            }
-
-            ers.add( er );
+            annotationSet.add( new Annotation( dto.getQualifier(), evidence, dto.getReference() ) );
 
         }
 
-        return allSeries;
+        return trackData;
 
     }
 
