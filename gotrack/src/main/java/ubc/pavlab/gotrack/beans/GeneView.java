@@ -44,6 +44,7 @@ import org.primefaces.context.RequestContext;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 
@@ -59,6 +60,7 @@ import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.table.AnnotationValues;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
@@ -95,8 +97,8 @@ public class GeneView {
     private Collection<GeneOntologyTerm> filteredAllTerms;
 
     // View Annotations List
-    private Collection<Annotation> viewAnnotations = new ArrayList<>();
-    private Collection<Annotation> filteredViewAnnotations;
+    private Collection<AnnotationValues> viewAnnotations = new ArrayList<>();
+    private Collection<AnnotationValues> filteredViewAnnotations;
     private GeneOntologyTerm viewTerm;
 
     // Click event lists
@@ -240,15 +242,27 @@ public class GeneView {
         // A map that will be needed in the front end for drilling down
         Map<Long, Integer> dateToEdition = new HashMap<>();
 
-        for ( Edition ed : rawData.get( AnnotationType.DIRECT ).rowKeySet() ) {
+        for ( Edition ed : rawData.get( AnnotationType.INFERRED ).rowKeySet() ) {
             dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
         }
 
         RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
 
-        // Now create a list of terms that will be displayed in a front-end table
+        // Now create a list of terms that will be displayed in a front-end right panel
+        // Cannot simply use columnKeySet as there are no guarantees as to which terms will be chosen
+        // We want the most recent of each term
 
-        allTerms = rawData.get( AnnotationType.DIRECT ).columnKeySet();
+        //allTerms = rawData.get( AnnotationType.DIRECT ).columnKeySet();
+        allTerms = new HashSet<>();
+        ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> reversedData = new ArrayList<>(
+                rawData.get( AnnotationType.INFERRED ).rowMap().entrySet() );
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( reversedData ) ) {
+
+            allTerms.addAll( entry.getValue().keySet() );
+        }
+
+        allTerms = new ArrayList<>( allTerms );
+        Collections.sort( ( List<GeneOntologyTerm> ) allTerms );
 
     }
 
@@ -539,7 +553,8 @@ public class GeneView {
 
         ChartValues chart = new ChartValues();
 
-        Collection<Edition> allEditions = cache.getAllEditions( species.getId() );
+        List<Edition> allEditions = new ArrayList<>( cache.getAllEditions( species.getId() ) );
+        Collections.sort( allEditions );
 
         Map<String, String> termNames = new HashMap<>();
 
@@ -590,7 +605,23 @@ public class GeneView {
 
         Set<Annotation> data = rawData.get( AnnotationType.DIRECT ).get( clickEdition, viewTerm );
 
-        viewAnnotations = ( data == null ) ? Sets.<Annotation> newHashSet() : data;
+        viewAnnotations = new HashSet<>();
+        if ( data != null ) {
+
+            // Add direct annotations
+            for ( Annotation annotation : data ) {
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.DIRECT ) );
+            }
+        }
+        data = rawData.get( AnnotationType.INFERRED ).get( clickEdition, viewTerm );
+
+        if ( data != null ) {
+
+            // Next add the inferred as they will not overwrite the direct if the direct already exists
+            for ( Annotation annotation : data ) {
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.INFERRED ) );
+            }
+        }
 
         filteredViewAnnotations = null;
     }
@@ -612,7 +643,7 @@ public class GeneView {
         clickEdition = cache.getEdition( species.getId(), editionId );
 
         try {
-            clickTerms = rawData.get( AnnotationType.DIRECT ).row( clickEdition ).keySet();
+            clickTerms = rawData.get( AnnotationType.INFERRED ).row( clickEdition ).keySet();
         } catch ( NullPointerException e ) {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
             return;
@@ -641,9 +672,25 @@ public class GeneView {
 
         viewTerm = cache.getTerm( clickEdition, goId );
 
-        Set<Annotation> data = rawData.get( AnnotationType.INFERRED ).get( clickEdition, viewTerm );
+        Set<Annotation> data = rawData.get( AnnotationType.DIRECT ).get( clickEdition, viewTerm );
 
-        viewAnnotations = ( data == null ) ? Sets.<Annotation> newHashSet() : data;
+        viewAnnotations = new HashSet<>();
+        if ( data != null ) {
+
+            // Add direct annotations
+            for ( Annotation annotation : data ) {
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.DIRECT ) );
+            }
+        }
+        data = rawData.get( AnnotationType.INFERRED ).get( clickEdition, viewTerm );
+
+        if ( data != null ) {
+
+            // Next add the inferred as they will not overwrite the direct if the direct already exists
+            for ( Annotation annotation : data ) {
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.INFERRED ) );
+            }
+        }
 
         filteredViewAnnotations = null;
 
@@ -675,11 +722,11 @@ public class GeneView {
         this.gene = gene;
     }
 
-    public Collection<Annotation> getViewAnnotations() {
+    public Collection<AnnotationValues> getViewAnnotations() {
         return viewAnnotations;
     }
 
-    public Collection<Annotation> getFilteredViewAnnotations() {
+    public Collection<AnnotationValues> getFilteredViewAnnotations() {
         return filteredViewAnnotations;
     }
 

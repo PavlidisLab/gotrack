@@ -219,7 +219,7 @@
 					emptyMessage="No annotations found with given criteria"
 					filteredValue="#{geneView.filteredClickTerms}" scrollHeight="600">
 					<p:column filterBy="#{term.goId}" filterMatchMode="contains"
-						headerText="Id" width="25%">
+						headerText="Id" style="width:120px;">
 						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
 							target="_blank"><i class="fa fa-external-link fa-sm"
 							style="font-size: 0.7em;" /> </a>#{term.goId}
@@ -237,7 +237,7 @@
 						<h:outputText value="#{term.aspect.label}"/>
 					</p:column>
 					<p:column filterBy="#{term.name}" filterMatchMode="contains"
-						headerText="Name" width="55%">
+						headerText="Name">
 						<h:outputText value="#{term.name}" />
 					</p:column>
 			        <p:column style="width:32px;text-align: center">
@@ -262,19 +262,22 @@
 					style="margin-bottom:0"
 					emptyMessage="No annotations found with given criteria" scrollHeight="250">
 					<p:column headerText="Qualifier">
-						<h:outputText value="#{annot.qualifier}" />
+						<h:outputText value="#{annot.annotation.qualifier}" />
 					</p:column>
 					<p:column headerText="Evidence">
-						<h:outputText value="#{annot.evidence.evidence}" />
+						<h:outputText value="#{annot.annotation.evidence.evidence}" />
 					</p:column>
 					<p:column headerText="Category">
-						<h:outputText value="#{annot.evidence.category}" />
+						<h:outputText value="#{annot.annotation.evidence.category}" />
 					</p:column>
 					<p:column headerText="Description">
-						<h:outputText value="#{annot.evidence.description}" />
+						<h:outputText value="#{annot.annotation.evidence.description}" />
 					</p:column>
 					<p:column headerText="Reference">
-						<h:outputText value="#{annot.reference}" />
+						<h:outputText value="#{annot.annotation.reference}" />
+					</p:column>
+					<p:column headerText="Type">
+						<h:outputText value="#{annot.type}" />
 					</p:column>
 			        <f:facet name="footer">
 			        	<h:outputText value="Date: #{geneView.clickEdition.date}, Edition: #{geneView.clickEdition.edition}, GO Term:  #{geneView.viewTerm.goId}"/>
