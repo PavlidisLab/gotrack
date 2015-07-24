@@ -96,6 +96,10 @@
     	<exception-type>ubc.pavlab.gotrack.exception.GeneNotFoundException</exception-type>
     	<location>/WEB-INF/errors/gene.xhtml</location>
 	</error-page>
+	<error-page>
+    	<exception-type>ubc.pavlab.gotrack.exception.TermNotFoundException</exception-type>
+    	<location>/WEB-INF/errors/term.xhtml</location>
+	</error-page>
 	
 
 	<listener>

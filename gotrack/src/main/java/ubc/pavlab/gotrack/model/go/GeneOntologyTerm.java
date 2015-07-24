@@ -19,14 +19,13 @@
 
 package ubc.pavlab.gotrack.model.go;
 
-import gnu.trove.set.hash.THashSet;
-
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
+import gnu.trove.set.hash.THashSet;
 import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
-
-import com.google.common.collect.ImmutableSet;
 
 /**
  * The instances of this class may be shared between threads (sessions)
@@ -87,6 +86,17 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         this.name = t.getName();
         this.aspect = t.getAspect();
         freeze();
+    }
+
+    /**
+     * USE WITH CAUTION, SHOULD NOT BE ALLOWED TO MINGLE WITH 'REAL' TERMS
+     */
+    public GeneOntologyTerm( String goId ) {
+
+        this.id = convertGOId( goId );
+        this.goId = goId;
+        this.name = "";
+        this.aspect = null;
     }
 
     public int getId() {

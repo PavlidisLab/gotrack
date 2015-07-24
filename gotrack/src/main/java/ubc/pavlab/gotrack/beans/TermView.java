@@ -49,7 +49,8 @@ import org.primefaces.context.RequestContext;
 import com.google.gson.Gson;
 
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
-import ubc.pavlab.gotrack.exception.GeneNotFoundException;
+import ubc.pavlab.gotrack.beans.service.StatsService;
+import ubc.pavlab.gotrack.exception.TermNotFoundException;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.Species;
@@ -75,6 +76,9 @@ public class TermView {
 
     @ManagedProperty("#{cache}")
     private Cache cache;
+
+    @ManagedProperty("#{statsService}")
+    private StatsService statsService;
 
     @ManagedProperty("#{annotationService}")
     private AnnotationService annotationService;
@@ -102,7 +106,7 @@ public class TermView {
         log.info( "TermView postConstruct" );
     }
 
-    public String init() throws GeneNotFoundException {
+    public String init() throws TermNotFoundException {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
             return null; // Skip ajax requests.
         }
@@ -132,7 +136,7 @@ public class TermView {
 
         if ( temp == null || temp.isEmpty() ) {
             // gene symbol not found
-            throw new GeneNotFoundException();
+            throw new TermNotFoundException();
             /*
              * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
              * facesContext.getApplication().getNavigationHandler(); navigationHandler.handleNavigation( facesContext,
@@ -158,6 +162,8 @@ public class TermView {
                 }
             }
             Collections.sort( allGOEditions );
+
+            statsService.countTermHit( currentTerm );
 
         }
 
@@ -524,6 +530,10 @@ public class TermView {
 
     public void setCache( Cache cache ) {
         this.cache = cache;
+    }
+
+    public void setStatsService( StatsService statsService ) {
+        this.statsService = statsService;
     }
 
     public void setAnnotationService( AnnotationService annotationService ) {

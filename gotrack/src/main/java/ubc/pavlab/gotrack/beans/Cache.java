@@ -1048,14 +1048,16 @@ public class Cache implements Serializable {
 
         Map<GOEdition, GeneOntologyTerm> termsMap = new HashMap<>();
 
+        boolean found = false;
+
         for ( Entry<GOEdition, GeneOntology> entry : ontologies.entrySet() ) {
             GeneOntologyTerm term = entry.getValue().getTerm( goId );
             // yes we want null values
             termsMap.put( entry.getKey(), term );
-
+            found |= ( term != null );
         }
 
-        return termsMap;
+        return found ? termsMap : null;
     }
 
     public GeneOntologyTerm getCurrentTerm( String goId ) {

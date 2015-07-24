@@ -148,7 +148,7 @@ public class GeneView {
             throw new GeneNotFoundException();
         } else {
             // Count gene hit
-            statsService.countHit( gene );
+            statsService.countGeneHit( gene );
 
             log.info( "Gene: " + gene );
             return null;

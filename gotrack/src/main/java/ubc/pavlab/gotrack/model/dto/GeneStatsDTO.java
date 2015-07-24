@@ -25,13 +25,13 @@ package ubc.pavlab.gotrack.model.dto;
  * @author mjacobson
  * @version $Id$
  */
-public class StatsDTO {
+public class GeneStatsDTO {
     private final Integer id;
     private final Integer speciesId;
     private final String symbol;
     private final Integer count;
 
-    public StatsDTO( Integer id, Integer species_id, String symbol, Integer count ) {
+    public GeneStatsDTO( Integer id, Integer species_id, String symbol, Integer count ) {
         super();
         this.id = id;
         this.speciesId = species_id;
