@@ -47,7 +47,7 @@ public class StatsDAOImpl implements StatsDAO {
     private static final String SQL_LIST_GENE = "SELECT id, species_id, symbol, count FROM track_popular_genes";
     private static final String SQL_LIST_TERM = "SELECT id, go_id, count FROM track_popular_terms";
     private static final String SQL_INCREMENT_GENE = "INSERT INTO track_popular_genes(species_id, symbol, count) values (?,?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
-    private static final String SQL_INCREMENT_TERM = "INSERT INTO track_popular_terms(go_id count) values (?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
+    private static final String SQL_INCREMENT_TERM = "INSERT INTO track_popular_terms(go_id, count) values (?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
 
     // Vars ---------------------------------------------------------------------------------------
 
