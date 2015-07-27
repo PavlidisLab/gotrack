@@ -17,7 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.model.dto;
 
 /**
  * TODO Document Me
@@ -25,17 +25,28 @@ package ubc.pavlab.gotrack.model;
  * @author mjacobson
  * @version $Id$
  */
-public enum Aspect {
-    CC("Cellular Component"), BP("Biological Process"), MF("Molecular Function");
+public class TermStatsDTO {
+    private final Integer id;
+    private final String goId;
+    private final Integer count;
 
-    private String label;
-
-    private Aspect( String label ) {
-        this.label = label;
+    public TermStatsDTO( Integer id, String goId, Integer count ) {
+        super();
+        this.id = id;
+        this.goId = goId;
+        this.count = count;
     }
 
-    public String getLabel() {
-        return label;
+    public Integer getId() {
+        return id;
+    }
+
+    public String getGoId() {
+        return goId;
+    }
+
+    public Integer getCount() {
+        return count;
     }
 
 }

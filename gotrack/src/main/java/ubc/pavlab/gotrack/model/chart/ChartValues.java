@@ -19,7 +19,7 @@
 
 package ubc.pavlab.gotrack.model.chart;
 
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -31,7 +31,7 @@ import java.util.Set;
  */
 public class ChartValues {
 
-    Set<Series> series = new HashSet<>();
+    Set<Series> series = new LinkedHashSet<>();
 
     public ChartValues() {
         super();

@@ -49,6 +49,8 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
+import com.google.gson.Gson;
+
 import ubc.pavlab.gotrack.analysis.CombinedAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
@@ -58,6 +60,7 @@ import ubc.pavlab.gotrack.analysis.SimilarityScore;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.analysis.StabilityScore;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.StatusPoller;
@@ -68,8 +71,6 @@ import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
 import ubc.pavlab.gotrack.model.table.GeneMatches;
 import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
 import ubc.pavlab.gotrack.model.table.StabilityTableValues;
-
-import com.google.gson.Gson;
 
 /**
  * TODO Document Me
@@ -153,6 +154,7 @@ public class EnrichmentView implements Serializable {
     private MultipleTestCorrection multipleTestCorrection = MultipleTestCorrection.BH;
     private double pThreshold = 0.05;
     private double fdr = 0.05;
+    private List<Aspect> aspects = Arrays.asList( Aspect.values() );
 
     // Enrichment Feedback
     private StatusPoller statusPoller = new StatusPoller( " completed" );
@@ -205,7 +207,7 @@ public class EnrichmentView implements Serializable {
     private SimilarityScore selectedSimilarityScore;
 
     // Static final
-    private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
+    //private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
 
     public EnrichmentChartType[] getEnrichmentChartTypes() {
         return EnrichmentChartType.values();
@@ -217,8 +219,8 @@ public class EnrichmentView implements Serializable {
 
     public EnrichmentView() {
         log.info( "EnrichmentView created" );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
 
     }
 
@@ -228,11 +230,8 @@ public class EnrichmentView implements Serializable {
         }
         log.info( "EnrichmentView init" );
         if ( FacesContext.getCurrentInstance().getApplication().getProjectStage() == ProjectStage.Development ) {
-            FacesContext.getCurrentInstance()
-                    .addMessage(
-                            "betaMessage",
-                            new FacesMessage( FacesMessage.SEVERITY_WARN,
-                                    "This is the DEVELOPMENT version of GOTrack!", null ) );
+            FacesContext.getCurrentInstance().addMessage( "betaMessage", new FacesMessage( FacesMessage.SEVERITY_WARN,
+                    "This is the DEVELOPMENT version of GOTrack!", null ) );
         }
 
         enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
@@ -242,7 +241,7 @@ public class EnrichmentView implements Serializable {
     }
 
     private Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> retrieveData( Set<Gene> genes, Integer currentSpeciesId,
-            StatusPoller statusPoller ) {
+            Set<Aspect> filterAspect, StatusPoller statusPoller ) {
 
         if ( genes != null && !genes.isEmpty() ) {
             log.info( "Current species: " + currentSpeciesId );
@@ -262,7 +261,7 @@ public class EnrichmentView implements Serializable {
             for ( Gene gene : genes ) {
                 Map<Edition, Set<GeneOntologyTerm>> cachedGeneData = cache.getEnrichmentData( gene );
                 if ( cachedGeneData != null ) {
-                    addGeneData( gene, cachedGeneData, geneGOMap );
+                    addGeneData( gene, cachedGeneData, filterAspect, geneGOMap );
                 } else {
                     genesToLoad.add( gene );
                 }
@@ -286,7 +285,7 @@ public class EnrichmentView implements Serializable {
 
                 for ( Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneEntry : prop.entrySet() ) {
 
-                    addGeneData( geneEntry.getKey(), geneEntry.getValue(), geneGOMap );
+                    addGeneData( geneEntry.getKey(), geneEntry.getValue(), filterAspect, geneGOMap );
                     cache.addEnrichmentData( geneEntry.getKey(), geneEntry.getValue() );
                 }
                 statusPoller.completeStatus();
@@ -312,8 +311,11 @@ public class EnrichmentView implements Serializable {
         }
     }
 
-    private void addGeneData( Gene g, Map<Edition, Set<GeneOntologyTerm>> cachedGeneData,
+    private void addGeneData( Gene g, Map<Edition, Set<GeneOntologyTerm>> cachedGeneData, Set<Aspect> filterAspect,
             Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data ) {
+
+        boolean bypassFilter = ( filterAspect == null || filterAspect.size() == 0
+                || filterAspect.size() == Aspect.values().length );
 
         for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : cachedGeneData.entrySet() ) {
             Edition ed = editionEntry.getKey();
@@ -327,15 +329,16 @@ public class EnrichmentView implements Serializable {
             }
 
             for ( GeneOntologyTerm term : editionEntry.getValue() ) {
-                Set<Gene> geneSet = m1.get( term );
+                if ( bypassFilter || filterAspect.contains( term.getAspect() ) ) {
+                    Set<Gene> geneSet = m1.get( term );
+                    if ( geneSet == null ) {
+                        // Previously had no genes for this term in this edition
+                        geneSet = new HashSet<>();
+                        m1.put( term, geneSet );
+                    }
 
-                if ( geneSet == null ) {
-                    // Previously had no genes for this term in this edition
-                    geneSet = new HashSet<>();
-                    m1.put( term, geneSet );
+                    geneSet.add( g );
                 }
-
-                geneSet.add( g );
 
             }
 
@@ -374,9 +377,9 @@ public class EnrichmentView implements Serializable {
         enrichmentSuccess = false;
         statusPoller = new StatusPoller( " completed" );
         double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
-        CombinedAnalysis ca = enrich( new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ),
-                currentSpeciesId, multipleTestCorrection, thresh, minAnnotatedPopulation, maxAnnotatedPopulation,
-                similarityCompareMethod, TOP_N_JACCARD, statusPoller );
+        CombinedAnalysis ca = enrich( new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ), currentSpeciesId,
+                multipleTestCorrection, thresh, minAnnotatedPopulation, maxAnnotatedPopulation,
+                new HashSet<>( aspects ), similarityCompareMethod, TOP_N_JACCARD, statusPoller );
         enrichmentSuccess = ca.isSuccess();
         analysis = ca.getEnrichmentAnalysis();
         enrichmentResults = analysis.getResults();
@@ -396,10 +399,10 @@ public class EnrichmentView implements Serializable {
     }
 
     public CombinedAnalysis enrich( Set<Gene> genes, int spId, MultipleTestCorrection mtc, double thresh, int min,
-            int max, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
+            int max, Set<Aspect> aspects, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
         statusPoller.newStatus( "Starting Enrichment Analysis", 0 );
 
-        Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, spId, statusPoller );
+        Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, spId, aspects, statusPoller );
 
         if ( geneGOMap == null || geneGOMap.isEmpty() ) {
             statusPoller.newStatus( "Failed", 100 );
@@ -502,12 +505,9 @@ public class EnrichmentView implements Serializable {
         }
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
-        RequestContext.getCurrentInstance()
-                .addCallbackParam(
-                        "hc_title",
-                        "Enrichment Similarity to "
-                                + ( similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous"
-                                        : "Current" ) + " Edition" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Similarity to "
+                + ( similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current" )
+                + " Edition" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Similarity Index" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToEdition", new Gson().toJson( dateToEdition ) );
@@ -583,6 +583,7 @@ public class EnrichmentView implements Serializable {
                         editionData.entrySet() );
 
                 Collections.sort( sortedData, new Comparator<Entry<GeneOntologyTerm, EnrichmentResult>>() {
+                    @Override
                     public int compare( Entry<GeneOntologyTerm, EnrichmentResult> e1,
                             Entry<GeneOntologyTerm, EnrichmentResult> e2 ) {
                         return Integer.compare( e1.getValue().getRank(), e2.getValue().getRank() );
@@ -779,8 +780,8 @@ public class EnrichmentView implements Serializable {
     }
 
     public void fetchSimilarityInformation() {
-        Integer edition = Integer.valueOf( FacesContext.getCurrentInstance().getExternalContext()
-                .getRequestParameterMap().get( "edition" ) );
+        Integer edition = Integer.valueOf(
+                FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         Edition ed = cache.getEdition( currentSpeciesId, edition );
         selectedSimilarityScore = stabilityAnalysis.getSimilarityScores( ed );
     }
@@ -790,8 +791,8 @@ public class EnrichmentView implements Serializable {
      */
     public void fetchTermInformation() {
         String termId = FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "termId" );
-        Integer edition = Integer.valueOf( FacesContext.getCurrentInstance().getExternalContext()
-                .getRequestParameterMap().get( "edition" ) );
+        Integer edition = Integer.valueOf(
+                FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
 
         Edition ed = cache.getEdition( currentSpeciesId, edition );
         selectedEdition = ed;
@@ -1000,6 +1001,7 @@ public class EnrichmentView implements Serializable {
         if ( !geneMatches.isEmpty() ) {
 
             Collections.sort( geneMatches, new Comparator<GeneMatches>() {
+                @Override
                 public int compare( GeneMatches e1, GeneMatches e2 ) {
                     return -e1.getType().compareTo( e2.getType() );
                 }
@@ -1107,6 +1109,14 @@ public class EnrichmentView implements Serializable {
 
     public void setMultipleTestCorrection( MultipleTestCorrection multipleTestCorrection ) {
         this.multipleTestCorrection = multipleTestCorrection;
+    }
+
+    public List<Aspect> getAspects() {
+        return aspects;
+    }
+
+    public void setAspects( List<Aspect> aspects ) {
+        this.aspects = aspects;
     }
 
     public double getpThreshold() {

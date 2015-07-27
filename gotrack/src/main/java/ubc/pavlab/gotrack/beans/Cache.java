@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.PostConstruct;
@@ -40,44 +41,48 @@ import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Multimap;
+import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
+import com.googlecode.concurrenttrees.radix.RadixTree;
+import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
 
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.beans.service.SpeciesService;
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Aggregate;
+import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.AnnotationType;
+import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Evidence;
-import ubc.pavlab.gotrack.model.EvidenceReference;
 import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.StatsEntry;
 import ubc.pavlab.gotrack.model.dto.AccessionDTO;
 import ubc.pavlab.gotrack.model.dto.AdjacencyDTO;
-import ubc.pavlab.gotrack.model.dto.AggregateDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
+import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntology;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.RelationshipType;
 import ubc.pavlab.gotrack.model.table.GeneMatches;
 import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
-
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Multimap;
-import com.googlecode.concurrenttrees.radix.ConcurrentRadixTree;
-import com.googlecode.concurrenttrees.radix.RadixTree;
-import com.googlecode.concurrenttrees.radix.node.concrete.DefaultCharArrayNodeFactory;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -132,33 +137,40 @@ public class Cache implements Serializable {
 
     private Map<String, Accession> primaryAccession = new ConcurrentHashMap<>();
 
-    private Map<Integer, Map<Edition, StatsEntry>> aggregates = new ConcurrentHashMap<>();
+    //private Map<Integer, Map<Edition, StatsEntry>> aggregates = new ConcurrentHashMap<>();
+    private Map<Integer, Map<Edition, Aggregate>> aggregates = new ConcurrentHashMap<>();
+
+    //private Map<Gene, Map<Edition, Integer>> geneRanksByInferredTermCount = new ConcurrentHashMap<>();
 
     // Map<species, Map<edition, Map<go_id, count>>>
-    private Map<MultiKey, Integer> goSetSizes = new ConcurrentHashMap<>();
+    private Map<MultiKey, Integer> inferredAnnotationCount = new ConcurrentHashMap<>();
+    private Map<MultiKey, Integer> directAnnotationCount = new ConcurrentHashMap<>();
 
     private Map<GOEdition, GeneOntology> ontologies = new ConcurrentHashMap<>();
 
-    // Static
     private Map<String, Evidence> evidenceCache = new ConcurrentHashMap<>();
+    private ImmutableSet<String> evidenceCategoryCache = null;
 
-    private Map<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> applicationLevelDataCache = new LinkedHashMap<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>>(
-            MAX_DATA_ENTRIES + 1, 0.75F, true ) {
-        // This method is called just after a new entry has been added
-        @Override
-        public boolean removeEldestEntry(
-                Map.Entry<Gene, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>>> eldest ) {
-            return size() > MAX_DATA_ENTRIES;
-        }
-    };
+    // Page specific caches
 
     // TODO This should be changed to an LFU cache instead of LRU
     private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> applicationLevelEnrichmentCache = new LinkedHashMap<Gene, Map<Edition, Set<GeneOntologyTerm>>>(
-            MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true ) {
+            MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true) {
         // This method is called just after a new entry has been added
         @Override
         public boolean removeEldestEntry( Map.Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> eldest ) {
-            return size() > MAX_ENRICHMENT_ENTRIES;
+            return size( ) > MAX_ENRICHMENT_ENTRIES;
+        }
+    };
+
+    // Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>
+    private Map<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>> applicationLevelGeneCache = new LinkedHashMap<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>>(
+            MAX_DATA_ENTRIES + 1, 0.75F, true) {
+        // This method is called just after a new entry has been added
+        @Override
+        public boolean removeEldestEntry(
+                Map.Entry<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>> eldest ) {
+            return size( ) > MAX_DATA_ENTRIES;
         }
     };
 
@@ -183,15 +195,20 @@ public class Cache implements Serializable {
         return SimilarityCompareMethod.values();
     }
 
+    public Aspect[] getAspects() {
+        return Aspect.values();
+    }
+
     @PostConstruct
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "Cache init" );
 
-        applicationLevelDataCache = Collections.synchronizedMap( applicationLevelDataCache );
+        applicationLevelEnrichmentCache = Collections.synchronizedMap( applicationLevelEnrichmentCache );
+        applicationLevelGeneCache = Collections.synchronizedMap( applicationLevelGeneCache );
 
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
 
         int[] speciesRestrictions = settingsCache.getSpeciesRestrictions();
 
@@ -251,9 +268,20 @@ public class Cache implements Serializable {
         }
         // ****************************
 
+        // Evidence Category cache creation
+        // ****************************
+        Set<String> tmpCategories = new TreeSet<>();
+        for ( Evidence e : evidenceCache.values() ) {
+            tmpCategories.add( e.getCategory() );
+        }
+
+        evidenceCategoryCache = ImmutableSet.copyOf( tmpCategories );
+
+        // ****************************
+
         // System.gc();
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
 
         // GOTerm creation
         // ****************************
@@ -294,51 +322,165 @@ public class Cache implements Serializable {
 
             System.gc();
             log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() );
-            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                    / 1000000 + " MB" );
+            log.info( "Used Memory: "
+                    + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
         }
         // ****************************
 
-        // goSetSize cache creation
+        // goSetSize cache creation &
+        // Aggregate Stats
         // ****************************
         if ( !settingsCache.isDryRun() ) {
-            for ( AnnotationCountDTO dto : cacheDAO.getGOSizes( speciesRestrictions ) ) {
-                MultiKey k = new MultiKey( dto );
-                Integer cnt = this.goSetSizes.put( k, dto.getCount() );
-                if ( cnt != null ) {
-                    // key existed before
-                    log.warn( k );
+            // for ( AnnotationCountDTO dto : cacheDAO.getGOSizes( speciesRestrictions ) ) {
+            // MultiKey k = new MultiKey( dto );
+            // Integer cnt = this.goSetSizes.put( k, dto.getCount() );
+            // if ( cnt != null ) {
+            // // key existed before
+            // log.warn( k );
+            // }
+            // }
+
+            log.info( "Create GO Set Sizes in memory (not from table)" );
+            for ( Species species : speciesList ) {
+                if ( speciesRestrictions == null || speciesRestrictions.length == 0
+                        || ArrayUtils.contains( speciesRestrictions, species.getId() ) ) {
+                    // No restrictions set or species in restrictions
+                    Integer speciesId = species.getId();
+                    log.info( "Starting species (" + speciesId + ")" );
+                    Map<Integer, Edition> m = allEditions.get( speciesId );
+                    if ( m != null ) {
+
+                        Map<Edition, Aggregate> speciesAggregates = new ConcurrentHashMap<>();
+                        aggregates.put( speciesId, speciesAggregates );
+
+                        int i = 0;
+                        int total = m.size();
+                        for ( Edition ed : m.values() ) {
+                            if ( ++i % 10 == 0 ) log.info( i + "/" + total );
+                            List<SimpleAnnotationDTO> results = cacheDAO.getSimpleAnnotations( speciesId, ed );
+
+                            // These are for computing the number of genes associated with each go term
+
+                            Map<GeneOntologyTerm, Integer> tempDirectAnnotationCount = new HashMap<>();
+                            Map<GeneOntologyTerm, Set<String>> tempAnnotationSets = new HashMap<>();
+
+                            // These are for computing the number of go terms associated with each gene
+
+                            Map<String, Set<GeneOntologyTerm>> tempTermSets = new HashMap<>();
+
+                            // propagation cache for speed purposes
+
+                            Map<GeneOntologyTerm, Set<GeneOntologyTerm>> ancestorCache = new HashMap<>();
+
+                            // Begin
+
+                            GeneOntology o = ontologies.get( ed.getGoEdition() );
+
+                            for ( SimpleAnnotationDTO dto : results ) {
+                                String goId = dto.getGoId();
+                                String symbol = dto.getSymbol();
+                                // Integer count = dto.getCount();
+                                GeneOntologyTerm t = o.getTerm( goId );
+
+                                if ( t != null ) {
+
+                                    // Deal with direct counts
+
+                                    Integer directCnt = tempDirectAnnotationCount.get( t ); // gene counts
+                                    tempDirectAnnotationCount.put( t, ( directCnt == null ) ? 1 : directCnt + 1 );
+
+                                    // Deal with inferred counts
+
+                                    Set<GeneOntologyTerm> propagate = o.getAncestors( t, true, ancestorCache );
+                                    propagate.add( t );
+
+                                    for ( GeneOntologyTerm term : propagate ) { // gene counts
+                                        Set<String> s = tempAnnotationSets.get( term );
+                                        if ( s == null ) {
+                                            s = new HashSet<>();
+                                            tempAnnotationSets.put( term, s );
+                                        }
+                                        s.add( symbol );
+                                    }
+
+                                    Set<GeneOntologyTerm> terms = tempTermSets.get( symbol ); // term counts
+                                    if ( terms == null ) {
+                                        terms = new HashSet<>();
+                                        tempTermSets.put( symbol, terms );
+                                    }
+                                    terms.addAll( propagate );
+
+                                } else {
+                                    // log.warn( "Term not found in edition " + ed + " (" + goId + ")" );
+                                }
+
+                            }
+
+                            int totalGeneSetSizes = 0;
+
+                            // Convert sets into counts
+                            for ( Entry<GeneOntologyTerm, Set<String>> entry : tempAnnotationSets.entrySet() ) {
+                                MultiKey k = new MultiKey( speciesId, ed, entry.getKey() );
+                                this.inferredAnnotationCount.put( k, entry.getValue().size() );
+                                totalGeneSetSizes += entry.getValue().size(); // For calculating avgGenesByTerm
+                                Integer cnt = tempDirectAnnotationCount.get( entry.getKey() );
+                                if ( cnt != null ) {
+                                    this.directAnnotationCount.put( k, cnt );
+                                }
+
+                            }
+
+                            int totalTermSetSizes = 0;
+
+                            for ( Entry<String, Set<GeneOntologyTerm>> entry : tempTermSets.entrySet() ) {
+                                totalTermSetSizes += entry.getValue().size();
+                            }
+
+                            // GeneCount, avgDirectByGene, avgInferredByGene, avgGenesByTerm
+                            int geneCount = tempTermSets.keySet().size();
+                            speciesAggregates.put( ed,
+                                    new Aggregate( geneCount, results.size() / ( double ) geneCount,
+                                            totalTermSetSizes / ( double ) geneCount,
+                                            totalGeneSetSizes / ( double ) tempAnnotationSets.keySet().size() ) );
+
+                        }
+                    }
+
+                    log.info( "Used Memory: "
+                            + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                            + " MB" );
+
                 }
             }
 
             log.info( "GO Set sizes successfully obtained" );
             // System.gc();();
-            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                    / 1000000 + " MB" );
+            log.info( "Used Memory: "
+                    + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
         }
         // ****************************
 
         // Aggregate cache creation
         // ****************************
-        if ( !settingsCache.isDryRun() ) {
-            for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
-                Map<Edition, StatsEntry> m1 = aggregates.get( dto.getSpecies() );
-
-                if ( m1 == null ) {
-                    m1 = new ConcurrentHashMap<>();
-                    aggregates.put( dto.getSpecies(), m1 );
-                }
-
-                Edition ed = allEditions.get( dto.getSpecies() ).get( dto.getEdition() );
-
-                m1.put( ed, new StatsEntry( dto ) );
-
-            }
-            log.info( "Aggregates successfully obtained" );
-
-            log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                    / 1000000 + " MB" );
-        }
+        //        if ( !settingsCache.isDryRun() ) {
+        //            for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
+        //                Map<Edition, StatsEntry> m1 = aggregates.get( dto.getSpecies() );
+        //
+        //                if ( m1 == null ) {
+        //                    m1 = new ConcurrentHashMap<>();
+        //                    aggregates.put( dto.getSpecies(), m1 );
+        //                }
+        //
+        //                Edition ed = allEditions.get( dto.getSpecies() ).get( dto.getEdition() );
+        //
+        //                m1.put( ed, new StatsEntry( dto ) );
+        //
+        //            }
+        //            log.info( "Aggregates successfully obtained" );
+        //
+        //            log.info( "Used Memory: "
+        //                    + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
+        //        }
         // ****************************
 
         // Accession cache creation
@@ -366,8 +508,8 @@ public class Cache implements Serializable {
 
         }
         for ( String accession : spMap.keySet() ) {
-            primaryAccession
-                    .put( accession, new Accession( accession, spMap.get( accession ), secMap.get( accession ) ) );
+            primaryAccession.put( accession,
+                    new Accession( accession, spMap.get( accession ), secMap.get( accession ) ) );
         }
         spMap.clear();
         secMap.clear();
@@ -450,8 +592,9 @@ public class Cache implements Serializable {
             }
         }
 
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
+
         // ****************************
 
         // Gene caches for auto-completion
@@ -692,10 +835,17 @@ public class Cache implements Serializable {
         }
     }
 
-    public Integer getGoSetSizes( Integer speciesId, Edition ed, GeneOntologyTerm t ) {
+    public Integer getInferredAnnotationCount( Integer speciesId, Edition ed, GeneOntologyTerm t ) {
         if ( speciesId == null || ed == null || t == null ) return null;
         MultiKey k = new MultiKey( speciesId, ed, t );
-        return goSetSizes.get( k );
+        return inferredAnnotationCount.get( k );
+
+    }
+
+    public Integer getDirectAnnotationCount( Integer speciesId, Edition ed, GeneOntologyTerm t ) {
+        if ( speciesId == null || ed == null || t == null ) return null;
+        MultiKey k = new MultiKey( speciesId, ed, t );
+        return directAnnotationCount.get( k );
 
     }
 
@@ -708,20 +858,20 @@ public class Cache implements Serializable {
         }
     }
 
-    public Map<Edition, StatsEntry> getAggregates( Integer speciesId ) {
-        if ( speciesId == null ) return null;
-        Map<Edition, StatsEntry> tmp = aggregates.get( speciesId );
-        if ( tmp != null ) {
-            return Collections.unmodifiableMap( tmp );
-        } else {
-            return null;
-        }
+    //    public Map<Edition, Aggregate> getAggregates( Integer speciesId ) {
+    //        if ( speciesId == null ) return null;
+    //        Map<Edition, Aggregate> tmp = aggregates.get( speciesId );
+    //        if ( tmp != null ) {
+    //            return Collections.unmodifiableMap( tmp );
+    //        } else {
+    //            return null;
+    //        }
+    //
+    //    }
 
-    }
-
-    public StatsEntry getAggregates( Integer speciesId, Edition ed ) {
+    public Aggregate getAggregates( Integer speciesId, Edition ed ) {
         if ( speciesId == null || ed == null ) return null;
-        Map<Edition, StatsEntry> tmp = aggregates.get( speciesId );
+        Map<Edition, Aggregate> tmp = aggregates.get( speciesId );
         if ( tmp != null ) {
             return tmp.get( ed );
         }
@@ -771,28 +921,28 @@ public class Cache implements Serializable {
         return false;
     }
 
-    public Integer getAccessionCount( Integer speciesId, Edition edition ) {
-        if ( speciesId == null || edition == null ) {
-            return null;
-        }
-        Map<Edition, StatsEntry> map2 = aggregates.get( speciesId );
-        if ( map2 != null ) {
-            StatsEntry se = map2.get( edition );
-            if ( se != null ) {
-                return se.getAccessionCount();
-            }
-
-        }
-        return null;
-    }
+    //    public Integer getAccessionCount( Integer speciesId, Edition edition ) {
+    //        if ( speciesId == null || edition == null ) {
+    //            return null;
+    //        }
+    //        Map<Edition, StatsEntry> map2 = aggregates.get( speciesId );
+    //        if ( map2 != null ) {
+    //            StatsEntry se = map2.get( edition );
+    //            if ( se != null ) {
+    //                return se.getAccessionCount();
+    //            }
+    //
+    //        }
+    //        return null;
+    //    }
 
     public Integer getGeneCount( Integer speciesId, Edition edition ) {
         if ( speciesId == null || edition == null ) {
             return null;
         }
-        Map<Edition, StatsEntry> map2 = aggregates.get( speciesId );
+        Map<Edition, Aggregate> map2 = aggregates.get( speciesId );
         if ( map2 != null ) {
-            StatsEntry se = map2.get( edition );
+            Aggregate se = map2.get( edition );
             if ( se != null ) {
                 return se.getGeneCount();
             }
@@ -801,14 +951,14 @@ public class Cache implements Serializable {
         return null;
     }
 
-    public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
-            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations, Edition ed ) {
-        if ( goAnnotations == null || ed == null ) {
+    public Map<GeneOntologyTerm, Set<Annotation>> propagateAnnotations( Map<GeneOntologyTerm, Set<Annotation>> map,
+            Edition ed ) {
+        if ( map == null || ed == null ) {
             return null;
         }
         GeneOntology o = ontologies.get( ed.getGoEdition() );
         if ( o != null ) {
-            return o.propagate( goAnnotations );
+            return o.propagateAnnotations( map );
         }
         return null;
     }
@@ -853,6 +1003,10 @@ public class Cache implements Serializable {
         return evidenceCache.get( evidence );
     }
 
+    public Set<String> getEvidenceCategories() {
+        return evidenceCategoryCache;
+    }
+
     public Accession getAccession( String acc ) {
         if ( acc == null ) return null;
         return primaryAccession.get( acc );
@@ -894,14 +1048,16 @@ public class Cache implements Serializable {
 
         Map<GOEdition, GeneOntologyTerm> termsMap = new HashMap<>();
 
+        boolean found = false;
+
         for ( Entry<GOEdition, GeneOntology> entry : ontologies.entrySet() ) {
             GeneOntologyTerm term = entry.getValue().getTerm( goId );
             // yes we want null values
             termsMap.put( entry.getKey(), term );
-
+            found |= ( term != null );
         }
 
-        return termsMap;
+        return found ? termsMap : null;
     }
 
     public GeneOntologyTerm getCurrentTerm( String goId ) {
@@ -939,16 +1095,17 @@ public class Cache implements Serializable {
 
     // Application Level Caching get/set
 
-    public Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> getData( Gene g ) {
+    public Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> getGeneData( Gene g ) {
         // TODO not sure if necessary, not a big deal either way
-        synchronized ( applicationLevelDataCache ) {
-            return applicationLevelDataCache.get( g );
+        synchronized ( applicationLevelGeneCache ) {
+            return applicationLevelGeneCache.get( g );
         }
     }
 
-    public void addData( Gene g, Map<Accession, Map<Edition, Map<GeneOntologyTerm, Set<EvidenceReference>>>> data ) {
-        synchronized ( applicationLevelDataCache ) {
-            applicationLevelDataCache.put( g, data );
+    public void addGeneData( Gene g,
+            Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> data ) {
+        synchronized ( applicationLevelGeneCache ) {
+            applicationLevelGeneCache.put( g, data );
         }
     }
 

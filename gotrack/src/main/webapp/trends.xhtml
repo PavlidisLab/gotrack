@@ -39,41 +39,40 @@
 		
 		<h:outputScript rendered="#{termView.trackedTerms != null}">
 		$(document).ready(function() {
-			$('#loading-spinner').show();
-			fetchCharts();
+			$('.loading').show();
+			fetchDAGData();
+			fetchEvidenceChart();
+			fetchOverviewChart();
+			fetchGeneChart();
+			
 		});
 		</h:outputScript>  
 	</ui:define>
 
 	<ui:define name="left_right_layout">
 
-		<p:layoutUnit id="left" position="west" size="275" resizable="true"
-			collapsible="true" header="Options" minSize="275" collapsed="#{termView.trackedTerms == null}">
-
-			<h:form>
-				<h3 class="center">Global Settings</h3>
-
-			</h:form>
-
-			<f:facet name="footer">
-				<h:graphicImage library="img" width="130" height="110"
-					name="logo1.png" styleClass="center" />
-			</f:facet>
-		</p:layoutUnit>
-
 	</ui:define>
 
 	<ui:define name="center_layout">
 		<p:outputPanel rendered="#{termView.trackedTerms != null}">
 				<h:form style="margin:0 25px 0 25px;">
-					<p:remoteCommand name="fetchCharts"
-						oncomplete="hideLoadingSpinner();handleFetchCharts(xhr, status, args);"
-						actionListener="#{termView.fetchCharts()}" />
+					<p:remoteCommand name="fetchDAGData" async="true"
+						oncomplete="handleFetchDAGData(xhr, status, args);"
+						actionListener="#{termView.fetchDAGData()}" />
+					<p:remoteCommand name="fetchOverviewChart" async="true"
+						oncomplete="handleFetchOverviewChart(xhr, status, args);"
+						actionListener="#{termView.fetchOverviewChart()}" />
+					<p:remoteCommand name="fetchGeneChart" async="true"
+						oncomplete="handleFetchGeneChart(xhr, status, args);"
+						actionListener="#{termView.fetchGeneChart()}" />
+					<p:remoteCommand name="fetchEvidenceChart" async="true"
+						oncomplete="handleFetchEvidenceChart(xhr, status, args);"
+						actionListener="#{termView.fetchEvidenceChart()}" />
 					<p:remoteCommand name="fetchGraph"
 						oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
 						actionListener="#{termView.fetchGraph()}" />
 					<p:tabView onTabShow="tabShowed(index)">
-					<p:tab title="Overview">						
+					<p:tab title="Current">						
 						<p:outputPanel>
 							<h3>Current Information</h3>
 							<p:panelGrid  styleClass="no-border">
@@ -122,8 +121,25 @@
 											<ui:repeat
 												value="#{termView.currentTerm.parents.toArray()}"
 												var="parent" varStatus="loop">
-												<p:link value="#{parent.parent.goId}" outcome="trends" target="_blank">
-													<f:param name="query" value="#{parent.parent.goId}" />
+												<p:link value="#{parent.relation.goId}" outcome="trends" target="_blank">
+													<f:param name="query" value="#{parent.relation.goId}" />
+												</p:link>#{!loop.last ? ', ' : ''}
+											</ui:repeat>
+										</span>
+									</p:column>
+								</p:row>
+								
+								<p:row>
+									<p:column>
+										<h:outputText value="Children" />
+									</p:column>
+									<p:column>
+										<span class="sqlDialogText"> 
+											<ui:repeat
+												value="#{termView.currentTerm.children.toArray()}"
+												var="children" varStatus="loop">
+												<p:link value="#{children.relation.goId}" outcome="trends" target="_blank">
+													<f:param name="query" value="#{children.relation.goId}" />
 												</p:link>#{!loop.last ? ', ' : ''}
 											</ui:repeat>
 										</span>
@@ -132,32 +148,25 @@
 
 							</p:panelGrid>
                             <h3>Ancestry Chart</h3>
-                             <h:panelGrid columns="4" style="margin-bottom:10px" cellpadding="5">
-                                 <h:outputText value="Overlay comparison to date: " />
-                                 <p:selectOneMenu value="#{termView.compareEditionId}">
-                                    <f:selectItems value="#{termView.allGOEditions}" var="ed"
-                                        itemValue="#{ed.edition}" itemLabel="#{ed.date}" />
-                                </p:selectOneMenu>
-                                <p:commandButton value="GO"
-                                    actionListener="#{termView.fetchDiff()}" icon="fa fa-bar-chart"
-                                    oncomplete="handleFetchDiff(xhr, status, args);" />
-                                <p:commandButton type="button" icon="fa fa-trash"                          
-                                        onclick="revertOverview()" />
-                            </h:panelGrid>
 						</p:outputPanel>
-						<div id="loading-spinner" class="loading" style="display: none;" />
-						<div id="mynetwork" style="height:500px;width:700px;"/>
+						<div id="loading-spinner-DAG" class="loading" style="display: none;" />
+						<div id="currentAncestry" style="height:600px;width:900px;display: none;"/>
 					</p:tab>
-					<p:tab title="Existence">
+					<p:tab title="Overview">
 					<p:outputPanel>
-						
-						<div id="hc_exist_container" style="width: 100%; height: 600px;"/>
+						<div id="loading-spinner-overview" class="loading" style="display: none;" />
+						<div id="hc_overview_container" style="width: 100%; height: 600px;"/>
 
 					</p:outputPanel>
 					</p:tab>
-					<p:tab title="Gene Count">
-					
+					<p:tab title="Gene Breakdown">
+					    <div id="loading-spinner-gene" class="loading" style="display: none;" />
 						<div id="hc_gene_container" style="width: 100%; height: 600px;"/>
+						
+					</p:tab>
+					<p:tab title="Evidence Breakdown">
+						<div id="loading-spinner-evidence" class="loading" style="display: none;" />
+						<div id="hc_evidence_container" style="width: 100%; height: 600px;"/>
 						
 					</p:tab>
 					</p:tabView>

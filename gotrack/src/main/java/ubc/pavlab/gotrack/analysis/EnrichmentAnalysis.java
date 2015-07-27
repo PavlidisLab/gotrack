@@ -132,7 +132,7 @@ public class EnrichmentAnalysis {
 
             for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : data.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
-                Integer populationAnnotated = cache.getGoSetSizes( currentSpeciesId, ed, term );
+                Integer populationAnnotated = cache.getInferredAnnotationCount( currentSpeciesId, ed, term );
 
                 if ( populationAnnotated != null && populationAnnotated >= minAnnotatedPopulation
                         && populationAnnotated <= maxAnnotatedPopulation ) {

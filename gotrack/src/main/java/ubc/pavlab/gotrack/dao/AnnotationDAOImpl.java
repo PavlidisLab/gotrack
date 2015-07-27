@@ -34,8 +34,10 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
+import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
+import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
-import ubc.pavlab.gotrack.model.dto.TrackDTO;
 
 /**
  * TODO Document Me
@@ -50,9 +52,15 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     /* CURRENT QUERIES */
 
     // species, symbol,species
-    private static final String SQL_TRACK = "select distinct edition, primary_accession as `primary`, go_id, evidence, reference from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where symbol=? and species_id=?";
+    private static final String SQL_TRACK = "select distinct edition, go_id, qualifier, evidence, reference from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where symbol=? and species_id=? order by edition";
 
-    private static final String SQL_ENRICH = "select edition.date, goa_symbol.edition, edition.go_edition_id_fk, edition.date go_date, goa_annot.go_id parent, goa_symbol.symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id INNER JOIN edition on edition.edition=goa_symbol.edition and edition.species_id =goa_symbol.species_id where goa_symbol.species_id=? and goa_symbol.symbol in (%s) GROUP BY goa_symbol.edition, parent, goa_symbol.symbol ORDER BY NULL";
+    private static final String SQL_ENRICH = "select goa_symbol.edition, goa_annot.go_id, goa_symbol.symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where goa_symbol.species_id=? and goa_symbol.symbol in (%s) GROUP BY goa_symbol.edition, go_id, goa_symbol.symbol ORDER BY NULL";
+
+    // Collect evidence breakdown for a specific term
+    private static final String SQL_CATEGORY_BREAKDOWN_FOR_TERM = "select date, evidence_categories.category , COUNT(*) count from goa_symbol inner join goa_annot on goa_symbol.id = goa_annot.goa_symbol_id inner join edition on edition.edition=goa_symbol.edition and edition.species_id = goa_symbol.species_id inner join evidence_categories on evidence_categories.evidence  = goa_annot.evidence where go_id=? group by date, evidence_categories.category order by date";
+
+    // Collect unique ,directly annotated gene counts for a term
+    private static final String SQL_DIRECT_GENE_COUNTS_FOR_TERM = "select species_id, edition, COUNT(distinct symbol) count from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where go_id = ? group by species_id, edition";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -73,19 +81,19 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public List<TrackDTO> track( Integer species, String symbol ) throws DAOException {
+    public List<AnnotationDTO> track( Integer speciesId, String symbol ) throws DAOException {
 
         List<Object> params = new ArrayList<Object>();
 
         // species, symbol,species
         params.add( symbol );
-        params.add( species );
+        params.add( speciesId );
 
         Connection connection = null;
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        List<TrackDTO> results = new ArrayList<>();
+        List<AnnotationDTO> results = new ArrayList<>();
         String sql = SQL_TRACK;
 
         log.debug( sql );
@@ -108,8 +116,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
             startTime = System.currentTimeMillis();
             while ( resultSet.next() ) {
-                results.add( new TrackDTO( resultSet.getInt( "edition" ), resultSet.getString( "primary" ), resultSet
-                        .getString( "go_id" ), resultSet.getString( "evidence" ), resultSet.getString( "reference" ) ) );
+                results.add( new AnnotationDTO( resultSet.getInt( 1 ), resultSet.getString( 2 ),
+                        resultSet.getString( 3 ), resultSet.getString( 4 ), resultSet.getString( 5 ) ) );
             }
             endTime = System.currentTimeMillis();
             log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
@@ -178,10 +186,108 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         return results;
     }
 
+    @Override
+    public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException {
+
+        List<Object> params = new ArrayList<Object>();
+
+        // species, symbol,species
+        params.add( goId );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<CategoryCountDTO> results = new ArrayList<>();
+        String sql = SQL_CATEGORY_BREAKDOWN_FOR_TERM;
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+                results.add( new CategoryCountDTO( resultSet.getDate( "date" ), resultSet.getString( "category" ),
+                        resultSet.getInt( "count" ) ) );
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
+    public List<AnnotationCountDTO> directGeneCounts( String goId ) throws DAOException {
+
+        List<Object> params = new ArrayList<Object>();
+
+        // species, symbol,species
+        params.add( goId );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<AnnotationCountDTO> results = new ArrayList<>();
+        String sql = SQL_DIRECT_GENE_COUNTS_FOR_TERM;
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+                results.add( new AnnotationCountDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
+                        "", resultSet.getInt( "count" ) ) );
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
     private static EnrichmentDTO enrichmentMap( ResultSet resultSet ) throws SQLException {
         Integer edition = resultSet.getInt( "edition" );
         String symbol = resultSet.getString( "symbol" );
-        String goId = resultSet.getString( "parent" );
+        String goId = resultSet.getString( "go_id" );
         return new EnrichmentDTO( edition, symbol, goId );
     }
 

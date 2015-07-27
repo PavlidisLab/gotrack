@@ -21,6 +21,7 @@ package ubc.pavlab.gotrack.dao;
 
 import java.util.List;
 
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.dto.AccessionDTO;
 import ubc.pavlab.gotrack.model.dto.AdjacencyDTO;
 import ubc.pavlab.gotrack.model.dto.AggregateDTO;
@@ -30,6 +31,7 @@ import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
+import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 
 /**
  * Holds methods for retrieving data that is meant to be cached
@@ -60,5 +62,7 @@ public interface CacheDAO {
     public List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException;
 
     public List<GOEditionDTO> getAllGOEditions() throws DAOException;
+
+    public List<SimpleAnnotationDTO> getSimpleAnnotations( Integer speciesId, Edition ed ) throws DAOException;
 
 }

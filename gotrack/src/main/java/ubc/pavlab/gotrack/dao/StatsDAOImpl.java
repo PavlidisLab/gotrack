@@ -29,7 +29,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ubc.pavlab.gotrack.model.dto.StatsDTO;
+import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
+import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
 
 /**
  * TODO Document Me
@@ -43,8 +44,10 @@ public class StatsDAOImpl implements StatsDAO {
     // Constants ----------------------------------------------------------------------------------
 
     private static final String SQL_FIND_BY_ID = "SELECT id, species_id, symbol, count FROM track_popular_genes WHERE id = ?";
-    private static final String SQL_LIST = "SELECT id, species_id, symbol, count FROM track_popular_genes";
-    private static final String SQL_INCREMENT = "INSERT INTO track_popular_genes(species_id, symbol, count) values (?,?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
+    private static final String SQL_LIST_GENE = "SELECT id, species_id, symbol, count FROM track_popular_genes";
+    private static final String SQL_LIST_TERM = "SELECT id, go_id, count FROM track_popular_terms";
+    private static final String SQL_INCREMENT_GENE = "INSERT INTO track_popular_genes(species_id, symbol, count) values (?,?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
+    private static final String SQL_INCREMENT_TERM = "INSERT INTO track_popular_terms(go_id, count) values (?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -70,23 +73,23 @@ public class StatsDAOImpl implements StatsDAO {
      * @see ubc.pavlab.gotrack.dao.AnnotationDAO#find(java.lang.Long)
      */
     @Override
-    public StatsDTO find( Long id ) throws DAOException {
+    public GeneStatsDTO find( Long id ) throws DAOException {
         return execute( SQL_FIND_BY_ID, id );
     }
 
     @Override
-    public List<StatsDTO> list() throws DAOException {
+    public List<GeneStatsDTO> listGenes() throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        List<StatsDTO> list = new ArrayList<>();
+        List<GeneStatsDTO> list = new ArrayList<>();
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_LIST );
+            preparedStatement = connection.prepareStatement( SQL_LIST_GENE );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                list.add( map( resultSet ) );
+                list.add( geneMap( resultSet ) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -97,13 +100,37 @@ public class StatsDAOImpl implements StatsDAO {
         return list;
     }
 
+    @Override
+    public List<TermStatsDTO> listTerms() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        List<TermStatsDTO> list = new ArrayList<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_LIST_TERM );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                list.add( termMap( resultSet ) );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return list;
+    }
+
+    @Override
     public void incrementGeneHit( Integer speciesId, String symbol ) {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = prepareStatement( connection, SQL_INCREMENT, false, speciesId, symbol );
+            preparedStatement = prepareStatement( connection, SQL_INCREMENT_GENE, false, speciesId, symbol );
             int result = preparedStatement.executeUpdate();
             if ( result == 0 ) {
                 throw new SQLException( "Something went wrong in the popular genes update!" );
@@ -115,18 +142,37 @@ public class StatsDAOImpl implements StatsDAO {
         }
     }
 
-    private StatsDTO execute( String sql, Object... values ) throws DAOException {
+    @Override
+    public void incrementTermHit( String goId ) {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = prepareStatement( connection, SQL_INCREMENT_TERM, false, goId );
+            int result = preparedStatement.executeUpdate();
+            if ( result == 0 ) {
+                throw new SQLException( "Something went wrong in the popular terms update!" );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, null );
+        }
+    }
+
+    private GeneStatsDTO execute( String sql, Object... values ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        StatsDTO species = null;
+        GeneStatsDTO species = null;
 
         try {
             connection = daoFactory.getConnection();
             preparedStatement = prepareStatement( connection, sql, false, values );
             resultSet = preparedStatement.executeQuery();
             if ( resultSet.next() ) {
-                species = map( resultSet );
+                species = geneMap( resultSet );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -137,17 +183,16 @@ public class StatsDAOImpl implements StatsDAO {
         return species;
     }
 
-    /**
-     * Map the current row of the given ResultSet to a Species.
-     * 
-     * @param resultSet The ResultSet of which the current row is to be mapped to a Species.
-     * @return The mapped Species from the current row of the given ResultSet.
-     * @throws SQLException If something fails at database level.
-     */
-    private static StatsDTO map( ResultSet resultSet ) throws SQLException {
+    private static GeneStatsDTO geneMap( ResultSet resultSet ) throws SQLException {
 
-        return new StatsDTO( resultSet.getInt( "id" ), resultSet.getInt( "species_id" ),
+        return new GeneStatsDTO( resultSet.getInt( "id" ), resultSet.getInt( "species_id" ),
                 resultSet.getString( "symbol" ), resultSet.getInt( "count" ) );
+    }
+
+    private static TermStatsDTO termMap( ResultSet resultSet ) throws SQLException {
+
+        return new TermStatsDTO( resultSet.getInt( "id" ), resultSet.getString( "go_id" ),
+                resultSet.getInt( "count" ) );
     }
 
 }

@@ -17,8 +17,10 @@
  *
  */
 
-package ubc.pavlab.gotrack.model.go;
+package ubc.pavlab.gotrack.model.table;
 
+import ubc.pavlab.gotrack.model.Annotation;
+import ubc.pavlab.gotrack.model.AnnotationType;
 
 /**
  * TODO Document Me
@@ -26,35 +28,30 @@ package ubc.pavlab.gotrack.model.go;
  * @author mjacobson
  * @version $Id$
  */
-public final class Parent {
-    private final GeneOntologyTerm parent;
-    private final RelationshipType type;
+public final class AnnotationValues {
 
-    public Parent( GeneOntologyTerm parent, RelationshipType type ) {
+    private final Annotation annotation;
+    private final AnnotationType type;
+
+    public AnnotationValues( Annotation annotation, AnnotationType type ) {
         super();
-        this.parent = parent;
+        this.annotation = annotation;
         this.type = type;
     }
 
-    public GeneOntologyTerm getParent() {
-        return parent;
+    public Annotation getAnnotation() {
+        return annotation;
     }
 
-    public RelationshipType getType() {
+    public AnnotationType getType() {
         return type;
-    }
-
-    @Override
-    public String toString() {
-        return "Parent [parent=" + parent + ", type=" + type + "]";
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ( ( parent == null ) ? 0 : parent.hashCode() );
-        result = prime * result + ( ( type == null ) ? 0 : type.hashCode() );
+        result = prime * result + ( ( annotation == null ) ? 0 : annotation.hashCode() );
         return result;
     }
 
@@ -63,12 +60,16 @@ public final class Parent {
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        Parent other = ( Parent ) obj;
-        if ( parent == null ) {
-            if ( other.parent != null ) return false;
-        } else if ( !parent.equals( other.parent ) ) return false;
-        if ( type != other.type ) return false;
+        AnnotationValues other = ( AnnotationValues ) obj;
+        if ( annotation == null ) {
+            if ( other.annotation != null ) return false;
+        } else if ( !annotation.equals( other.annotation ) ) return false;
         return true;
+    }
+
+    @Override
+    public String toString() {
+        return "AnnotationValues [annotation=" + annotation + ", type=" + type + "]";
     }
 
 }

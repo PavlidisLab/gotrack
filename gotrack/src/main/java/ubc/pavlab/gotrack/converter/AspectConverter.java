@@ -17,7 +17,12 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.converter;
+
+import javax.faces.convert.EnumConverter;
+import javax.faces.convert.FacesConverter;
+
+import ubc.pavlab.gotrack.model.Aspect;
 
 /**
  * TODO Document Me
@@ -25,17 +30,11 @@ package ubc.pavlab.gotrack.model;
  * @author mjacobson
  * @version $Id$
  */
-public enum Aspect {
-    CC("Cellular Component"), BP("Biological Process"), MF("Molecular Function");
+@FacesConverter(value = "aspectConverter")
+public class AspectConverter extends EnumConverter {
 
-    private String label;
-
-    private Aspect( String label ) {
-        this.label = label;
-    }
-
-    public String getLabel() {
-        return label;
+    public AspectConverter() {
+        super( Aspect.class );
     }
 
 }

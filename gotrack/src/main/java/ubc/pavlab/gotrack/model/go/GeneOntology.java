@@ -19,8 +19,6 @@
 
 package ubc.pavlab.gotrack.model.go;
 
-import gnu.trove.map.hash.TIntObjectHashMap;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,7 +29,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
-import ubc.pavlab.gotrack.model.EvidenceReference;
+import gnu.trove.map.hash.TIntObjectHashMap;
+import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.GOEdition;
 
 /**
@@ -93,12 +92,13 @@ public class GeneOntology {
             log.warn( "Relationship (" + parent + ") parent not found in term map!" );
         }
 
-        term.getParents().add( new Parent( parentTerm, type ) );
+        term.getParents().add( new Relation( parentTerm, type ) );
+        parentTerm.getChildren().add( new Relation( term, type ) );
     }
 
     public void freeze() {
         for ( GeneOntologyTerm t : termMap.valueCollection() ) {
-            t.freezeParents();
+            t.freeze();
         }
     }
 
@@ -160,20 +160,18 @@ public class GeneOntology {
 
     }
 
-    public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
-            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations ) {
-        return propagate( goAnnotations, true );
+    public Map<GeneOntologyTerm, Set<Annotation>> propagateAnnotations( Map<GeneOntologyTerm, Set<Annotation>> map ) {
+        return propagateAnnotations( map, true );
     }
 
-    public Map<GeneOntologyTerm, Set<EvidenceReference>> propagate(
-            Map<GeneOntologyTerm, Set<EvidenceReference>> goAnnotations, boolean includePartOf ) {
-
-        Map<GeneOntologyTerm, Set<EvidenceReference>> propagatedAnnotations = new HashMap<>();
-        for ( Entry<GeneOntologyTerm, Set<EvidenceReference>> goEntry : goAnnotations.entrySet() ) {
+    public Map<GeneOntologyTerm, Set<Annotation>> propagateAnnotations(
+            Map<GeneOntologyTerm, Set<Annotation>> goAnnotations, boolean includePartOf ) {
+        Map<GeneOntologyTerm, Set<Annotation>> propagatedAnnotations = new HashMap<>();
+        for ( Entry<GeneOntologyTerm, Set<Annotation>> goEntry : goAnnotations.entrySet() ) {
             GeneOntologyTerm go = goEntry.getKey();
-            Set<EvidenceReference> ev = goEntry.getValue();
+            Set<Annotation> ev = goEntry.getValue();
             // Add current terms annotations
-            Set<EvidenceReference> evidence = propagatedAnnotations.get( go );
+            Set<Annotation> evidence = propagatedAnnotations.get( go );
             if ( evidence == null ) {
                 evidence = new HashSet<>();
                 propagatedAnnotations.put( go, evidence );
@@ -217,11 +215,11 @@ public class GeneOntology {
 
         Set<GeneOntologyTerm> ancestors = new HashSet<>();
 
-        for ( Parent parent : getParents( t, includePartOf ) ) {
+        for ( Relation relation : getParents( t, includePartOf ) ) {
 
-            ancestors.add( parent.getParent() );
+            ancestors.add( relation.getRelation() );
             // ancestors.addAll( ancestorsCache.getUnchecked( parent.getParent() ) );
-            ancestors.addAll( getAncestors( parent.getParent(), includePartOf, cache ) );
+            ancestors.addAll( getAncestors( relation.getRelation(), includePartOf, cache ) );
 
         }
 
@@ -233,26 +231,26 @@ public class GeneOntology {
 
     }
 
-    public Set<Parent> getParents( String goid, boolean includePartOf ) throws IllegalArgumentException {
+    public Set<Relation> getParents( String goid, boolean includePartOf ) throws IllegalArgumentException {
         return getParents( convertGOId( goid ), includePartOf );
     }
 
-    public Set<Parent> getParents( int id, boolean includePartOf ) {
+    public Set<Relation> getParents( int id, boolean includePartOf ) {
         return getParents( termMap.get( id ), includePartOf );
     }
 
-    private Set<Parent> getParents( GeneOntologyTerm t, boolean includePartOf ) {
+    private Set<Relation> getParents( GeneOntologyTerm t, boolean includePartOf ) {
         if ( includePartOf ) {
             return t.getParents();
         } else {
-            Set<Parent> parents = new HashSet<>();
-            for ( Parent p : t.getParents() ) {
+            Set<Relation> relations = new HashSet<>();
+            for ( Relation p : t.getParents() ) {
                 if ( p.getType().equals( RelationshipType.IS_A ) ) {
-                    parents.add( p );
+                    relations.add( p );
                 }
             }
 
-            return parents;
+            return relations;
 
         }
 

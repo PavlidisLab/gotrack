@@ -30,6 +30,7 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.dto.AccessionDTO;
 import ubc.pavlab.gotrack.model.dto.AdjacencyDTO;
 import ubc.pavlab.gotrack.model.dto.AggregateDTO;
@@ -39,6 +40,7 @@ import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
+import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 
 /**
  * Holds methods for retrieving data that is meant to be cached
@@ -78,6 +80,11 @@ public class CacheDAOImpl implements CacheDAO {
 
     // Evidence
     private static final String SQL_EVIDENCE = "SELECT id, evidence, description, category FROM evidence_categories";
+
+    // Simplified annotations for an edition, species
+    private static final String SQL_SIMPLE_ANNOTATIONS = "select distinct go_id, symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where species_id=? and edition = ?";
+    // Keep in mind this SQL for single term lookups
+    // "select distinct symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where species_id=? and edition=? and go_id in (select child from go_ontology_tclosure where go_edition_id_fk = ? and parent = ?)";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -395,6 +402,35 @@ public class CacheDAOImpl implements CacheDAO {
             while ( resultSet.next() ) {
                 list.add( new EvidenceDTO( resultSet.getInt( "id" ), resultSet.getString( "evidence" ), resultSet
                         .getString( "description" ), resultSet.getString( "category" ) ) );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return list;
+    }
+
+    @Override
+    public List<SimpleAnnotationDTO> getSimpleAnnotations( Integer speciesId, Edition ed ) throws DAOException {
+
+        List<Object> params = new ArrayList<Object>();
+        params.add( speciesId );
+        params.add( ed.getEdition() );
+
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        List<SimpleAnnotationDTO> list = new ArrayList<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_SIMPLE_ANNOTATIONS );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                list.add( new SimpleAnnotationDTO( resultSet.getString( "go_id" ), resultSet.getString( "symbol" ) ) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );

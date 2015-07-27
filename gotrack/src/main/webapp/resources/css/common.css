@@ -117,3 +117,7 @@ button.icon-only {
 	border:0;
 	padding:0;
 }
+
+i.fa.fa-external-link:hover {
+	color: #0000ff;
+}

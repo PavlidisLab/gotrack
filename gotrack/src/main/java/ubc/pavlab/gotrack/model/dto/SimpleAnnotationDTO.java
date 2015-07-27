@@ -25,40 +25,22 @@ package ubc.pavlab.gotrack.model.dto;
  * @author mjacobson
  * @version $Id$
  */
-public final class TrackDTO {
-
-    private final Integer edition;
-    private final String accession;
+public final class SimpleAnnotationDTO {
     private final String goId;
-    private final String evidence;
-    private final String reference;
+    private final String symbol;
 
-    public TrackDTO( Integer edition, String accession, String goId, String evidence, String reference ) {
+    public SimpleAnnotationDTO( String goId, String symbol ) {
         super();
-        this.edition = edition;
-        this.accession = accession;
         this.goId = goId;
-        this.evidence = evidence;
-        this.reference = reference;
-    }
-
-    public Integer getEdition() {
-        return edition;
-    }
-
-    public String getAccession() {
-        return accession;
+        this.symbol = symbol;
     }
 
     public String getGoId() {
         return goId;
     }
 
-    public String getEvidence() {
-        return evidence;
+    public String getSymbol() {
+        return symbol;
     }
 
-    public String getReference() {
-        return reference;
-    }
 }

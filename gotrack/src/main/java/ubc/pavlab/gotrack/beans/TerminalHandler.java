@@ -47,17 +47,19 @@ import org.dom4j.Element;
 import org.dom4j.Node;
 import org.dom4j.io.SAXReader;
 
+import com.google.common.base.Joiner;
+
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
-import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
+import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.model.Aggregate;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.StatusPoller;
-
-import com.google.common.base.Joiner;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
  * TODO Document Me
@@ -96,8 +98,8 @@ public class TerminalHandler implements Serializable {
 
     public TerminalHandler() {
         log.info( "TerminalHandler created" );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
 
     }
 
@@ -118,6 +120,64 @@ public class TerminalHandler implements Serializable {
             return enrichmentView.getSelectedGenes().toString();
         } else if ( command.equals( "help" ) ) {
             return sessionManager.getAuthenticated() ? AUTH_COMMANDS.toString() : OPEN_COMMANDS.toString();
+        } else if ( command.equals( "aggregate" ) ) {
+            if ( params.length == 2 ) {
+                Integer speciesId;
+                try {
+                    speciesId = Integer.valueOf( params[0] );
+                } catch ( NumberFormatException e ) {
+                    return "Malformed Input : speciesId, edition";
+                }
+                Integer editionId;
+                try {
+                    editionId = Integer.valueOf( params[1] );
+                } catch ( NumberFormatException e ) {
+                    return "Malformed Input : speciesId, edition";
+                }
+                Edition ed = cache.getEdition( speciesId, editionId );
+                Aggregate agg = cache.getAggregates( speciesId, ed );
+                if ( agg == null ) {
+                    return "Null";
+                }
+                return agg.toString();
+            } else {
+                return "Malformed Input : speciesId, edition";
+            }
+        } else if ( command.equals( "term" ) ) {
+            Edition ed;
+            String goId;
+            Integer speciesId;
+            if ( params.length > 1 ) {
+                try {
+                    speciesId = Integer.valueOf( params[0] );
+                } catch ( NumberFormatException e ) {
+                    return "Malformed Input : speciesId, term [, GO Edition]";
+                }
+                goId = params[1];
+                if ( params.length > 2 ) {
+                    Integer editionId;
+                    try {
+                        editionId = Integer.valueOf( params[2] );
+                    } catch ( NumberFormatException e ) {
+                        return "Malformed Input : speciesId, term [, GO Edition]";
+                    }
+                    ed = cache.getEdition( speciesId, editionId );
+                } else {
+                    ed = cache.getCurrentEditions( speciesId );
+                }
+
+            } else
+                return "Malformed Input : speciesId, term [, GO Edition]";
+
+            GeneOntologyTerm t = cache.getTerm( ed, goId );
+
+            if ( t == null ) {
+                return "Term not found.";
+            }
+
+            Integer val = cache.getInferredAnnotationCount( speciesId, ed, t );
+
+            return t.toString() + "<br/>" + "GO Set Size: " + ( val == null ? "" : val.toString() );
         } else if ( command.equals( "" ) ) {
             return "";
         }
@@ -168,7 +228,7 @@ public class TerminalHandler implements Serializable {
                     return "Error parsing XML!";
                 }
 
-                List<? extends Node> genesets = ( List<? extends Node> ) document.selectNodes( "//MSIGDB/GENESET" );
+                List<? extends Node> genesets = document.selectNodes( "//MSIGDB/GENESET" );
 
                 log.info( "Total Genesets: " + genesets.size() );
 
@@ -221,7 +281,7 @@ public class TerminalHandler implements Serializable {
                         }
                     }
                     StabilityAnalysis sa = enrichmentView.enrich( hitList, species, MultipleTestCorrection.BH, 0.05, 5,
-                            200, SimilarityCompareMethod.CURRENT, 5, new StatusPoller() ).getStabilityAnalysis();
+                            200, null, SimilarityCompareMethod.CURRENT, 5, new StatusPoller() ).getStabilityAnalysis();
 
                     String outputFile = outputFolder + "/" + systematicName + "_results.txt";
 
@@ -229,7 +289,8 @@ public class TerminalHandler implements Serializable {
                     try {
                         writer = new PrintWriter( outputFile, "UTF-8" );
 
-                        writer.println( "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard\tTopParentsJaccard" );
+                        writer.println(
+                                "Edition\tDate\tCompleteTermJaccard\tTopTermJaccard\tTopGeneJaccard\tTopParentsJaccard" );
                         for ( Entry<Edition, SimilarityScore> editionEntry : sa.getSimilarityScores().entrySet() ) {
                             Edition ed = editionEntry.getKey();
                             SimilarityScore score = editionEntry.getValue();
@@ -301,7 +362,7 @@ public class TerminalHandler implements Serializable {
                             returnString += "Could not find " + geneInput + "<br/>";
                         }
                     }
-                    enrichmentView.enrich( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200,
+                    enrichmentView.enrich( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200, null,
                             SimilarityCompareMethod.CURRENT, 5, new StatusPoller() );
 
                 } else {

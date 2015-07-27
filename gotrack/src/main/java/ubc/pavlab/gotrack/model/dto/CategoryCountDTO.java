@@ -17,7 +17,9 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.model.dto;
+
+import java.sql.Date;
 
 /**
  * TODO Document Me
@@ -25,17 +27,28 @@ package ubc.pavlab.gotrack.model;
  * @author mjacobson
  * @version $Id$
  */
-public enum Aspect {
-    CC("Cellular Component"), BP("Biological Process"), MF("Molecular Function");
+public final class CategoryCountDTO {
+    private final Date date;
+    private final String category;
+    private final int count;
 
-    private String label;
-
-    private Aspect( String label ) {
-        this.label = label;
+    public CategoryCountDTO( Date date, String category, int count ) {
+        super();
+        this.date = date;
+        this.category = category;
+        this.count = count;
     }
 
-    public String getLabel() {
-        return label;
+    public Date getDate() {
+        return date;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public int getCount() {
+        return count;
     }
 
 }

@@ -17,9 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
-
-import org.primefaces.extensions.model.timeline.TimelineModel;
+package ubc.pavlab.gotrack.model.dto;
 
 /**
  * TODO Document Me
@@ -27,22 +25,34 @@ import org.primefaces.extensions.model.timeline.TimelineModel;
  * @author mjacobson
  * @version $Id$
  */
-public class CustomTimelineModel<T> extends TimelineModel {
+public class GeneStatsDTO {
+    private final Integer id;
+    private final Integer speciesId;
+    private final String symbol;
+    private final Integer count;
 
-    /**
-     * 
-     */
-    private static final long serialVersionUID = -2774559777621029334L;
-
-    private final T title;
-
-    public CustomTimelineModel( T title ) {
+    public GeneStatsDTO( Integer id, Integer species_id, String symbol, Integer count ) {
         super();
-        this.title = title;
+        this.id = id;
+        this.speciesId = species_id;
+        this.symbol = symbol;
+        this.count = count;
     }
 
-    public T getTitle() {
-        return title;
+    public Integer getId() {
+        return id;
+    }
+
+    public Integer getSpeciesId() {
+        return speciesId;
+    }
+
+    public String getSymbol() {
+        return symbol;
+    }
+
+    public Integer getCount() {
+        return count;
     }
 
 }

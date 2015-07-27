@@ -17,7 +17,7 @@
  *
  */
 
-package ubc.pavlab.gotrack.model.dto;
+package ubc.pavlab.gotrack.model;
 
 /**
  * TODO Document Me
@@ -25,34 +25,6 @@ package ubc.pavlab.gotrack.model.dto;
  * @author mjacobson
  * @version $Id$
  */
-public class StatsDTO {
-    private final Integer id;
-    private final Integer speciesId;
-    private final String symbol;
-    private final Integer count;
-
-    public StatsDTO( Integer id, Integer species_id, String symbol, Integer count ) {
-        super();
-        this.id = id;
-        this.speciesId = species_id;
-        this.symbol = symbol;
-        this.count = count;
-    }
-
-    public Integer getId() {
-        return id;
-    }
-
-    public Integer getSpeciesId() {
-        return speciesId;
-    }
-
-    public String getSymbol() {
-        return symbol;
-    }
-
-    public Integer getCount() {
-        return count;
-    }
-
+public enum AnnotationType {
+    DIRECT, INFERRED;
 }

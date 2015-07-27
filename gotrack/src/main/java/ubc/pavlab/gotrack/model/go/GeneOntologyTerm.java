@@ -19,14 +19,13 @@
 
 package ubc.pavlab.gotrack.model.go;
 
-import gnu.trove.set.hash.THashSet;
-
 import java.util.Set;
 
+import com.google.common.collect.ImmutableSet;
+
+import gnu.trove.set.hash.THashSet;
 import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
-
-import com.google.common.collect.ImmutableSet;
 
 /**
  * The instances of this class may be shared between threads (sessions)
@@ -41,10 +40,12 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
     private final String name;
     private final Aspect aspect;
     private final boolean obsolete = false;
-    private Set<Parent> parents = new THashSet<>();
+    private Set<Relation> relations = new THashSet<>();
+    private Set<Relation> children = new THashSet<>();
 
-    public void freezeParents() {
-        this.parents = ImmutableSet.copyOf( this.parents );
+    public void freeze() {
+        this.relations = ImmutableSet.copyOf( this.relations );
+        this.children = ImmutableSet.copyOf( this.children );
     }
 
     private int convertGOId( String goId ) {
@@ -84,7 +85,18 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         this.goId = t.getGoId();
         this.name = t.getName();
         this.aspect = t.getAspect();
-        freezeParents();
+        freeze();
+    }
+
+    /**
+     * USE WITH CAUTION, SHOULD NOT BE ALLOWED TO MINGLE WITH 'REAL' TERMS
+     */
+    public GeneOntologyTerm( String goId ) {
+
+        this.id = convertGOId( goId );
+        this.goId = goId;
+        this.name = "";
+        this.aspect = null;
     }
 
     public int getId() {
@@ -107,13 +119,18 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         return obsolete;
     }
 
-    public Set<Parent> getParents() {
-        return parents;
+    public Set<Relation> getParents() {
+        return relations;
+    }
+
+    public Set<Relation> getChildren() {
+        return children;
     }
 
     @Override
     public String toString() {
-        return "GOTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + "]";
+        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + ", parents=" + relations
+                + ", children=" + children + "]";
     }
 
     @Override

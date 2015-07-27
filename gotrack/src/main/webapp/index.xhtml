@@ -34,7 +34,7 @@
 					<ul class="tabbed">
 						<li class="current-tab"><h:link value="Home"
 								outcome="index.xhtml" /></li>
-						<li><h:link value="Track Gene" outcome="track.xhtml" /></li>
+						<li><h:link value="Track Gene" outcome="genes.xhtml" /></li>
 						<li><h:link value="Track Term" outcome="trends.xhtml" /></li>
 						<li><h:link value="Enrichment" outcome="enrichment.xhtml" /></li>
 						<li><h:link value="Tutorial" outcome="about.xhtml" /></li>
@@ -228,7 +228,7 @@
 				<div class="ui-grid-col-2">
 					<div class="section">
 
-						<div class="section-title">Most Popular Genes Searches</div>
+						<div class="section-title">Most Popular Gene Searches</div>
 
 						<div class="nice-list">
 
@@ -242,15 +242,15 @@
 					</div>
 					<div class="section">
 
-						<div class="section-title">Top Multifunctional Genes</div>
+						<div class="section-title">Most Popular Term Searches</div>
 
 						<div class="nice-list">
-						
-							<p:dataList value="#{statsService.topMultifunc}" var="gene"
-									type="ordered">  
-			                #{gene}  
-			              </p:dataList>
-						
+
+							<p:dataList value="#{statsService.popularTerms}" var="term"
+								type="ordered">  
+		                <span title="#{term.name}">#{term.goId} [#{of:abbreviate(term.name, 15)}]</span>
+		              </p:dataList>
+
 						</div>
 
 					</div>

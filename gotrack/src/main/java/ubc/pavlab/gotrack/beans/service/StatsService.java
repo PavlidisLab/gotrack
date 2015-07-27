@@ -33,19 +33,21 @@ import javax.faces.bean.ManagedProperty;
 
 import org.apache.log4j.Logger;
 
-import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.beans.DAOFactoryBean;
-import ubc.pavlab.gotrack.beans.SettingsCache;
-import ubc.pavlab.gotrack.dao.StatsDAO;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.dto.StatsDTO;
-
 import com.google.common.collect.ConcurrentHashMultiset;
 import com.google.common.collect.ImmutableMultiset;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 import com.google.common.collect.Multisets;
+
+import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.beans.DAOFactoryBean;
+import ubc.pavlab.gotrack.beans.SettingsCache;
+import ubc.pavlab.gotrack.dao.StatsDAO;
+import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
+import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
  * TODO Document Me
@@ -82,6 +84,7 @@ public class StatsService implements Serializable {
 
     // private Map<Gene, Integer> trackPopularGenes = new ConcurrentHashMap<>();
     private Multiset<Gene> trackPopularGenes = ConcurrentHashMultiset.create();
+    private Multiset<GeneOntologyTerm> trackPopularTerms = ConcurrentHashMultiset.create();
 
     private List<String> topMultifunc = new ArrayList<String>();
 
@@ -93,11 +96,17 @@ public class StatsService implements Serializable {
     public void init() {
         log.info( "StatsService init" );
         statsDAO = daoFactoryBean.getGotrack().getStatsDAO();
-        List<StatsDTO> l = statsDAO.list();
-        for ( StatsDTO dto : l ) {
+        for ( GeneStatsDTO dto : statsDAO.listGenes() ) {
             trackPopularGenes.setCount( cache.getCurrentGene( dto.getSpeciesId(), dto.getSymbol().toUpperCase() ),
                     dto.getCount() );
         }
+
+        for ( TermStatsDTO dto : statsDAO.listTerms() ) {
+            GeneOntologyTerm t = cache.getCurrentTerm( dto.getGoId() );
+            if ( t == null ) t = new GeneOntologyTerm( dto.getGoId() );
+            trackPopularTerms.setCount( t, dto.getCount() );
+        }
+
         topMultifunc.addAll( Arrays.asList( new String[] { "One", "Two", "Three", "Four" } ) );
 
     }
@@ -120,12 +129,31 @@ public class StatsService implements Serializable {
         return tmp;
     }
 
-    public void countHit( Gene g ) {
+    public List<GeneOntologyTerm> getPopularTerms() {
+        List<GeneOntologyTerm> tmp = new ArrayList<>();
+        ImmutableMultiset<GeneOntologyTerm> a = Multisets.copyHighestCountFirst( trackPopularTerms );
+        for ( Iterator<Entry<GeneOntologyTerm>> iterator = Iterables.limit( a.entrySet(), 5 ).iterator(); iterator
+                .hasNext(); ) {
+            tmp.add( iterator.next().getElement() );
+
+        }
+        return tmp;
+    }
+
+    public void countGeneHit( Gene g ) {
         trackPopularGenes.add( g );
         if ( settingsCache.isPopularTableUpdateable() ) {
             statsDAO.incrementGeneHit( g.getSpecies().getId(), g.getSymbol() );
         }
         log.debug( "Hits Map: " + trackPopularGenes );
+    }
+
+    public void countTermHit( GeneOntologyTerm t ) {
+        trackPopularTerms.add( t );
+        if ( settingsCache.isPopularTableUpdateable() ) {
+            statsDAO.incrementTermHit( t.getGoId() );
+        }
+        log.debug( "Hits Map: " + trackPopularTerms );
     }
 
     public List<String> getTopMultifunc() {

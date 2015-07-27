@@ -19,36 +19,25 @@
 
 package ubc.pavlab.gotrack.model;
 
-import ubc.pavlab.gotrack.model.dto.AggregateDTO;
-
 /**
- * TODO Immutable entry of aggregate table
+ * TODO Document Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-public final class StatsEntry {
-
-    private final Integer accessionCount;
-    private final Double avgDirectByAccession;
+public final class Aggregate {
 
     private final Integer geneCount;
     private final Double avgDirectByGene;
+    private final Double avgInferredByGene;
+    private final Double avgGenesByTerm;
 
-    public StatsEntry( AggregateDTO dto ) {
+    public Aggregate( Integer geneCount, Double avgDirectByGene, Double avgInferredByGene, Double avgGenesByTerm ) {
         super();
-        this.accessionCount = dto.getAccessionCount();
-        this.avgDirectByAccession = dto.getAccessionAverage();
-        this.geneCount = dto.getGeneCount();
-        this.avgDirectByGene = dto.getGeneAverage();
-    }
-
-    public Integer getAccessionCount() {
-        return accessionCount;
-    }
-
-    public Double getAvgDirectByAccession() {
-        return avgDirectByAccession;
+        this.geneCount = geneCount;
+        this.avgDirectByGene = avgDirectByGene;
+        this.avgInferredByGene = avgInferredByGene;
+        this.avgGenesByTerm = avgGenesByTerm;
     }
 
     public Integer getGeneCount() {
@@ -59,10 +48,18 @@ public final class StatsEntry {
         return avgDirectByGene;
     }
 
+    public Double getAvgInferredByGene() {
+        return avgInferredByGene;
+    }
+
+    public Double getAvgGenesByTerm() {
+        return avgGenesByTerm;
+    }
+
     @Override
     public String toString() {
-        return "StatsEntry [accessionCount=" + accessionCount + ", avgDirectByAccession=" + avgDirectByAccession
-                + ", geneCount=" + geneCount + ", avgDirectByGene=" + avgDirectByGene + "]";
+        return "Aggregate [geneCount=" + geneCount + ", avgDirectByGene=" + avgDirectByGene + ", avgInferredByGene="
+                + avgInferredByGene + ", avgGenesByTerm=" + avgGenesByTerm + "]";
     }
 
 }
