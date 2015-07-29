@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.dao;
 
 /**
- * TODO Document Me
+ * Exception to capture problems in the configuration of the DAO layer.
  * 
  * @author mjacobson
  * @version $Id$

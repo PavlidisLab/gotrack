@@ -63,7 +63,7 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.Relation;
 
 /**
- * TODO Document Me
+ * Backing bean for the term tracking functionality.
  * 
  * @author mjacobson
  * @version $Id$
@@ -106,6 +106,11 @@ public class TermView {
         log.info( "TermView postConstruct" );
     }
 
+    /**
+     * pre-render view
+     * 
+     * This is kept lightweight so that the page loads quickly and lazy loads the data using remote commands
+     */
     public String init() throws TermNotFoundException {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
             return null; // Skip ajax requests.
@@ -120,13 +125,8 @@ public class TermView {
         }
 
         if ( FacesContext.getCurrentInstance().getApplication().getProjectStage() == ProjectStage.Development ) {
-            // FacesContext.getCurrentInstance()
-            // .addMessage(
-            // "betaMessage",
-            // new FacesMessage( FacesMessage.SEVERITY_WARN,
-            // "This is the DEVELOPMENT version of GOTrack!", null ) );
-            FacesContext.getCurrentInstance().addMessage( "betaMessage",
-                    new FacesMessage( FacesMessage.SEVERITY_WARN, "This page is Under Construction!", null ) );
+            FacesContext.getCurrentInstance().addMessage( "betaMessage", new FacesMessage( FacesMessage.SEVERITY_WARN,
+                    "This is the DEVELOPMENT version of GOTrack!", null ) );
 
         }
 
@@ -170,6 +170,9 @@ public class TermView {
         return null;
     }
 
+    /**
+     * entry point to fetch data to create the most current ancestry DAG
+     */
     public void fetchDAGData() {
         // make some data for cyto.js
 
@@ -180,6 +183,9 @@ public class TermView {
         RequestContext.getCurrentInstance().addCallbackParam( "current_id", currentTerm.getId() );
     }
 
+    /**
+     * Entry point to fetch data for the overview gantt chart.
+     */
     public void fetchOverviewChart() {
         // Going to need this
         Map<Long, Integer> dateToEdition = new HashMap<>();
@@ -244,6 +250,10 @@ public class TermView {
                 new Gson().toJson( dateToNameChange ) );
     }
 
+    /**
+     * Entry point to fetch data for the Gene chart which shows counts of genes with this term annotated
+     * to it over time (both directly and through propagation)
+     */
     public void fetchGeneChart() {
         // Create the 'Gene Count' chart
         Collection<Species> species = cache.getSpeciesList();
@@ -330,6 +340,11 @@ public class TermView {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_data", geneChart );
     }
 
+    /**
+     * Entry point to fetch data for the creation of the evidence chart, which shows total counts of annotations over
+     * time grouped by evidence category (not unique genes, this retrieves total counts of unique annotations from the
+     * database)
+     */
     public void fetchEvidenceChart() {
         // Make evidence charts
 
@@ -356,6 +371,10 @@ public class TermView {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_data", evidenceChart );
     }
 
+    /**
+     * Fetch data necessary to create a ancestry DAG for a given edition (and possibly overlay changes from previous
+     * edition)
+     */
     public void fetchGraph() {
 
         Integer goEditionId = Integer.valueOf(
@@ -403,6 +422,9 @@ public class TermView {
 
     }
 
+    /**
+     * Fetches comparison of the ancestry DAG of some edition to the most current one. Not used anywhere anymore.
+     */
     public void fetchDiff() {
 
         GOEdition compareEdition = cache.getGOEdition( compareEditionId );
@@ -414,6 +436,13 @@ public class TermView {
 
     }
 
+    /**
+     * Creates a graph object with required information to create an ancestry DAG using cyto.js in the front-end.
+     * Essentially collects all nodes and edges in the ancestry chart.
+     * 
+     * @param t term
+     * @return
+     */
     private Graph calcElements( GeneOntologyTerm t ) {
 
         if ( t == null ) {
@@ -447,6 +476,13 @@ public class TermView {
 
     }
 
+    /**
+     * Collects the difference between two charts
+     * 
+     * @param baseGraph
+     * @param newGraph
+     * @return Map of ['added', 'deleted'] -> Graph object containing either added or deleted nodes/edges
+     */
     public Map<String, Graph> graphDiff( Graph baseGraph, Graph newGraph ) {
 
         Set<Node> newNodes = new HashSet<>();

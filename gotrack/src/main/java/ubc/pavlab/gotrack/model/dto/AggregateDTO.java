@@ -19,9 +19,10 @@
 
 package ubc.pavlab.gotrack.model.dto;
 
+import ubc.pavlab.gotrack.model.Aggregate;
 
 /**
- * TODO Document Me
+ * Data Transfer Object for {@link Aggregate}
  * 
  * @author mjacobson
  * @version $Id$

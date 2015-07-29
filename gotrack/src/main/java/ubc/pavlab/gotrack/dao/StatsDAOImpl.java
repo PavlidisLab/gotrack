@@ -67,16 +67,6 @@ public class StatsDAOImpl implements StatsDAO {
 
     // Actions ------------------------------------------------------------------------------------
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see ubc.pavlab.gotrack.dao.AnnotationDAO#find(java.lang.Long)
-     */
-    @Override
-    public GeneStatsDTO find( Long id ) throws DAOException {
-        return execute( SQL_FIND_BY_ID, id );
-    }
-
     @Override
     public List<GeneStatsDTO> listGenes() throws DAOException {
         Connection connection = null;

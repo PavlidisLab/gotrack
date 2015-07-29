@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.exception;
 
 /**
- * TODO Document Me
+ * Exception to be executed when a forced attempt at loading TermView with a non-existent term id occurs.
  * 
  * @author mjacobson
  * @version $Id$

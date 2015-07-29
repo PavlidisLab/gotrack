@@ -30,7 +30,7 @@ import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Species;
 
 /**
- * TODO Document Me
+ * Converter for {@link Species}.
  * 
  * @author mjacobson
  * @version $Id$

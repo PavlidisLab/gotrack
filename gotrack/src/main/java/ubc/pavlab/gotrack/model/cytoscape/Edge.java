@@ -22,7 +22,7 @@ package ubc.pavlab.gotrack.model.cytoscape;
 import ubc.pavlab.gotrack.model.go.RelationshipType;
 
 /**
- * TODO Document Me
+ * Represents a connection between two nodes using their ids
  * 
  * @author mjacobson
  * @version $Id$

@@ -32,7 +32,7 @@ import ubc.pavlab.gotrack.dao.DAOConfigurationException;
 import ubc.pavlab.gotrack.dao.DAOFactory;
 
 /**
- * TODO Document Me
+ * Bean injected into services in order to give access to the DAO Factory
  * 
  * @author mjacobson
  * @version $Id$
@@ -69,7 +69,6 @@ public class DAOFactoryBean implements Serializable {
 
     @PostConstruct
     public void init() {
-        // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "DAOFactoryBean init" );
         // Obtain DAOFactory.
         String dbKey = settingsCache.getProperty( PROPERTY_DB );

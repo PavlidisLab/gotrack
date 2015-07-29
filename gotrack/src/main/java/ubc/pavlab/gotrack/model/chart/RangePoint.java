@@ -22,7 +22,7 @@ package ubc.pavlab.gotrack.model.chart;
 import java.sql.Date;
 
 /**
- * TODO Document Me
+ * Represents a long x and a range of y values (currently used for storing error bands)
  * 
  * @author mjacobson
  * @version $Id$
@@ -42,10 +42,12 @@ public class RangePoint implements Point {
         this.y = new Range( left, right );
     }
 
+    @Override
     public long getX() {
         return x;
     }
 
+    @Override
     public Range getY() {
         return y;
     }

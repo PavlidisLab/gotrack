@@ -25,7 +25,7 @@ import javax.faces.convert.FacesConverter;
 import ubc.pavlab.gotrack.model.Aspect;
 
 /**
- * TODO Document Me
+ * Enum converter for {@link Aspect}
  * 
  * @author mjacobson
  * @version $Id$

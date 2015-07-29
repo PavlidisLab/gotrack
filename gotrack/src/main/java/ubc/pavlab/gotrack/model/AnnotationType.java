@@ -20,7 +20,11 @@
 package ubc.pavlab.gotrack.model;
 
 /**
- * TODO Document Me
+ * Represents a type of annotation.
+ * 
+ * Direct means the annotation was made directly between the given Term and Gene.
+ * 
+ * Inferred means the annotation was made to some child of the given Term and was propagated to be applied to this Gene.
  * 
  * @author mjacobson
  * @version $Id$

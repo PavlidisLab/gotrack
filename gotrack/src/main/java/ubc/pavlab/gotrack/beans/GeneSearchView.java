@@ -36,7 +36,7 @@ import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.model.table.GeneMatches;
 
 /**
- * TODO Document Me
+ * Backing bean for a gene search input that leads to the GeneView page
  * 
  * @author mjacobson
  * @version $Id$

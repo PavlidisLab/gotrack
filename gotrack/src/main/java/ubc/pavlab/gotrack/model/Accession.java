@@ -24,7 +24,7 @@ import java.util.Collection;
 import com.google.common.collect.ImmutableSet;
 
 /**
- * TODO Document Me
+ * Represents a primary accession of the most current edition.
  * 
  * @author mjacobson
  * @version $Id$
@@ -32,16 +32,8 @@ import com.google.common.collect.ImmutableSet;
 public final class Accession {
 
     private final String accession;
-    private final Dataset dataset;
-    private final Collection<String> secondary;
-
-    // TODO this should be removed but it is necessary atm
-    public Accession( String accession ) {
-        super();
-        this.accession = accession;
-        this.dataset = null;
-        this.secondary = null;
-    }
+    private final Dataset dataset; // Swiss-Prot vs TrEMBL
+    private final Collection<String> secondary; // All accessions that now represent this primary accession
 
     public Accession( String accession, boolean sp, Collection<String> secondary ) {
         super();

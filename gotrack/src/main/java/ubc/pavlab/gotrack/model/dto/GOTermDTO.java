@@ -19,9 +19,10 @@
 
 package ubc.pavlab.gotrack.model.dto;
 
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * TODO Document Me
+ * Data Transfer Object for {@link GeneOntologyTerm}
  * 
  * @author mjacobson
  * @version $Id$

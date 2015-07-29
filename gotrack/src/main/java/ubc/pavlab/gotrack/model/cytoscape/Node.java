@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model.cytoscape;
 
 /**
- * TODO Document Me
+ * Represents a node with a unique id
  * 
  * @author mjacobson
  * @version $Id$

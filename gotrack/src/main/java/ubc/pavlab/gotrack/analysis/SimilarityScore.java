@@ -25,7 +25,7 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * scores which attempt to explore the impact that annotation stability has on the performance of gene set enrichment
+ * Scores which attempt to explore the impact that annotation similarity has on the performance of gene set enrichment
  * analyses
  * 
  * @author mjacobson
@@ -42,11 +42,13 @@ public class SimilarityScore {
     private final Set<GeneOntologyTerm> topParents;
 
     /**
-     * @param completeTermJaccard
-     * @param topTermJaccard
-     * @param topGeneJaccard
-     * @param topTerms
-     * @param topGenes
+     * @param completeTermJaccard Jaccard between all terms
+     * @param topTermJaccard Jaccard between the top N terms
+     * @param topGeneJaccard Jaccard between the genes backing the top N terms
+     * @param topParentsJaccard Jaccard between the parents of the top N terms
+     * @param topTerms top N terms
+     * @param topGenes genes backing top N terms
+     * @param topParents parents of top N terms
      */
     public SimilarityScore( Double completeTermJaccard, Double topTermJaccard, Double topGeneJaccard,
             Double topParentsJaccard, Set<GeneOntologyTerm> topTerms, Set<Gene> topGenes,

@@ -24,7 +24,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Calculates Jaccard index and/or distance for two sets.
+ * Efficiently calculates Jaccard index and/or distance for two sets.
  * 
  * @author mjacobson
  * @version $Id$

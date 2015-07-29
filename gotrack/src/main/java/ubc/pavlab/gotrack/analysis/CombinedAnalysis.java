@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.analysis;
 
 /**
- * TODO Document Me
+ * Simple container for passing around the results of EnrichmentView's analysis
  * 
  * @author mjacobson
  * @version $Id$
@@ -30,7 +30,8 @@ public final class CombinedAnalysis {
     private final StabilityAnalysis stabilityAnalysis;
     private final boolean success;
 
-    public CombinedAnalysis( EnrichmentAnalysis enrichmentAnalysis, StabilityAnalysis stabilityAnalysis, boolean success ) {
+    public CombinedAnalysis( EnrichmentAnalysis enrichmentAnalysis, StabilityAnalysis stabilityAnalysis,
+            boolean success ) {
         super();
         this.enrichmentAnalysis = enrichmentAnalysis;
         this.stabilityAnalysis = stabilityAnalysis;

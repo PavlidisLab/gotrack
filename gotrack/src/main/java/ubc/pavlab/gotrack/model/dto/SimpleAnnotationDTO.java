@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model.dto;
 
 /**
- * TODO Document Me
+ * Data Transfer Object for pre-processing of aggregate data in cache start-up.
  * 
  * @author mjacobson
  * @version $Id$

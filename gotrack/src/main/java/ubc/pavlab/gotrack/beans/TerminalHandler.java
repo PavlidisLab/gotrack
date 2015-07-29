@@ -62,7 +62,7 @@ import ubc.pavlab.gotrack.model.StatusPoller;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * TODO Document Me
+ * Handled reqests to the terminal (available only in development mode currently)
  * 
  * @author mjacobson
  * @version $Id$
@@ -77,9 +77,10 @@ public class TerminalHandler implements Serializable {
     private static final long serialVersionUID = -3311870883348699626L;
     private static final Logger log = Logger.getLogger( TerminalHandler.class );
 
-    private static final List<String> OPEN_COMMANDS = Arrays.asList( "greet", "auth", "help", "genes" );
-    private static final List<String> AUTH_COMMANDS = Arrays.asList( "greet", "auth", "help", "genes",
-            "reload_settings" );
+    private static final List<String> OPEN_COMMANDS = Arrays.asList( "greet", "date", "genes", "aggregate", "term",
+            "auth", "help", "genes" );
+    private static final List<String> AUTH_COMMANDS = Arrays.asList( "greet", "date", "genes", "aggregate", "term",
+            "auth", "help", "genes", "reload_settings", "stability", "enrich" );
 
     @ManagedProperty("#{sessionManager}")
     private SessionManager sessionManager;
@@ -108,6 +109,13 @@ public class TerminalHandler implements Serializable {
         log.info( "TerminalHandler PostConstruct" );
     }
 
+    /**
+     * Handle a command from the terminal
+     * 
+     * @param command
+     * @param params
+     * @return
+     */
     public String handleCommand( String command, String[] params ) {
         if ( command.equals( "greet" ) ) {
             if ( params.length > 0 )

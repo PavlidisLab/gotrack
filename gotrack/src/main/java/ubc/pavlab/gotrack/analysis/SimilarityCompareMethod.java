@@ -20,7 +20,8 @@
 package ubc.pavlab.gotrack.analysis;
 
 /**
- * TODO Document Me
+ * Method of comparing Editions w.r.t. similarity of terms. Current: compare each edition to the most current one.
+ * Proximal: compare each edition to the next one.
  * 
  * @author mjacobson
  * @version $Id$

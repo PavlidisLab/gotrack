@@ -5,6 +5,12 @@ import javax.servlet.http.HttpSessionListener;
 
 import org.apache.log4j.Logger;
 
+/**
+ * Listener that logs when sessions are created and destroyed
+ * 
+ * @author mjacobson
+ * @version $Id$
+ */
 public class HttpSessionChecker implements HttpSessionListener {
 
     private static final Logger log = Logger.getLogger( HttpSessionChecker.class );

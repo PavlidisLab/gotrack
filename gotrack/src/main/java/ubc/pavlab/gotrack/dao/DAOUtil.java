@@ -40,6 +40,11 @@ public final class DAOUtil {
 
     // Actions ------------------------------------------------------------------------------------
 
+    /**
+     * Will replace '(%s) with (?,?,?,?,?,...) depending on size to accommodate lists of parameters in an SQL query
+     * 
+     * @param length length of list of placeholders to be prepared
+     */
     public static String preparePlaceHolders( int length ) {
         StringBuilder builder = new StringBuilder( length * 2 - 1 );
         for ( int i = 0; i < length; i++ ) {

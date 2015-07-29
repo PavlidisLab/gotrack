@@ -36,7 +36,7 @@ import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
 
 /**
- * TODO Document Me
+ * Service layer on top of species DAO. Contains methods for fetching information related to species from the database.
  * 
  * @author mjacobson
  * @version $Id$
@@ -68,6 +68,9 @@ public class SpeciesService implements Serializable {
 
     }
 
+    /**
+     * @return list of all species ordered by id.
+     */
     public List<Species> list() {
 
         List<SpeciesDTO> dto = speciesDAO.list();

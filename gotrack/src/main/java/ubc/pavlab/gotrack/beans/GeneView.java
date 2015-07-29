@@ -98,7 +98,7 @@ public class GeneView {
 
     // View Annotations List
     private Collection<AnnotationValues> viewAnnotations = new ArrayList<>();
-    private Collection<AnnotationValues> filteredViewAnnotations;
+    private Collection<AnnotationValues> filteredViewAnnotations; // TODO use this
     private GeneOntologyTerm viewTerm;
 
     // Click event lists
@@ -117,6 +117,11 @@ public class GeneView {
     public void postConstruct() {
     }
 
+    /**
+     * pre-render view
+     * 
+     * This is kept lightweight so that the page loads quickly and lazy loads the data using remote commands
+     */
     public String init() throws GeneNotFoundException, IOException {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
             return null; // Skip ajax requests.
@@ -132,6 +137,7 @@ public class GeneView {
             return null;
         } else if ( !( isSpeciesSet && isGeneSet ) ) {
             // malformed input if only one parameter is specified
+            // Send to error page
             FacesContext facesContext = FacesContext.getCurrentInstance();
             facesContext.getExternalContext().responseSendError( 400, "Missing Parameter" );
             facesContext.responseComplete();
@@ -147,6 +153,7 @@ public class GeneView {
         gene = cache.getCurrentGene( species.getId(), query );
         if ( gene == null ) {
             // gene symbol not found
+            // Send to error page
             throw new GeneNotFoundException();
         } else {
             // Count gene hit
@@ -234,9 +241,13 @@ public class GeneView {
 
     }
 
+    /**
+     * Entry point for initiating the retrieval of necessary data.
+     */
     public void fetchData() {
         log.debug( "fetchData" );
 
+        // retrieve data nad apply no filters
         rawData = retrieveData();
 
         // A map that will be needed in the front end for drilling down
@@ -280,6 +291,12 @@ public class GeneView {
         return propagatedData;
     }
 
+    /**
+     * Create chart showing counts of unique terms annotated to this gene over time (both directly and through
+     * propagation)
+     * 
+     * @param rawData data
+     */
     private void fetchAnnotationChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchAnnotationChart" );
@@ -337,11 +354,20 @@ public class GeneView {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
     }
 
+    /**
+     * Entry point for fetching the annotation chart
+     */
     public void fetchAnnotationChart() {
         fetchAnnotationChart( rawData );
 
     }
 
+    /**
+     * Create chart showing similarity of terms annotated to this gene in an edition compared to the most current
+     * edition (both directly and through propagation)
+     * 
+     * @param rawData data
+     */
     private void fetchJaccardChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchJaccardChart" );
@@ -386,11 +412,21 @@ public class GeneView {
 
     }
 
+    /**
+     * Entry point for fetching the similarity chart
+     */
     public void fetchJaccardChart() {
         fetchJaccardChart( rawData );
 
     }
 
+    /**
+     * Create chart showing multifunctionality of this gene over time (Gillis J, Pavlidis P (2011) The Impact of
+     * Multifunctional Genes on "Guilt by Association" Analysis. PLoS ONE 6(2): e17258. doi:
+     * 10.1371/journal.pone.0017258)
+     * 
+     * @param rawData data
+     */
     private void fetchMultifunctionalityChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchMultifunctionalityChart" );
@@ -423,10 +459,19 @@ public class GeneView {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
     }
 
+    /**
+     * Entry point for fetching the multifunctionality chart
+     */
     public void fetchMultifunctionalityChart() {
         fetchMultifunctionalityChart( rawData );
     }
 
+    /**
+     * Create chart showing total number of terms lost and gained between editions (both directly and through
+     * propagation)
+     * 
+     * @param rawData data
+     */
     private void fetchLossGainChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchLossGainChart" );
@@ -499,11 +544,17 @@ public class GeneView {
 
     }
 
+    /**
+     * Entry point for fetching the loss/gain chart
+     */
     public void fetchLossGainChart() {
         fetchLossGainChart( rawData );
 
     }
 
+    /**
+     * Filter charts to include only those terms selected from right panel
+     */
     public void filterCharts() {
         if ( selectedTerms == null || selectedTerms.size() == 0 ) {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", false );
@@ -518,11 +569,17 @@ public class GeneView {
 
     }
 
+    /**
+     * Remove all filters on charts
+     */
     public void resetCharts() {
         rawData = retrieveData();
         RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", true );
     }
 
+    /**
+     * Entry point for fetching data to create a gantt chart of annotations categories over time
+     */
     public void fetchTimeline() {
         log.debug( "fetchTimeline" );
         if ( selectedTerms == null || selectedTerms.size() == 0 ) {
@@ -594,7 +651,10 @@ public class GeneView {
 
     }
 
-    // View Term's Annotations
+    /**
+     * Entry point to view a terms annotations in a specific edition. This is reached by clicking a term in a table of
+     * terms after clicking a data point in the annotation chart.
+     */
     public void fetchAnnotations() {
         log.debug( "fetchAnnotations" );
         //        if ( selectedClickTerms == null || selectedClickTerms.isEmpty() ) {
@@ -626,8 +686,9 @@ public class GeneView {
         filteredViewAnnotations = null;
     }
 
-    // Click event functionality
-
+    /**
+     * Click event functionality for annotation chart
+     */
     public void fetchAnnotationPointData() {
         log.debug( "fetchAnnotationPointData" );
         Integer editionId;
@@ -656,6 +717,9 @@ public class GeneView {
 
     }
 
+    /**
+     * Click event functionality for clicking timeline gantt chart
+     */
     public void fetchTimelinePointData() {
         Integer editionId;
         try {

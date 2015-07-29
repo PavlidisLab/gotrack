@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * This class immediately loads the DAO properties file 'database.properties' once in memory and provides a constructor
+ * This class immediately loads the DAO properties file 'X.properties' once in memory and provides a constructor
  * which takes the specific key which is to be used as property key prefix of the DAO properties file. There is a
  * property getter which only returns the property prefixed with 'specificKey.' and provides the option to indicate
  * whether the property is mandatory or not.

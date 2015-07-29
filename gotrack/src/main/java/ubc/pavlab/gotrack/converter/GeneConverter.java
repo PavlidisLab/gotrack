@@ -30,7 +30,7 @@ import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Gene;
 
 /**
- * TODO Document Me
+ * Converter for {@link Gene}. Must pass in a species attribute or it will fail.
  * 
  * @author mjacobson
  * @version $Id$
@@ -38,6 +38,7 @@ import ubc.pavlab.gotrack.model.Gene;
 @FacesConverter("geneConverter")
 public class GeneConverter implements Converter {
 
+    @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {
         if ( value != null && value.trim().length() > 0 ) {
             try {
@@ -45,14 +46,15 @@ public class GeneConverter implements Converter {
                 Cache cache = ( Cache ) fc.getExternalContext().getApplicationMap().get( "cache" );
                 return cache.getCurrentGene( species, value );
             } catch ( NumberFormatException e ) {
-                throw new ConverterException( new FacesMessage( FacesMessage.SEVERITY_ERROR, "Conversion Error",
-                        "Not a valid gene." ) );
+                throw new ConverterException(
+                        new FacesMessage( FacesMessage.SEVERITY_ERROR, "Conversion Error", "Not a valid gene." ) );
             }
         } else {
             return null;
         }
     }
 
+    @Override
     public String getAsString( FacesContext fc, UIComponent uic, Object object ) {
         if ( object != null ) {
             return ( ( Gene ) object ).getSymbol();

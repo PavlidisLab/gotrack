@@ -50,13 +50,8 @@ import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * TODO Document Me
- * 
- * @author mjacobson
- * @version $Id$
- */
-/**
- * TODO Document Me
+ * Service layer on top of stats DAO. Contains methods for fetching information related to the tracking of
+ * the hit counts of popular genes and terms as well as the incrementing of said hit counts.
  * 
  * @author mjacobson
  * @version $Id$

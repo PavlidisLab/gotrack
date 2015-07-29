@@ -20,7 +20,8 @@
 package ubc.pavlab.gotrack.analysis;
 
 /**
- * TODO Document Me
+ * Scores which attempt to explore the impact that annotation stability has on the performance of gene set enrichment
+ * analyses
  * 
  * @author mjacobson
  * @version $Id$
@@ -34,8 +35,17 @@ public final class StabilityScore {
     private final double score;
     private final double averageScore;
 
-    public StabilityScore( double sampleSigma, double populationSigma, double minPvalue, double maxPvalue,
-            double score, double averageScore ) {
+    /**
+     * @param sampleSigma standard deviation of sample annotated
+     * @param populationSigma standard deviation of population annotated
+     * @param minPvalue minimum p-value given greedy variation of parameters around 95% confidence interval
+     * @param maxPvalue maximum p-value given greedy variation of parameters around 95% confidence interval
+     * @param score Stability score (log( ( maxPvalue - minPvalue ) / pvalue ), essentially a log of coefficient of
+     *        variation
+     * @param averageScore simple average of score sup to this point: log( SUM_edition (e^score(edition)) )
+     */
+    public StabilityScore( double sampleSigma, double populationSigma, double minPvalue, double maxPvalue, double score,
+            double averageScore ) {
         super();
         this.sampleSigma = sampleSigma;
         this.populationSigma = populationSigma;

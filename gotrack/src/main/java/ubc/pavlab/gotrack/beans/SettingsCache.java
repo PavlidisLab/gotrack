@@ -34,7 +34,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
 /**
- * TODO Document Me
+ * Holds settings from the properties file. Alter the static fields here to meet your requirements if necessary.
  * 
  * @author mjacobson
  * @version $Id$

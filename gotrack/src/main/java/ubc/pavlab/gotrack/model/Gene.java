@@ -24,6 +24,8 @@ import java.util.Set;
 import com.google.common.collect.ImmutableSet;
 
 /**
+ * Represents a Gene. Thread-safe.
+ * 
  * @author mjacobson
  * @version $Id$
  */

@@ -19,8 +19,10 @@
 
 package ubc.pavlab.gotrack.model.dto;
 
+import ubc.pavlab.gotrack.model.Accession;
+
 /**
- * TODO Document Me
+ * Data Transfer Object for {@link Accession}
  * 
  * @author mjacobson
  * @version $Id$

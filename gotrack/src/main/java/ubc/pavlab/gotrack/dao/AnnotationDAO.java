@@ -29,17 +29,29 @@ import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
 
 /**
- * This interface represents a contract for a DAO for the {@link AnnotationDetailed} model. Note that all methods are
+ * This interface represents a contract for {@link AnnotationDAOImpl}. Note that all methods are
  * read-only.
  */
 public interface AnnotationDAO {
     // Actions ------------------------------------------------------------------------------------
+    /**
+     * Retrieve data necessary for enrichment of given set of genes
+     */
     public List<EnrichmentDTO> enrich( Integer species, Set<Gene> genes ) throws DAOException;
 
+    /**
+     * Retrieves counts of unique annotations grouped by evidence category over time for a specific GO Id
+     */
     public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException;
 
+    /**
+     * Retrieves counts of unique genes which have this GO Id annotated to it over time
+     */
     public List<AnnotationCountDTO> directGeneCounts( String goId ) throws DAOException;
 
+    /**
+     * Retrieve data necessary for tracking a specific gene over time
+     */
     public List<AnnotationDTO> track( Integer speciesId, String symbol ) throws DAOException;
 
 }

@@ -34,7 +34,7 @@ import ubc.pavlab.gotrack.model.dto.GeneDTO;
 import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 
 /**
- * Holds methods for retrieving data that is meant to be cached
+ * Holds methods for retrieving data that is meant to be cached. Read-only.
  * 
  * @author mjacobson
  * @version $Id$
@@ -42,27 +42,54 @@ import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 public interface CacheDAO {
 
     /**
-     * @return Map of species to ordered linkedlist of editions
-     * @throws DAOException
+     * Retrieve ordered list of edition
      */
     public List<EditionDTO> getAllEditions( int[] speciesRestrictions ) throws DAOException;
 
+    /**
+     * Retrieve data for number of genes annotated to each term or their children (GO Gene Set Sizes)
+     */
     public List<AnnotationCountDTO> getGOSizes( int[] speciesRestrictions ) throws DAOException;
 
+    /**
+     * Map of species to ordered linkedlist of editions
+     */
     public List<AggregateDTO> getAggregates( int[] speciesRestrictions ) throws DAOException;
 
+    /**
+     * Retrieve current genes
+     */
     public List<GeneDTO> getCurrentGenes( int[] speciesRestrictions ) throws DAOException;
 
+    /**
+     * Retrieve all GO Terms
+     */
     public List<GOTermDTO> getGoTerms() throws DAOException;
 
+    /**
+     * Retrieve all relationships between GO Terms
+     */
     public List<AdjacencyDTO> getAdjacencies() throws DAOException;
 
+    /**
+     * Retrieve all evidence codes
+     */
     public List<EvidenceDTO> getEvidence() throws DAOException;
 
+    /**
+     * Retrieve all accessions
+     */
     public List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException;
 
+    /**
+     * Retrieve all GO editions
+     */
     public List<GOEditionDTO> getAllGOEditions() throws DAOException;
 
+    /**
+     * Retrieve all unique go_id, symbol for a specific species and edition. Useful if there is heavy/complicated
+     * pre-processing to be done.
+     */
     public List<SimpleAnnotationDTO> getSimpleAnnotations( Integer speciesId, Edition ed ) throws DAOException;
 
 }

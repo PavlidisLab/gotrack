@@ -86,7 +86,11 @@ import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
- * necessarily created AFTER initialization, thus prohibiting stale memory
+ * necessarily created AFTER initialization, thus prohibiting stale memory. We do, however, attempt to implement
+ * concurrency wherever possible... just in case.
+ * 
+ * This is the application cache for most static data in GOTrack as well as cached database queries for the various
+ * Views. Takes ~15 minutes for a initialization using all species on production system.
  * 
  * @author mjacobson
  * @version $Id$
@@ -114,11 +118,22 @@ public class Cache implements Serializable {
     @ManagedProperty("#{speciesService}")
     private SpeciesService speciesService;
 
+    // Maps species id -> species;
     private Map<Integer, Species> speciesCache = new ConcurrentHashMap<>();
+
+    // Maps species id -> most current edition
     private Map<Integer, Edition> currentEditions = new ConcurrentHashMap<>();
+
+    // Maps species id, edition id -> edition
     private Map<Integer, Map<Integer, Edition>> allEditions = new ConcurrentHashMap<>();
+
+    // Maps GO edition id -> GO edition
     private Map<Integer, GOEdition> allGOEditions = new ConcurrentHashMap<>();
+
+    // Most current GO edition
     private GOEdition currentGOEdition;
+
+    // Maps species id, gene symbol -> gene
     private Map<Integer, Map<String, Gene>> speciesToSymbolGenes = new ConcurrentHashMap<>();
 
     // These are used for autocompletion
@@ -126,36 +141,54 @@ public class Cache implements Serializable {
     private Map<Integer, Multimap<String, Gene>> speciesToSecondarySymbolGenes = new ConcurrentHashMap<>();
     // TODO Consider replacing speciesToSymbolGenes with this
     private Map<Integer, RadixTree<Gene>> speciesToRadixGenes = new ConcurrentHashMap<>();
-    // These two together create the (slightly hacky) term autocompletion
-    // private RadixTree<String> radixWords = new ConcurrentRadixTree<String>( new DefaultCharArrayNodeFactory() );
-    // private Map<String, ImmutableSet<GeneOntologyTerm>> wordsToTerm = new ConcurrentHashMap<>();
     private RadixTree<ImmutableSet<GeneOntologyTerm>> radixTerms = new ConcurrentRadixTree<ImmutableSet<GeneOntologyTerm>>(
             new DefaultCharArrayNodeFactory() );
+
     // *********************************
 
+    // Most current GeneOntology
     private GeneOntology currentOntology;
 
+    // Maps accession id -> accession
+    // Holds only primary accessions, each accession object houses the secondary accessions ids
     private Map<String, Accession> primaryAccession = new ConcurrentHashMap<>();
 
-    //private Map<Integer, Map<Edition, StatsEntry>> aggregates = new ConcurrentHashMap<>();
+    // Maps species if, edition -> aggregate
+    // Holds information about aggregate statistics, such as species averages in an edition, etc
     private Map<Integer, Map<Edition, Aggregate>> aggregates = new ConcurrentHashMap<>();
 
     //private Map<Gene, Map<Edition, Integer>> geneRanksByInferredTermCount = new ConcurrentHashMap<>();
 
-    // Map<species, Map<edition, Map<go_id, count>>>
+    // Maps species, edition, goId -> count of unique genes annotated this term or any of its children
     private Map<MultiKey, Integer> inferredAnnotationCount = new ConcurrentHashMap<>();
+
+    // Maps species, edition, goId -> count of unique genes annotated this term only
     private Map<MultiKey, Integer> directAnnotationCount = new ConcurrentHashMap<>();
 
+    // Maps GOEdition -> GeneOntology
+    // Holds our created ontologies
     private Map<GOEdition, GeneOntology> ontologies = new ConcurrentHashMap<>();
 
+    // Maps evidence code -> Evidence
+    // Holds all evidence codes
     private Map<String, Evidence> evidenceCache = new ConcurrentHashMap<>();
+
+    // Holds all unique evidence categories (Automatic, Author, etc).
+    // TODO consider turning into objects (or possibly enum if we are sure the categories won't be changing any time soon...)
     private ImmutableSet<String> evidenceCategoryCache = null;
 
-    // Page specific caches
+    /*
+     * Page specific caches
+     */
 
-    // TODO This should be changed to an LFU cache instead of LRU
+    // Holds data for enrichment used in EnrichmentView.
     private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> applicationLevelEnrichmentCache = new LinkedHashMap<Gene, Map<Edition, Set<GeneOntologyTerm>>>(
             MAX_ENRICHMENT_ENTRIES + 1, 0.75F, true) {
+        /**
+                 * 
+                 */
+        private static final long serialVersionUID = -2166216884887056632L;
+
         // This method is called just after a new entry has been added
         @Override
         public boolean removeEldestEntry( Map.Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> eldest ) {
@@ -163,9 +196,15 @@ public class Cache implements Serializable {
         }
     };
 
-    // Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>
+    // Holds data for GeneView
+    // TODO Does this have the potential for being merged with applicationLevelEnrichmentCache while retrieving annotation sets on the fly?
     private Map<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>> applicationLevelGeneCache = new LinkedHashMap<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>>(
             MAX_DATA_ENTRIES + 1, 0.75F, true) {
+        /**
+                 * 
+                 */
+        private static final long serialVersionUID = -6677016445725453615L;
+
         // This method is called just after a new entry has been added
         @Override
         public boolean removeEldestEntry(
@@ -181,7 +220,7 @@ public class Cache implements Serializable {
         log.info( "Cache created" );
     }
 
-    /* Getters for View Static */
+    /* Getters for View Static info */
 
     public Dataset[] getDatasets() {
         return Dataset.values();
@@ -199,9 +238,11 @@ public class Cache implements Serializable {
         return Aspect.values();
     }
 
+    /**
+     * Create lots of static data caches to be used by Views.
+     */
     @PostConstruct
     public void init() {
-        // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "Cache init" );
 
         applicationLevelEnrichmentCache = Collections.synchronizedMap( applicationLevelEnrichmentCache );
@@ -210,6 +251,7 @@ public class Cache implements Serializable {
         log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
                 + " MB" );
 
+        // Cache creation is restricted to these species (not necessarily database retrieval calls in Views though)
         int[] speciesRestrictions = settingsCache.getSpeciesRestrictions();
 
         if ( speciesRestrictions == null || speciesRestrictions.length == 0 ) {
@@ -329,8 +371,14 @@ public class Cache implements Serializable {
 
         // goSetSize cache creation &
         // Aggregate Stats
+
+        // This may or may not be the most efficient method for doing this. Getting the database to be able to create this data
+        // in a reasonable amount of time has proven troublesome. Increasing startup time by 10 minutes seems better than
+        // adding in a 6-10 hour process once a month.
+
         // ****************************
         if ( !settingsCache.isDryRun() ) {
+            // Reads from database
             // for ( AnnotationCountDTO dto : cacheDAO.getGOSizes( speciesRestrictions ) ) {
             // MultiKey k = new MultiKey( dto );
             // Integer cnt = this.goSetSizes.put( k, dto.getCount() );
@@ -655,6 +703,14 @@ public class Cache implements Serializable {
 
     }
 
+    /**
+     * Autocompletes Gene Ontology Terms by id or name
+     * 
+     * @param query query
+     * @param maxResults max results
+     * @param retain Whether to take intersection of results (true) or union of results (false)
+     * @return list of terms in order goodness
+     */
     public List<GeneOntologyTerm> completeTerm( String query, int maxResults, boolean retain ) {
         if ( query == null || maxResults < 1 ) return Lists.newArrayList();
         Set<GeneOntologyTerm> results = new HashSet<>();
@@ -730,6 +786,14 @@ public class Cache implements Serializable {
         return p;
     }
 
+    /**
+     * Autocompletes genes by symbol
+     * 
+     * @param query query
+     * @param species species
+     * @param maxResults max results to return
+     * @return list of matches in order of goodness
+     */
     public List<GeneMatches> complete( String query, Integer species, Integer maxResults ) {
         List<GeneMatches> results = new ArrayList<>();
         Set<String> duplicateChecker = new HashSet<>();
@@ -806,14 +870,25 @@ public class Cache implements Serializable {
         return results;
     }
 
+    /**
+     * list of all species
+     */
     public Collection<Species> getSpeciesList() {
         return Collections.unmodifiableCollection( speciesCache.values() );
     }
 
+    /**
+     * @param speciesId species id
+     * @return most current edition for this species
+     */
     public Edition getCurrentEditions( Integer speciesId ) {
         return currentEditions.get( speciesId );
     }
 
+    /**
+     * @param speciesId
+     * @return UNORDERED collection of all editions for this species
+     */
     public Collection<Edition> getAllEditions( Integer speciesId ) {
         Map<Integer, Edition> tmp = allEditions.get( speciesId );
         if ( tmp != null ) {
@@ -823,6 +898,11 @@ public class Cache implements Serializable {
         }
     }
 
+    /**
+     * @param speciesId species id
+     * @param edition edition
+     * @return fetch edition from cache or null if not there
+     */
     public Edition getEdition( Integer speciesId, Integer edition ) {
         if ( speciesId == null || edition == null ) {
             return null;
@@ -835,6 +915,12 @@ public class Cache implements Serializable {
         }
     }
 
+    /**
+     * @param speciesId species id
+     * @param ed edition
+     * @param t term
+     * @return count of genes annotated with this term or any of its children
+     */
     public Integer getInferredAnnotationCount( Integer speciesId, Edition ed, GeneOntologyTerm t ) {
         if ( speciesId == null || ed == null || t == null ) return null;
         MultiKey k = new MultiKey( speciesId, ed, t );
@@ -842,6 +928,12 @@ public class Cache implements Serializable {
 
     }
 
+    /**
+     * @param speciesId species id
+     * @param ed edition
+     * @param t term
+     * @return count of genes annotated with this term
+     */
     public Integer getDirectAnnotationCount( Integer speciesId, Edition ed, GeneOntologyTerm t ) {
         if ( speciesId == null || ed == null || t == null ) return null;
         MultiKey k = new MultiKey( speciesId, ed, t );
@@ -849,6 +941,10 @@ public class Cache implements Serializable {
 
     }
 
+    /**
+     * @param speciesId species id
+     * @return map of symbol to gene for all current genes in a species
+     */
     public Map<String, Gene> getSpeciesToCurrentGenes( Integer speciesId ) {
         Map<String, Gene> tmp = speciesToSymbolGenes.get( speciesId );
         if ( tmp != null ) {
@@ -869,6 +965,11 @@ public class Cache implements Serializable {
     //
     //    }
 
+    /**
+     * @param speciesId species id
+     * @param ed edition
+     * @return aggregate
+     */
     public Aggregate getAggregates( Integer speciesId, Edition ed ) {
         if ( speciesId == null || ed == null ) return null;
         Map<Edition, Aggregate> tmp = aggregates.get( speciesId );
@@ -879,6 +980,11 @@ public class Cache implements Serializable {
 
     }
 
+    /**
+     * @param speciesId species id
+     * @param symbol gene symbol
+     * @return gene with this symbol from this species or null
+     */
     public Gene getCurrentGene( Integer speciesId, String symbol ) {
         if ( speciesId == null || symbol == null ) {
             return null;
@@ -890,6 +996,11 @@ public class Cache implements Serializable {
         return null;
     }
 
+    /**
+     * @param speciesId species id
+     * @param symbol gene symbol
+     * @return set of genes with this symbol as a synonym
+     */
     public Set<Gene> getCurrentGeneBySynonym( Integer speciesId, String symbol ) {
         if ( speciesId == null || symbol == null ) {
             return null;
@@ -910,6 +1021,11 @@ public class Cache implements Serializable {
         return exactSynonym;
     }
 
+    /**
+     * @param speciesId species id
+     * @param symbol gene symbol
+     * @return true if gene exists with this symbol else false
+     */
     public boolean currentSymbolExists( Integer speciesId, String symbol ) {
         if ( speciesId == null || symbol == null ) {
             return false;
@@ -936,6 +1052,11 @@ public class Cache implements Serializable {
     //        return null;
     //    }
 
+    /**
+     * @param speciesId species id
+     * @param edition edition
+     * @return Count of unique genes in this edition under this species
+     */
     public Integer getGeneCount( Integer speciesId, Edition edition ) {
         if ( speciesId == null || edition == null ) {
             return null;
@@ -951,6 +1072,13 @@ public class Cache implements Serializable {
         return null;
     }
 
+    /**
+     * Propagates terms and their annotations to parents terms
+     * 
+     * @param map map of term to a set of annotation for that term
+     * @param ed edition
+     * @return Map of all propagated terms to their propagated annotations
+     */
     public Map<GeneOntologyTerm, Set<Annotation>> propagateAnnotations( Map<GeneOntologyTerm, Set<Annotation>> map,
             Edition ed ) {
         if ( map == null || ed == null ) {
@@ -963,6 +1091,13 @@ public class Cache implements Serializable {
         return null;
     }
 
+    /**
+     * Propagates terms up the ontology
+     * 
+     * @param terms set of terms to propagate
+     * @param ed edition
+     * @return set of propagated terms
+     */
     public Set<GeneOntologyTerm> propagate( Set<GeneOntologyTerm> terms, Edition ed ) {
         if ( terms == null || ed == null ) {
             return null;
@@ -974,6 +1109,13 @@ public class Cache implements Serializable {
         return null;
     }
 
+    /**
+     * Propagates a single term up the ontology
+     * 
+     * @param term term to propagate
+     * @param goEd GO edition
+     * @return set of propagated terms
+     */
     public Set<GeneOntologyTerm> propagate( GeneOntologyTerm term, GOEdition goEd ) {
         if ( term == null || goEd == null ) {
             return null;
@@ -992,6 +1134,9 @@ public class Cache implements Serializable {
     //
     // }
 
+    /**
+     * @return most current GO edition
+     */
     public GOEdition getCurrentGOEdition() {
         return currentGOEdition;
     }
@@ -1041,6 +1186,12 @@ public class Cache implements Serializable {
         return null;
     }
 
+    /**
+     * Will always contain ever GO Edition in keyset as editions where the term did not exist will have null values
+     * 
+     * @param goId
+     * @return map of GO edition -> term or null if this GO edition did not contains said term.
+     */
     public Map<GOEdition, GeneOntologyTerm> getTerm( String goId ) {
         if ( goId == null ) {
             return null;
@@ -1060,6 +1211,10 @@ public class Cache implements Serializable {
         return found ? termsMap : null;
     }
 
+    /**
+     * @param goId
+     * @return most current term with this goId
+     */
     public GeneOntologyTerm getCurrentTerm( String goId ) {
         if ( goId == null ) {
             return null;
@@ -1072,6 +1227,10 @@ public class Cache implements Serializable {
 
     }
 
+    /**
+     * @param goId
+     * @return true if any edition contains a term under this goId else false
+     */
     public boolean termExists( String goId ) {
         if ( goId == null ) {
             return false;
@@ -1095,6 +1254,10 @@ public class Cache implements Serializable {
 
     // Application Level Caching get/set
 
+    /**
+     * @param g gene
+     * @return cached data for GeneView under given gene
+     */
     public Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> getGeneData( Gene g ) {
         // TODO not sure if necessary, not a big deal either way
         synchronized ( applicationLevelGeneCache ) {
@@ -1102,6 +1265,12 @@ public class Cache implements Serializable {
         }
     }
 
+    /**
+     * Add data to GeneView cache under given gene
+     * 
+     * @param g gene to cache data under
+     * @param data data to be cached
+     */
     public void addGeneData( Gene g,
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> data ) {
         synchronized ( applicationLevelGeneCache ) {
@@ -1109,6 +1278,10 @@ public class Cache implements Serializable {
         }
     }
 
+    /**
+     * @param gene
+     * @return cache data for EnrichmentView under given gene
+     */
     public Map<Edition, Set<GeneOntologyTerm>> getEnrichmentData( Gene gene ) {
         // TODO not sure if necessary, not a big deal either way
         synchronized ( applicationLevelEnrichmentCache ) {
@@ -1116,6 +1289,12 @@ public class Cache implements Serializable {
         }
     }
 
+    /**
+     * Add data to EnrichmentView cache under given gene
+     * 
+     * @param g gene to cache data under
+     * @param data data to be cached
+     */
     public void addEnrichmentData( Gene gene, Map<Edition, Set<GeneOntologyTerm>> data ) {
         synchronized ( applicationLevelEnrichmentCache ) {
             applicationLevelEnrichmentCache.put( gene, data );
@@ -1138,10 +1317,19 @@ public class Cache implements Serializable {
 
 }
 
+/**
+ * Comparator to order autocompleted terms based on similarity to query
+ * 
+ * @author mjacobson
+ * @version $Id$
+ */
 class LevenshteinComparator implements Comparator<GeneOntologyTerm> {
 
     private String compareTo;
 
+    /**
+     * @param compareTo this is the string which every item in a list will be compared to for an ordering
+     */
     public LevenshteinComparator( String compareTo ) {
         super();
         this.compareTo = compareTo;
@@ -1155,6 +1343,13 @@ class LevenshteinComparator implements Comparator<GeneOntologyTerm> {
     }
 }
 
+/**
+ * Combined key for use in Maps based on species, edition and goId. Most useful if intermediate maps are not
+ * required.
+ * 
+ * @author mjacobson
+ * @version $Id$
+ */
 final class MultiKey {
     private final Integer species;
     private final Integer edition;

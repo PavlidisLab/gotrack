@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model.go;
 
 /**
- * TODO Document Me
+ * Represents a relationship to a Gene Ontology Term.
  * 
  * @author mjacobson
  * @version $Id$

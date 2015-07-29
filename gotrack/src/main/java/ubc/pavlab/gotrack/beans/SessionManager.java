@@ -28,7 +28,7 @@ import javax.faces.bean.SessionScoped;
 import org.apache.log4j.Logger;
 
 /**
- * TODO Document Me
+ * Backing bean for user sessions. Only used to store security authorization at the moment.
  * 
  * @author mjacobson
  * @version $Id$

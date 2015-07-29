@@ -19,9 +19,9 @@
 
 package ubc.pavlab.gotrack.model.hashkey;
 
-
 /**
- * TODO Document Me
+ * Represents a combined key to a map where the hashcode should be a combination of each cell in a contingency table.
+ * Hypergeometric Upper Cumulative Function Key (HyperUCFKey)
  * 
  * @author mjacobson
  * @version $Id$

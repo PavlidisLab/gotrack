@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model.dto;
 
 /**
- * TODO Document Me
+ * Data Transfer Object for statistics of hit counts of terms.
  * 
  * @author mjacobson
  * @version $Id$

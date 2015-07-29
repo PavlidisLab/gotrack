@@ -31,7 +31,8 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.table.GeneMatches;
 
 /**
- * TODO Document Me
+ * Converter for {@link GeneMatches}. Complicated getAsString as the use case in confirming multiple genes necessitates
+ * it.
  * 
  * @author mjacobson
  * @version $Id$
@@ -39,6 +40,7 @@ import ubc.pavlab.gotrack.model.table.GeneMatches;
 @FacesConverter("geneMatchConverter")
 public class GeneMatchConverter implements Converter {
 
+    @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {
         if ( value != null && value.trim().length() > 0 ) {
             try {
@@ -54,6 +56,7 @@ public class GeneMatchConverter implements Converter {
         }
     }
 
+    @Override
     public String getAsString( FacesContext fc, UIComponent uic, Object object ) {
         if ( object != null ) {
             if ( object instanceof Gene ) {

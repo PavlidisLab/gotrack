@@ -22,7 +22,7 @@ package ubc.pavlab.gotrack.model.table;
 import ubc.pavlab.gotrack.model.Gene;
 
 /**
- * TODO Document Me
+ * Represents a potential match when attempting to search for a gene by symbol.
  * 
  * @author mjacobson
  * @version $Id$
@@ -31,8 +31,12 @@ public class GeneMatches {
 
     public enum MatchType {
 
-        EXACT("Exact"), EXACT_SYNONYM("Exact Synonym"), MULTIPLE_EXACT_SYNONYMS("Multiple Exact Synonyms"), PREFIX(
-                "Prefix"), SIMILAR("Similar"), NO_MATCH("No Match");
+        EXACT("Exact"), // Gene's symbol is an exact match to the query
+        EXACT_SYNONYM("Exact Synonym"), // This Gene (and only this Gene) has a synonym that is an exact match this the query
+        MULTIPLE_EXACT_SYNONYMS("Multiple Exact Synonyms"), // This Gene and others have a synonym that is an exact match to the query
+        PREFIX("Prefix"), // The query is a prefix to this Gene's symbol
+        SIMILAR("Similar"), // The query is similar to this Gene's symbol 
+        NO_MATCH("No Match"); // No match was found, Gene will be Null
 
         private String label;
 
@@ -46,9 +50,9 @@ public class GeneMatches {
 
     }
 
-    private final String querySymbol;
-    private Gene selectedGene;
-    private final MatchType type;
+    private final String querySymbol; // The query that was used to search
+    private Gene selectedGene; // The current best guess at a gene
+    private final MatchType type; // What type of match this best guess is
 
     public GeneMatches( String querySymbol, Gene selectedGene, MatchType type ) {
         this.querySymbol = querySymbol;

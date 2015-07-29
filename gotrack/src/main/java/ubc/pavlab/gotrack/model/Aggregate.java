@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model;
 
 /**
- * TODO Document Me
+ * Represents a collection of aggregate statistics for a specific edition and species
  * 
  * @author mjacobson
  * @version $Id$

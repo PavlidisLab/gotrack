@@ -25,7 +25,7 @@ import javax.faces.convert.FacesConverter;
 import ubc.pavlab.gotrack.model.Dataset;
 
 /**
- * TODO Document Me
+ * Enum converter for {@link Dataset}
  * 
  * @author mjacobson
  * @version $Id$

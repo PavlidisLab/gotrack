@@ -20,7 +20,9 @@
 package ubc.pavlab.gotrack.analysis;
 
 /**
- * TODO Document Me
+ * Method of dealing with the multiple testing problem. Either Bonferroni
+ * (https://en.wikipedia.org/wiki/Bonferroni_correction) or BH Step-up
+ * (https://en.wikipedia.org/wiki/False_discovery_rate#Benjamini.E2.80.93Hochberg_procedure)
  * 
  * @author mjacobson
  * @version $Id$

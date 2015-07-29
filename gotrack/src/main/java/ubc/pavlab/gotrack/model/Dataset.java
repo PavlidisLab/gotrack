@@ -20,7 +20,11 @@
 package ubc.pavlab.gotrack.model;
 
 /**
- * TODO Document Me
+ * Represents the section of UniProtKB to which the annotation belongs
+ * 
+ * UniProtKB/Swiss-Prot which is manually annotated and is reviewed and
+ * 
+ * UniProtKB/TrEMBL which is automatically annotated and is not reviewed.
  * 
  * @author mjacobson
  * @version $Id$

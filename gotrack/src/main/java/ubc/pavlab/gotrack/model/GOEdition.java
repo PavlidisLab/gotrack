@@ -24,7 +24,7 @@ import java.sql.Date;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 
 /**
- * TODO Document Me
+ * Represents an edition of GO. Currently the edition numbers are out of order, so rely on sorting by date.
  * 
  * @author mjacobson
  * @version $Id$

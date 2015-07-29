@@ -19,8 +19,10 @@
 
 package ubc.pavlab.gotrack.model;
 
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+
 /**
- * TODO Document Me
+ * Represents an annotation, only makes sense when used to connect a {@link GeneOntologyTerm} and {@link Gene}
  * 
  * @author mjacobson
  * @version $Id$

@@ -31,7 +31,7 @@ import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * TODO Document Me
+ * Backing bean for a term search input that leads to the TermView page
  * 
  * @author mjacobson
  * @version $Id$
@@ -54,8 +54,8 @@ public class TermSearchView implements Serializable {
 
     public TermSearchView() {
         log.info( "TermSearchView created" );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
     }
 
     public String go() {

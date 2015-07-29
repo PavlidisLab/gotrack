@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model;
 
 /**
- * TODO Document Me
+ * Represents the namespace or sub-ontology to which a Term belongs.
  * 
  * @author mjacobson
  * @version $Id$

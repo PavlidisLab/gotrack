@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model.dto;
 
 /**
- * TODO Document Me
+ * Data Transfer Object for gathering gene counts for go terms.
  * 
  * @author mjacobson
  * @version $Id$

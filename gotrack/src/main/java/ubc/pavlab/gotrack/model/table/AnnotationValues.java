@@ -23,7 +23,11 @@ import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.AnnotationType;
 
 /**
- * TODO Document Me
+ * Represents an annotation combined with whether or not it is direct or inferred from a child term.
+ * The equals method purposefully leaves out type in its comparison. This is so that we may only have one type for each
+ * unique annotation, it is up the the use case to ensure the correct type is kept in a set. Direct implies Inferred but
+ * Inferred does NOT imply Direct.
+ * (ex. if an annotation is both direct and inferred then it is direct )
  * 
  * @author mjacobson
  * @version $Id$

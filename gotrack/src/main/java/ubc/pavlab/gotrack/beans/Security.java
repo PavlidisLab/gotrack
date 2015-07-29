@@ -28,7 +28,7 @@ import org.apache.log4j.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 
 /**
- * TODO Document Me
+ * Secure authorization handler for accessing protected methods in the terminal handler.
  * 
  * @author mjacobson
  * @version $Id$

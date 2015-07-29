@@ -23,7 +23,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 
 /**
- * TODO Document Me
+ * Represents a collection of nodes and edges
  * 
  * @author mjacobson
  * @version $Id$

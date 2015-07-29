@@ -20,7 +20,8 @@
 package ubc.pavlab.gotrack.model.go;
 
 /**
- * TODO Document Me
+ * Represents a type of relationship two Terms might have. Currently only supports IS_A and PART_OF, no plans of
+ * expanding.
  * 
  * @author mjacobson
  * @version $Id$

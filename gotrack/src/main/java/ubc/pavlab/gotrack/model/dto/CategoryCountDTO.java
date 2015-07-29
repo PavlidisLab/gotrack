@@ -22,7 +22,7 @@ package ubc.pavlab.gotrack.model.dto;
 import java.sql.Date;
 
 /**
- * TODO Document Me
+ * Data Transfer Object for gene counts grouped by category, date
  * 
  * @author mjacobson
  * @version $Id$
