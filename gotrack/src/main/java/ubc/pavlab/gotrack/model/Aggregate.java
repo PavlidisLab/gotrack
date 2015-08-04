@@ -19,6 +19,8 @@
 
 package ubc.pavlab.gotrack.model;
 
+import ubc.pavlab.gotrack.model.dto.AggregateDTO;
+
 /**
  * Represents a collection of aggregate statistics for a specific edition and species
  * 
@@ -38,6 +40,13 @@ public final class Aggregate {
         this.avgDirectByGene = avgDirectByGene;
         this.avgInferredByGene = avgInferredByGene;
         this.avgGenesByTerm = avgGenesByTerm;
+    }
+
+    public Aggregate( AggregateDTO dto ) {
+        this.geneCount = dto.getGeneCount();
+        this.avgDirectByGene = dto.getAvgDirectTermsForGene();
+        this.avgInferredByGene = dto.getAvgInferredTermsForGene();
+        this.avgGenesByTerm = dto.getAvgInferredGenesForTerm();
     }
 
     public Integer getGeneCount() {

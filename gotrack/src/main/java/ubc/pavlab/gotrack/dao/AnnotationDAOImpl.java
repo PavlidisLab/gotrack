@@ -34,7 +34,7 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
+import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
@@ -236,7 +236,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<AnnotationCountDTO> directGeneCounts( String goId ) throws DAOException {
+    public List<DirectAnnotationCountDTO> directGeneCounts( String goId ) throws DAOException {
 
         List<Object> params = new ArrayList<Object>();
 
@@ -247,7 +247,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        List<AnnotationCountDTO> results = new ArrayList<>();
+        List<DirectAnnotationCountDTO> results = new ArrayList<>();
         String sql = SQL_DIRECT_GENE_COUNTS_FOR_TERM;
 
         log.debug( sql );
@@ -270,7 +270,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
             startTime = System.currentTimeMillis();
             while ( resultSet.next() ) {
-                results.add( new AnnotationCountDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
+                results.add( new DirectAnnotationCountDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
                         "", resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();

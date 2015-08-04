@@ -48,7 +48,7 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Evidence;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
+import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
@@ -331,8 +331,8 @@ public class AnnotationService implements Serializable {
      */
     public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( String goId ) {
         Map<Integer, Map<Edition, Integer>> results = new HashMap<>();
-        List<AnnotationCountDTO> resultset = annotationDAO.directGeneCounts( goId );
-        for ( AnnotationCountDTO dto : resultset ) {
+        List<DirectAnnotationCountDTO> resultset = annotationDAO.directGeneCounts( goId );
+        for ( DirectAnnotationCountDTO dto : resultset ) {
             Map<Edition, Integer> m2 = results.get( dto.getSpecies() );
             if ( m2 == null ) {
                 m2 = new HashMap<>();

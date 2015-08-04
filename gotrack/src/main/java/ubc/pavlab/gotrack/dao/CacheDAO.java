@@ -20,7 +20,9 @@
 package ubc.pavlab.gotrack.dao;
 
 import java.util.List;
+import java.util.Map;
 
+import ubc.pavlab.gotrack.model.Aggregate;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.dto.AccessionDTO;
 import ubc.pavlab.gotrack.model.dto.AdjacencyDTO;
@@ -32,9 +34,10 @@ import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
 import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
+import ubc.pavlab.gotrack.model.hashkey.MultiKey;
 
 /**
- * Holds methods for retrieving data that is meant to be cached. Read-only.
+ * Holds methods for retrieving data that is meant to be cached.
  * 
  * @author mjacobson
  * @version $Id$
@@ -49,7 +52,7 @@ public interface CacheDAO {
     /**
      * Retrieve data for number of genes annotated to each term or their children (GO Gene Set Sizes)
      */
-    public List<AnnotationCountDTO> getGOSizes( int[] speciesRestrictions ) throws DAOException;
+    public List<AnnotationCountDTO> getGOAnnotationCounts( int[] speciesRestrictions ) throws DAOException;
 
     /**
      * Map of species to ordered linkedlist of editions
@@ -91,5 +94,17 @@ public interface CacheDAO {
      * pre-processing to be done.
      */
     public List<SimpleAnnotationDTO> getSimpleAnnotations( Integer speciesId, Edition ed ) throws DAOException;
+
+    /**
+     * Write annotation counts on a per species, edition, GO Term basis to the DB for fast cache creation in later
+     * starts.
+     */
+    public void writeAnnotationCounts( Map<MultiKey, Integer> direct, Map<MultiKey, Integer> inferred );
+
+    /**
+     * Write aggregate calculations on a per species, edition basis to the DB for fast cache creation in later
+     * starts.
+     */
+    public void writeAggregates( Map<Integer, Map<Edition, Aggregate>> aggs );
 
 }

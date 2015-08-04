@@ -20,26 +20,23 @@
 package ubc.pavlab.gotrack.model.dto;
 
 /**
- * Data Transfer Object for gathering direct and inferred gene counts for go terms.
+ * Data Transfer Object for gathering direct gene counts for go terms.
  * 
  * @author mjacobson
  * @version $Id$
  */
-public final class AnnotationCountDTO {
+public final class DirectAnnotationCountDTO {
     private final Integer species;
     private final Integer edition;
     private final String goId;
-    private final Integer directCount;
-    private final Integer inferredCount;
+    private final Integer count;
 
-    public AnnotationCountDTO( Integer species, Integer edition, String goId, Integer directCount,
-            Integer inferredCount ) {
+    public DirectAnnotationCountDTO( Integer speciesId, Integer ed, String goid, Integer count ) {
         super();
-        this.species = species;
-        this.edition = edition;
-        this.goId = goId;
-        this.directCount = directCount;
-        this.inferredCount = inferredCount;
+        this.species = speciesId;
+        this.edition = ed;
+        this.goId = goid;
+        this.count = count;
     }
 
     public Integer getSpecies() {
@@ -54,12 +51,7 @@ public final class AnnotationCountDTO {
         return goId;
     }
 
-    public Integer getDirectCount() {
-        return directCount;
+    public Integer getCount() {
+        return count;
     }
-
-    public Integer getInferredCount() {
-        return inferredCount;
-    }
-
 }

@@ -30,20 +30,20 @@ import ubc.pavlab.gotrack.model.Aggregate;
 public final class AggregateDTO {
     private final Integer species;
     private final Integer edition;
-    private final Integer accessionCount;
     private final Integer geneCount;
-    private final Double accessionAverage;
-    private final Double geneAverage;
+    private final Double avgDirectTermsForGene;
+    private final Double avgInferredTermsForGene;
+    private final Double avgInferredGenesForTerm;
 
-    public AggregateDTO( Integer species, Integer edition, Integer accessionCount, Integer geneCount,
-            Double accessionAverage, Double geneAverage ) {
+    public AggregateDTO( Integer species, Integer edition, Integer geneCount, Double avgDirectTermsForGene,
+            Double avgInferredTermsForGene, Double avgInferredGenesForTerm ) {
         super();
         this.species = species;
         this.edition = edition;
-        this.accessionCount = accessionCount;
         this.geneCount = geneCount;
-        this.accessionAverage = accessionAverage;
-        this.geneAverage = geneAverage;
+        this.avgDirectTermsForGene = avgDirectTermsForGene;
+        this.avgInferredTermsForGene = avgInferredTermsForGene;
+        this.avgInferredGenesForTerm = avgInferredGenesForTerm;
     }
 
     public Integer getSpecies() {
@@ -54,20 +54,20 @@ public final class AggregateDTO {
         return edition;
     }
 
-    public Integer getAccessionCount() {
-        return accessionCount;
-    }
-
     public Integer getGeneCount() {
         return geneCount;
     }
 
-    public Double getAccessionAverage() {
-        return accessionAverage;
+    public Double getAvgDirectTermsForGene() {
+        return avgDirectTermsForGene;
     }
 
-    public Double getGeneAverage() {
-        return geneAverage;
+    public Double getAvgInferredTermsForGene() {
+        return avgInferredTermsForGene;
+    }
+
+    public Double getAvgInferredGenesForTerm() {
+        return avgInferredGenesForTerm;
     }
 
 }

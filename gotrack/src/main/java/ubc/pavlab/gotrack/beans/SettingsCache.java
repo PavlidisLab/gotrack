@@ -54,6 +54,8 @@ public class SettingsCache implements Serializable {
     private static final String SPECIES_RESTRICTIONS_PROPERTY = "gotrack.speciesRestrictions";
     private static final String UPDATE_POP_TABLE = "gotrack.updatePopularTable";
     private static final String DRY_RUN = "gotrack.dryRun";
+    private static final String WRITE_CACHE = "gotrack.writeCache";
+    private static final String RECALCULATE = "gotrack.recalculate";
 
     private Properties prop = new Properties();
 
@@ -126,6 +128,26 @@ public class SettingsCache implements Serializable {
     public boolean isDryRun() {
         String r = prop.getProperty( DRY_RUN );
         return r != null && r.equals( "true" );
+    }
+
+    /**
+     * Some data that is very heavy to create on application start-up can be written to database for fast retrieval on
+     * subsequent start-ups
+     */
+    public boolean writeCache() {
+        String r = prop.getProperty( WRITE_CACHE );
+        return r != null && r.equals( "true" );
+
+    }
+
+    /**
+     * If true then the pre-calculated data will be redone on application start-up instead of attempting to read data
+     * from database cache
+     */
+    public boolean recalculate() {
+        String r = prop.getProperty( RECALCULATE );
+        return r != null && r.equals( "true" );
+
     }
 
     public boolean contains( String key ) {
