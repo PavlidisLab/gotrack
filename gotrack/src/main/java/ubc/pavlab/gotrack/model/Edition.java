@@ -57,7 +57,7 @@ public class Edition implements Comparable<Edition> {
     }
 
     public Integer getGoEditionId() {
-        return goEdition.getEdition();
+        return goEdition.getId();
     }
 
     public GOEdition getGoEdition() {
@@ -67,7 +67,7 @@ public class Edition implements Comparable<Edition> {
     @Override
     public String toString() {
         return "Edition [edition=" + edition + ", date=" + date + ", goDate=" + goEdition.getDate() + ", goEditionId="
-                + goEdition.getEdition() + "]";
+                + goEdition.getId() + "]";
     }
 
     @Override

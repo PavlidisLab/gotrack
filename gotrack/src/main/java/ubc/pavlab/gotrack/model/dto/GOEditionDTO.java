@@ -30,17 +30,17 @@ import ubc.pavlab.gotrack.model.GOEdition;
  * @version $Id$
  */
 public final class GOEditionDTO {
-    private final Integer edition;
+    private final Integer id;
     private final Date date;
 
-    public GOEditionDTO( Integer edition, Date date ) {
+    public GOEditionDTO( Integer id, Date date ) {
         super();
-        this.edition = edition;
+        this.id = id;
         this.date = date;
     }
 
-    public Integer getEdition() {
-        return edition;
+    public Integer getId() {
+        return id;
     }
 
     public Date getDate() {

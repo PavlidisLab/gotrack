@@ -275,7 +275,7 @@ public class Cache implements Serializable {
         // GOEdition Cache creation
         // ****************************
         for ( GOEditionDTO dto : cacheDAO.getAllGOEditions() ) {
-            allGOEditions.put( dto.getEdition(), new GOEdition( dto ) );
+            allGOEditions.put( dto.getId(), new GOEdition( dto ) );
         }
 
         currentGOEdition = Collections.max( allGOEditions.values() );
@@ -531,6 +531,7 @@ public class Cache implements Serializable {
                                 }
 
                                 // GeneCount, avgDirectByGene, avgInferredByGene, avgGenesByTerm
+                                // TODO: geneCount is always 1 greater than my previous values, check into this. Possibly nulls?
                                 int geneCount = tempTermSets.keySet().size();
                                 if ( geneCount != 0 ) {
                                     speciesAggregates.put( ed,

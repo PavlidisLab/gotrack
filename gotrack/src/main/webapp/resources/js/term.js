@@ -39,7 +39,7 @@ function handleFetchOverviewChart(xhr, status, args) {
    console.log(args);
    try {
       $('#loading-spinner-overview').hide();
-      GLOBALS.dateToEdition = JSON.parse(args.dateToEdition);
+      GLOBALS.dateToGOEditionId = JSON.parse(args.dateToGOEditionId);
       GLOBALS.nameChange = JSON.parse(args.dateToNameChange);
    } catch(e) {
       console.log(e);
@@ -362,7 +362,7 @@ function createOverviewChart(args) {
                            events: {
                               click: function () {
                                  if (this.y != 0){
-                                    fetchGraph([{name:'edition', value:GLOBALS.dateToEdition[this.x]},{name:'showDiff', value:this.y==1} ]);
+                                    fetchGraph([{name:'edition', value:GLOBALS.dateToGOEditionId[this.x]},{name:'showDiff', value:this.y==1} ]);
                                  }
                               }
                            }

@@ -188,7 +188,7 @@ public class TermView {
      */
     public void fetchOverviewChart() {
         // Going to need this
-        Map<Long, Integer> dateToEdition = new HashMap<>();
+        Map<Long, Integer> dateToGOEditionId = new HashMap<>();
         Map<Long, String[]> dateToNameChange = new HashMap<>();
 
         // Create the 'did this term exist' chart
@@ -201,7 +201,7 @@ public class TermView {
         for ( Entry<GOEdition, GeneOntologyTerm> entry : trackedTerms.entrySet() ) {
             GeneOntologyTerm t = entry.getValue();
             existSeries.addDataPoint( entry.getKey().getDate().getTime(), t != null ? 1 : 0 );
-            dateToEdition.put( entry.getKey().getDate().getTime(), entry.getKey().getEdition() );
+            dateToGOEditionId.put( entry.getKey().getDate().getTime(), entry.getKey().getId() );
             if ( t != null ) {
 
                 Graph eles = calcElements( t );
@@ -245,7 +245,8 @@ public class TermView {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_data", existChart );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "dateToGOEditionId",
+                new Gson().toJson( dateToGOEditionId ) );
         RequestContext.getCurrentInstance().addCallbackParam( "dateToNameChange",
                 new Gson().toJson( dateToNameChange ) );
     }

@@ -48,9 +48,9 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Evidence;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
+import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
@@ -188,7 +188,8 @@ public class AnnotationService implements Serializable {
             GeneOntologyTerm go = cache.getTerm( ed, enrichmentDTO.getGoId() );
 
             if ( go == null ) {
-                log.debug( "Could not find (" + enrichmentDTO.getGoId() + ") in go_edition: " + ed.getGoEditionId() );
+                log.debug(
+                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEditionId() );
                 missingTerms.put( enrichmentDTO.getGoId(), enrichmentDTO );
                 continue;
             }
