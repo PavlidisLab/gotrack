@@ -28,32 +28,32 @@ import ubc.pavlab.gotrack.model.Gene;
  * @version $Id$
  */
 public final class GeneDTO {
-    private final Integer species;
+    private final Integer geneId;
+    private final Integer speciesId;
     private final String symbol;
-    private final String synonyms;
-    private final String accession;
+    private final String synonym;
 
-    public GeneDTO( Integer species, String symbol, String synonyms, String accession ) {
+    public GeneDTO( Integer geneId, Integer speciesId, String symbol, String synonym ) {
         super();
-        this.species = species;
+        this.geneId = geneId;
+        this.speciesId = speciesId;
         this.symbol = symbol;
-        this.synonyms = synonyms;
-        this.accession = accession;
+        this.synonym = synonym;
     }
 
-    public Integer getSpecies() {
-        return species;
+    public Integer getSpeciesId() {
+        return speciesId;
     }
 
     public String getSymbol() {
         return symbol;
     }
 
-    public String getSynonyms() {
-        return synonyms;
+    public String getSynonym() {
+        return synonym;
     }
 
-    public String getAccession() {
-        return accession;
+    public Integer getGeneId() {
+        return geneId;
     }
 }

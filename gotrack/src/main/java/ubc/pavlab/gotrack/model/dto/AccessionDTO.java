@@ -28,12 +28,14 @@ import ubc.pavlab.gotrack.model.Accession;
  * @version $Id$
  */
 public class AccessionDTO {
+    private final int geneId;
     private final String accession;
     private final String sec;
     private final Boolean sp;
 
-    public AccessionDTO( String accession, String sec, Boolean sp ) {
+    public AccessionDTO( int geneId, String accession, String sec, Boolean sp ) {
         super();
+        this.geneId = geneId;
         this.accession = accession;
         this.sec = sec;
         this.sp = sp;
@@ -49,6 +51,10 @@ public class AccessionDTO {
 
     public Boolean getSp() {
         return sp;
+    }
+
+    public int getGeneId() {
+        return geneId;
     }
 
 }

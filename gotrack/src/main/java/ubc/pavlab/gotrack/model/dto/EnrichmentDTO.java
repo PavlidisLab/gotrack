@@ -28,22 +28,13 @@ package ubc.pavlab.gotrack.model.dto;
 public final class EnrichmentDTO {
 
     private final Integer edition;
-    private final String symbol;
+    private final Integer geneId;
     private final String goId;
 
-    /**
-     * @param date
-     * @param edition
-     * @param goEdition
-     * @param symbol
-     * @param goId
-     * @param name
-     * @param aspect
-     */
-    public EnrichmentDTO( Integer edition, String symbol, String goId ) {
+    public EnrichmentDTO( Integer edition, int geneId, String goId ) {
         super();
         this.edition = edition;
-        this.symbol = symbol;
+        this.geneId = geneId;
         this.goId = goId;
     }
 
@@ -51,8 +42,8 @@ public final class EnrichmentDTO {
         return edition;
     }
 
-    public String getSymbol() {
-        return symbol;
+    public Integer getGeneId() {
+        return geneId;
     }
 
     public String getGoId() {

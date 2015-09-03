@@ -61,39 +61,50 @@ public class CacheDAOImpl implements CacheDAO {
 
     // Constants ----------------------------------------------------------------------------------
 
-    private static final String SQL_CURRENT_EDITIONS = "select species_id, edition, date, go_date, go_edition_id_fk "
-            + "from (select species_id, edition, edition.date, go_edition.date as go_date, edition.go_edition_id_fk "
-            + "from edition INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id order by edition DESC) "
-            + "as temp group by species_id";
+    /*
+     * private static final String SQL_CURRENT_EDITIONS = "select species_id, edition, date, go_date, go_edition_id_fk "
+     * + "from (select species_id, edition, edition.date, go_edition.date as go_date, edition.go_edition_id_fk "
+     * + "from edition INNER JOIN go_edition on edition.go_edition_id_fk=go_edition.id order by edition DESC) "
+     * + "as temp group by species_id";
+     */
+
+    // Creating caches of models ------------------------------------------------------------------
+
+    // Edition
     private static final String SQL_ALL_EDITIONS = "select species_id, edition, edition.date, go_edition_id_fk from edition order by edition";
     private static final String SQL_ALL_EDITIONS_RESTRICT = "select species_id, edition, edition.date, go_edition_id_fk from edition WHERE edition.species_id in (%s) order by edition";
-    private static final String SQL_GO_ANNOTATION_COUNTS = "select species_id, edition, go_id, direct_annotation_count, inferred_annotation_count from go_annotation_counts";
-    private static final String SQL_GO_ANNOTATION_COUNTS_RESTRICT = "select species_id, edition, go_id, direct_annotation_count, inferred_annotation_count from go_annotation_counts WHERE species_id in (%s)";
-    private static final String SQL_AGGREGATE = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term from edition_aggregates";
-    private static final String SQL_AGGREGATE_RESTRICT = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term from edition_aggregates WHERE species_id in (%s)";
+
+    // GOEdition
     private static final String SQL_ALL_GO_EDITIONS = "SELECT id, date from go_edition";
 
-    private static final String SQL_ACCESSIONS = "select distinct accession, sec, acindex.symbol IS NOT NULL as sp from current_genes left join acindex using (accession) LEFT JOIN sec_ac on accession=ac";
-    private static final String SQL_ACCESSIONS_RESTRICT = "select distinct accession, sec, acindex.symbol IS NOT NULL as sp from current_genes left join acindex using (accession) LEFT JOIN sec_ac on accession=ac WHERE species_id in (%s)";
+    // directAnnotationCount & inferredAnnotationCount
+    private static final String SQL_GO_ANNOTATION_COUNTS = "select species_id, edition, go_id, direct_annotation_count, inferred_annotation_count from go_annotation_counts";
+    private static final String SQL_GO_ANNOTATION_COUNTS_RESTRICT = "select species_id, edition, go_id, direct_annotation_count, inferred_annotation_count from go_annotation_counts WHERE species_id in (%s)";
 
-    private static final String SQL_CURRENT_GENES = "select species_id, symbol, accession, synonyms from current_genes";
-    private static final String SQL_CURRENT_GENES_RESTRICT = "select species_id, symbol, accession, synonyms from current_genes WHERE species_id in (%s)";
-    private static final String SQL_GO_TERMS2 = "Select go_ontology_tclosure.go_edition_id_fk, child go_id, name, aspect from go_ontology_tclosure inner join go_term on go_term.go_id=go_ontology_tclosure.child and go_term.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk where min_distance=0";
+    // Aggregate
+    private static final String SQL_AGGREGATE = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term from edition_aggregates";
+    private static final String SQL_AGGREGATE_RESTRICT = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term from edition_aggregates WHERE species_id in (%s)";
+
+    // Accession
+    private static final String SQL_ACCESSIONS = "select distinct pp_current_genes_id, accession, sec, acindex.symbol IS NOT NULL as sp from pp_primary_accessions left join acindex using (accession) LEFT JOIN sec_ac on accession=ac";
+    private static final String SQL_ACCESSIONS_RESTRICT = "select distinct pp_current_genes_id, accession, sec, acindex.symbol IS NOT NULL as sp from pp_primary_accessions inner join pp_current_genes on pp_current_genes.id = pp_primary_accessions.pp_current_genes_id left join acindex using (accession) LEFT JOIN sec_ac on accession=ac WHERE species_id in (%s)";
+
+    // Gene
+    private static final String SQL_CURRENT_GENES = "select pp_current_genes.id, species_id, symbol, synonym from pp_current_genes left join pp_synonyms on pp_current_genes.id=pp_synonyms.pp_current_genes_id order by id";
+    private static final String SQL_CURRENT_GENES_RESTRICT = "select pp_current_genes.id, species_id, symbol, synonym from pp_current_genes left join pp_synonyms on pp_current_genes.id=pp_synonyms.pp_current_genes_id WHERE species_id in (%s) order by id";
+
+    // GeneOntology and GeneOntologyTerm
     private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from go_term";
-    private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from go_ontology_tclosure where min_distance =1";
-
-    private static final String SQL_GO_TERMS_BY_EDITION = "Select child go_id, name, aspect from go_ontology_tclosure inner join go_term on go_term.go_id=go_ontology_tclosure.child and go_term.go_edition_id_fk=go_ontology_tclosure.go_edition_id_fk where go_ontology_tclosure.go_edition_id_fk=? and min_distance=0";
-    private static final String SQL_GO_ADJACENCY_BY_EDITION = "select child, parent, relationship from go_ontology_tclosure where go_ontology_tclosure.go_edition_id_fk=? and min_distance =1";
+    private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from go_adjacency";
 
     // Evidence
     private static final String SQL_EVIDENCE = "SELECT id, evidence, description, category FROM evidence_categories";
 
-    // Simplified annotations for an edition, species
-    private static final String SQL_SIMPLE_ANNOTATIONS = "select distinct go_id, symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where species_id=? and edition = ?";
-    // Keep in mind this SQL for single term lookups
-    // "select distinct symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where species_id=? and edition=? and go_id in (select child from go_ontology_tclosure where go_edition_id_fk = ? and parent = ?)";
+    // Used to recompute directAnnotationCount & inferredAnnotationCount & Aggregate Tables
+    private static final String SQL_SIMPLE_ANNOTATIONS = "select distinct go_id, pp_current_genes.id gene_id from pp_current_genes inner join pp_goa on pp_current_genes.id=pp_goa.pp_current_genes_id where species_id=? and edition = ?";
 
-    // These are WRITE oriented
+    // These are WRITE oriented -----------------------------------------------------------------
+
     private static final String[] SQL_WRITE_ANNOTATION_COUNTS_TABLE_CREATION = new String[] {
             "DROP TABLE IF EXISTS go_annotation_counts_new",
             "CREATE TABLE go_annotation_counts_new ( id INTEGER NOT NULL AUTO_INCREMENT, species_id INTEGER NOT NULL, edition INTEGER NOT NULL, go_id VARCHAR(10) NOT NULL, direct_annotation_count INTEGER NULL DEFAULT NULL, inferred_annotation_count INTEGER NULL DEFAULT NULL, PRIMARY KEY (id) )" };
@@ -307,8 +318,9 @@ public class CacheDAOImpl implements CacheDAO {
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                results.add( new GeneDTO( resultSet.getInt( "species_id" ), resultSet.getString( "symbol" ),
-                        resultSet.getString( "synonyms" ), resultSet.getString( "accession" ) ) );
+                results.add( new GeneDTO( resultSet.getInt( "id" ), resultSet.getInt( "species_id" ),
+                        resultSet.getString( "symbol" ),
+                        resultSet.getString( "synonym" ) ) );
 
             }
 
@@ -346,7 +358,8 @@ public class CacheDAOImpl implements CacheDAO {
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                results.add( new AccessionDTO( resultSet.getString( "accession" ), resultSet.getString( "sec" ),
+                results.add( new AccessionDTO( resultSet.getInt( "pp_current_genes_id" ),
+                        resultSet.getString( "accession" ), resultSet.getString( "sec" ),
                         resultSet.getBoolean( "sp" ) ) );
 
             }
@@ -457,7 +470,7 @@ public class CacheDAOImpl implements CacheDAO {
             DAOUtil.setValues( preparedStatement, params.toArray() );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                list.add( new SimpleAnnotationDTO( resultSet.getString( "go_id" ), resultSet.getString( "symbol" ) ) );
+                list.add( new SimpleAnnotationDTO( resultSet.getString( "go_id" ), resultSet.getInt( "gene_id" ) ) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );

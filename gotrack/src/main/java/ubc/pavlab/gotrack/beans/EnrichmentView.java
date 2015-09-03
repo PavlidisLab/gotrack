@@ -494,6 +494,7 @@ public class EnrichmentView implements Serializable {
 
         StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, topN, scm, cache );
         statusPoller.completeStatus();
+        log.info( "Analysis Complete" );
 
         return new CombinedAnalysis( analysis, stabilityAnalysis, true );
 

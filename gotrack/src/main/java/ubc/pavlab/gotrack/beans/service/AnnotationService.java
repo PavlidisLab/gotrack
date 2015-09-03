@@ -105,7 +105,7 @@ public class AnnotationService implements Serializable {
 
         Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> trackData = new LinkedHashMap<>();
 
-        List<AnnotationDTO> resultset = annotationDAO.track( species.getId(), g.getSymbol() );
+        List<AnnotationDTO> resultset = annotationDAO.track( g );
 
         for ( AnnotationDTO dto : resultset ) {
 
@@ -162,13 +162,13 @@ public class AnnotationService implements Serializable {
             Collection<Gene> genes ) {
         Set<Gene> geneSet = new HashSet<>( genes );
 
-        // Used to map strings back to genes, small efficiency boost as we don't have to his gene cache in Cache service
-        Map<String, Gene> givenGenes = new HashMap<>();
+        // Used to map strings back to genes, small efficiency boost as we don't have to hit gene cache in Cache service
+        Map<Integer, Gene> givenGenes = new HashMap<>();
         for ( Gene g : genes ) {
-            givenGenes.put( g.getSymbol().toUpperCase(), g );
+            givenGenes.put( g.getId(), g );
         }
 
-        List<EnrichmentDTO> resultset = annotationDAO.enrich( speciesId, geneSet );
+        List<EnrichmentDTO> resultset = annotationDAO.enrich( geneSet );
 
         Multimap<String, EnrichmentDTO> missingTerms = ArrayListMultimap.create();
 
@@ -176,10 +176,10 @@ public class AnnotationService implements Serializable {
 
         for ( EnrichmentDTO enrichmentDTO : resultset ) {
 
-            String symbol = enrichmentDTO.getSymbol();
-            Gene g = givenGenes.get( symbol.toUpperCase() );
+            Integer geneId = enrichmentDTO.getGeneId();
+            Gene g = givenGenes.get( geneId );
             if ( g == null ) {
-                log.warn( "Could not find symbol:" + symbol + " in given genes." );
+                log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
                 // g = new Gene( symbol, species );
             }
 
@@ -251,10 +251,10 @@ public class AnnotationService implements Serializable {
             for ( Entry<EnrichmentDTO, GeneOntologyTerm> entry : mapped.entrySet() ) {
                 EnrichmentDTO enrichmentDTO = entry.getKey();
 
-                String symbol = enrichmentDTO.getSymbol();
-                Gene g = givenGenes.get( symbol.toUpperCase() );
+                Integer geneId = enrichmentDTO.getGeneId();
+                Gene g = givenGenes.get( geneId );
                 if ( g == null ) {
-                    log.warn( "Could not find symbol:" + symbol + " in given genes." );
+                    log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
                     // g = new Gene( symbol, species );
                 }
 

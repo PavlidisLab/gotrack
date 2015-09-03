@@ -151,10 +151,6 @@ public class Cache implements Serializable {
     // Most current GeneOntology
     private GeneOntology currentOntology;
 
-    // Maps accession id -> accession
-    // Holds only primary accessions, each accession object houses the secondary accessions ids
-    private Map<String, Accession> primaryAccession = new ConcurrentHashMap<>();
-
     // Maps species if, edition -> aggregate
     // Holds information about aggregate statistics, such as species averages in an edition, etc
     private Map<Integer, Map<Edition, Aggregate>> aggregates = new ConcurrentHashMap<>();
@@ -456,11 +452,11 @@ public class Cache implements Serializable {
                                 // These are for computing the number of genes associated with each go term
 
                                 Map<GeneOntologyTerm, Integer> tempDirectAnnotationCount = new HashMap<>();
-                                Map<GeneOntologyTerm, Set<String>> tempAnnotationSets = new HashMap<>();
+                                Map<GeneOntologyTerm, Set<Integer>> tempAnnotationSets = new HashMap<>();
 
                                 // These are for computing the number of go terms associated with each gene
 
-                                Map<String, Set<GeneOntologyTerm>> tempTermSets = new HashMap<>();
+                                Map<Integer, Set<GeneOntologyTerm>> tempTermSets = new HashMap<>();
 
                                 // propagation cache for speed purposes
 
@@ -472,7 +468,7 @@ public class Cache implements Serializable {
 
                                 for ( SimpleAnnotationDTO dto : results ) {
                                     String goId = dto.getGoId();
-                                    String symbol = dto.getSymbol();
+                                    Integer geneId = dto.getGeneId();
                                     // Integer count = dto.getCount();
                                     GeneOntologyTerm t = o.getTerm( goId );
 
@@ -489,18 +485,18 @@ public class Cache implements Serializable {
                                         propagate.add( t );
 
                                         for ( GeneOntologyTerm term : propagate ) { // gene counts
-                                            Set<String> s = tempAnnotationSets.get( term );
+                                            Set<Integer> s = tempAnnotationSets.get( term );
                                             if ( s == null ) {
                                                 s = new HashSet<>();
                                                 tempAnnotationSets.put( term, s );
                                             }
-                                            s.add( symbol );
+                                            s.add( geneId );
                                         }
 
-                                        Set<GeneOntologyTerm> terms = tempTermSets.get( symbol ); // term counts
+                                        Set<GeneOntologyTerm> terms = tempTermSets.get( geneId ); // term counts
                                         if ( terms == null ) {
                                             terms = new HashSet<>();
-                                            tempTermSets.put( symbol, terms );
+                                            tempTermSets.put( geneId, terms );
                                         }
                                         terms.addAll( propagate );
 
@@ -513,7 +509,7 @@ public class Cache implements Serializable {
                                 int totalGeneSetSizes = 0;
 
                                 // Convert sets into counts
-                                for ( Entry<GeneOntologyTerm, Set<String>> entry : tempAnnotationSets.entrySet() ) {
+                                for ( Entry<GeneOntologyTerm, Set<Integer>> entry : tempAnnotationSets.entrySet() ) {
                                     MultiKey k = new MultiKey( speciesId, ed, entry.getKey() );
                                     this.inferredAnnotationCount.put( k, entry.getValue().size() );
                                     totalGeneSetSizes += entry.getValue().size(); // For calculating avgGenesByTerm
@@ -526,7 +522,7 @@ public class Cache implements Serializable {
 
                                 int totalTermSetSizes = 0;
 
-                                for ( Entry<String, Set<GeneOntologyTerm>> entry : tempTermSets.entrySet() ) {
+                                for ( Entry<Integer, Set<GeneOntologyTerm>> entry : tempTermSets.entrySet() ) {
                                     totalTermSetSizes += entry.getValue().size();
                                 }
 
@@ -538,7 +534,8 @@ public class Cache implements Serializable {
                                             new Aggregate( geneCount,
                                                     results.size() / ( double ) geneCount, totalTermSetSizes
                                                             / ( double ) geneCount,
-                                            totalGeneSetSizes / ( double ) tempAnnotationSets.keySet().size() ) );
+                                                    totalGeneSetSizes
+                                                            / ( double ) tempAnnotationSets.keySet().size() ) );
                                 }
 
                             }
@@ -600,106 +597,114 @@ public class Cache implements Serializable {
         //        }
         // ****************************
 
-        // Accession cache creation
+        // Accession creation
         // ****************************
-        Map<String, Set<String>> secMap = new HashMap<>();
-        Map<String, Boolean> spMap = new HashMap<>();
+        Multimap<Integer, Accession> geneIdToPrimary = HashMultimap.create();
+        String previousAccession = null;
+        Accession.AccessionBuilder accessionBuilder = null;
         for ( AccessionDTO dto : cacheDAO.getAccessions( speciesRestrictions ) ) {
-            // secs
+            // Iteration ordered by accession!
             String accession = dto.getAccession();
-            Set<String> secs = secMap.get( accession );
-
-            if ( secs == null ) {
-                secs = new HashSet<>();
-                secMap.put( accession, secs );
-            }
-
             String sec = dto.getSec();
-            if ( sec != null ) {
-                // Null secondary values means it has no secondary accessions
-                secs.add( sec );
+            if ( accession.equals( previousAccession ) ) {
+                // Still on same primary accession
+                try {
+                    accessionBuilder.secondary( sec );
+                } catch ( NullPointerException e ) {
+                    log.error( dto );
+                    log.error( accession );
+                    log.error( sec );
+                }
+            } else { // New primary accession
+
+                // Create Accession object from previous one
+                if ( accessionBuilder != null ) {
+                    Accession acc = accessionBuilder.build();
+                    geneIdToPrimary.put( acc.getGeneId(), acc );
+                }
+
+                accessionBuilder = new Accession.AccessionBuilder( dto.getGeneId(), accession, dto.getSp() );
+
+                // Add first secondary
+
+                if ( sec != null ) {
+                    // Null secondary values means it has no secondary accessions
+                    if ( !sec.equals( accession ) ) { // Remove reflexive associations that were added for performance reasons
+                        accessionBuilder.secondary( sec );
+                    }
+                }
+
             }
-
-            // sp
-            spMap.put( accession, dto.getSp() );
-
+            previousAccession = accession;
         }
-        for ( String accession : spMap.keySet() ) {
-            primaryAccession.put( accession,
-                    new Accession( accession, spMap.get( accession ), secMap.get( accession ) ) );
+
+        // Create Accession object from last entry
+        if ( accessionBuilder != null ) {
+            Accession acc = accessionBuilder.build();
+            geneIdToPrimary.put( acc.getGeneId(), acc );
         }
-        spMap.clear();
-        secMap.clear();
         // ****************************
 
         // Gene cache creation
         // ****************************
-        Map<Integer, Map<String, Set<String>>> allSynMap = new HashMap<>();
-        Map<Integer, Map<String, Set<Accession>>> allAccMap = new HashMap<>();
+        Set<Gene> genes = new HashSet<>();
+        Integer previousGeneId = null;
+        Gene.GeneBuilder geneBuilder = null;
         for ( GeneDTO dto : cacheDAO.getCurrentGenes( speciesRestrictions ) ) {
-            Integer species = dto.getSpecies();
-            String symbol = dto.getSymbol();
+            // Iteration ordered by geneId
+            Integer geneId = dto.getGeneId();
+            String syn = dto.getSynonym();
+            if ( geneId.equals( previousGeneId ) ) { // Still on same gene
+                geneBuilder.synonym( syn );
+            } else { // New Gene
 
-            // Synonyms
-            Map<String, Set<String>> synMap = allSynMap.get( species );
+                // Finalize Gene
+                if ( geneBuilder != null ) {
+                    genes.add( geneBuilder.build() );
+                }
 
-            if ( synMap == null ) {
-                synMap = new HashMap<>();
-                allSynMap.put( species, synMap );
+                Collection<Accession> accs = geneIdToPrimary.get( geneId );
+                geneBuilder = new Gene.GeneBuilder( geneId, dto.getSymbol(), speciesCache.get( dto.getSpeciesId() ),
+                        accs );
+
+                // Add first synonym
+                if ( syn != null ) {
+                    // Null values means it has no synonyms
+                    geneBuilder.synonym( syn );
+                }
+
             }
+            previousGeneId = geneId;
+        }
 
-            Set<String> syns = synMap.get( symbol );
+        // Finalize Gene
+        if ( geneBuilder != null ) {
+            genes.add( geneBuilder.build() );
+        }
 
-            if ( syns == null ) {
-                syns = new HashSet<>();
-                synMap.put( symbol, syns );
-            }
+        // Creating caches
 
-            syns.addAll( Arrays.asList( dto.getSynonyms().split( "\\|" ) ) );
+        for ( Species species : speciesList ) {
+            speciesToSymbolGenes.put( species.getId(), new ConcurrentHashMap<String, Gene>() );
+            speciesToSecondarySymbolGenes.put( species.getId(), HashMultimap.<String, Gene> create() );
+        }
 
-            // Accessions
-            Map<String, Set<Accession>> accMap = allAccMap.get( species );
+        for ( Gene g : genes ) {
+            Integer speciesId = g.getSpecies().getId();
+            String symbol = g.getSymbol();
 
-            if ( accMap == null ) {
-                accMap = new HashMap<>();
-                allAccMap.put( species, accMap );
-            }
+            // Official symbol cache
+            Map<String, Gene> m = speciesToSymbolGenes.get( speciesId );
+            m.put( symbol.toUpperCase(), g );
 
-            Set<Accession> accs = accMap.get( symbol );
-
-            if ( accs == null ) {
-                accs = new HashSet<>();
-                accMap.put( symbol, accs );
-            }
-
-            Accession acc = primaryAccession.get( dto.getAccession() );
-
-            if ( acc != null ) {
-                accs.add( acc );
-            } else {
-                log.warn( "Accession (" + acc + ") somehow missing when creating genes" );
+            // Secondary symbol cache
+            Multimap<String, Gene> msec = speciesToSecondarySymbolGenes.get( speciesId );
+            for ( String syn : g.getSynonyms() ) {
+                msec.put( syn.toUpperCase(), g );
             }
 
         }
 
-        for ( Entry<Integer, Map<String, Set<String>>> speciesEntry : allSynMap.entrySet() ) {
-            Integer species = speciesEntry.getKey();
-            Map<String, Gene> m = speciesToSymbolGenes.get( species );
-
-            if ( m == null ) {
-                m = new ConcurrentHashMap<>();
-                speciesToSymbolGenes.put( species, m );
-            }
-
-            Map<String, Set<Accession>> accMap = allAccMap.get( species );
-            Map<String, Set<String>> synMap = allSynMap.get( species );
-
-            for ( String symbol : speciesEntry.getValue().keySet() ) {
-                Gene g = new Gene( symbol, speciesCache.get( species ), accMap.get( symbol ), synMap.get( symbol ) );
-                m.put( symbol.toUpperCase(), g );
-            }
-
-        }
         log.info( "Done loading current genes..." );
 
         for ( Species species : speciesList ) {
@@ -716,21 +721,6 @@ public class Cache implements Serializable {
 
         // Gene caches for auto-completion
         // ****************************
-        // secondary cache
-        for ( Entry<Integer, Map<String, Gene>> spEntry : speciesToSymbolGenes.entrySet() ) {
-            Integer speciesId = spEntry.getKey();
-            Multimap<String, Gene> msec = speciesToSecondarySymbolGenes.get( speciesId );
-            if ( msec == null ) {
-                msec = HashMultimap.create();
-                speciesToSecondarySymbolGenes.put( speciesId, msec );
-            }
-            for ( Gene g : spEntry.getValue().values() ) {
-                for ( String syn : g.getSynonyms() ) {
-                    msec.put( syn.toUpperCase(), g );
-                }
-
-            }
-        }
 
         // radix trie for symbols
         for ( Entry<Integer, Map<String, Gene>> spEntry : speciesToSymbolGenes.entrySet() ) {
@@ -1219,12 +1209,6 @@ public class Cache implements Serializable {
 
     public Set<String> getEvidenceCategories() {
         return evidenceCategoryCache;
-    }
-
-    public Accession getAccession( String acc ) {
-        if ( acc == null ) return null;
-        return primaryAccession.get( acc );
-
     }
 
     public Species getSpecies( Integer id ) {

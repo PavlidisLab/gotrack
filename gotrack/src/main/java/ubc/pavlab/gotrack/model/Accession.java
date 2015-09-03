@@ -22,6 +22,7 @@ package ubc.pavlab.gotrack.model;
 import java.util.Collection;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 
 /**
  * Represents a primary accession of the most current edition.
@@ -31,19 +32,20 @@ import com.google.common.collect.ImmutableSet;
  */
 public final class Accession {
 
+    private final int geneId;
     private final String accession;
     private final Dataset dataset; // Swiss-Prot vs TrEMBL
     private final Collection<String> secondary; // All accessions that now represent this primary accession
 
-    public Accession( String accession, boolean sp, Collection<String> secondary ) {
-        super();
-        this.accession = accession;
-        if ( sp ) {
-            this.dataset = Dataset.SwissProt;
-        } else {
-            this.dataset = Dataset.TrEMBL;
-        }
-        this.secondary = ImmutableSet.copyOf( secondary );
+    private Accession( AccessionBuilder builder ) {
+        this.geneId = builder.geneId;
+        this.accession = builder.accession;
+        this.dataset = builder.dataset;
+        this.secondary = builder.secondary.build();
+    }
+
+    public int getGeneId() {
+        return geneId;
     }
 
     public String getAccession() {
@@ -81,6 +83,32 @@ public final class Accession {
             if ( other.accession != null ) return false;
         } else if ( !accession.equals( other.accession ) ) return false;
         return true;
+    }
+
+    public static class AccessionBuilder {
+        private final int geneId;
+        private final String accession;
+        private final Dataset dataset;
+        private Builder<String> secondary = new ImmutableSet.Builder<String>();
+
+        public AccessionBuilder( int geneId, String accession, boolean sp ) {
+            this.geneId = geneId;
+            this.accession = accession;
+            if ( sp ) {
+                this.dataset = Dataset.SwissProt;
+            } else {
+                this.dataset = Dataset.TrEMBL;
+            }
+        }
+
+        public AccessionBuilder secondary( String sec ) {
+            this.secondary.add( sec );
+            return this;
+        }
+
+        public Accession build() {
+            return new Accession( this );
+        }
     }
 
 }

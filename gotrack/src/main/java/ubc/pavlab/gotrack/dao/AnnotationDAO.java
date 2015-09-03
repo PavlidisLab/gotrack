@@ -23,9 +23,9 @@ import java.util.List;
 import java.util.Set;
 
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
+import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
 
 /**
@@ -37,7 +37,7 @@ public interface AnnotationDAO {
     /**
      * Retrieve data necessary for enrichment of given set of genes
      */
-    public List<EnrichmentDTO> enrich( Integer species, Set<Gene> genes ) throws DAOException;
+    public List<EnrichmentDTO> enrich( Set<Gene> genes ) throws DAOException;
 
     /**
      * Retrieves counts of unique annotations grouped by evidence category over time for a specific GO Id
@@ -52,6 +52,6 @@ public interface AnnotationDAO {
     /**
      * Retrieve data necessary for tracking a specific gene over time
      */
-    public List<AnnotationDTO> track( Integer speciesId, String symbol ) throws DAOException;
+    public List<AnnotationDTO> track( Gene g ) throws DAOException;
 
 }
