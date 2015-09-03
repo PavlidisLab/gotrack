@@ -31,3 +31,6 @@ created by https://www.gitignore.io
 ## File-based project format:
 *.ipr
 *.iws
+
+### Python ###
+*.py[cod]
