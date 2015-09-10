@@ -377,55 +377,84 @@ public class Cache implements Serializable {
         // ****************************
         if ( !settingsCache.isDryRun() ) {
 
-            // Reads from database
-            if ( !settingsCache.recalculate() ) {
+            // *************** Reads from database ******************
+            Map<Integer, Integer> mostRecentAggregateEditions = new HashMap<>();
+            Map<Integer, Integer> mostRecentCountEditions = new HashMap<>();
 
-                // Aggregate cache creation
-                // ****************************
-                log.info( "Attempting to create Aggregates from database cache" );
-                for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
-                    Map<Edition, Aggregate> m1 = aggregates.get( dto.getSpecies() );
+            // Aggregate cache creation
+            // ****************************
+            log.info( "Attempting to create Aggregates from database cache" );
+            for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
+                Map<Edition, Aggregate> m1 = aggregates.get( dto.getSpecies() );
 
-                    if ( m1 == null ) {
-                        m1 = new ConcurrentHashMap<>();
-                        aggregates.put( dto.getSpecies(), m1 );
-                    }
-
-                    Edition ed = allEditions.get( dto.getSpecies() ).get( dto.getEdition() );
-
-                    m1.put( ed, new Aggregate( dto ) );
-
+                if ( m1 == null ) {
+                    m1 = new ConcurrentHashMap<>();
+                    aggregates.put( dto.getSpecies(), m1 );
                 }
-                // ****************************
-                // Annotation Counts cache creation
-                // ****************************
-                log.info( "Attempting to create Annotation Counts from database cache" );
-                for ( AnnotationCountDTO dto : cacheDAO.getGOAnnotationCounts( speciesRestrictions ) ) {
-                    MultiKey k = new MultiKey( dto );
 
-                    if ( dto.getDirectCount() != null ) {
-                        Integer prev = directAnnotationCount.put( k, dto.getDirectCount() );
-                        if ( prev != null ) {
-                            // key existed before
-                            log.warn( k );
-                        }
-                    }
+                Edition ed = allEditions.get( dto.getSpecies() ).get( dto.getEdition() );
 
-                    if ( dto.getInferredCount() != null ) {
-                        Integer prev = inferredAnnotationCount.put( k, dto.getInferredCount() );
-                        if ( prev != null ) {
-                            // key existed before
-                            log.warn( k );
-                        }
-                    }
+                m1.put( ed, new Aggregate( dto ) );
+
+                Integer recentEdition = mostRecentAggregateEditions.get( dto.getSpecies() );
+
+                if ( recentEdition == null || dto.getEdition() > recentEdition ) {
+                    mostRecentAggregateEditions.put( dto.getSpecies(), dto.getEdition() );
                 }
 
             }
+            // ****************************
+            // Annotation Counts cache creation
+            // ****************************
+            log.info( "Attempting to create Annotation Counts from database cache" );
+            for ( AnnotationCountDTO dto : cacheDAO.getGOAnnotationCounts( speciesRestrictions ) ) {
+                MultiKey k = new MultiKey( dto );
 
-            // If creation from database failed
-            if ( aggregates == null || aggregates.isEmpty() || directAnnotationCount == null
-                    || directAnnotationCount.isEmpty() || inferredAnnotationCount == null
-                    || inferredAnnotationCount.isEmpty() ) {
+                if ( dto.getDirectCount() != null ) {
+                    Integer prev = directAnnotationCount.put( k, dto.getDirectCount() );
+                    if ( prev != null ) {
+                        // key existed before
+                        log.warn( k );
+                    }
+                }
+
+                if ( dto.getInferredCount() != null ) {
+                    Integer prev = inferredAnnotationCount.put( k, dto.getInferredCount() );
+                    if ( prev != null ) {
+                        // key existed before
+                        log.warn( k );
+                    }
+                }
+
+                Integer recentEdition = mostRecentCountEditions.get( dto.getSpecies() );
+
+                if ( recentEdition == null || dto.getEdition() > recentEdition ) {
+                    mostRecentCountEditions.put( dto.getSpecies(), dto.getEdition() );
+                }
+
+            }
+            // ****************************
+
+            // ******************************************************
+
+            // Check to see if aggregates are out of date with data
+            boolean outOfDate = false;
+            for ( Entry<Integer, Map<Integer, Edition>> speciesEntry : allEditions.entrySet() ) {
+                Integer speciesId = speciesEntry.getKey();
+                Collection<Edition> eds = speciesEntry.getValue().values();
+                if ( !eds.isEmpty() ) {
+                    Integer mostRecentEdition = Collections.max( eds ).getEdition();
+                    // Check against aggregates and counts
+                    Integer aggRecentEdition = mostRecentAggregateEditions.get( speciesId );
+                    outOfDate |= ( !mostRecentEdition.equals( aggRecentEdition ) );
+
+                    Integer cntRecentEdition = mostRecentCountEditions.get( speciesId );
+                    outOfDate |= ( !mostRecentEdition.equals( cntRecentEdition ) );
+                }
+            }
+
+            // If aggregates are out of date
+            if ( outOfDate ) {
                 aggregates.clear();
                 directAnnotationCount.clear();
                 inferredAnnotationCount.clear();
@@ -555,7 +584,8 @@ public class Cache implements Serializable {
                     + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
 
             // Write to table 
-            if ( settingsCache.writeCache() ) {
+            if ( settingsCache.writeCache() && outOfDate ) {
+                log.info( "Attempting to write aggregates to database" );
 
                 if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
                     log.warn(

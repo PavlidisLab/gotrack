@@ -140,16 +140,6 @@ public class SettingsCache implements Serializable {
 
     }
 
-    /**
-     * If true then the pre-calculated data will be redone on application start-up instead of attempting to read data
-     * from database cache
-     */
-    public boolean recalculate() {
-        String r = prop.getProperty( RECALCULATE );
-        return r != null && r.equals( "true" );
-
-    }
-
     public boolean contains( String key ) {
         return prop.contains( key );
     }
