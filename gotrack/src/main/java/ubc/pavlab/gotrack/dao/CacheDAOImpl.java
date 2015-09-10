@@ -108,7 +108,7 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String[] SQL_WRITE_ANNOTATION_COUNTS_TABLE_CREATION = new String[] {
             "DROP TABLE IF EXISTS go_annotation_counts_new",
             "CREATE TABLE go_annotation_counts_new ( id INTEGER NOT NULL AUTO_INCREMENT, species_id INTEGER NOT NULL, edition INTEGER NOT NULL, go_id VARCHAR(10) NOT NULL, direct_annotation_count INTEGER NULL DEFAULT NULL, inferred_annotation_count INTEGER NULL DEFAULT NULL, PRIMARY KEY (id) )" };
-    private static final String SQL_WRITE_ANNOTATION_COUNTS = "INSERT INTO go_annotation_counts_new (species_id, edition, go_id, direct_annotation_count, inferred_annotation_count) VALUES(?, ?, ?, ?, ?)";
+    private static final String SQL_WRITE_ANNOTATION_COUNTS = "INSERT INTO go_annotation_counts_new (species_id, edition, go_id, direct_annotation_count, inferred_annotation_count) VALUES ";
     private static final String[] SQL_WRITE_ANNOTATION_COUNTS_TABLE_DROP_SWAP = new String[] {
             "DROP TABLE IF EXISTS go_annotation_counts_old",
             "RENAME TABLE go_annotation_counts TO go_annotation_counts_old, go_annotation_counts_new To go_annotation_counts" };
@@ -500,38 +500,50 @@ public class CacheDAOImpl implements CacheDAO {
             connection = daoFactory.getConnection();
             saveStateAutoCommit = connection.getAutoCommit();
             connection.setAutoCommit( false );
-            preparedStatement = connection.prepareStatement( SQL_WRITE_ANNOTATION_COUNTS );
+
+            int BATCH_SIZE = 1000;
+            preparedStatement = connection
+                    .prepareStatement( buildBatchInsertSQL( SQL_WRITE_ANNOTATION_COUNTS, 5, BATCH_SIZE ) );
             int i = 0;
+
             for ( MultiKey mk : combinedKeyset ) {
-                preparedStatement.setInt( 1, mk.getSpecies() );
-                preparedStatement.setInt( 2, mk.getEdition() );
-                preparedStatement.setString( 3, mk.getGoId() );
+                int param_number_start = 5 * ( i % BATCH_SIZE );
+                preparedStatement.setInt( param_number_start + 1, mk.getSpecies() );
+                preparedStatement.setInt( param_number_start + 2, mk.getEdition() );
+                preparedStatement.setString( param_number_start + 3, mk.getGoId() );
 
                 Integer count = direct.get( mk );
                 if ( count == null ) {
-                    preparedStatement.setNull( 4, java.sql.Types.INTEGER );
+                    preparedStatement.setNull( param_number_start + 4, java.sql.Types.INTEGER );
                 } else {
-                    preparedStatement.setInt( 4, count );
+                    preparedStatement.setInt( param_number_start + 4, count );
                 }
 
                 count = inferred.get( mk );
                 if ( count == null ) {
-                    preparedStatement.setNull( 5, java.sql.Types.INTEGER );
+                    preparedStatement.setNull( param_number_start + 5, java.sql.Types.INTEGER );
                 } else {
-                    preparedStatement.setInt( 5, count );
+                    preparedStatement.setInt( param_number_start + 5, count );
                 }
 
-                preparedStatement.addBatch();
+                //preparedStatement.addBatch();
                 i++;
-                if ( i % 1000 == 0 || i == combinedKeyset.size() ) {
-
-                    preparedStatement.executeBatch(); // Execute every 1000 items.
-                    connection.commit();
+                if ( i % BATCH_SIZE == 0 || i == combinedKeyset.size() ) {
+                    preparedStatement.execute(); // Execute every BATCH_SIZE items.
+                    preparedStatement.clearParameters();
+                    int itemsLeft = combinedKeyset.size() - i;
+                    if ( itemsLeft < BATCH_SIZE && itemsLeft != 0 ) {
+                        close( preparedStatement );
+                        preparedStatement = connection
+                                .prepareStatement( buildBatchInsertSQL( SQL_WRITE_ANNOTATION_COUNTS, 5, itemsLeft ) );
+                    }
                 }
                 if ( i % 100000 == 0 || i == combinedKeyset.size() ) {
                     log.info( i + " / " + combinedKeyset.size() );
                 }
             }
+
+            connection.commit();
 
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -545,6 +557,29 @@ public class CacheDAOImpl implements CacheDAO {
         }
 
         dropSwapAnnotationCountsTable();
+    }
+
+    private String buildBatchInsertSQL( final String sql, int columnSize, int batchSize ) {
+
+        final StringBuilder paramBuilder = new StringBuilder( "(" );
+        for ( int i = 0; i < columnSize; i++ ) {
+            if ( i != 0 ) {
+                paramBuilder.append( "," );
+            }
+            paramBuilder.append( "?" );
+        }
+        final String placeholders = paramBuilder.append( ")" ).toString();
+
+        final StringBuilder sqlBuilder = new StringBuilder( sql );
+
+        for ( int i = 0; i < batchSize; i++ ) {
+            if ( i != 0 ) {
+                sqlBuilder.append( "," );
+            }
+            sqlBuilder.append( placeholders );
+        }
+        return sqlBuilder.toString();
+
     }
 
     private void createAnnotationCountsTable() {
