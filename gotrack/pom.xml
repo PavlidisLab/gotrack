@@ -173,11 +173,11 @@
 		</dependency>
 
 		<!-- Hibernate -->
-		<dependency>
+<!-- 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 			<version>5.1.9</version>
-		</dependency>
+		</dependency> -->
 
 		<!-- Test Artifacts -->
 		<dependency>

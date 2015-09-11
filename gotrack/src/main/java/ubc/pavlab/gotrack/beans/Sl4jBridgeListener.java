@@ -31,21 +31,19 @@ import org.slf4j.bridge.SLF4JBridgeHandler;
  * @version $Id$
  */
 public class Sl4jBridgeListener implements ServletContextListener {
-    
+
     @Override
-    public void contextInitialized(ServletContextEvent arg) {
-        System.out.println("contextInitialized....");
- 
+    public void contextInitialized( ServletContextEvent arg ) {
+
         //remove the jsf root logger, avoid duplicated logging
         //try comment out this and see the different on the console
         SLF4JBridgeHandler.removeHandlersForRootLogger();
         SLF4JBridgeHandler.install();
     }
- 
+
     @Override
-    public void contextDestroyed(ServletContextEvent arg) {
-        System.out.println("contextDestroyed....");
- 
+    public void contextDestroyed( ServletContextEvent arg ) {
+        // No-op.
     }
- 
+
 }

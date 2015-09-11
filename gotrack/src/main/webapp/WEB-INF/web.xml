@@ -25,6 +25,13 @@
 		  </listener-class>
 	</listener>
 	
+	<!-- Install finalize context -->
+   <listener>
+        <listener-class>
+        		ubc.pavlab.gotrack.listeners.ContextFinalizer
+        </listener-class>
+    </listener>
+	
 	
 	<!-- FacesServlet is main servlet responsible to handle all request. It 
 		acts as central controller. This servlet initializes the JSF components before 
