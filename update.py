@@ -13,41 +13,23 @@ import download
 
 LOG = Log(sys.stdout)
 
-CREDS = {'host': 'localhost',
-         'user': 'root',
-         'passwd': 'toast',
-         'db': 'gotrack_test'
-         }
-
-# CREDS = {'host': 'abe',
-#          'user': 'gotrack',
-#          'passwd': 'gotrack321#',
-#          'db': 'gotrack'
+# CREDS = {'host': 'localhost',
+#          'user': 'root',
+#          'passwd': 'toast',
+#          'db': 'gotrack_test'
 #          }
 
-
-def timeit(method):
-    def timed(*args, **kw):
-        ts = time.time()
-        result = method(*args, **kw)
-        te = time.time()
-
-        print '%r: %2.2f sec' % \
-              (method.__name__, te - ts)
-        return result
-
-    return timed
+CREDS = {'host': 'abe',
+         'user': 'gotrack',
+         'passwd': 'gotrack321#',
+         'db': 'gotrack_sandbox'
+         }
 
 
 @timeit
-def main(cron=False):
+def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
     tmp_directory = None
     try:
-        try:
-            resource_directory = sys.argv[1]
-        except IndexError:
-            resource_directory = None
-
         # Connect to database
         gotrack = GOTrack(**CREDS)
         LOG.info("Connected to host: {host}, db: {db}, user: {user}".format(**CREDS))
@@ -80,10 +62,11 @@ def main(cron=False):
             LOG.warn("No resource directory specified. Creating temporary folder at {0}".format(resource_directory))
 
         # Check for missing data from FTP sites
-        LOG.info("Checking FTP sites for new GO Version data...")
 
         # First check for GO Versions
-        if query_yes_no("Check FTP sites for new GO Version data?"):
+        if not no_dl and (cron or query_yes_no("Check FTP sites for new GO Version data?")):
+            if cron:
+                LOG.info("Checking FTP sites for new GO Versions")
             ftp_go_dates = download.fetch_go_dates()
             missing_go_dates_from_ftp = [(d, f) for d, f in ftp_go_dates.iteritems()
                                          if d not in folder_go and d not in db_go]
@@ -91,7 +74,9 @@ def main(cron=False):
             if len(missing_go_dates_from_ftp) > 0:
                 LOG.warn("Missing {0} GO Versions from FTP".format(len(missing_go_dates_from_ftp)))
 
-                if query_yes_no("Download missing GO Versions?"):
+                if cron or query_yes_no("Download missing GO Versions?"):
+                    if cron:
+                        LOG.info("Downloading missing GO Versions")
                     download.download_go_data([x[1] for x in missing_go_dates_from_ftp], resource_directory)
 
                     files = [f for f in glob.iglob(os.path.join(resource_directory, 'gene_ontology_edit.obo*gz'))]
@@ -108,22 +93,28 @@ def main(cron=False):
                 LOG.info("No new GO Versions found on FTP site")
 
         # Now check for GOA Editions
-        if query_yes_no("Check FTP sites for new GOA Edition data?"):
-            # LOG.info("Checking FTP sites for new GOA Edition data...")
+        if not no_dl and (cron or query_yes_no("Check FTP sites for new GOA Edition data?")):
+            if cron:
+                LOG.info("Checking FTP sites for new GOA Edition data...")
             ftp_goa_editions = {}
+            missing_goa_editions_from_ftp = {}
             for sp, sp_id in sp_map.iteritems():
                 LOG.info("Checking {0}".format(sp))
-                ftp_goa_editions[sp_id] = download.fetch_goa_editions(sp)
-
-            missing_goa_editions_from_ftp = {sp_id: [(x, f) for x, f in ftp_goa_editions[sp_id].iteritems()
-                                             if x not in folder_goa.setdefault(sp_id, {}) and x not in db_goa[sp_id]]
-                                             for sp, sp_id in sp_map.iteritems()}
+                dl_fge = download.fetch_goa_editions(sp)
+                ftp_goa_editions[sp_id] = dl_fge
+                missing = [(x, f) for x, f in dl_fge.iteritems()  if x not in folder_goa.setdefault(sp_id, {}) and
+                           x not in db_goa[sp_id]]
+                missing_goa_editions_from_ftp[sp_id] = missing
+                if len(missing) > 0:
+                    LOG.info("Missing {0} Editions".format(len(missing)))
 
             count_missing_goa_editions = sum(len(v) for v in missing_goa_editions_from_ftp.itervalues())
             if count_missing_goa_editions > 0:
                 LOG.warn("Missing {0} GOA Editions from FTP".format(count_missing_goa_editions))
 
-                if query_yes_no("Download missing GOA Editions?"):
+                if cron or query_yes_no("Download missing GOA Editions?"):
+                    if cron:
+                        LOG.info("Downloading missing GOA Editions")
                     download.download_goa_data({sp: [x[1] for x in missing_goa_editions_from_ftp[sp_id]]
                                                 for sp, sp_id in sp_map.iteritems()}, resource_directory)
 
@@ -149,10 +140,12 @@ def main(cron=False):
             sec_ac = files[0]
             LOG.info("Found sec_ac file ({0}). Ready for update.".format(sec_ac))
         else:
-            if query_yes_no("Could not find sec_ac file, download?"):
+            if not no_dl and (cron or query_yes_no("Could not find sec_ac file, download?")):
+                if cron:
+                    LOG.info("Downloading sec_ac file")
                 download.download_sec_ac(resource_directory)
+                files = [f for f in glob.iglob(os.path.join(resource_directory, 'sec_ac.txt'))]
 
-            files = [f for f in glob.iglob(os.path.join(resource_directory, 'sec_ac.txt'))]
             if len(files) == 1:
                 sec_ac = files[0]
                 LOG.info("Found sec_ac file ({0}). Ready for update.".format(sec_ac))
@@ -166,10 +159,12 @@ def main(cron=False):
             acindex = files[0]
             LOG.info("Found acindex file ({0}). Ready for update.".format(acindex))
         else:
-            if query_yes_no("Could not find acindex file, download?"):
+            if not no_dl and (cron or query_yes_no("Could not find acindex file, download?")):
+                if cron:
+                    LOG.info("Downloading acindex file")
                 download.download_acindex(resource_directory)
+                files = [f for f in glob.iglob(os.path.join(resource_directory, 'acindex.txt'))]
 
-            files = [f for f in glob.iglob(os.path.join(resource_directory, 'acindex.txt'))]
             if len(files) == 1:
                 acindex = files[0]
                 LOG.info("Found acindex file ({0}). Ready for update.".format(acindex))
@@ -195,14 +190,18 @@ def main(cron=False):
 
         # Begin updates
         if len(go_new) > 0 and (cron or query_yes_no("Update GO tables? (Affected tables: '{go_edition}', '{go_term}', "
-                                             "'{go_adjacency}')".format(**gotrack.TABLES))):
+                                                     "'{go_adjacency}')".format(**gotrack.TABLES))):
+            if cron:
+                LOG.info("Updating GO tables")
             for d, f in go_new:
                 LOG.info("Begin:", d.strftime('%Y-%m-%d'))
                 ont = Ontology(d, f)
                 gotrack.update_go_table(ont)
 
-        if count_goa_new > 0 and (cron or query_yes_no("Update GOA tables? (Affected tables: '{edition}', '{gene_annotation}')"
-                                              .format(**gotrack.TABLES))):
+        if count_goa_new > 0 and (cron or query_yes_no("Update GOA tables? (Affected tables: '{edition}', "
+                                                       "'{gene_annotation}')".format(**gotrack.TABLES))):
+            if cron:
+                LOG.info("Updating GOA tables")
             for sp_id, files in goa_new.iteritems():
                 LOG.info("Begin Species:", sp_id)
                 for e, f in files:
@@ -224,35 +223,64 @@ def main(cron=False):
                     gotrack.update_goa_table(sp_id, e, generated, data)
 
         if sec_ac is not None and (cron or query_yes_no("Update sec_ac table? (Affected tables: '{sec_ac}')"
-                                               .format(**gotrack.TABLES))):
+                                                        .format(**gotrack.TABLES))):
+            if cron:
+                LOG.info("Updating sec_ac table")
             data = process_sec_ac(sec_ac)
             gotrack.update_sec_ac_table(data, False)
 
         if acindex is not None and (cron or query_yes_no("Update acindex table? (Affected tables: '{acindex}')"
-                                                .format(**gotrack.TABLES))):
+                                                         .format(**gotrack.TABLES))):
+            if cron:
+                LOG.info("Updating acindex table")
             data = process_acindex(acindex)
             gotrack.update_acindex_table(data, False)
 
-        inconsistent, inc_results = check_database_consistency(gotrack)
-        print inc_results
+        if cron or force_pp or query_yes_no("Check database for consistency? (Used for pre-processing)"):
+            if cron and not force_pp:
+                LOG.info("Checking database for consistency")
+            elif force_pp:
+                LOG.info("Forcing database preprocess (skipping consistency check)")
+            if not force_pp:
+                inconsistent, inc_results = check_database_consistency(gotrack)
+                print inc_results
 
-        if inc_results['preprocess_ood'] or inc_results['aggregate_ood']:
-            if cron or query_yes_no("Database requires preprocessing, run now? "
-                                    "(Make sure new GO and GOA data has been imported as well as new sec_ac and acindex files) "
-                                    "(Affects tables: '{current_genes}', '{goa}', '{accession}', '{synonym}' "
-                                    .format(**GOTrack.TABLES)):
-                gotrack.pre_process_current_genes_tables()
-                gotrack.pre_process_goa_table()
+            if force_pp or inc_results['preprocess_ood']:
+                if cron or force_pp or query_yes_no("Database requires preprocessing, run now? (Make sure new GO and GOA data has "
+                                                    "been imported as well as new sec_ac and acindex files) (Affects tables: "
+                                                    "'{pp_genes_staging}', '{pp_goa_staging}', '{pp_accession_staging}', "
+                                                    "'{pp_synonym_staging}')"
+                                                    .format(**GOTrack.TABLES)):
+                    if cron and not force_pp:
+                        LOG.info("Database requires preprocessing, running now...")
+                    elif force_pp:
+                        LOG.info("Preprocessing database...")
+                    gotrack.pre_process_current_genes_tables()
+                    gotrack.pre_process_goa_table()
+            else:
+                LOG.info("Database does not require preprocessing.")
         else:
-            LOG.info("Database does not require preprocessing.")
+            LOG.info("Consistency Check Skipped")
 
     finally:
-        cleanup(tmp_directory)
+        cleanup(tmp_directory, cron)
 
 
-def cleanup(d, q=False):
-    if d is not None and (q or query_yes_no("Delete temporary folder {0} ?".format(d))):
+def cleanup(d, cron=False):
+    if d is not None and (cron or query_yes_no("Delete temporary folder {0} ?".format(d))):
         shutil.rmtree(d)
+    elif d is not None:
+        LOG.info("Temporary Folder: {0}".format(d))
+
+
+def push_to_production():
+    # Connect to database
+    gotrack = GOTrack(**CREDS)
+    LOG.info("Connected to host: {host}, db: {db}, user: {user}".format(**CREDS))
+
+    gotrack.push_staging_to_production()
+
+    log.info("Staging area has been pushed to production, a restart of GOTrack is now necessary (with writeCache=True)")
 
 
 def check_database_consistency(gotrack, verbose=True):
@@ -313,4 +341,34 @@ def search_files_for_goa(files):
     return species_files
 
 if __name__ == '__main__':
-    main(False)
+    import argparse
+    parser = argparse.ArgumentParser(description='Update GOTrack Database')
+    parser.add_argument('resource_directory', metavar='d', type=str, nargs='?', default=None,
+                        help='a folder holding resources to use in the update')
+    parser.add_argument('--push', dest='push', action='store_true',
+                        help='Push Staging to Production, does not insert data')
+    parser.add_argument('--meta', dest='meta', action='store_true',
+                        help='Display Connection and Table Information')
+    parser.add_argument('--cron', dest='cron', action='store_true',
+                        help='No interactivity mode')
+    parser.add_argument('--no-downloads', dest='dl', action='store_true',
+                        help='Prevent all downloads')
+    parser.add_argument('--force-pp', dest='force_pp', action='store_true',
+                        help='Force preprocessing of database (regardless of need)')
+
+    args = parser.parse_args()
+    if args.push and (args.resource_directory is not None or args.cron or args.dl or args.meta or args.force_pp):
+        LOG.error("--push cannot be specified with other options")
+    elif args.push:
+        # Push Staging to Production
+        push_to_production()
+    elif args.meta:
+        # Push Staging to Production
+        LOG.info("Host: {host}, db: {db}, user: {user}".format(**CREDS))
+        LOG.info(*['TABLES:'] + sorted([x for x in GOTrack.TABLES.iteritems()]), sep="\n")
+    else:
+        # Update database
+        main(args.resource_directory, args.cron, args.dl, args.force_pp)
+
+
+

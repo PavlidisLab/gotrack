@@ -6,6 +6,7 @@ Utility Functions
 
 import sys
 from datetime import datetime
+import time
 
 COLORS = {'red': '\033[0;31m',
           'green': '\033[0;32m',
@@ -16,6 +17,20 @@ COLORS = {'red': '\033[0;31m',
           'white': '\033[0;37m',
           'NC': '\033[0m'
           }
+
+
+def timeit(method):
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+
+        print '%r: %2.2f sec' % \
+              (method.__name__, te - ts)
+        return result
+
+    return timed
+
 
 def max_default(iterable, default=0):
     if len(iterable) == 0:

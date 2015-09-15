@@ -10,7 +10,7 @@ import MySQLdb
 import time
 
 
-from utility import grouper, Log, max_default
+from utility import grouper, Log, timeit
 import warnings
 warnings.filterwarnings("ignore", "Unknown table.*")
 
@@ -27,11 +27,15 @@ class GOTrack:
               'go_edition': "go_edition",
               'sec_ac': "sec_ac",
               'acindex': "acindex",
-              'current_genes': "pp_current_genes",
-              'goa': "pp_goa",
-              'accession': "pp_primary_accessions",
-              'synonym': "pp_synonyms",
               'go_annotation_counts': 'go_annotation_counts',
+              'pp_genes_staging': "pp_current_genes_staging",
+              'pp_goa_staging': "pp_goa_staging",
+              'pp_accession_staging': "pp_primary_accessions_staging",
+              'pp_synonym_staging': "pp_synonyms_staging",
+              'pp_genes': "pp_current_genes",
+              'pp_goa': "pp_goa",
+              'pp_accession': "pp_primary_accessions",
+              'pp_synonym': "pp_synonyms",
               'new': "_tmp_newdata",  # tmp table creation suffix
               'old': "_tmp_olddata"  # tmp table creation suffix
               }
@@ -75,7 +79,8 @@ class GOTrack:
 
                     # Checks to see if pre-processed data is out of date. Specifically, if max edition present in
                     # the pre-processed data is the same as the max edition inserted in the database for all species
-                    cur.execute("SELECT species_id, max(edition) from {goa} goa inner join {current_genes} cg on "
+                    cur.execute("SELECT species_id, max(edition) from {pp_goa} goa "
+                                "inner join {pp_genes} cg on "
                                 "goa.pp_current_genes_id=cg.id group by species_id"
                                 .format(**GOTrack.TABLES))
                     pp_state = cur.fetchall()
@@ -272,8 +277,9 @@ class GOTrack:
                     go_edition_id_fk = cur.fetchone()
 
                     if go_edition_id_fk is None:
-                        log.warn("Failed to link date: {0} to a GO Release. Setting as NULL. FIX MANUALLY."
-                                 .format(date.strftime('%Y-%m-%d')))
+                        log.error("Failed to link date: {0} to a GO Release. Setting as NULL. FIX MANUALLY."
+                                  .format(date.strftime('%Y-%m-%d')))
+                        raise ValueError
                     else:
 
                         log.info("Linked date: {0} to GO Release: {1}".format(date.strftime('%Y-%m-%d'),
@@ -302,6 +308,7 @@ class GOTrack:
             log.error("Problem with database connection", e)
             return
 
+    @timeit
     def pre_process_current_genes_tables(self):
 
         try:
@@ -309,6 +316,15 @@ class GOTrack:
             with self.con as cur:
                 log.info("pre_process_current_genes_tables (~1-2min)")
                 try:
+                    cur.execute("DROP TABLE IF EXISTS {pp_genes_staging}".format(**GOTrack.TABLES))
+                    cur.execute("CREATE TABLE {pp_genes_staging} LIKE {pp_genes}".format(**GOTrack.TABLES))
+
+                    cur.execute("DROP TABLE IF EXISTS {pp_accession_staging}".format(**GOTrack.TABLES))
+                    cur.execute("CREATE TABLE {pp_accession_staging} LIKE {pp_accession}".format(**GOTrack.TABLES))
+
+                    cur.execute("DROP TABLE IF EXISTS {pp_synonym_staging}".format(**GOTrack.TABLES))
+                    cur.execute("CREATE TABLE {pp_synonym_staging} LIKE {pp_synonym}".format(**GOTrack.TABLES))
+
                     cur.execute("SELECT id from {species} order by id".format(**GOTrack.TABLES))
                     species = [x[0] for x in cur.fetchall()]
 
@@ -360,54 +376,33 @@ class GOTrack:
                     # for i,gmap in enumerate(gene_id_maps):
                     #     print i+1, len(gmap)
 
-                    sql = "CREATE TABLE {current_genes}{new} like {current_genes}".format(**GOTrack.TABLES)
-                    cur.execute(sql)
-
                     log.info("Inserting current_genes table")
-                    cnt = self.insert_multiple(GOTrack.TABLES['current_genes'] + GOTrack.TABLES['new'],
+                    cnt = self.insert_multiple(GOTrack.TABLES['pp_genes_staging'],
                                                ["id", "species_id", "symbol"], pp_current_genes,
                                                GOTrack.CONCURRENT_INSERTIONS, cur, False)
                     if cnt == 0:
                         raise (ValueError("No values inserted for current_genes table"))
 
-                    sql = "RENAME TABLE {current_genes} TO {current_genes}{old}, " \
-                          "{current_genes}{new} to {current_genes}".format(**GOTrack.TABLES)
-                    cur.execute(sql)
-
                     #####################
 
-                    sql = "CREATE TABLE {synonym}{new} like {synonym}".format(**GOTrack.TABLES)
-                    cur.execute(sql)
-
                     log.info("Inserting synonym table")
-                    cnt = self.insert_multiple(GOTrack.TABLES['synonym'] + GOTrack.TABLES['new'],
+                    cnt = self.insert_multiple(GOTrack.TABLES['pp_synonym_staging'],
                                                ["pp_current_genes_id", "synonym"], pp_synonyms,
                                                GOTrack.CONCURRENT_INSERTIONS, cur, False)
 
                     if cnt == 0:
                         raise (ValueError("No values inserted for synonym table"))
 
-                    sql = "RENAME TABLE {synonym} TO {synonym}{old}, {synonym}{new} to {synonym}"\
-                        .format(**GOTrack.TABLES)
-                    cur.execute(sql)
-
                     #####################
 
-                    sql = "CREATE TABLE {accession}{new} like {accession}".format(**GOTrack.TABLES)
-                    cur.execute(sql)
-
                     log.info("Inserting accession table")
-                    cnt = self.insert_multiple(GOTrack.TABLES['accession'] + GOTrack.TABLES['new'],
+                    cnt = self.insert_multiple(GOTrack.TABLES['pp_accession_staging'],
                                                ["pp_current_genes_id", "accession"], pp_primary_accessions,
                                                GOTrack.CONCURRENT_INSERTIONS, cur, False)
 
                     if cnt == 0:
                         raise (ValueError("No values inserted for accession table"))
 
-                    sql = "RENAME TABLE {accession} TO {accession}{old}, {accession}{new} to {accession}"\
-                        .format(**GOTrack.TABLES)
-                    cur.execute(sql)
-
                     #####################
 
                     self.con.commit()
@@ -416,48 +411,45 @@ class GOTrack:
                     self.con.rollback()
                 finally:
                     if cur:
-                        cur.execute("DROP TABLE IF EXISTS {current_genes}{old}".format(**GOTrack.TABLES))
-                        cur.execute("DROP TABLE IF EXISTS {current_genes}{new}".format(**GOTrack.TABLES))
-                        cur.execute("DROP TABLE IF EXISTS {synonym}{old}".format(**GOTrack.TABLES))
-                        cur.execute("DROP TABLE IF EXISTS {synonym}{new}".format(**GOTrack.TABLES))
-                        cur.execute("DROP TABLE IF EXISTS {accession}{old}".format(**GOTrack.TABLES))
-                        cur.execute("DROP TABLE IF EXISTS {accession}{new}".format(**GOTrack.TABLES))
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
             return
 
+    @timeit
     def pre_process_goa_table(self):
         try:
             self.con = self.test_and_reconnect()
             with self.con as cur:
                 log.info("pre_process_goa_table (~90min)")
                 try:
-                    sql = "CREATE TABLE {goa}{new} like {goa}".format(**GOTrack.TABLES)
-                    cur.execute(sql)
+                    cur.execute("DROP TABLE IF EXISTS {pp_goa_staging}".format(**GOTrack.TABLES))
+                    cur.execute("CREATE TABLE {pp_goa_staging} LIKE {pp_goa}".format(**GOTrack.TABLES))
 
-                    sql = """INSERT IGNORE INTO {goa}{new}(pp_current_genes_id, edition, qualifier, go_id,
+                    sql = """INSERT IGNORE INTO {pp_goa_staging}(pp_current_genes_id, edition, qualifier, go_id,
                                 evidence, reference)
                              select distinct pp_current_genes_id, edition, qualifier , go_id,
-                                evidence, reference from {gene_annotation}
-                             inner join
-                                (select pp_current_genes_id, sec from {accession} inner join {sec_ac} on ac=accession
+                                evidence, reference from {gene_annotation} ga
+                             inner join ( select species_id, pp_current_genes_id, sec from
+                                (select pp_current_genes_id, sec from {pp_accession_staging}
+                                    inner join {sec_ac} on ac=accession
                                 UNION ALL
-                                select pp_current_genes_id, ac from {accession} inner join {sec_ac} on ac=accession
+                                select pp_current_genes_id, ac from {pp_accession_staging}
+                                    inner join {sec_ac} on ac=accession
                                 UNION
-                                select pp_current_genes_id, accession from {accession}) as gene_mapping on accession=sec
-                             where accession is not null and species_id=%s""".format(**GOTrack.TABLES)
+                                select pp_current_genes_id, accession from {pp_accession_staging}) as gene_mapping
+                                inner join
+                                {pp_genes_staging} cg on cg.id=pp_current_genes_id and species_id=%s ) as gmap
+                             on accession=sec and ga.species_id=gmap.species_id
+                             where accession is not null and ga.species_id=%s""".format(**GOTrack.TABLES)
 
                     cur.execute("SELECT id from {species} order by id".format(**GOTrack.TABLES))
                     species = [x[0] for x in cur.fetchall()]
 
                     for sp_id in species:
                         log.info('species: {0}'.format(sp_id))
-                        cur.execute(sql, [sp_id])
-
-                    sql = "RENAME TABLE {goa} TO {goa}{old}, {goa}{new} to {goa}".format(**GOTrack.TABLES)
-                    cur.execute(sql)
+                        cur.execute(sql, [sp_id, sp_id])
 
                     self.con.commit()
                 except Exception as inst:
@@ -465,9 +457,46 @@ class GOTrack:
                     self.con.rollback()
                 finally:
                     if cur:
-                        cur.execute("DROP TABLE IF EXISTS {goa}{old}".format(**GOTrack.TABLES))
-                        cur.execute("DROP TABLE IF EXISTS {goa}{new}".format(**GOTrack.TABLES))
                         cur.close()
+        except _mysql.Error, e:
+            log.error("Problem with database connection", e)
+            return
+
+    def push_staging_to_production(self):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+
+                try:
+                    # Check to see if staging area has data
+                    for t in ['{pp_genes_staging}', '{pp_goa_staging}', '{pp_accession_staging}',
+                              '{pp_synonym_staging}']:
+
+                        sql = "SELECT COUNT(*) from " + t
+                        cur.execute(sql.format(**GOTrack.TABLES))
+                        cnt = cur.fetchone()
+
+                        if cnt == 0:
+                            raise ValueError((t + " is empty; cancelling push to production").format(**GOTrack.TABLES))
+
+                    # Swap Staging and Production tables
+                    swap_template = "{prod} TO {prod}{old}, {staging} to {prod}"
+
+                    for staging, prod in [('{pp_genes_staging}', '{pp_genes}'),
+                                          ('{pp_goa_staging}', '{pp_goa}'),
+                                          ('{pp_accession_staging}', '{pp_accession}'),
+                                          ('{pp_synonym_staging}', '{pp_synonym)')]:
+                        sql = swap_template.format(staging=staging, prod=prod)
+                        cur.execute(sql.format(**GOTrack.TABLES))
+
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back', inst)
+                    self.con.rollback()
+                finally:
+                    if cur:
+                        cur.close()
+
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
             return
