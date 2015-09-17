@@ -481,9 +481,10 @@ public class CacheDAOImpl implements CacheDAO {
         return list;
     }
 
-    // WRITE ORIENTED
+    // WRITE ORIENTED ***************** THESE ARE NO LONGER USED BUT ARE BEING KEPT FOR NOW... JUST IN CASE ******************
 
     @Override
+    @Deprecated
     public void writeAnnotationCounts( Map<MultiKey, Integer> direct, Map<MultiKey, Integer> inferred ) {
         if ( direct == null || inferred == null ) {
             return;
@@ -559,6 +560,7 @@ public class CacheDAOImpl implements CacheDAO {
         dropSwapAnnotationCountsTable();
     }
 
+    @Deprecated
     private String buildBatchInsertSQL( final String sql, int columnSize, int batchSize ) {
 
         final StringBuilder paramBuilder = new StringBuilder( "(" );
@@ -582,6 +584,7 @@ public class CacheDAOImpl implements CacheDAO {
 
     }
 
+    @Deprecated
     private void createAnnotationCountsTable() {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
@@ -603,6 +606,7 @@ public class CacheDAOImpl implements CacheDAO {
 
     }
 
+    @Deprecated
     private void dropSwapAnnotationCountsTable() {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
@@ -623,6 +627,7 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
+    @Deprecated
     public void writeAggregates( Map<Integer, Map<Edition, Aggregate>> aggs ) {
         if ( aggs == null ) {
             return;
@@ -684,6 +689,7 @@ public class CacheDAOImpl implements CacheDAO {
         dropSwapAggregateTable();
     }
 
+    @Deprecated
     private void createAggregateTable() {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
@@ -703,6 +709,7 @@ public class CacheDAOImpl implements CacheDAO {
 
     }
 
+    @Deprecated
     private void dropSwapAggregateTable() {
         Connection connection = null;
         PreparedStatement preparedStatement = null;

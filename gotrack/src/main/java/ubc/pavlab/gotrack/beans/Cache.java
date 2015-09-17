@@ -41,7 +41,6 @@ import javax.faces.bean.ApplicationScoped;
 import javax.faces.bean.ManagedBean;
 import javax.faces.bean.ManagedProperty;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 
@@ -78,7 +77,6 @@ import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
-import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntology;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.RelationshipType;
@@ -446,185 +444,34 @@ public class Cache implements Serializable {
                     Integer mostRecentEdition = Collections.max( eds ).getEdition();
                     // Check against aggregates and counts
                     Integer aggRecentEdition = mostRecentAggregateEditions.get( speciesId );
-                    outOfDate |= ( !mostRecentEdition.equals( aggRecentEdition ) );
+                    boolean ood = ( !mostRecentEdition.equals( aggRecentEdition ) );
+                    if ( ood ) {
+                        log.warn(
+                                "Most recent edition in Aggregate Data (" + aggRecentEdition
+                                        + ") does not match most recent edition in Edition Table (" + mostRecentEdition
+                                        + ") for species (" + speciesId + ")" );
+                    }
+                    outOfDate |= ood;
 
                     Integer cntRecentEdition = mostRecentCountEditions.get( speciesId );
-                    outOfDate |= ( !mostRecentEdition.equals( cntRecentEdition ) );
+                    ood = ( !mostRecentEdition.equals( cntRecentEdition ) );
+                    if ( ood ) {
+                        log.warn(
+                                "Most recent edition in Aggregate Count Data (" + cntRecentEdition
+                                        + ") does not match most recent edition in Edition Table (" + mostRecentEdition
+                                        + ") for species (" + speciesId + ")" );
+                    }
+                    outOfDate |= ood;
                 }
             }
 
             // If aggregates are out of date
             if ( outOfDate ) {
-                aggregates.clear();
-                directAnnotationCount.clear();
-                inferredAnnotationCount.clear();
-
-                log.info( "Create Annotation Counts and Aggregates in memory (not from table)" );
-                for ( Species species : speciesList ) {
-                    if ( speciesRestrictions == null || speciesRestrictions.length == 0
-                            || ArrayUtils.contains( speciesRestrictions, species.getId() ) ) {
-                        // No restrictions set or species in restrictions
-                        Integer speciesId = species.getId();
-                        log.info( "Starting species (" + speciesId + ")" );
-                        Map<Integer, Edition> m = allEditions.get( speciesId );
-                        if ( m != null ) {
-
-                            Map<Edition, Aggregate> speciesAggregates = new ConcurrentHashMap<>();
-                            aggregates.put( speciesId, speciesAggregates );
-
-                            int i = 0;
-                            int total = m.size();
-                            for ( Edition ed : m.values() ) {
-                                if ( ++i % 10 == 0 ) log.info( i + "/" + total );
-                                List<SimpleAnnotationDTO> results = cacheDAO.getSimpleAnnotations( speciesId, ed );
-
-                                // These are for computing the number of genes associated with each go term
-
-                                Map<GeneOntologyTerm, Integer> tempDirectAnnotationCount = new HashMap<>();
-                                Map<GeneOntologyTerm, Set<Integer>> tempAnnotationSets = new HashMap<>();
-
-                                // These are for computing the number of go terms associated with each gene
-
-                                Map<Integer, Set<GeneOntologyTerm>> tempTermSets = new HashMap<>();
-
-                                // propagation cache for speed purposes
-
-                                Map<GeneOntologyTerm, Set<GeneOntologyTerm>> ancestorCache = new HashMap<>();
-
-                                // Begin
-
-                                GeneOntology o = ontologies.get( ed.getGoEdition() );
-
-                                for ( SimpleAnnotationDTO dto : results ) {
-                                    String goId = dto.getGoId();
-                                    Integer geneId = dto.getGeneId();
-                                    // Integer count = dto.getCount();
-                                    GeneOntologyTerm t = o.getTerm( goId );
-
-                                    if ( t != null ) {
-
-                                        // Deal with direct counts
-
-                                        Integer directCnt = tempDirectAnnotationCount.get( t ); // gene counts
-                                        tempDirectAnnotationCount.put( t, ( directCnt == null ) ? 1 : directCnt + 1 );
-
-                                        // Deal with inferred counts
-
-                                        Set<GeneOntologyTerm> propagate = o.getAncestors( t, true, ancestorCache );
-                                        propagate.add( t );
-
-                                        for ( GeneOntologyTerm term : propagate ) { // gene counts
-                                            Set<Integer> s = tempAnnotationSets.get( term );
-                                            if ( s == null ) {
-                                                s = new HashSet<>();
-                                                tempAnnotationSets.put( term, s );
-                                            }
-                                            s.add( geneId );
-                                        }
-
-                                        Set<GeneOntologyTerm> terms = tempTermSets.get( geneId ); // term counts
-                                        if ( terms == null ) {
-                                            terms = new HashSet<>();
-                                            tempTermSets.put( geneId, terms );
-                                        }
-                                        terms.addAll( propagate );
-
-                                    } else {
-                                        // log.warn( "Term not found in edition " + ed + " (" + goId + ")" );
-                                    }
-
-                                }
-
-                                int totalGeneSetSizes = 0;
-
-                                // Convert sets into counts
-                                for ( Entry<GeneOntologyTerm, Set<Integer>> entry : tempAnnotationSets.entrySet() ) {
-                                    MultiKey k = new MultiKey( speciesId, ed, entry.getKey() );
-                                    this.inferredAnnotationCount.put( k, entry.getValue().size() );
-                                    totalGeneSetSizes += entry.getValue().size(); // For calculating avgGenesByTerm
-                                    Integer cnt = tempDirectAnnotationCount.get( entry.getKey() );
-                                    if ( cnt != null ) {
-                                        this.directAnnotationCount.put( k, cnt );
-                                    }
-
-                                }
-
-                                int totalTermSetSizes = 0;
-
-                                for ( Entry<Integer, Set<GeneOntologyTerm>> entry : tempTermSets.entrySet() ) {
-                                    totalTermSetSizes += entry.getValue().size();
-                                }
-
-                                // GeneCount, avgDirectByGene, avgInferredByGene, avgGenesByTerm
-                                // TODO: geneCount is always 1 greater than my previous values, check into this. Possibly nulls?
-                                int geneCount = tempTermSets.keySet().size();
-                                if ( geneCount != 0 ) {
-                                    speciesAggregates.put( ed,
-                                            new Aggregate( geneCount,
-                                                    results.size() / ( double ) geneCount, totalTermSetSizes
-                                                            / ( double ) geneCount,
-                                                    totalGeneSetSizes
-                                                            / ( double ) tempAnnotationSets.keySet().size() ) );
-                                }
-
-                            }
-                        }
-
-                        log.info( "Used Memory: "
-                                + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
-                                + " MB" );
-
-                    }
-                }
-            }
-
-            log.info( "Annotation Counts and Aggregates successfully obtained" );
-            // System.gc();
-            log.info( "Used Memory: "
-                    + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
-
-            // Write to table 
-            if ( settingsCache.writeCache() && outOfDate ) {
-                log.info( "Attempting to write aggregates to database" );
-
-                if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
-                    log.warn(
-                            "Cannot write Aggregate and/or Annotation Counts to database for fast retrieval if not all species are loaded!" );
-                } else {
-                    log.info( "Writing aggregates to DB" );
-                    cacheDAO.writeAggregates( aggregates );
-                    log.info( "Finished Writing aggregates" );
-
-                    log.info( "Writing direct and inferred annotation counts to DB" );
-                    cacheDAO.writeAnnotationCounts( directAnnotationCount, inferredAnnotationCount );
-                    log.info( "Finished Writing annotation counts" );
-                }
-
+                log.warn(
+                        "Aggregate Data and/or Aggregate Count Data Tables appear to be in need of pre-processing, "
+                                + "this will most likely break functionality somewhere" );
             }
         }
-        // ****************************
-
-        // Aggregate cache creation
-        // ****************************
-        //        if ( !settingsCache.isDryRun() ) {
-        //            for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
-        //                Map<Edition, StatsEntry> m1 = aggregates.get( dto.getSpecies() );
-        //
-        //                if ( m1 == null ) {
-        //                    m1 = new ConcurrentHashMap<>();
-        //                    aggregates.put( dto.getSpecies(), m1 );
-        //                }
-        //
-        //                Edition ed = allEditions.get( dto.getSpecies() ).get( dto.getEdition() );
-        //
-        //                m1.put( ed, new StatsEntry( dto ) );
-        //
-        //            }
-        //            log.info( "Aggregates successfully obtained" );
-        //
-        //            log.info( "Used Memory: "
-        //                    + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
-        //        }
         // ****************************
 
         // Accession creation

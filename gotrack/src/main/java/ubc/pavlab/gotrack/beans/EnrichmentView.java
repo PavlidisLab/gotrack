@@ -127,7 +127,7 @@ public class EnrichmentView implements Serializable {
     private static final Integer MAX_RESULTS = 15;
 
     // Max size of hit list
-    private static final int MAX_GENESET_SIZE = 300;
+    private static final int MAX_GENESET_SIZE = 20000;
 
     @ManagedProperty("#{settingsCache}")
     private SettingsCache settingsCache;
@@ -307,10 +307,10 @@ public class EnrichmentView implements Serializable {
 
                 Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> geneGOMapFromDB;
 
+                geneGOMapFromDB = annotationService.fetchEnrichmentData( currentSpeciesId, genesToLoad );
+
                 statusPoller.completeStatus();
                 statusPoller.newStatus( "Propagating GO Terms...", 30 );
-
-                geneGOMapFromDB = annotationService.fetchEnrichmentData( currentSpeciesId, genesToLoad );
 
                 log.info( "Propagating GO Terms..." );
                 Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> prop = propagate( geneGOMapFromDB );

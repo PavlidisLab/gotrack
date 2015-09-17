@@ -140,7 +140,7 @@ public class StatsService implements Serializable {
         if ( settingsCache.isPopularTableUpdateable() ) {
             statsDAO.incrementGeneHit( g.getSpecies().getId(), g.getSymbol() );
         }
-        log.debug( "Hits Map: " + trackPopularGenes );
+        // log.debug( "Hits Map: " + trackPopularGenes );
     }
 
     public void countTermHit( GeneOntologyTerm t ) {
@@ -148,7 +148,7 @@ public class StatsService implements Serializable {
         if ( settingsCache.isPopularTableUpdateable() ) {
             statsDAO.incrementTermHit( t.getGoId() );
         }
-        log.debug( "Hits Map: " + trackPopularTerms );
+        // log.debug( "Hits Map: " + trackPopularTerms );
     }
 
     public List<String> getTopMultifunc() {
