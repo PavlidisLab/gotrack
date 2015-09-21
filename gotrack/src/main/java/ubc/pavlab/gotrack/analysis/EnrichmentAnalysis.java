@@ -140,8 +140,13 @@ public class EnrichmentAnalysis {
             Set<GeneOntologyTerm> rj = new HashSet<>(); // Rejected Terms
             Set<GeneOntologyTerm> sig = new HashSet<>(); // Significant Terms
 
-            int populationSize = cache.getGeneCount( currentSpeciesId, ed );
-            int sampleSize = sampleSizes.get( ed );
+            Integer populationSize = cache.getGeneCount( currentSpeciesId, ed );
+            Integer sampleSize = sampleSizes.get( ed );
+
+            if ( populationSize == null || sampleSize == null ) {
+                log.warn( "Could not find aggregate data for edition (" + ed + "), skipping..." );
+                continue;
+            }
 
             /*
              * pre-loop to remove terms that don't fit population limits, to get test set size for bonferroni and to get
