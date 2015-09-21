@@ -276,8 +276,9 @@ class GOTrack:
                     log.info("Attempting to link GOA Edition to GO Version")
                     sql = "select id, date from {go_edition} where date <= %s order by date DESC LIMIT 1".format(
                         **GOTrack.TABLES)
-                    cur.execute(sql, date.strftime('%Y-%m-%d'))
+                    cur.execute(sql, [date.strftime('%Y-%m-%d')])
                     go_edition_id_fk = cur.fetchone()
+                    cur.nextset()
 
                     if go_edition_id_fk is None:
                         log.error("Failed to link date: {0} to a GO Release. Setting as NULL. FIX MANUALLY."
@@ -543,7 +544,7 @@ class GOTrack:
 
                 try:
                     cur.execute("select child, parent, relationship from {go_adjacency} where go_edition_id_fk = %s"
-                                .format(**GOTrack.TABLES), go_ed)
+                                .format(**GOTrack.TABLES), [go_ed])
                     for row in cur:
                             yield row
                     self.con.commit()
@@ -565,7 +566,7 @@ class GOTrack:
 
                 try:
                     cur.execute("select go_id, name, aspect from {go_term} where go_edition_id_fk = %s"
-                                .format(**GOTrack.TABLES), go_ed)
+                                .format(**GOTrack.TABLES), [go_ed])
                     for row in cur:
                             yield row
                     self.con.commit()
