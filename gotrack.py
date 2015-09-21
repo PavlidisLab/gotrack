@@ -27,7 +27,10 @@ class GOTrack:
               'go_edition': "go_edition",
               'sec_ac': "sec_ac",
               'acindex': "acindex",
-              'go_annotation_counts': 'go_annotation_counts',
+              'pp_edition_aggregates': 'pp_edition_aggregates',
+              'pp_edition_aggregates_staging': 'pp_edition_aggregates_staging',
+              'pp_go_annotation_counts': 'pp_go_annotation_counts',
+              'pp_go_annotation_counts_staging': 'pp_go_annotation_counts_staging',
               'pp_genes_staging': "pp_current_genes_staging",
               'pp_goa_staging': "pp_goa_staging",
               'pp_accession_staging': "pp_primary_accessions_staging",
@@ -88,7 +91,7 @@ class GOTrack:
 
                     # Checks to see if the aggregate data is out of date with the database. If not then a server
                     # restart is required with suitable options for recreation of aggregates.
-                    cur.execute("SELECT species_id, max(edition) from {go_annotation_counts} group by species_id"
+                    cur.execute("SELECT species_id, max(edition) from {pp_go_annotation_counts} group by species_id"
                                 .format(**GOTrack.TABLES))
                     pp_state = cur.fetchall()
                     results['aggregate_ood'] = pp_state != db_state
@@ -469,25 +472,32 @@ class GOTrack:
 
                 try:
                     # Check to see if staging area has data
-                    for t in ['{pp_genes_staging}', '{pp_goa_staging}', '{pp_accession_staging}',
-                              '{pp_synonym_staging}']:
-
-                        sql = "SELECT COUNT(*) from " + t
-                        cur.execute(sql.format(**GOTrack.TABLES))
-                        cnt = cur.fetchone()
-
-                        if cnt == 0:
-                            raise ValueError((t + " is empty; cancelling push to production").format(**GOTrack.TABLES))
+                    # for t in ['{pp_genes_staging}', '{pp_goa_staging}', '{pp_accession_staging}',
+                    #           '{pp_synonym_staging}']:
+                    #
+                    #     sql = "SELECT COUNT(*) from " + t
+                    #     cur.execute(sql.format(**GOTrack.TABLES))
+                    #     cnt = cur.fetchone()
+                    #
+                    #     if cnt == 0:
+                    #         raise ValueError((t + " is empty; cancelling push to production").format(**GOTrack.TABLES))
 
                     # Swap Staging and Production tables
-                    swap_template = "{prod} TO {prod}{old}, {staging} to {prod}"
+                    swap_template = "rename table {prod} TO {prod}{old}, {staging} to {prod}"
 
                     for staging, prod in [('{pp_genes_staging}', '{pp_genes}'),
                                           ('{pp_goa_staging}', '{pp_goa}'),
                                           ('{pp_accession_staging}', '{pp_accession}'),
-                                          ('{pp_synonym_staging}', '{pp_synonym)')]:
-                        sql = swap_template.format(staging=staging, prod=prod)
-                        cur.execute(sql.format(**GOTrack.TABLES))
+                                          ('{pp_synonym_staging}', '{pp_synonym}'),
+                                          ('{pp_edition_aggregates_staging}', '{pp_edition_aggregates}'),
+                                          ('{pp_go_annotation_counts_staging}', '{pp_go_annotation_counts}')]:
+                        staging = staging.format(**GOTrack.TABLES)
+                        prod = prod.format(**GOTrack.TABLES)
+
+                        cur.execute("DROP TABLE IF EXISTS {prod}{old}".format(prod=prod, **GOTrack.TABLES))
+
+                        sql = swap_template.format(staging=staging, prod=prod, **GOTrack.TABLES)
+                        cur.execute(sql)
 
                     self.con.commit()
                 except Exception as inst:
@@ -500,6 +510,170 @@ class GOTrack:
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
             return
+
+    # Stuff to do with aggregate creation
+
+    def fetch_editions(self):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+
+                try:
+                    cur.execute("select species_id, edition, ed.date goa_date, go_edition_id_fk, "
+                                "ged.date go_date from {edition} ed inner join {go_edition} ged on "
+                                "ed.go_edition_id_fk = ged.id".format(**GOTrack.TABLES))
+                    for row in cur:
+                            yield row
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back', inst)
+                    self.con.rollback()
+                finally:
+                    if cur:
+                        cur.close()
+
+        except _mysql.Error, e:
+            log.error("Problem with database connection", e)
+            return
+
+    def fetch_adjacency_list(self, go_ed):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+
+                try:
+                    cur.execute("select child, parent, relationship from {go_adjacency} where go_edition_id_fk = %s"
+                                .format(**GOTrack.TABLES), go_ed)
+                    for row in cur:
+                            yield row
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back', inst)
+                    self.con.rollback()
+                finally:
+                    if cur:
+                        cur.close()
+
+        except _mysql.Error, e:
+            log.error("Problem with database connection", e)
+            return
+
+    def fetch_term_list(self, go_ed):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+
+                try:
+                    cur.execute("select go_id, name, aspect from {go_term} where go_edition_id_fk = %s"
+                                .format(**GOTrack.TABLES), go_ed)
+                    for row in cur:
+                            yield row
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back', inst)
+                    self.con.rollback()
+                finally:
+                    if cur:
+                        cur.close()
+
+        except _mysql.Error, e:
+            log.error("Problem with database connection", e)
+            return
+
+    def fetch_all_annotations(self, sp_id, ed):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+
+                try:
+                    cur.execute("select distinct go_id, ppc.id gene_id from {pp_genes_staging} ppc inner join "
+                                "{pp_goa_staging} ppg on ppc.id=ppg.pp_current_genes_id where species_id=%s "
+                                "and edition = %s".format(**GOTrack.TABLES), [sp_id, ed])
+                    for row in cur:
+                        yield row
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back', inst)
+                    self.con.rollback()
+                finally:
+                    if cur:
+                        cur.close()
+
+        except _mysql.Error, e:
+            log.error("Problem with database connection", e)
+            return
+
+    def create_aggregate_staging(self):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+
+                try:
+                    cur.execute("DROP TABLE IF EXISTS {pp_edition_aggregates_staging}".format(**GOTrack.TABLES))
+                    cur.execute("CREATE TABLE {pp_edition_aggregates_staging} LIKE {pp_edition_aggregates}".format(**GOTrack.TABLES))
+
+                    cur.execute("DROP TABLE IF EXISTS {pp_go_annotation_counts_staging}".format(**GOTrack.TABLES))
+                    cur.execute("CREATE TABLE {pp_go_annotation_counts_staging} LIKE {pp_go_annotation_counts}".format(**GOTrack.TABLES))
+
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back', inst)
+                    self.con.rollback()
+                finally:
+                    if cur:
+                        cur.close()
+
+        except _mysql.Error, e:
+            log.error("Problem with database connection", e)
+            return
+
+    def write_aggregate(self, sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+
+                try:
+                    self.insert_multiple(GOTrack.TABLES['pp_edition_aggregates_staging'],
+                                         ["species_id", "edition", "gene_count", "avg_direct_terms_for_gene", "avg_inferred_terms_for_gene", "avg_inferred_genes_for_term"],
+                                         [[sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term]], 1, cur, False)
+
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back', inst)
+                    self.con.rollback()
+                finally:
+                    if cur:
+                        cur.close()
+
+        except _mysql.Error, e:
+            log.error("Problem with database connection", e)
+            return
+
+    def write_term_counts(self, sp_id, ed, d_map, i_map):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+
+                try:
+                    data_gen = ((sp_id, ed, term.id, d_map[term] if term in d_map else None , i_map[term] if term in i_map else None) for term in (d_map.viewkeys() | i_map.keys()))
+
+                    self.insert_multiple(GOTrack.TABLES['pp_go_annotation_counts_staging'],
+                                         ["species_id", "edition", "go_id", "direct_annotation_count", "inferred_annotation_count"],
+                                         data_gen, GOTrack.CONCURRENT_INSERTIONS, cur, False)
+
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back', inst)
+                    self.con.rollback()
+                finally:
+                    if cur:
+                        cur.close()
+
+        except _mysql.Error, e:
+            log.error("Problem with database connection", e)
+            return
+
+    # General use
 
     def insert_multiple(self, table, columns, data, concurrent_insertions=1000, cur=None, verbose=False):
         value_length = len(columns)
@@ -526,7 +700,8 @@ class GOTrack:
                 log.info(cnt)
             cur.executemany(sql, row_list)
 
-        log.info("Row Count: {0}, Time: {1}".format(cnt, time.time() - start))
+        if verbose:
+            log.info("Row Count: {0}, Time: {1}".format(cnt, time.time() - start))
 
         if close_cursor and cur:
             cur.close()

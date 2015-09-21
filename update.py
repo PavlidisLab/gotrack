@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-from __future__ import with_statement
+from __future__ import with_statement, division
 import glob
 import os
 import tempfile
@@ -10,7 +10,7 @@ from parsers import *
 from gotrack import *
 from model import *
 import download
-
+import MySQLdb.cursors
 LOG = Log(sys.stdout)
 
 # CREDS = {'host': 'localhost',
@@ -22,7 +22,7 @@ LOG = Log(sys.stdout)
 CREDS = {'host': 'abe',
          'user': 'gotrack',
          'passwd': 'gotrack321#',
-         'db': 'gotrack_sandbox'
+         'db': 'gotrack'
          }
 
 
@@ -31,7 +31,7 @@ def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
     tmp_directory = None
     try:
         # Connect to database
-        gotrack = GOTrack(**CREDS)
+        gotrack = GOTrack(cursorclass=MySQLdb.cursors.SSCursor, **CREDS)
         LOG.info("Connected to host: {host}, db: {db}, user: {user}".format(**CREDS))
 
         # Get list of current data editions in database
@@ -195,7 +195,7 @@ def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
                 LOG.info("Updating GO tables")
             for d, f in go_new:
                 LOG.info("Begin:", d.strftime('%Y-%m-%d'))
-                ont = Ontology(d, f)
+                ont = Ontology.from_file_data(d, f)
                 gotrack.update_go_table(ont)
 
         if count_goa_new > 0 and (cron or query_yes_no("Update GOA tables? (Affected tables: '{edition}', "
@@ -245,7 +245,7 @@ def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
                 inconsistent, inc_results = check_database_consistency(gotrack)
                 print inc_results
 
-            if force_pp or inc_results['preprocess_ood']:
+            if force_pp or inconsistent:
                 if cron or force_pp or query_yes_no("Database requires preprocessing, run now? (Make sure new GO and GOA data has "
                                                     "been imported as well as new sec_ac and acindex files) (Affects tables: "
                                                     "'{pp_genes_staging}', '{pp_goa_staging}', '{pp_accession_staging}', "
@@ -255,8 +255,31 @@ def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
                         LOG.info("Database requires preprocessing, running now...")
                     elif force_pp:
                         LOG.info("Preprocessing database...")
-                    gotrack.pre_process_current_genes_tables()
-                    gotrack.pre_process_goa_table()
+
+                    if force_pp or inc_results['preprocess_ood']:
+                        LOG.info("Creating current genes tables...")
+                        gotrack.pre_process_current_genes_tables()
+                        LOG.info("Creating GOA table...")
+                        gotrack.pre_process_goa_table()
+
+                    if force_pp or inc_results['aggregate_ood']:
+                        LOG.info("Creating aggregate tables...")
+                        go_ed_to_sp_ed = defaultdict(list)
+                        for sp_id, ed, goa_date, go_ed, go_date in gotrack.fetch_editions():
+                            go_ed_to_sp_ed[go_ed].append((sp_id, ed))
+
+                        gotrack.create_aggregate_staging()
+
+                        i = 0
+                        for go_ed, eds in sorted(go_ed_to_sp_ed.iteritems()):
+                            i += 1
+                            LOG.info("Starting Ontology:", i, "/", len(go_ed_to_sp_ed))
+                            # node_list = gotrack.fetch_term_list(go_ed)
+                            adjacency_list = gotrack.fetch_adjacency_list(go_ed)
+                            ont = Ontology.from_adjacency("1900-01-01", adjacency_list)
+                            for sp_id, ed in eds:
+                                process_aggregate(gotrack, ont, sp_id, ed)
+
             else:
                 LOG.info("Database does not require preprocessing.")
         else:
@@ -283,6 +306,89 @@ def push_to_production():
     log.info("Staging area has been pushed to production, a restart of GOTrack is now necessary (with writeCache=True)")
 
 
+def process_aggregate(gotrack, ont, sp_id, ed):
+
+    all_annotations_stream = gotrack.fetch_all_annotations(sp_id, ed)
+
+    # These are for computing the number of genes associated with each go term
+    direct_counts_per_term = defaultdict(int)
+    gene_id_set_per_term = defaultdict(set)
+
+    # These are for computing the number of go terms associated with each gene
+    term_set_per_gene_id = defaultdict(set)
+
+    # Propagation Cache for performance purposes
+    ancestor_cache = defaultdict(set)
+    annotation_count = 0
+    # ancestor_total_time = 0
+    # ancestor_total_runs = 0
+    # ancestor_total_cache_hits = 0
+    for go_id, gene_id in all_annotations_stream:
+        term = ont.get_term(go_id)
+
+        if term is not None:
+            annotation_count += 1
+            # Deal with direct counts
+
+            direct_counts_per_term[term] += 1
+
+            # Deal with inferred counts
+            # tmp_time = time.time()
+            if term in ancestor_cache:
+                ancestors = ancestor_cache[term]
+                # ancestor_total_cache_hits += 1
+            else:
+                ancestors = ont.get_ancestors(term, True, ancestor_cache)
+                ancestor_cache[term] = ancestors
+            # ancestor_total_time += time.time() - tmp_time
+            # ancestor_total_runs += 1
+
+            for anc in ancestors:  # gene counts
+                gene_id_set_per_term[anc].add(gene_id)
+
+            term_set_per_gene_id[gene_id].update(ancestors)
+        # else:
+        #     LOG.warn(go_id + " not found in edition ({0}), go ediiton ({1})".format(ed, go_ed))
+
+    # print "Total Ancestor Time: {0}".format(ancestor_total_time)
+    # print "Total Ancestor Runs: {0}".format(ancestor_total_runs)
+    # print "Total Ancestor Cache Hits: {0}".format(ancestor_total_cache_hits)
+    # print "% Cache Hits: {0}".format(100 * ancestor_total_cache_hits / ancestor_total_runs)
+
+    # Convert sets into counts
+
+    inferred_counts_per_term = {t: len(s) for t, s in gene_id_set_per_term.iteritems()}
+
+    total_gene_set_size = sum(len(s) for s in gene_id_set_per_term.itervalues())
+    total_term_set_size = sum(len(s) for s in term_set_per_gene_id.itervalues())
+    gene_count = len(term_set_per_gene_id)
+
+    # write_total_time = time.time()
+
+    # Write aggregates
+    if gene_count > 0:
+        gotrack.write_aggregate(sp_id, ed, gene_count, annotation_count / gene_count,
+                                total_term_set_size / gene_count, total_gene_set_size / len(gene_id_set_per_term))
+    else:
+        LOG.warn("No Genes in Species ({0}), Edition ({1})".format(sp_id, ed))
+
+    # Write Term Counts
+    if total_gene_set_size > 0 or total_term_set_size > 0:
+        gotrack.write_term_counts(sp_id, ed, direct_counts_per_term, inferred_counts_per_term)
+    else:
+        LOG.warn("No Annotations in Species ({0}), Edition ({1})".format(sp_id, ed))
+
+    # write_total_time = time.time() - write_total_time
+
+    # print "Total Write Time: {0}".format(write_total_time)
+
+    # total_time = time.time() - total_time
+    # print ""
+    # print "Total Time: {0}".format(total_time)
+    # print "Ancestor %: {0}".format(100 * ancestor_total_time / total_time)
+    # print "Write %: {0}".format(100 * write_total_time / total_time)
+
+
 def check_database_consistency(gotrack, verbose=True):
     results = gotrack.fetch_consistency()
     if verbose:
@@ -293,7 +399,7 @@ def check_database_consistency(gotrack, verbose=True):
         if results['unlinked_editions']:
             LOG.warn('The following GOA editions are unlinked with GO ontologies')
             LOG.warn(results['unlinked_editions'])
-    return results['preprocess_ood'] or results['aggregate_ood'] or results['unlinked_editions'], results
+    return results['preprocess_ood'] or results['aggregate_ood'], results
 
 
 def search_files_for_go(files):
@@ -342,6 +448,7 @@ def search_files_for_goa(files):
 
 if __name__ == '__main__':
     import argparse
+
     parser = argparse.ArgumentParser(description='Update GOTrack Database')
     parser.add_argument('resource_directory', metavar='d', type=str, nargs='?', default=None,
                         help='a folder holding resources to use in the update')
