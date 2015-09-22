@@ -463,17 +463,24 @@ if __name__ == '__main__':
                         help='Prevent all downloads')
     parser.add_argument('--force-pp', dest='force_pp', action='store_true',
                         help='Force preprocessing of database (regardless of need)')
+    parser.add_argument('--update-push', dest='update_push', action='store_true',
+                        help='Runs Update with options following by update with --push')
 
     args = parser.parse_args()
-    if args.push and (args.resource_directory is not None or args.cron or args.dl or args.meta or args.force_pp):
+    if args.push and (args.resource_directory is not None or args.cron or args.dl or args.meta or args.force_pp or args.update_push):
         LOG.error("--push cannot be specified with other options")
-    elif args.push:
-        # Push Staging to Production
-        push_to_production()
     elif args.meta:
         # Push Staging to Production
         LOG.info("Host: {host}, db: {db}, user: {user}".format(**CREDS))
         LOG.info(*['TABLES:'] + sorted([x for x in GOTrack.TABLES.iteritems()]), sep="\n")
+    elif args.update_push:
+        # Update followed by push to production
+        main(args.resource_directory, args.cron, args.dl, args.force_pp)
+        if args.cron or query_yes_no("Push staging to production?"):
+            push_to_production()
+    elif args.push:
+        # Push Staging to Production
+        push_to_production()
     else:
         # Update database
         main(args.resource_directory, args.cron, args.dl, args.force_pp)
