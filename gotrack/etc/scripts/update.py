@@ -303,7 +303,8 @@ def push_to_production():
 
     gotrack.push_staging_to_production()
 
-    log.info("Staging area has been pushed to production, a restart of GOTrack is now necessary (with writeCache=True)")
+    log.info("Staging area has been pushed to production, a restart of GOTrack is now necessary")
+    log.info("Remember to delete temporary old data tables if everything works")
 
 
 def process_aggregate(gotrack, ont, sp_id, ed):

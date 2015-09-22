@@ -106,13 +106,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def fetch_current_state(self):
         try:
@@ -141,13 +142,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def update_sec_ac_table(self, data, verbose=False):
 
@@ -178,6 +180,7 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.execute("DROP TABLE IF EXISTS {sec_ac}{old}".format(**GOTrack.TABLES))
@@ -186,7 +189,7 @@ class GOTrack:
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def update_acindex_table(self, data, verbose=False):
 
@@ -213,6 +216,7 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.execute("DROP TABLE IF EXISTS {acindex}{old}".format(**GOTrack.TABLES))
@@ -221,7 +225,7 @@ class GOTrack:
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def update_go_table(self, ont):
         try:
@@ -259,13 +263,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', ont.date.strftime('%Y-%m-%d'), inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def update_goa_table(self, sp_id, ed, date, data):
         try:
@@ -304,13 +309,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', sp_id, ed, date.strftime('%Y-%m-%d'), inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     @timeit
     def pre_process_current_genes_tables(self):
@@ -413,13 +419,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     @timeit
     def pre_process_goa_table(self):
@@ -459,12 +466,13 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def push_staging_to_production(self):
         try:
@@ -504,13 +512,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     # Stuff to do with aggregate creation
 
@@ -529,13 +538,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def fetch_adjacency_list(self, go_ed):
         try:
@@ -551,13 +561,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def fetch_term_list(self, go_ed):
         try:
@@ -573,13 +584,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def fetch_all_annotations(self, sp_id, ed):
         try:
@@ -596,13 +608,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def create_aggregate_staging(self):
         try:
@@ -620,13 +633,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def write_aggregate(self, sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term):
         try:
@@ -642,13 +656,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     def write_term_counts(self, sp_id, ed, d_map, i_map):
         try:
@@ -666,13 +681,14 @@ class GOTrack:
                 except Exception as inst:
                     log.error('Error rolling back', inst)
                     self.con.rollback()
+                    raise
                 finally:
                     if cur:
                         cur.close()
 
         except _mysql.Error, e:
             log.error("Problem with database connection", e)
-            return
+            raise
 
     # General use
 
