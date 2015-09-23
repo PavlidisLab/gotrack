@@ -5,7 +5,7 @@ Utility Functions
 '''
 
 import sys
-from datetime import datetime
+# from datetime import datetime
 import time
 
 COLORS = {'red': '\033[0;31m',
@@ -106,44 +106,44 @@ def grouper(page_size, iterable):
     yield page
 
 
-class Log:
-
-    COLORS = {'red': '\033[0;31m',
-              'green': '\033[0;32m',
-              'yellow': '\033[0;33m',
-              'blue': '\033[0;34m',
-              'purple': '\033[0;35m',
-              'cyan': '\033[0;36m',
-              'white': '\033[0;37m',
-              'NC': '\033[0m'
-              }
-
-    def __init__(self, out=sys.stdout, **kwargs):
-
-        self.out = out
-
-        cols = list()
-        cols.append(kwargs.get('info', 'green'))
-        cols.append(kwargs.get('warning', 'cyan'))
-        cols.append(kwargs.get('error', 'red'))
-        cols.append(kwargs.get('default', 'NC'))
-
-        try:
-            self.cols = [Log.COLORS[c] for c in cols]
-        except KeyError as inst:
-            print "Unknown Key", inst
-
-    def info(self, *msg, **kwargs):
-        sep = kwargs.get('sep', ' ')
-        self.out.write('%s%s INFO > %s%s\n' %
-                       (self.cols[0], str(datetime.now()), sep.join(map(str, msg)), self.cols[3]))
-
-    def warn(self, *msg, **kwargs):
-        sep = kwargs.get('sep', ' ')
-        self.out.write('%s%s WARNING > %s%s\n' %
-                       (self.cols[1], str(datetime.now()), sep.join(map(str, msg)), self.cols[3]))
-
-    def error(self, *msg, **kwargs):
-        sep = kwargs.get('sep', ' ')
-        self.out.write('%s%s ERROR > %s%s\n' %
-                       (self.cols[2], str(datetime.now()), sep.join(map(str, msg)), self.cols[3]))
+# class Log:
+#
+#     COLORS = {'red': '\033[0;31m',
+#               'green': '\033[0;32m',
+#               'yellow': '\033[0;33m',
+#               'blue': '\033[0;34m',
+#               'purple': '\033[0;35m',
+#               'cyan': '\033[0;36m',
+#               'white': '\033[0;37m',
+#               'NC': '\033[0m'
+#               }
+#
+#     def __init__(self, out=sys.stdout, **kwargs):
+#
+#         self.out = out
+#
+#         cols = list()
+#         cols.append(kwargs.get('info', 'green'))
+#         cols.append(kwargs.get('warning', 'cyan'))
+#         cols.append(kwargs.get('error', 'red'))
+#         cols.append(kwargs.get('default', 'NC'))
+#
+#         try:
+#             self.cols = [Log.COLORS[c] for c in cols]
+#         except KeyError as inst:
+#             print "Unknown Key", inst
+#
+#     def info(self, *msg, **kwargs):
+#         sep = kwargs.get('sep', ' ')
+#         self.out.write('%s%s INFO > %s%s\n' %
+#                        (self.cols[0], str(datetime.now()), sep.join(map(str, msg)), self.cols[3]))
+#
+#     def warn(self, *msg, **kwargs):
+#         sep = kwargs.get('sep', ' ')
+#         self.out.write('%s%s WARNING > %s%s\n' %
+#                        (self.cols[1], str(datetime.now()), sep.join(map(str, msg)), self.cols[3]))
+#
+#     def error(self, *msg, **kwargs):
+#         sep = kwargs.get('sep', ' ')
+#         self.out.write('%s%s ERROR > %s%s\n' %
+#                        (self.cols[2], str(datetime.now()), sep.join(map(str, msg)), self.cols[3]))

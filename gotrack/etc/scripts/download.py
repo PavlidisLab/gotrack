@@ -1,13 +1,12 @@
 #!/usr/bin/env python
 
-import sys
+import logging
 import os 
 import re
 from ftplib import FTP, error_perm
 from datetime import datetime
-from utility import Log
 
-LOG = Log(sys.stdout)
+log = logging.getLogger(__name__)
 
 go_ftp_host = 'ftp.geneontology.org'
 go_ftp_directory = '/go/ontology-archive/'
@@ -28,7 +27,6 @@ def download_sec_ac(save_folder):
         ftp.login()
         ftp.cwd(uniprot_ftp_directory)
         file_name = 'sec_ac.txt'
-        print 'Downloading: ' + file_name
         full_path = os.path.join(save_folder, file_name)
 
         if os.path.isfile(full_path):
@@ -60,7 +58,6 @@ def download_acindex(save_folder):
         ftp.login()
         ftp.cwd(uniprot_ftp_directory)
         file_name = 'acindex.txt'
-        print 'Downloading: ' + file_name
         full_path = os.path.join(save_folder, file_name)
 
         if os.path.isfile(full_path):
@@ -103,7 +100,7 @@ def fetch_goa_editions(sp):
             if match is not None:
                 ftp_editions[int(match.group(1))] = f
     except error_perm:
-        LOG.warn("Cannot find species in FTP site:", sp)
+        log.warn("Cannot find species in FTP site: %s", sp)
     finally:
         if ftp is not None:
             ftp.close()
@@ -123,36 +120,36 @@ def download_goa_data(sp_to_files, save_folder):
                 ftp.cwd(ftp_directory)
 
                 for fname in files:
-                    LOG.info('Downloading: {0} ...'.format(fname))
+                    log.info('Downloading: {0} ...'.format(fname))
                     try:
                         ftp.voidcmd("NOOP")
                     except Exception as inst:
-                        LOG.warn('Timeout: Reconnecting to FTP Server', inst)
+                        log.warn('Timeout: Reconnecting to FTP Server, %s', inst)
                         ftp.close()
                         ftp = FTP(goa_ftp_host)
                         ftp.login()
                         ftp.cwd(ftp_directory)
                     full_path = os.path.join(save_folder, fname)
                     if os.path.isfile(full_path):
-                        LOG.warn(full_path + ' already exists, skipping...')
+                        log.warn('%s already exists, skipping...', full_path)
                         continue
 
                     try:
                         lf = open(full_path, "wb")
                     except Exception as inst:
-                        LOG.warn('Problem creating output file {0}, skipping...'.format(full_path), inst)
+                        log.warn('Problem creating output file %s, skipping..., %s', full_path, inst)
                         continue
 
                     try:
                         ftp.retrbinary('RETR ' + fname, lf.write)
                         fname_list.append(full_path)
-                        LOG.info('Download Complete')
+                        log.info('Download Complete')
                     except Exception as inst:
-                        LOG.warn('Problem downloading file', inst)
+                        log.warn('Problem downloading file, %s', inst)
                     finally:
                         lf.close()
             except error_perm:
-                LOG.warn("Cannot find species in FTP site:", sp)
+                log.warn("Cannot find species in FTP site: %s", sp)
             finally:
                 if ftp is not None:
                     ftp.close()
@@ -177,10 +174,10 @@ def fetch_go_dates():
                     file_date = datetime.strptime(match.group(1), "%Y-%m-%d").date()
                     ftp_date_map[file_date] = f
                 except ValueError:
-                    LOG.warn('Cannot parse date: ', fname)
+                    log.warn('Cannot parse date: %s', fname)
                     continue
                 except Exception as inst:
-                    LOG.warn('Something went wrong', fname, inst)
+                    log.warn('Something went wrong %s %s', fname, inst)
                     continue
     finally:
         if ftp is not None:
@@ -198,32 +195,32 @@ def download_go_data(files, save_folder):
         ftp.cwd(go_ftp_directory)
 
         for fname in files:
-            LOG.info('Downloading: {0} ...'.format(fname))
+            log.info('Downloading: %s ...', fname)
             try:
                 ftp.voidcmd("NOOP")
             except Exception as inst:
-                LOG.warn('Timeout: Reconnecting to FTP Server', inst)
+                log.warn('Timeout: Reconnecting to FTP Server, %s', inst)
                 ftp.close()
                 ftp = FTP(go_ftp_host)
                 ftp.login()
                 ftp.cwd(go_ftp_directory)
             full_path = os.path.join(save_folder, fname)
             if os.path.isfile(full_path):
-                LOG.warn(full_path + ' already exists, skipping...')
+                log.warn('%s already exists, skipping...', full_path)
                 continue
 
             try:
                 lf = open(full_path, "wb")
             except Exception as inst:
-                LOG.warn('Problem creating output file {0}, skipping...'.format(full_path), inst)
+                log.warn('Problem creating output file %s, skipping..., %s', full_path, inst)
                 continue
 
             try:
                 ftp.retrbinary('RETR ' + fname, lf.write)
                 fname_list.append(full_path)
-                LOG.info('Download Complete')
+                log.info('Download Complete')
             except Exception as inst:
-                LOG.warn('Problem downloading file', inst)
+                log.warn('Problem downloading file, %s', inst)
             finally:
                 lf.close()
     finally:

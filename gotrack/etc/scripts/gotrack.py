@@ -5,16 +5,17 @@ Contains functionality related to connecting, retrieving information and inserti
 database.
 """
 
+import logging
 import _mysql
 import MySQLdb
 import time
 
 
-from utility import grouper, Log, timeit
+from utility import grouper, timeit
 import warnings
 warnings.filterwarnings("ignore", "Unknown table.*")
 
-log = Log()
+log = logging.getLogger(__name__)
 
 
 class GOTrack:
@@ -50,7 +51,7 @@ class GOTrack:
         try:
             self.con = MySQLdb.connect(**self.creds)
         except Exception, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def test_and_reconnect(self):
@@ -104,7 +105,7 @@ class GOTrack:
 
                     return results
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -112,7 +113,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def fetch_current_state(self):
@@ -140,7 +141,7 @@ class GOTrack:
 
                     return results
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -148,7 +149,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def update_sec_ac_table(self, data, verbose=False):
@@ -178,7 +179,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -188,7 +189,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def update_acindex_table(self, data, verbose=False):
@@ -214,7 +215,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -224,7 +225,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def update_go_table(self, ont):
@@ -261,7 +262,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', ont.date.strftime('%Y-%m-%d'), inst)
+                    log.error('Error rolling back %s, %s', ont.date.strftime('%Y-%m-%d'), inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -269,7 +270,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def update_goa_table(self, sp_id, ed, date, data):
@@ -307,7 +308,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', sp_id, ed, date.strftime('%Y-%m-%d'), inst)
+                    log.error('Error rolling back sp: %s, ed: %s, date: %s, %s', sp_id, ed, date.strftime('%Y-%m-%d'), inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -315,7 +316,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     @timeit
@@ -324,7 +325,7 @@ class GOTrack:
         try:
             self.con = self.test_and_reconnect()
             with self.con as cur:
-                log.info("pre_process_current_genes_tables (~1-2min)")
+                log.info("pre_process_current_genes_tables (~4min)")
                 try:
                     cur.execute("DROP TABLE IF EXISTS {pp_genes_staging}".format(**GOTrack.TABLES))
                     cur.execute("CREATE TABLE {pp_genes_staging} LIKE {pp_genes}".format(**GOTrack.TABLES))
@@ -417,7 +418,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -425,7 +426,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     @timeit
@@ -464,14 +465,14 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
                     if cur:
                         cur.close()
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def push_staging_to_production(self):
@@ -510,7 +511,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -518,7 +519,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     # Stuff to do with aggregate creation
@@ -536,7 +537,7 @@ class GOTrack:
                             yield row
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -544,7 +545,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def fetch_adjacency_list(self, go_ed):
@@ -559,7 +560,7 @@ class GOTrack:
                             yield row
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -567,7 +568,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def fetch_term_list(self, go_ed):
@@ -582,7 +583,7 @@ class GOTrack:
                             yield row
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -590,7 +591,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def fetch_all_annotations(self, sp_id, ed):
@@ -606,7 +607,7 @@ class GOTrack:
                         yield row
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -614,7 +615,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def create_aggregate_staging(self):
@@ -631,7 +632,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -639,7 +640,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def write_aggregate(self, sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term):
@@ -654,7 +655,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -662,7 +663,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     def write_term_counts(self, sp_id, ed, d_map, i_map):
@@ -679,7 +680,7 @@ class GOTrack:
 
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back', inst)
+                    log.error('Error rolling back, %s', inst)
                     self.con.rollback()
                     raise
                 finally:
@@ -687,7 +688,7 @@ class GOTrack:
                         cur.close()
 
         except _mysql.Error, e:
-            log.error("Problem with database connection", e)
+            log.error("Problem with database connection, %s", e)
             raise
 
     # General use
