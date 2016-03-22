@@ -19,12 +19,8 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
 import java.io.Serializable;
-import java.util.Properties;
+import java.util.Map.Entry;
 
 import javax.annotation.PostConstruct;
 import javax.faces.bean.ApplicationScoped;
@@ -32,6 +28,8 @@ import javax.faces.bean.ManagedBean;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+
+import ubc.pavlab.gotrack.utilities.PropertiesFile;
 
 /**
  * Holds settings from the properties file. Alter the static fields here to meet your requirements if necessary.
@@ -49,13 +47,15 @@ public class SettingsCache implements Serializable {
 
     private static final Logger log = Logger.getLogger( SettingsCache.class );
 
-    private static final String PROPERTIES_FILE = "/usr/local/tomcat/gotrack.properties";
+    private static final String PROPERTIES_BACKUP_PATH = "/usr/local/tomcat/";
+    private static final String PROPERTIES_PATH = System.getProperty( "user.home" );
+    private static final String PROPERTIES_FILE = "gotrack.properties";
 
     private static final String SPECIES_RESTRICTIONS_PROPERTY = "gotrack.speciesRestrictions";
     private static final String UPDATE_POP_TABLE = "gotrack.updatePopularTable";
     private static final String DRY_RUN = "gotrack.dryRun";
 
-    private Properties prop = new Properties();
+    private PropertiesFile prop = new PropertiesFile();
 
     // Individual settings caches
     private int[] speciesRestrictions = null;
@@ -64,35 +64,9 @@ public class SettingsCache implements Serializable {
     public void init() {
         log.info( "SettingsCache init" );
 
-        InputStream input = null;
-
-        try {
-            try {
-                // TODO possibly look at classpath first?
-                input = new FileInputStream( PROPERTIES_FILE );
-            } catch ( FileNotFoundException e ) {
-                log.warn( "Could not find PROPERTIES_FILE : (" + PROPERTIES_FILE + ") looking in: ("
-                        + System.getProperty( "user.dir" ) + ")" );
-                input = new FileInputStream( "gotrack.properties" );
-            }
-
-            // load a properties file from class path, inside static method
-            prop.load( input );
-
-            for ( String property : prop.stringPropertyNames() ) {
-                log.debug( property + ": " + prop.getProperty( property ) );
-            }
-
-        } catch ( IOException ex ) {
-            ex.printStackTrace();
-        } finally {
-            if ( input != null ) {
-                try {
-                    input.close();
-                } catch ( IOException e ) {
-                    e.printStackTrace();
-                }
-            }
+        prop.load( PROPERTIES_FILE, PROPERTIES_PATH, PROPERTIES_BACKUP_PATH );
+        for ( Entry<Object, Object> e : prop.entrySet() ) {
+            log.info( e.getKey().toString() + " : " + e.getValue().toString() );
         }
 
     }

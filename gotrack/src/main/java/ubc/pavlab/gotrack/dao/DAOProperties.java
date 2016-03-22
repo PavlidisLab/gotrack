@@ -19,11 +19,7 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Properties;
+import ubc.pavlab.gotrack.utilities.PropertiesFile;
 
 /**
  * This class immediately loads the DAO properties file 'X.properties' once in memory and provides a constructor
@@ -35,30 +31,15 @@ public class DAOProperties {
 
     // Constants ----------------------------------------------------------------------------------
 
-    // private static final String PROPERTIES_FILE = "database.properties";
+    private static final String PROPERTIES_BACKUP_PATH = "/usr/local/tomcat/";
+    private static final String PROPERTIES_PATH = System.getProperty( "user.home" );
     private static final String PROPERTIES_FILE = "gotrack.properties";
-    private static final Properties PROPERTIES = new Properties();
+    private static final PropertiesFile PROPERTIES = new PropertiesFile();
 
     static {
-        // ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
-        // InputStream propertiesFile = classLoader.getResourceAsStream( PROPERTIES_FILE );
-        InputStream propertiesFile = null;
-        try {
-            propertiesFile = new FileInputStream( PROPERTIES_FILE );
-        } catch ( FileNotFoundException e1 ) {
-            // TODO Auto-generated catch block
-            e1.printStackTrace();
-        }
 
-        if ( propertiesFile == null ) {
-            throw new DAOConfigurationException( "Properties file '" + PROPERTIES_FILE + "' is missing in classpath." );
-        }
+        PROPERTIES.load( PROPERTIES_FILE, PROPERTIES_PATH, PROPERTIES_BACKUP_PATH );
 
-        try {
-            PROPERTIES.load( propertiesFile );
-        } catch ( IOException e ) {
-            throw new DAOConfigurationException( "Cannot load properties file '" + PROPERTIES_FILE + "'.", e );
-        }
     }
 
     // Vars ---------------------------------------------------------------------------------------
