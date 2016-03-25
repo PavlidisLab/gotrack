@@ -253,7 +253,20 @@
 		    <version>2.4.0</version>
 		</dependency>
 
-	</dependencies>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>5.1.35</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-all</artifactId>
+                <version>1.10.19</version>
+        </dependency>
+
+        </dependencies>
 
 	<repositories>
 
@@ -452,4 +465,76 @@
 			</plugins>
 		</pluginManagement>
 	</build>
+  <profiles>
+        <profile>
+            <id>testdb.build</id>
+            <activation>
+                <activeByDefault>false</activeByDefault>
+                <property>
+                    <name>testdb.build</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>sql-maven-plugin</artifactId>
+                        <version>1.5</version>
+                        <dependencies><!-- specify the dependent JDBC driver here -->
+                            <dependency>
+                                <groupId>mysql</groupId>
+                                <artifactId>mysql-connector-java</artifactId>
+                                <version>5.1.10</version>
+                                <type>jar</type>
+                            </dependency>
+                        </dependencies>
+                        <!-- common configuration shared by all executions -->
+                        <configuration>
+                            <driver>com.mysql.jdbc.Driver</driver>
+                            <username>${gotrack.testdb.build.user}</username>
+                            <password>${gotrack.testdb.build.password}</password>
+                            <onError>abort</onError>
+                            <autocommit>true</autocommit>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>drop-add-testdb</id>
+                                <phase>initialize</phase>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                                <configuration>
+                                    <url>${bootstrap.db.url}</url>
+                                    <username>${gotrack.testdb.build.user}</username>
+                                    <password>${gotrack.testdb.build.password}</password>
+                                    <autocommit>false</autocommit>
+                                    <sqlCommand>
+                                                                        <![CDATA[
+                                        drop database if exists ${gotrack.testdb.name};
+                                                                        create database ${gotrack.testdb.name}
+                                        ]]>
+                                    </sqlCommand>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>load-testdb-schema</id>
+                                <phase>process-test-resources</phase>
+                                <goals>
+                                    <goal>execute</goal>
+                                </goals>
+                                <configuration>
+                                    <url>${gotrack.testdb.build.url}</url>
+                                    <srcFiles>
+                                        <srcFile>src/test/resources/sql/testing.sql</srcFile>
+                                    </srcFiles>
+                                    <onError>abort</onError>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        </profiles>
+
 </project>
