@@ -83,7 +83,11 @@ public class GeneOntology {
      * Add term to this ontology
      */
     public void addTerm( GeneOntologyTerm t ) {
-        termMap.put( t.getId(), t );
+        if ( termMap.contains( t.getId() ) ) {
+            throw new IllegalArgumentException( "Gene Ontology ID (" + t.getGoId() + ") already exists in ontology." );
+        }
+        GeneOntologyTerm a = termMap.put( t.getId(), t );
+
     }
 
     /**
@@ -105,8 +109,16 @@ public class GeneOntology {
             log.warn( "Relationship (" + parent + ") parent not found in term map!" );
         }
 
-        term.getParents().add( new Relation( parentTerm, type ) );
-        parentTerm.getChildren().add( new Relation( term, type ) );
+        Relation parentRelation = new Relation( parentTerm, type );
+        Relation childRelation = new Relation( term, type );
+
+        if ( term.getParents().contains( parentRelation ) || parentTerm.getChildren().contains( childRelation ) ) {
+            throw new IllegalArgumentException(
+                    "Relationship between " + child + " and " + parent + " already exists." );
+        }
+
+        term.getParents().add( parentRelation );
+        parentTerm.getChildren().add( childRelation );
     }
 
     /**
