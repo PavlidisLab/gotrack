@@ -39,9 +39,9 @@ import org.junit.Test;
  * @author mjacobson
  * @version $Id$
  */
-public class EnrichmentAnalysisTest {
+public class HyperGeometricUtilitiesTest {
 
-    private static final Logger log = Logger.getLogger( EnrichmentAnalysisTest.class );
+    private static final Logger log = Logger.getLogger( HyperGeometricUtilitiesTest.class );
 
     private static final int TEST_COUNT = 10000;
 

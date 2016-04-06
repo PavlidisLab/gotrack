@@ -42,8 +42,8 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
     private final String name;
     private final Aspect aspect;
     private final boolean obsolete = false;
-    private Set<Relation> relations = new THashSet<>();
-    private Set<Relation> children = new THashSet<>();
+    private Set<Relation<GeneOntologyTerm>> relations = new THashSet<>();
+    private Set<Relation<GeneOntologyTerm>> children = new THashSet<>();
 
     /**
      * Make child/parent sets immutable
@@ -131,11 +131,11 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         return obsolete;
     }
 
-    public Set<Relation> getParents() {
+    public Set<Relation<GeneOntologyTerm>> getParents() {
         return relations;
     }
 
-    public Set<Relation> getChildren() {
+    public Set<Relation<GeneOntologyTerm>> getChildren() {
         return children;
     }
 

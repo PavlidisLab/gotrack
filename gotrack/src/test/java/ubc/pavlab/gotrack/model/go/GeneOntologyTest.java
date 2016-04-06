@@ -415,39 +415,43 @@ public class GeneOntologyTest {
 
     // getParents
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testGetParentsString() {
-        Set<Relation> res = go.getParents( go9.getGoId(), true );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation( go8, RelationshipType.PART_OF ),
-                new Relation( go4, RelationshipType.IS_A ) ) );
+        Set<Relation<GeneOntologyTerm>> res = go.getParents( go9.getGoId(), true );
+        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation<>( go8, RelationshipType.PART_OF ),
+                new Relation<>( go4, RelationshipType.IS_A ) ) );
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testGetParentsInteger() {
-        Set<Relation> res = go.getParents( 22607, true );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation( go8, RelationshipType.PART_OF ),
-                new Relation( go4, RelationshipType.IS_A ) ) );
+        Set<Relation<GeneOntologyTerm>> res = go.getParents( 22607, true );
+        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation<>( go8, RelationshipType.PART_OF ),
+                new Relation<>( go4, RelationshipType.IS_A ) ) );
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testGetParentsNoPartOf() {
-        Set<Relation> res = go.getParents( go9.getGoId(), false );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation( go4, RelationshipType.IS_A ) ) );
+        Set<Relation<GeneOntologyTerm>> res = go.getParents( go9.getGoId(), false );
+        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation<>( go4, RelationshipType.IS_A ) ) );
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void testGetParents() {
-        Set<Relation> res = go.getParents( go7.getGoId(), true );
+        Set<Relation<GeneOntologyTerm>> res = go.getParents( go7.getGoId(), true );
         Assert.assertThat( res,
-                Matchers.containsInAnyOrder( new Relation( go5, RelationshipType.IS_A ),
-                        new Relation( go6, RelationshipType.IS_A ) ) );
+                Matchers.containsInAnyOrder( new Relation<>( go5, RelationshipType.IS_A ),
+                        new Relation<>( go6, RelationshipType.IS_A ) ) );
     }
 
     @Test
     public void testGetParentsNull() {
         String g = null;
         try {
-            Set<Relation> res = go.getParents( g, true );
+            Set<Relation<GeneOntologyTerm>> res = go.getParents( g, true );
             Assert.fail( "Should error with null term" );
         } catch ( NullPointerException e ) {
             // Expected
@@ -456,7 +460,7 @@ public class GeneOntologyTest {
 
     @Test
     public void testGetParentsRoot() {
-        Set<Relation> res = go.getParents( go0.getGoId(), false );
+        Set<Relation<GeneOntologyTerm>> res = go.getParents( go0.getGoId(), false );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
     }
 

@@ -464,7 +464,7 @@ public class TermView {
             nodes.add( new Node( term.getId(), term.getName() ) );
             discovered.add( term );
 
-            for ( Relation p : term.getParents() ) {
+            for ( Relation<GeneOntologyTerm> p : term.getParents() ) {
                 edges.add( new Edge( term.getId(), p.getRelation().getId(), p.getType() ) );
                 if ( !discovered.contains( p.getRelation() ) ) {
                     termQ.add( p.getRelation() );
