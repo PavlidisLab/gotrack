@@ -65,6 +65,8 @@ public class Enrichment<T, G> {
     private Set<T> significantTerms;
     private Set<T> rejectedTerms;
 
+    private int calculations;
+
     public Enrichment() {
 
     }
@@ -105,6 +107,7 @@ public class Enrichment<T, G> {
         this.cutoff = 0;
         this.significantTerms = Sets.newHashSet();
         this.rejectedTerms = Sets.newHashSet();
+        this.calculations = 0;
 
         int sampleSize = sample.size();
         int populationSize = population.size();
@@ -139,6 +142,8 @@ public class Enrichment<T, G> {
 
                 results.put( t,
                         new EnrichmentResult( p, sampleAnnotated, populationAnnotated, sampleSize, populationSize ) );
+
+                calculations++;
 
             }
 
@@ -267,6 +272,10 @@ public class Enrichment<T, G> {
 
     public double getCutoff() {
         return cutoff;
+    }
+
+    public int getCalculations() {
+        return calculations;
     }
 
     /**

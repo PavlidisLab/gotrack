@@ -133,6 +133,12 @@ public class EnrichmentAnalysis {
 
             termsSignificantInAnyEdition.addAll( enrichment.getSignificantTerms() );
 
+            // Stats
+
+            totalGenes.addAll( sample.getEntities() );
+            totalTerms.addAll( data.keySet() );
+            totalResults += enrichment.getCalculations();
+
         }
 
         // Store results

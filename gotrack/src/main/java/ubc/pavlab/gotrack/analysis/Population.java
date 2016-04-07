@@ -73,15 +73,17 @@ class StandardPopulation<T, G> extends Population<T, G> {
     private Map<T, Integer> annotationCountMap;
     private Integer distinctEntityCount;
 
+    private Set<G> entities;
+
     public StandardPopulation( Map<T, Set<G>> annotationMap ) {
         //        this.annotationMap = new HashMap<>( annotationMap );
         annotationCountMap = Maps.newHashMap();
-        Set<G> distinctEntities = Sets.newHashSet();
+        entities = Sets.newHashSet();
         for ( Entry<T, Set<G>> e : annotationMap.entrySet() ) {
-            distinctEntities.addAll( e.getValue() );
+            entities.addAll( e.getValue() );
             annotationCountMap.put( e.getKey(), e.getValue().size() );
         }
-        distinctEntityCount = distinctEntities.size();
+        distinctEntityCount = entities.size();
     }
 
     //    public Set<G> getEntities( T t ) {
@@ -90,6 +92,10 @@ class StandardPopulation<T, G> extends Population<T, G> {
 
     public Set<T> getProperties() {
         return annotationCountMap.keySet();
+    }
+
+    public Set<G> getEntities() {
+        return entities;
     }
 
     @Override
