@@ -98,7 +98,7 @@ public class HyperGeometricUtilitiesTest {
             double c = rndUpper[i];
             try {
                 assertEquals( c,
-                        EnrichmentAnalysis.upperCumulativeProbabilityLogMethod( arr[3], arr[1], arr[2], arr[0] ),
+                        HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( arr[3], arr[1], arr[2], arr[0] ),
                         c / 10000 );
                 successes++;
             } catch ( AssertionError e ) {
@@ -118,7 +118,7 @@ public class HyperGeometricUtilitiesTest {
             int[] arr = rndints[i];
             double c = rndSample[i];
             try {
-                assertEquals( c, EnrichmentAnalysis.sampleProbabilityLog( arr[3], arr[1], arr[2], arr[0] ),
+                assertEquals( c, HyperGeometricUtilities.sampleProbabilityLog( arr[3], arr[1], arr[2], arr[0] ),
                         0.434 / 10000 ); // error comes from logarithmic error propagation
                 successes++;
             } catch ( AssertionError e ) {
