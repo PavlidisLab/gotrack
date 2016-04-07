@@ -19,20 +19,17 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
-import org.apache.commons.math3.util.CombinatoricsUtils;
-import org.apache.commons.math3.util.FastMath;
 import org.apache.log4j.Logger;
+
+import com.google.common.base.Predicates;
+import com.google.common.collect.Maps;
 
 import gnu.trove.map.hash.TObjectDoubleHashMap;
 import ubc.pavlab.gotrack.beans.Cache;
@@ -54,27 +51,21 @@ public class EnrichmentAnalysis {
     private final int currentSpeciesId;
     private final int minAnnotatedPopulation;
     private final int maxAnnotatedPopulation;
+
     private final int totalEditions;
     private final int totalGenes;
     private final int totalTerms;
     private final int totalResults;
-    private final Map<Edition, Double> cutoffs;
 
     private final double threshold;
 
     private final Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> rawData;
 
     // Holds those unmodifiable results which met the population limits and had population data present in cache
-    private final Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> rawResults;
-    // Holds those unmodifiable terms which met the population limits but did not have population data present in cache
-    private final Map<Edition, Set<GeneOntologyTerm>> unmappedTerms;
-    // Holds those unmodifiable terms which did not meet the population limits
-    private final Map<Edition, Set<GeneOntologyTerm>> rejectedTerms;
+    private final Map<Edition, Enrichment<GeneOntologyTerm, Gene>> rawResults;
 
     // Holds those unmodifiable terms which are significant in any edition (used to create useful graphing views)
     private Set<GeneOntologyTerm> termsSignificantInAnyEdition = new HashSet<>();
-    // Holds those unmodifiable terms which are significant in its own edition
-    private Map<Edition, Set<GeneOntologyTerm>> termsSignificant = new HashMap<>();
 
     // ********************
     // Log Probability Memoization Cache
@@ -105,9 +96,6 @@ public class EnrichmentAnalysis {
          * magnitude that we will be computing.
          */
 
-        // Used to test for no entry in memoization cache
-        double noEntryValue = logProbCache.getNoEntryValue();
-
         // Store raw data used in this analysis
         this.rawData = geneGOMap;
 
@@ -123,186 +111,42 @@ public class EnrichmentAnalysis {
         int totalResults = 0;
 
         //  Containers for results
-        Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> rawResults = new HashMap<>();
-        Map<Edition, Set<GeneOntologyTerm>> unmappedTerms = new HashMap<>();
-        Map<Edition, Set<GeneOntologyTerm>> rejectedTerms = new HashMap<>();
+
+        Map<Edition, Enrichment<GeneOntologyTerm, Gene>> results = Maps.newHashMap();
         Set<GeneOntologyTerm> termsSignificantInAnyEdition = new HashSet<>();
-        Map<Edition, Set<GeneOntologyTerm>> termsSignificant = new HashMap<>();
-        Map<Edition, Double> cutoffs = new HashMap<>();
 
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Gene>>> editionEntry : geneGOMap.entrySet() ) {
             Edition ed = editionEntry.getKey();
             Map<GeneOntologyTerm, Set<Gene>> data = editionEntry.getValue();
 
-            Map<GeneOntologyTerm, EnrichmentResult> resultsInEdition = new HashMap<>();
+            StandardPopulation<GeneOntologyTerm, Gene> sample = Population.standardPopulation( data );
 
-            Set<GeneOntologyTerm> um = new HashSet<>(); // Unmapped terms
-            Set<GeneOntologyTerm> rj = new HashSet<>(); // Rejected Terms
-            Set<GeneOntologyTerm> sig = new HashSet<>(); // Significant Terms
+            Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, currentSpeciesId,
+                    ed );
 
-            Integer populationSize = cache.getGeneCount( currentSpeciesId, ed );
-            Integer sampleSize = sampleSizes.get( ed );
+            Enrichment<GeneOntologyTerm, Gene> enrichment = new Enrichment<>( test, threshold, minAnnotatedPopulation,
+                    maxAnnotatedPopulation );
 
-            if ( populationSize == null || sampleSize == null ) {
-                log.warn( "Could not find aggregate data for edition (" + ed + "), skipping..." );
-                continue;
-            }
+            enrichment.runAnalysis( sample, population, logProbCache );
 
-            /*
-             * pre-loop to remove terms that don't fit population limits, to get test set size for bonferroni and to get
-             * ranks
-             */
-            for ( Entry<GeneOntologyTerm, Set<Gene>> termEntry : data.entrySet() ) {
-                GeneOntologyTerm term = termEntry.getKey();
-                Integer populationAnnotated = cache.getInferredAnnotationCount( currentSpeciesId, ed, term );
+            results.put( ed, enrichment );
 
-                if ( populationAnnotated != null && populationAnnotated >= minAnnotatedPopulation
-                        && populationAnnotated <= maxAnnotatedPopulation ) { // Rejection test
-                    Integer sampleAnnotated = termEntry.getValue().size();
+            termsSignificantInAnyEdition.addAll( enrichment.getSignificantTerms() );
 
-                    // Combined map key
-                    HyperUCFKey key = new HyperUCFKey( sampleAnnotated, populationAnnotated, sampleSize,
-                            populationSize );
+            // Stats
 
-                    // Get log probability from memoization cache or compute it
-                    double p = logProbCache.get( key );
-                    if ( p == noEntryValue ) {
-                        p = upperCumulativeProbabilityLogMethod( sampleAnnotated, populationAnnotated, sampleSize,
-                                populationSize );
-                        // Cache result
-                        logProbCache.put( key, p );
-                    }
-
-                    // Add result to all results in this edition
-                    resultsInEdition.put( term, new EnrichmentResult( p, sampleAnnotated, populationAnnotated,
-                            sampleSize, populationSize ) );
-
-                    // These are used for stats collection
-                    totalResults++;
-                    totalGenes.addAll( termEntry.getValue() );
-                    totalTerms.add( term );
-
-                } else if ( populationAnnotated == null ) {
-                    um.add( term );
-
-                } else if ( populationAnnotated < minAnnotatedPopulation
-                        || populationAnnotated > maxAnnotatedPopulation ) {
-                    rj.add( term );
-                } else {
-                    log.warn( "Something went wrong with analysis term (" + term + ") with population: "
-                            + populationAnnotated );
-                }
-
-            }
-
-            /*
-             * Create EnrichmentResults
-             */
-
-            // Number of statistical tests done in analysis (within edition)
-            int testSetSize = resultsInEdition.keySet().size();
-
-            // Holds terms sorted by p-value
-            LinkedHashSet<GeneOntologyTerm> termsSortedByRank = EnrichmentAnalysis
-                    .getSortedKeySetByValue( resultsInEdition );
-
-            // We keep track of the cutoff p-value in each edition, set to some useful initial value
-            if ( test.equals( MultipleTestCorrection.BH ) ) {
-                // set lowest pvalue as cutoff for now;
-                cutoffs.put( ed, resultsInEdition.get( termsSortedByRank.iterator().next() ).getPvalue() );
-            } else {
-                cutoffs.put( ed, threshold );
-            }
-
-            // Containers
-            int rank = -1;
-            int k = 0;
-            EnrichmentResult previousResult = null;
-            Set<GeneOntologyTerm> maybePile = new HashSet<>();
-            Map<Integer, List<GeneOntologyTerm>> standardRanks = new HashMap<>();
-
-            /*
-             * Loops through each term in order of p-value and compute rank, significance based on chosen method
-             */
-            for ( GeneOntologyTerm term : termsSortedByRank ) {
-                k++;
-                EnrichmentResult er = resultsInEdition.get( term );
-                if ( test.equals( MultipleTestCorrection.BONFERRONI ) ) {
-                    er.setPvalue( Math.min( er.getPvalue() * testSetSize, 1 ) ); // Apply bonferroni correction
-                    if ( er.getPvalue() <= threshold ) { // Check against threshold
-                        termsSignificantInAnyEdition.add( term );
-                        sig.add( term );
-                    }
-
-                } else if ( test.equals( MultipleTestCorrection.BH ) ) {
-                    // Single pass method of BH step-up
-                    double qTresh = ( k ) * threshold / testSetSize;
-                    if ( er.getPvalue() <= qTresh ) {
-                        // add this term and all terms in maybe pile
-                        cutoffs.put( ed, er.getPvalue() ); //update cutoff
-                        termsSignificantInAnyEdition.add( term );
-                        sig.add( term );
-                        if ( !maybePile.isEmpty() ) {
-                            termsSignificantInAnyEdition.addAll( maybePile );
-                            sig.addAll( maybePile );
-                            maybePile.clear();
-                        }
-                    } else {
-                        // add this term to the maybe pile
-                        maybePile.add( term );
-                    }
-                } else { // Shouldn't get here
-                    termsSignificantInAnyEdition.add( term );
-                    sig.add( term );
-                }
-
-                // ranks
-
-                if ( !er.equals( previousResult ) ) {
-                    rank = k - 1;
-                }
-                List<GeneOntologyTerm> termSet = standardRanks.get( rank );
-                if ( termSet == null ) {
-                    termSet = new ArrayList<>();
-                    standardRanks.put( rank, termSet );
-                }
-                termSet.add( term );
-                er.setRank( rank );
-                previousResult = er;
-            }
-
-            // log.debug( "Results " + ed + " size: " + resultsInEdition.size() );
-            // log.debug( "Significant " + ed + " size: " + sig.size() );
-            // log.debug( "unmappedTerms " + ed + " size: " + um.size() );
-            // log.debug( "rejectedTerms " + ed + " size: " + rj.size() );
-
-            // Compute fractional Ranks
-
-            for ( Entry<Integer, List<GeneOntologyTerm>> rankEntry : standardRanks.entrySet() ) {
-                int standardRank = rankEntry.getKey();
-                List<GeneOntologyTerm> termSet = rankEntry.getValue();
-                double newRank = standardRank + ( termSet.size() - 1 ) / 2.0;
-                for ( GeneOntologyTerm term : termSet ) {
-                    EnrichmentResult er = resultsInEdition.get( term );
-                    er.setFractionalRank( newRank );
-                }
-            }
-
-            rawResults.put( ed, Collections.unmodifiableMap( resultsInEdition ) );
-            unmappedTerms.put( ed, Collections.unmodifiableSet( um ) );
-            rejectedTerms.put( ed, Collections.unmodifiableSet( rj ) );
-            termsSignificant.put( ed, Collections.unmodifiableSet( sig ) );
+            totalGenes.addAll( sample.getEntities() );
+            totalTerms.addAll( data.keySet() );
+            totalResults += enrichment.getCalculations();
 
         }
 
         // Store results
 
-        this.rawResults = Collections.unmodifiableMap( rawResults );
-        this.unmappedTerms = Collections.unmodifiableMap( unmappedTerms );
-        this.rejectedTerms = Collections.unmodifiableMap( rejectedTerms );
+        this.rawResults = Collections.unmodifiableMap( results );
+
         this.termsSignificantInAnyEdition = Collections.unmodifiableSet( termsSignificantInAnyEdition );
-        this.termsSignificant = Collections.unmodifiableMap( termsSignificant );
-        this.cutoffs = Collections.unmodifiableMap( cutoffs );
+
         this.totalGenes = totalGenes.size();
         this.totalTerms = totalTerms.size();
         this.totalResults = totalResults;
@@ -319,59 +163,36 @@ public class EnrichmentAnalysis {
     }
 
     /**
-     * @return cutoff p-values in each edition
+     * @return cutoff p-values for an edition
      */
-    public Map<Edition, Double> getCutoffs() {
-        return cutoffs;
-    }
-
-    /**
-     * @return unmodifiable map containing only significant results for each edition
-     */
-    public Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> getSignificantResults() {
-        Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> significantResultsOnly = new HashMap<>();
-
-        for ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> editionEntry : rawResults.entrySet() ) {
-            Edition ed = editionEntry.getKey();
-
-            Map<GeneOntologyTerm, EnrichmentResult> data = editionEntry.getValue();
-            Map<GeneOntologyTerm, EnrichmentResult> significantData = new HashMap<>();
-
-            Set<GeneOntologyTerm> sig = termsSignificant.get( ed );
-            if ( sig != null ) {
-                for ( GeneOntologyTerm term : sig ) {
-                    EnrichmentResult er = data.get( term );
-                    if ( er != null ) {
-                        significantData.put( term, er );
-                    }
-                }
-            }
-            significantResultsOnly.put( ed, Collections.unmodifiableMap( significantData ) );
+    public Double getCutoff( Edition ed ) {
+        if ( ed == null ) {
+            return null;
         }
+        Enrichment<GeneOntologyTerm, Gene> e = rawResults.get( ed );
+        if ( e == null ) {
+            return null;
+        }
+        return e.getCutoff();
+    }
 
-        return Collections.unmodifiableMap( significantResultsOnly );
-
+    public Set<Edition> getEditions() {
+        return Collections.unmodifiableSet( rawResults.keySet() );
     }
 
     /**
-     * @param specificEdition
+     * @param ed
      * @return unmodifiable map containing only significant results for specific edition
      */
-    public Map<GeneOntologyTerm, EnrichmentResult> getSignificantResults( Edition specificEdition ) {
-        Map<GeneOntologyTerm, EnrichmentResult> data = rawResults.get( specificEdition );
-        Map<GeneOntologyTerm, EnrichmentResult> significantData = new HashMap<>();
-
-        Set<GeneOntologyTerm> sig = termsSignificant.get( specificEdition );
-        if ( sig != null ) {
-            for ( GeneOntologyTerm term : sig ) {
-                EnrichmentResult er = data.get( term );
-                if ( er != null ) {
-                    significantData.put( term, er );
-                }
-            }
+    public Map<GeneOntologyTerm, EnrichmentResult> getSignificantResults( Edition ed ) {
+        if ( ed == null ) {
+            return null;
         }
-
-        return Collections.unmodifiableMap( significantData );
+        Enrichment<GeneOntologyTerm, Gene> e = rawResults.get( ed );
+        if ( e == null ) {
+            return null;
+        }
+        return Collections.unmodifiableMap( e.getSignificantResults() );
 
     }
 
@@ -381,19 +202,15 @@ public class EnrichmentAnalysis {
     public Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> getResults() {
         Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> significantInAnyEdition = new HashMap<>();
 
-        for ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> editionEntry : rawResults.entrySet() ) {
+        for ( Entry<Edition, Enrichment<GeneOntologyTerm, Gene>> editionEntry : rawResults.entrySet() ) {
             Edition ed = editionEntry.getKey();
 
-            Map<GeneOntologyTerm, EnrichmentResult> data = editionEntry.getValue();
-            Map<GeneOntologyTerm, EnrichmentResult> filteredData = new HashMap<>();
+            Enrichment<GeneOntologyTerm, Gene> enrichment = editionEntry.getValue();
 
-            for ( GeneOntologyTerm term : termsSignificantInAnyEdition ) {
-                EnrichmentResult er = data.get( term );
-                if ( er != null ) {
-                    filteredData.put( term, er );
-                }
-            }
-            significantInAnyEdition.put( ed, Collections.unmodifiableMap( filteredData ) );
+            significantInAnyEdition.put( ed, Collections
+                    .unmodifiableMap( Maps.filterKeys( enrichment.getSignificantResults(),
+                            Predicates.in( termsSignificantInAnyEdition ) ) ) );
+
         }
 
         return Collections.unmodifiableMap( significantInAnyEdition );
@@ -404,34 +221,34 @@ public class EnrichmentAnalysis {
      * @param specificEdition
      * @return unmodifiable map containing results significant in any edition for a specific edition
      */
-    public Map<GeneOntologyTerm, EnrichmentResult> getResults( Edition specificEdition ) {
-        Map<GeneOntologyTerm, EnrichmentResult> data = rawResults.get( specificEdition );
-        Map<GeneOntologyTerm, EnrichmentResult> filteredData = new HashMap<>();
-
-        for ( GeneOntologyTerm term : termsSignificantInAnyEdition ) {
-            EnrichmentResult er = data.get( term );
-            if ( er != null ) {
-                filteredData.put( term, er );
-            }
+    public Map<GeneOntologyTerm, EnrichmentResult> getResults( Edition ed ) {
+        if ( ed == null ) {
+            return null;
+        }
+        Enrichment<GeneOntologyTerm, Gene> e = rawResults.get( ed );
+        if ( e == null ) {
+            return null;
         }
 
-        return Collections.unmodifiableMap( filteredData );
+        return Collections.unmodifiableMap(
+                Maps.filterKeys( e.getSignificantResults(), Predicates.in( termsSignificantInAnyEdition ) ) );
 
     }
 
     /**
-     * @param specificEdition
+     * @param ed
      * @param specificTerm
      * @return Enrichment Result for specific edition and term else null if doesn't exist
      */
-    public EnrichmentResult getResult( Edition specificEdition, GeneOntologyTerm specificTerm ) {
-
-        Map<GeneOntologyTerm, EnrichmentResult> editionData = rawResults.get( specificEdition );
-        if ( editionData != null ) {
-            return editionData.get( specificTerm );
+    public EnrichmentResult getResult( Edition ed, GeneOntologyTerm specificTerm ) {
+        if ( ed == null || specificTerm == null ) {
+            return null;
         }
-
-        return null;
+        Enrichment<GeneOntologyTerm, Gene> e = rawResults.get( ed );
+        if ( e == null ) {
+            return null;
+        }
+        return e.getResult( specificTerm );
 
     }
 
@@ -457,24 +274,31 @@ public class EnrichmentAnalysis {
     }
 
     /**
-     * @return raw enrichment results both significant and not which passed all rejection tests.
+     * @return raw enrichment results, both significant and not, which passed all rejection tests.
      */
-    public Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> getRawResults() {
+    public Map<Edition, Enrichment<GeneOntologyTerm, Gene>> getRawResults() {
         return rawResults;
     }
 
-    /**
-     * @return Terms which were not mapped to anything in Cache
-     */
-    public Map<Edition, Set<GeneOntologyTerm>> getUnmappedTerms() {
-        return unmappedTerms;
-    }
+    //    /**
+    //     * @return Terms which were not mapped to anything in Cache
+    //     */
+    //    public Map<Edition, Set<GeneOntologyTerm>> getUnmappedTerms() {
+    //        return unmappedTerms;
+    //    }
 
     /**
-     * @return Terms which were rejected before significance tests
+     * @return Terms which were rejected before significance tests in an edition
      */
-    public Map<Edition, Set<GeneOntologyTerm>> getRejectedTerms() {
-        return rejectedTerms;
+    public Set<GeneOntologyTerm> getRejectedTerms( Edition ed ) {
+        if ( ed == null ) {
+            return null;
+        }
+        Enrichment<GeneOntologyTerm, Gene> e = rawResults.get( ed );
+        if ( e == null ) {
+            return null;
+        }
+        return Collections.unmodifiableSet( e.getRejectedTerms() );
     }
 
     /**
@@ -484,19 +308,26 @@ public class EnrichmentAnalysis {
         return termsSignificantInAnyEdition;
     }
 
-    /**
-     * @return Terms significant for each edition
-     */
-    public Map<Edition, Set<GeneOntologyTerm>> getTermsSignificant() {
-        return termsSignificant;
-    }
+    //    /**
+    //     * @return Terms significant for each edition
+    //     */
+    //    public Map<Edition, Set<GeneOntologyTerm>> getTermsSignificant() {
+    //        return termsSignificant;
+    //    }
 
     /**
      * @param ed Edition
      * @return Significant terms in a specific edition
      */
     public Set<GeneOntologyTerm> getTermsSignificant( Edition ed ) {
-        return termsSignificant.get( ed );
+        if ( ed == null ) {
+            return null;
+        }
+        Enrichment<GeneOntologyTerm, Gene> e = rawResults.get( ed );
+        if ( e == null ) {
+            return null;
+        }
+        return e.getSignificantTerms();
     }
 
     /**
@@ -520,15 +351,8 @@ public class EnrichmentAnalysis {
      */
     public Set<GeneOntologyTerm> getTopNTerms( int n ) {
         HashSet<GeneOntologyTerm> top = new HashSet<>();
-        for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : termsSignificant.entrySet() ) {
-            Edition ed = editionEntry.getKey();
-            for ( GeneOntologyTerm term : editionEntry.getValue() ) {
-                EnrichmentResult er = getResult( ed, term );
-                if ( er.getRank() < n ) {
-                    top.add( term );
-                }
-            }
-
+        for ( Enrichment<GeneOntologyTerm, Gene> e : rawResults.values() ) {
+            top.addAll( e.getTopNTerms( n ) );
         }
         return top;
     }
@@ -539,15 +363,15 @@ public class EnrichmentAnalysis {
      * @return Top N terms from specific edition
      */
     public Set<GeneOntologyTerm> getTopNTerms( int n, Edition ed ) {
-        HashSet<GeneOntologyTerm> top = new HashSet<>();
-        Set<GeneOntologyTerm> data = termsSignificant.get( ed );
-        for ( GeneOntologyTerm term : data ) {
-            EnrichmentResult er = getResult( ed, term );
-            if ( er.getRank() < n ) {
-                top.add( term );
-            }
+        if ( ed == null ) {
+            return null;
         }
-        return top;
+        Enrichment<GeneOntologyTerm, Gene> e = rawResults.get( ed );
+        if ( e == null ) {
+            return null;
+        }
+
+        return e.getTopNTerms( n );
     }
 
     /**
@@ -559,9 +383,9 @@ public class EnrichmentAnalysis {
     public Map<Edition, EnrichmentResult> getResults( GeneOntologyTerm t ) {
         if ( t == null ) return null;
         Map<Edition, EnrichmentResult> data = new HashMap<>();
-        for ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> editionEntry : rawResults.entrySet() ) {
+        for ( Entry<Edition, Enrichment<GeneOntologyTerm, Gene>> editionEntry : rawResults.entrySet() ) {
             Edition ed = editionEntry.getKey();
-            EnrichmentResult er = editionEntry.getValue().get( t );
+            EnrichmentResult er = editionEntry.getValue().getResult( t );
             if ( t != null ) {
                 data.put( ed, er );
             }
@@ -596,92 +420,6 @@ public class EnrichmentAnalysis {
      */
     public int getTotalResults() {
         return totalResults;
-    }
-
-    /**
-     * Optimized method of calculating probability tails, relies on the fact that given a probability from a
-     * hypergeometric distribution with given M,N,k at r : h_M,N,k(r) we can then find h_M,N,k(r+1) without calculating
-     * the 9 factorials which are usually required. h_M,N,k(r+1) = h_M,N,k(r) * (k-r) * (M-r) / [ (r+1) * (N-k+r+1) ]
-     * proof can be demonstrated relatively easily.
-     * 
-     * @param r sampleAnnotated
-     * @param m populationAnnotated
-     * @param k sampleSize
-     * @param t populationSize (N+M)
-     * @return upper cumulative probability at r given m,k,t
-     */
-    @Deprecated
-    public static double upperCumulativeProbability( int r, int m, int k, int t ) {
-        double h_r = sampleProbability( r, m, k, t );
-        double pvalue = h_r;
-        int min = Math.min( k, m );
-        for ( int r_ = r + 1; r_ <= min; r_++ ) {
-            h_r = h_r * ( k - r_ + 1 ) * ( m - r_ + 1 ) / ( ( r_ ) * ( t - m - k + r_ ) );
-
-            pvalue += h_r;
-        }
-        return pvalue;
-    }
-
-    /**
-     * Optimized method of calculating probability tails, relies on the fact that given a probability from a
-     * hypergeometric distribution with given M,N,k at r : h_M,N,k(r) we can then find h_M,N,k(r+1) without calculating
-     * the 9 factorials which are usually required. h_M,N,k(r+1) = h_M,N,k(r) * (k-r) * (M-r) / [ (r+1) * (N-k+r+1) ]
-     * proof can be demonstrated relatively easily. Utilizes log probabilities to be able to handle large integer inputs
-     * > 1000~
-     * 
-     * @param r sampleAnnotated
-     * @param m populationAnnotated
-     * @param k sampleSize
-     * @param t populationSize (N+M)
-     * @return upper cumulative probability at r given m,k,t
-     */
-    public static double upperCumulativeProbabilityLogMethod( int r, int m, int k, int t ) {
-        double h_r_log = sampleProbabilityLog( r, m, k, t );
-        double pvalue = Math.exp( h_r_log );
-        int min = Math.min( k, m );
-        for ( int r_ = r + 1; r_ <= min; r_++ ) {
-            h_r_log = h_r_log
-                    + FastMath.log( ( k - r_ + 1 ) * ( m - r_ + 1 ) / ( ( double ) ( r_ ) * ( t - m - k + r_ ) ) );
-
-            pvalue += FastMath.exp( h_r_log );
-        }
-        return pvalue;
-    }
-
-    @Deprecated
-    public static double sampleProbability( int r, int m, int k, int t ) {
-        // if ( r > m ) return 0d;
-        return CombinatoricsUtils.binomialCoefficientDouble( m, r )
-                / CombinatoricsUtils.binomialCoefficientDouble( t, k )
-                * CombinatoricsUtils.binomialCoefficientDouble( t - m, k - r );
-    }
-
-    public static double sampleProbabilityLog( int r, int m, int k, int t ) {
-        return ( CombinatoricsUtils.binomialCoefficientLog( m, r ) - CombinatoricsUtils.binomialCoefficientLog( t, k ) )
-                + CombinatoricsUtils.binomialCoefficientLog( t - m, k - r );
-    }
-
-    public static LinkedHashSet<GeneOntologyTerm> getSortedKeySetByValue(
-            Map<GeneOntologyTerm, EnrichmentResult> data ) {
-        LinkedHashSet<GeneOntologyTerm> results = new LinkedHashSet<>();
-
-        List<Entry<GeneOntologyTerm, EnrichmentResult>> entryList = new ArrayList<>( data.entrySet() );
-
-        Collections.sort( entryList, new Comparator<Entry<GeneOntologyTerm, EnrichmentResult>>() {
-            @Override
-            public int compare( Entry<GeneOntologyTerm, EnrichmentResult> e1,
-                    Entry<GeneOntologyTerm, EnrichmentResult> e2 ) {
-                return Double.compare( e1.getValue().getPvalue(), e2.getValue().getPvalue() );
-            }
-        } );
-
-        for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : entryList ) {
-            results.add( entry.getKey() );
-        }
-
-        return results;
-
     }
 
 }

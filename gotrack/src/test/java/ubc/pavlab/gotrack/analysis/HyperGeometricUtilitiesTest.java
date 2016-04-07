@@ -39,9 +39,9 @@ import org.junit.Test;
  * @author mjacobson
  * @version $Id$
  */
-public class EnrichmentAnalysisTest {
+public class HyperGeometricUtilitiesTest {
 
-    private static final Logger log = Logger.getLogger( EnrichmentAnalysisTest.class );
+    private static final Logger log = Logger.getLogger( HyperGeometricUtilitiesTest.class );
 
     private static final int TEST_COUNT = 10000;
 
@@ -98,7 +98,7 @@ public class EnrichmentAnalysisTest {
             double c = rndUpper[i];
             try {
                 assertEquals( c,
-                        EnrichmentAnalysis.upperCumulativeProbabilityLogMethod( arr[3], arr[1], arr[2], arr[0] ),
+                        HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( arr[3], arr[1], arr[2], arr[0] ),
                         c / 10000 );
                 successes++;
             } catch ( AssertionError e ) {
@@ -118,7 +118,7 @@ public class EnrichmentAnalysisTest {
             int[] arr = rndints[i];
             double c = rndSample[i];
             try {
-                assertEquals( c, EnrichmentAnalysis.sampleProbabilityLog( arr[3], arr[1], arr[2], arr[0] ),
+                assertEquals( c, HyperGeometricUtilities.sampleProbabilityLog( arr[3], arr[1], arr[2], arr[0] ),
                         0.434 / 10000 ); // error comes from logarithmic error propagation
                 successes++;
             } catch ( AssertionError e ) {

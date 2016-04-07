@@ -39,7 +39,7 @@ import ubc.pavlab.gotrack.model.GOEdition;
  * @author mjacobson
  * @version $Id$
  */
-public class GeneOntology {
+public class GeneOntology implements Ontology<GeneOntologyTerm> {
 
     private static final Logger log = Logger.getLogger( GeneOntology.class );
 
@@ -75,6 +75,7 @@ public class GeneOntology {
     /**
      * Return collection of all terms in this ontology
      */
+    @Override
     public Collection<GeneOntologyTerm> getAllTerms() {
         return termMap.valueCollection();
     }
@@ -82,11 +83,12 @@ public class GeneOntology {
     /**
      * Add term to this ontology
      */
+    @Override
     public void addTerm( GeneOntologyTerm t ) {
         if ( termMap.contains( t.getId() ) ) {
             throw new IllegalArgumentException( "Gene Ontology ID (" + t.getGoId() + ") already exists in ontology." );
         }
-        GeneOntologyTerm a = termMap.put( t.getId(), t );
+        termMap.put( t.getId(), t );
 
     }
 
@@ -109,16 +111,21 @@ public class GeneOntology {
             log.warn( "Relationship (" + parent + ") parent not found in term map!" );
         }
 
-        Relation parentRelation = new Relation( parentTerm, type );
-        Relation childRelation = new Relation( term, type );
+        addRelationship( term, parentTerm, type );
+    }
 
-        if ( term.getParents().contains( parentRelation ) || parentTerm.getChildren().contains( childRelation ) ) {
+    @Override
+    public void addRelationship( GeneOntologyTerm child, GeneOntologyTerm parent, RelationshipType type ) {
+        Relation<GeneOntologyTerm> parentRelation = new Relation<>( parent, type );
+        Relation<GeneOntologyTerm> childRelation = new Relation<>( child, type );
+
+        if ( child.getParents().contains( parentRelation ) || parent.getChildren().contains( childRelation ) ) {
             throw new IllegalArgumentException(
-                    "Relationship between " + child + " and " + parent + " already exists." );
+                    "Relationship between " + child.getGoId() + " and " + parent.getGoId() + " already exists." );
         }
 
-        term.getParents().add( parentRelation );
-        parentTerm.getChildren().add( childRelation );
+        child.getParents().add( parentRelation );
+        parent.getChildren().add( childRelation );
     }
 
     /**
@@ -152,6 +159,7 @@ public class GeneOntology {
      * @param id Id
      * @return Term or null if non-existent
      */
+    @Override
     public GeneOntologyTerm getTerm( int id ) {
         return termMap.get( id );
 
@@ -160,6 +168,7 @@ public class GeneOntology {
     /**
      * @return Number of terms in this ontology
      */
+    @Override
     public int size() {
         // return termMapLarge.size();
         return termMap.size();
@@ -195,6 +204,7 @@ public class GeneOntology {
      * @param goSet set of Terms
      * @return propagated set of terms including part of relationships
      */
+    @Override
     public Set<GeneOntologyTerm> propagate( Collection<GeneOntologyTerm> goSet ) {
         return propagate( goSet, true );
     }
@@ -289,6 +299,11 @@ public class GeneOntology {
         return getAncestors( termMap.get( id ), includePartOf, cache );
     }
 
+    @Override
+    public Set<GeneOntologyTerm> getAncestors( GeneOntologyTerm t ) {
+        return getAncestors( t, true, null );
+    }
+
     /**
      * @param t Term
      * @param includePartOf whether or not to propagate over part of relationships
@@ -306,7 +321,7 @@ public class GeneOntology {
 
         Set<GeneOntologyTerm> ancestors = new HashSet<>();
 
-        for ( Relation relation : getParents( t, includePartOf ) ) {
+        for ( Relation<GeneOntologyTerm> relation : getParents( t, includePartOf ) ) {
 
             ancestors.add( relation.getRelation() );
             // ancestors.addAll( ancestorsCache.getUnchecked( parent.getParent() ) );
@@ -328,7 +343,8 @@ public class GeneOntology {
      * @return Set of relations of the Term with this GO Id
      * @throws IllegalArgumentException
      */
-    public Set<Relation> getParents( String goid, boolean includePartOf ) throws IllegalArgumentException {
+    public Set<Relation<GeneOntologyTerm>> getParents( String goid, boolean includePartOf )
+            throws IllegalArgumentException {
         return getParents( convertGOId( goid ), includePartOf );
     }
 
@@ -337,8 +353,17 @@ public class GeneOntology {
      * @param includePartOf whether or not to propagate over part of relationships
      * @return Set of relations of the Term with this Id
      */
-    public Set<Relation> getParents( int id, boolean includePartOf ) {
+    public Set<Relation<GeneOntologyTerm>> getParents( int id, boolean includePartOf ) {
         return getParents( termMap.get( id ), includePartOf );
+    }
+
+    /**
+     * @param t Term
+     * @return Set of relations of the given Term
+     */
+    @Override
+    public Set<Relation<GeneOntologyTerm>> getParents( GeneOntologyTerm t ) {
+        return getParents( t, true );
     }
 
     /**
@@ -346,12 +371,12 @@ public class GeneOntology {
      * @param includePartOf whether or not to propagate over part of relationships
      * @return Set of relations of the given Term
      */
-    private Set<Relation> getParents( GeneOntologyTerm t, boolean includePartOf ) {
+    private Set<Relation<GeneOntologyTerm>> getParents( GeneOntologyTerm t, boolean includePartOf ) {
         if ( includePartOf ) {
             return t.getParents();
         } else {
-            Set<Relation> relations = new HashSet<>();
-            for ( Relation p : t.getParents() ) {
+            Set<Relation<GeneOntologyTerm>> relations = new HashSet<>();
+            for ( Relation<GeneOntologyTerm> p : t.getParents() ) {
                 if ( p.getType().equals( RelationshipType.IS_A ) ) {
                     relations.add( p );
                 }
@@ -368,6 +393,11 @@ public class GeneOntology {
      */
     public GOEdition getEdition() {
         return edition;
+    }
+
+    @Override
+    public int getId() {
+        return edition.getId();
     }
 
     // private ImmutableCollection<GeneOntologyTerm> getParents2( GeneOntologyTerm t ) {

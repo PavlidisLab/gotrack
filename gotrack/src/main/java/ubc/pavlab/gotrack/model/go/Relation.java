@@ -25,17 +25,17 @@ package ubc.pavlab.gotrack.model.go;
  * @author mjacobson
  * @version $Id$
  */
-public final class Relation {
-    private final GeneOntologyTerm relation;
+public final class Relation<T> {
+    private final T relation;
     private final RelationshipType type;
 
-    public Relation( GeneOntologyTerm relation, RelationshipType type ) {
+    public Relation( T relation, RelationshipType type ) {
         super();
         this.relation = relation;
         this.type = type;
     }
 
-    public GeneOntologyTerm getRelation() {
+    public T getRelation() {
         return relation;
     }
 
@@ -45,7 +45,7 @@ public final class Relation {
 
     @Override
     public String toString() {
-        return "Relation [relation=" + relation.getGoId() + ", type=" + type + "]";
+        return "Relation [relation=" + relation.toString() + ", type=" + type + "]";
     }
 
     @Override
