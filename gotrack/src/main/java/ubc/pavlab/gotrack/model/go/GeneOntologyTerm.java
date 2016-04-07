@@ -141,8 +141,7 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
 
     @Override
     public String toString() {
-        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + ", parents=" + relations
-                + ", children=" + children + "]";
+        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + "]"; //", parents=" + relations + ", children=" + children + "]";
     }
 
     @Override

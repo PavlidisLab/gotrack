@@ -76,11 +76,8 @@ public class StabilityAnalysis {
         // Container
         Map<Edition, SimilarityScore> similarityScores = new LinkedHashMap<>();
 
-        // All significant results from each edition
-        Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults = analysis.getSignificantResults();
-
         // ordered list of editions
-        List<Edition> orderedEditions = new ArrayList<>( enrichmentResults.keySet() );
+        List<Edition> orderedEditions = new ArrayList<>( analysis.getEditions() );
         Collections.sort( orderedEditions );
 
         // Edition to compare to (or in the case of proximal, the first edition)
@@ -234,7 +231,7 @@ public class StabilityAnalysis {
                         // compute log probs / decache them
                         double minp = logProbCache.get( key );
                         if ( minp == noEntryValue ) {
-                            minp = EnrichmentAnalysis.upperCumulativeProbabilityLogMethod( params[0], params[1],
+                            minp = HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( params[0], params[1],
                                     params[2], params[3] );
                             logProbCache.put( key, minp );
                         }
@@ -249,7 +246,7 @@ public class StabilityAnalysis {
                         key = new HyperUCFKey( params[0], params[1], params[2], params[3] );
                         double maxp = logProbCache.get( key );
                         if ( maxp == noEntryValue ) {
-                            maxp = EnrichmentAnalysis.upperCumulativeProbabilityLogMethod( params[0], params[1],
+                            maxp = HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( params[0], params[1],
                                     params[2], params[3] );
                             logProbCache.put( key, maxp );
                         }

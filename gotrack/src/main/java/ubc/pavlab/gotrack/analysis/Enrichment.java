@@ -77,7 +77,7 @@ public class Enrichment<T, G> {
         this.populationMax = populationMax <= 0 ? Integer.MAX_VALUE : populationMax;
     }
 
-    public boolean runAnalysis( StandardPopulation<T, G> sample, Population<T, G> population,
+    protected boolean runAnalysis( StandardPopulation<T, G> sample, Population<T, G> population,
             TObjectDoubleHashMap<HyperUCFKey> logProbCache ) {
         return runAnalysis( sample, population, sample.getProperties(), logProbCache );
     }
@@ -90,10 +90,11 @@ public class Enrichment<T, G> {
         return runAnalysis( sample, population, tests, null );
     }
 
-    public boolean runAnalysis( Population<T, G> sample, Population<T, G> population, Set<T> tests,
+    protected boolean runAnalysis( Population<T, G> sample, Population<T, G> population, Set<T> tests,
             TObjectDoubleHashMap<HyperUCFKey> logProbCache ) {
 
         if ( logProbCache == null ) {
+            // Log Probability Memoization Cache
             logProbCache = new TObjectDoubleHashMap<>();
         }
 
