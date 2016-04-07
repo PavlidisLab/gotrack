@@ -703,6 +703,37 @@ public class EnrichmentTest extends BaseTest {
 
     }
 
+    @Test
+    public void testEnrichmentMultipleSigResultsBenjaminiHochbergStepUp() {
+        Enrichment<GeneOntologyTerm, Gene> e = new Enrichment<>( MultipleTestCorrection.BH, 0.05, 0, 0 );
+
+        GeneOntologyTerm t = new GeneOntologyTerm( "GO:0000001" );
+        GeneOntologyTerm t2 = new GeneOntologyTerm( "GO:0000002" );
+        GeneOntologyTerm t3 = new GeneOntologyTerm( "GO:0000003" );
+        GeneOntologyTerm t4 = new GeneOntologyTerm( "GO:0000004" );
+
+        e.runAnalysis( sample, population, Sets.newHashSet( t, t2, t3, t4 ) );
+
+        Map<GeneOntologyTerm, EnrichmentResult> res = e.getSignificantResults();
+        Assert.assertThat( res.size(), Matchers.is( 3 ) );
+        Assert.assertThat( res.keySet(), Matchers.containsInAnyOrder( t2, t3, t4 ) );
+
+        e.setThreshold( 1.0 );
+        e.runAnalysis( sample, population, Sets.newHashSet( t, t2, t3, t4 ) );
+
+        res = e.getSignificantResults();
+        Assert.assertThat( res.size(), Matchers.is( 4 ) );
+        Assert.assertThat( res.keySet(), Matchers.containsInAnyOrder( t, t2, t3, t4 ) );
+
+        e.setThreshold( 0.005 );
+        e.runAnalysis( sample, population, Sets.newHashSet( t, t2, t3, t4 ) );
+
+        res = e.getSignificantResults();
+        Assert.assertThat( res.size(), Matchers.is( 3 ) );
+        Assert.assertThat( res.keySet(), Matchers.containsInAnyOrder( t2, t3, t4 ) );
+
+    }
+
     @Test(timeout = 30000)
     public void testLoad() {
         int gsetSize = 100;
