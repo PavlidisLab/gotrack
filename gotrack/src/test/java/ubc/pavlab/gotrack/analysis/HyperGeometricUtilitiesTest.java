@@ -53,7 +53,6 @@ public class HyperGeometricUtilitiesTest {
 
     @BeforeClass
     public static void classSetup() {
-        log.info( "EnrichmentAnalysisTest @BeforeClass" );
         Random rnd = new Random( 12345 );
         RandomGenerator rg = RandomGeneratorFactory.createRandomGenerator( rnd );
         rndints = new int[TEST_COUNT][4];
@@ -80,18 +79,15 @@ public class HyperGeometricUtilitiesTest {
 
     @Before
     public void setup() {
-        log.info( "EnrichmentAnalysisTest @Before" );
 
     }
 
     @After
     public void after() {
-        log.info( "EnrichmentAnalysisTest @After" );
     }
 
     @Test
     public void testUpperCumulativeProbability() {
-        log.info( "EnrichmentAnalysisTest testUpperCumulativeProbability" );
         int successes = 0;
         for ( int i = 0; i < rndints.length; i++ ) {
             int[] arr = rndints[i];
@@ -112,7 +108,6 @@ public class HyperGeometricUtilitiesTest {
 
     @Test
     public void testSampleProbability() {
-        log.info( "EnrichmentAnalysisTest testSampleProbability" );
         int successes = 0;
         for ( int i = 0; i < rndints.length; i++ ) {
             int[] arr = rndints[i];
