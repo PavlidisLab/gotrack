@@ -477,14 +477,13 @@ public class EnrichmentView implements Serializable {
 
         statusPoller.newStatus( "Retrieving Sample Sizes...", 50 );
         // This contains a part of the contingency tables we will need to create
-        Map<Edition, Integer> sampleSizes = calculateSampleSizes( geneGOMap );
+        //        Map<Edition, Integer> sampleSizes = calculateSampleSizes( geneGOMap );
         statusPoller.completeStatus();
 
         statusPoller.newStatus( "Running Overrepresentation Analyses on all editions...", 55 );
         log.info( "Running enrichment analysis" );
 
-        EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, min, max, mtc, thresh, cache,
-                spId );
+        EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, min, max, mtc, thresh, cache, spId );
 
         statusPoller.completeStatus();
 
@@ -663,8 +662,8 @@ public class EnrichmentView implements Serializable {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_type", "pvalue" );
 
             Map<Long, Double> cutoffs = new TreeMap<>();
-            for ( Entry<Edition, Double> entry : analysis.getCutoffs().entrySet() ) {
-                cutoffs.put( entry.getKey().getDate().getTime(), entry.getValue() );
+            for ( Edition ed : eds ) {
+                cutoffs.put( ed.getDate().getTime(), analysis.getCutoff( ed ) );
             }
 
             RequestContext.getCurrentInstance().addCallbackParam( "hc_cutoffs", new Gson().toJson( cutoffs ) );
@@ -680,7 +679,7 @@ public class EnrichmentView implements Serializable {
             boolean outsideTopNCheck = false; // Is any term outside of the topN in any edition
             boolean insignificantCheck = false; // Are there any terms which are insignificant in an edition
             for ( Edition ed : eds ) {
-                int maxSignificantRank = analysis.getTermsSignificant().get( ed ).size() - 1;
+                int maxSignificantRank = analysis.getTermsSignificant( ed ).size() - 1;
 
                 // First we compute the relative ranks among the terms selected
                 dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
@@ -1027,7 +1026,7 @@ public class EnrichmentView implements Serializable {
             return;
         }
         GeneOntologyTerm t = selectedStabilityTableValue.getTerm();
-        Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant().get( currentEdition );
+        Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant( currentEdition );
         EnrichmentResult er = enrichmentResults.get( currentEdition ).get( t );
         viewEnrichmentRow = new EnrichmentTableValues( currentEdition, t, er,
                 selectedStabilityTableValue.getStability(), sigTerms.contains( t ) );
@@ -1045,7 +1044,7 @@ public class EnrichmentView implements Serializable {
         Edition ed = enrichmentTableAllEditions.get( enrichmentTableEdition );
         if ( ed != null ) {
 
-            Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant().get( ed );
+            Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant( ed );
             Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
             for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();

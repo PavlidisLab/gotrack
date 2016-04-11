@@ -31,6 +31,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Lists;
+
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
@@ -144,6 +146,11 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     @Override
     public List<EnrichmentDTO> enrich( Set<Gene> genes ) throws DAOException {
+
+        if ( genes == null || genes.size() == 0 ) {
+            return Lists.newArrayList();
+        }
+
         List<Object> params = new ArrayList<Object>();
 
         String sql = String.format( SQL_ENRICH, DAOUtil.preparePlaceHolders( genes.size() ) );
@@ -199,6 +206,10 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         // If editions across species in the same 'release' are have slightly differing dates, 
         // they will not be grouped appropriately
 
+        if ( goId == null || goId.equals( "" ) ) {
+            return Lists.newArrayList();
+        }
+
         List<Object> params = new ArrayList<Object>();
 
         // species, symbol,species
@@ -247,6 +258,10 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     @Override
     public List<DirectAnnotationCountDTO> directGeneCounts( String goId ) throws DAOException {
+
+        if ( goId == null || goId.equals( "" ) ) {
+            return Lists.newArrayList();
+        }
 
         List<Object> params = new ArrayList<Object>();
 
