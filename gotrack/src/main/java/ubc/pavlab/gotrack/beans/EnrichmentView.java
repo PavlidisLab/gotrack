@@ -477,14 +477,13 @@ public class EnrichmentView implements Serializable {
 
         statusPoller.newStatus( "Retrieving Sample Sizes...", 50 );
         // This contains a part of the contingency tables we will need to create
-        Map<Edition, Integer> sampleSizes = calculateSampleSizes( geneGOMap );
+        //        Map<Edition, Integer> sampleSizes = calculateSampleSizes( geneGOMap );
         statusPoller.completeStatus();
 
         statusPoller.newStatus( "Running Overrepresentation Analyses on all editions...", 55 );
         log.info( "Running enrichment analysis" );
 
-        EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, sampleSizes, min, max, mtc, thresh, cache,
-                spId );
+        EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, min, max, mtc, thresh, cache, spId );
 
         statusPoller.completeStatus();
 

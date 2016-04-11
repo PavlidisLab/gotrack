@@ -308,6 +308,13 @@ public class Enrichment<T, G> {
     }
 
     /**
+     * @return unmodifiable map containing all results
+     */
+    public Map<T, EnrichmentResult> getResults() {
+        return results;
+    }
+
+    /**
      * @param n
      * @return Top N terms
      */

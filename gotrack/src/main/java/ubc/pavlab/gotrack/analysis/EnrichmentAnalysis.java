@@ -87,8 +87,8 @@ public class EnrichmentAnalysis {
      * @param cache Cache object containing part of the contingency table
      * @param currentSpeciesId Used to get correct data from cache
      */
-    public EnrichmentAnalysis( Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap,
-            Map<Edition, Integer> sampleSizes, int min, int max, MultipleTestCorrection test, double threshold,
+    public EnrichmentAnalysis( Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap, int min, int max,
+            MultipleTestCorrection test, double threshold,
             Cache cache, int currentSpeciesId ) {
 
         /*
@@ -208,7 +208,7 @@ public class EnrichmentAnalysis {
             Enrichment<GeneOntologyTerm, Gene> enrichment = editionEntry.getValue();
 
             significantInAnyEdition.put( ed, Collections
-                    .unmodifiableMap( Maps.filterKeys( enrichment.getSignificantResults(),
+                    .unmodifiableMap( Maps.filterKeys( enrichment.getResults(),
                             Predicates.in( termsSignificantInAnyEdition ) ) ) );
 
         }
@@ -231,7 +231,7 @@ public class EnrichmentAnalysis {
         }
 
         return Collections.unmodifiableMap(
-                Maps.filterKeys( e.getSignificantResults(), Predicates.in( termsSignificantInAnyEdition ) ) );
+                Maps.filterKeys( e.getResults(), Predicates.in( termsSignificantInAnyEdition ) ) );
 
     }
 
@@ -386,7 +386,7 @@ public class EnrichmentAnalysis {
         for ( Entry<Edition, Enrichment<GeneOntologyTerm, Gene>> editionEntry : rawResults.entrySet() ) {
             Edition ed = editionEntry.getKey();
             EnrichmentResult er = editionEntry.getValue().getResult( t );
-            if ( t != null ) {
+            if ( er != null ) {
                 data.put( ed, er );
             }
         }
