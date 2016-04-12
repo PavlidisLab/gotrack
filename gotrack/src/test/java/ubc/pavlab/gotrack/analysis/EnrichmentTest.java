@@ -734,7 +734,7 @@ public class EnrichmentTest extends BaseTest {
 
     }
 
-    @Test(timeout = 30000)
+    @Test(timeout = 60000)
     public void testLoad() {
         int gsetSize = 100;
         int hitListSize = 200;
