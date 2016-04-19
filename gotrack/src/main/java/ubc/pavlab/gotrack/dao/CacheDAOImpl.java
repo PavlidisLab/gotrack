@@ -82,8 +82,8 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_GO_ANNOTATION_COUNTS_RESTRICT = "select species_id, edition, go_id, direct_annotation_count, inferred_annotation_count from pp_go_annotation_counts WHERE species_id in (%s)";
 
     // Aggregate
-    private static final String SQL_AGGREGATE = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term from pp_edition_aggregates";
-    private static final String SQL_AGGREGATE_RESTRICT = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term from pp_edition_aggregates WHERE species_id in (%s)";
+    private static final String SQL_AGGREGATE = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term, avg_multifunctionality from pp_edition_aggregates";
+    private static final String SQL_AGGREGATE_RESTRICT = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term, avg_multifunctionality from pp_edition_aggregates WHERE species_id in (%s)";
 
     // Accession
     private static final String SQL_ACCESSIONS = "select distinct pp_current_genes_id, accession, sec, acindex.symbol IS NOT NULL as sp from pp_primary_accessions left join acindex using (accession) LEFT JOIN sec_ac on accession=ac";
@@ -280,7 +280,8 @@ public class CacheDAOImpl implements CacheDAO {
                 aggregates.add( new AggregateDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
                         resultSet.getInt( "gene_count" ), resultSet.getDouble( "avg_direct_terms_for_gene" ),
                         resultSet.getDouble( "avg_inferred_terms_for_gene" ),
-                        resultSet.getDouble( "avg_inferred_genes_for_term" ) ) );
+                        resultSet.getDouble( "avg_inferred_genes_for_term" ),
+                        resultSet.getDouble( "avg_multifunctionality" ) ) );
             }
 
         } catch ( SQLException e ) {

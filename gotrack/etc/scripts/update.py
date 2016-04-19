@@ -273,21 +273,7 @@ def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
 
                     if force_pp or inc_results['aggregate_ood']:
                         log.info("Creating aggregate tables...")
-                        go_ed_to_sp_ed = defaultdict(list)
-                        for sp_id, ed, goa_date, go_ed, go_date in gotrack.fetch_editions():
-                            go_ed_to_sp_ed[go_ed].append((sp_id, ed))
-
-                        gotrack.create_aggregate_staging()
-
-                        i = 0
-                        for go_ed, eds in sorted(go_ed_to_sp_ed.iteritems()):
-                            i += 1
-                            log.info("Starting Ontology: %s / %s", i, len(go_ed_to_sp_ed))
-                            # node_list = gotrack.fetch_term_list(go_ed)
-                            adjacency_list = gotrack.fetch_adjacency_list(go_ed)
-                            ont = Ontology.from_adjacency("1900-01-01", adjacency_list)
-                            for sp_id, ed in eds:
-                                process_aggregate(gotrack, ont, sp_id, ed)
+                        preprocess_aggregates(gotrack)
 
             else:
                 log.info("Database does not require preprocessing.")
@@ -303,6 +289,32 @@ def cleanup(d, cron=False):
         shutil.rmtree(d)
     elif d is not None:
         log.info("Temporary Folder: {0}".format(d))
+
+
+def preprocess_aggregates(gotrack=None):
+    """Manually: update pp_edition_aggregates inner join (select species_id, edition, sum(cast( 1/mf as decimal(10,8) ))/gene_count avg_mf from 
+        (select species_id, edition, (gene_count - inferred_annotation_count) mf from pp_go_annotation_counts inner join pp_edition_aggregates using(species_id, edition)) as t1 
+        inner join pp_edition_aggregates using(species_id, edition) group by species_id, edition) as mftable using (species_id, edition) set avg_multifunctionality=avg_mf;"""
+    if gotrack is None:
+        gotrack = gtdb.GOTrack(cursorclass=MySQLdb.cursors.SSCursor, **CREDS)
+        log.info("Connected to host: {host}, db: {db}, user: {user}".format(**CREDS))
+
+    log.info("Creating aggregate tables...")
+    go_ed_to_sp_ed = defaultdict(list)
+    for sp_id, ed, goa_date, go_ed, go_date in gotrack.fetch_editions():
+        go_ed_to_sp_ed[go_ed].append((sp_id, ed))
+
+    gotrack.create_aggregate_staging()
+
+    i = 0
+    for go_ed, eds in sorted(go_ed_to_sp_ed.iteritems()):
+        i += 1
+        log.info("Starting Ontology: %s / %s", i, len(go_ed_to_sp_ed))
+        # node_list = gotrack.fetch_term_list(go_ed)
+        adjacency_list = gotrack.fetch_adjacency_list(go_ed)
+        ont = Ontology.from_adjacency("1900-01-01", adjacency_list)
+        for sp_id, ed in eds:
+            process_aggregate(gotrack, ont, sp_id, ed)  
 
 
 def push_to_production():
@@ -373,12 +385,19 @@ def process_aggregate(gotrack, ont, sp_id, ed):
     total_term_set_size = sum(len(s) for s in term_set_per_gene_id.itervalues())
     gene_count = len(term_set_per_gene_id)
 
+    # Calculate average multifunctionality
+    avg_mf = 0
+    for t, c in inferred_counts_per_term.iteritems():
+        avg_mf += 1.0/(gene_count - c)
+
+    avg_mf = avg_mf / gene_count
+
     # write_total_time = time.time()
 
     # Write aggregates
     if gene_count > 0:
         gotrack.write_aggregate(sp_id, ed, gene_count, annotation_count / gene_count,
-                                total_term_set_size / gene_count, total_gene_set_size / len(gene_id_set_per_term))
+                                total_term_set_size / gene_count, total_gene_set_size / len(gene_id_set_per_term), avg_mf)
     else:
         log.warn("No Genes in Species ({0}), Edition ({1})".format(sp_id, ed))
 
@@ -462,23 +481,35 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Update GOTrack Database')
     parser.add_argument('resource_directory', metavar='d', type=str, nargs='?', default=None,
                         help='a folder holding resources to use in the update')
-    parser.add_argument('--push', dest='push', action='store_true',
+
+    group = parser.add_mutually_exclusive_group(required=True)
+
+    group.add_argument('--push', dest='push', action='store_true',
                         help='Push Staging to Production, does not insert data')
-    parser.add_argument('--meta', dest='meta', action='store_true',
+
+    group.add_argument('--meta', dest='meta', action='store_true',
                         help='Display Connection and Table Information')
+
+    group.add_argument('--update', dest='update', action='store_true',
+                        help='Runs Update with options')
+
+    group.add_argument('--update-push', dest='update_push', action='store_true',
+                        help='Runs Update with options followed by update with --push')
+
+    group.add_argument('--aggregate', dest='aggregate', action='store_true',
+                        help='Updates the aggregate tables only.')
+
     parser.add_argument('--cron', dest='cron', action='store_true',
                         help='No interactivity mode')
     parser.add_argument('--no-downloads', dest='dl', action='store_true',
                         help='Prevent all downloads')
     parser.add_argument('--force-pp', dest='force_pp', action='store_true',
                         help='Force preprocessing of database (regardless of need)')
-    parser.add_argument('--update-push', dest='update_push', action='store_true',
-                        help='Runs Update with options following by update with --push')
+
+
 
     args = parser.parse_args()
-    if args.push and (args.resource_directory is not None or args.cron or args.dl or args.meta or args.force_pp or args.update_push):
-        log.error("--push cannot be specified with other options")
-    elif args.meta:
+    if args.meta:
         # Push Staging to Production
         log.info("Host: {host}, db: {db}, user: {user}".format(**CREDS))
         log.info('Tables: \n%s', "\n".join(sorted([str(x) for x in gtdb.GOTrack.TABLES.iteritems()])))
@@ -490,9 +521,14 @@ if __name__ == '__main__':
     elif args.push:
         # Push Staging to Production
         push_to_production()
-    else:
+    elif args.aggregate:
+        # Update aggregate tables
+        preprocess_aggregates()
+    elif args.update:
         # Update database
         main(args.resource_directory, args.cron, args.dl, args.force_pp)
+    else:
+        log.error("No goal supplied.")
 
 
 

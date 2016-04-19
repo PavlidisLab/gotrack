@@ -364,22 +364,29 @@ public class CacheDAOTest extends BaseTest {
                     Assert.assertThat( dto.getAvgDirectTermsForGene(), Matchers.is( 21.4 ) );
                     Assert.assertThat( dto.getAvgInferredTermsForGene(), Matchers.is( 138.9 ) );
                     Assert.assertThat( dto.getAvgInferredGenesForTerm(), Matchers.closeTo( 1.885, 0.001 ) );
-
+                    Assert.assertThat( dto.getAvgMultifunctionality(),
+                            Matchers.closeTo( 0.000052743329, 0.000000001 ) );
                 } else if ( dto.getEdition() == 145 ) {
                     Assert.assertThat( dto.getGeneCount(), Matchers.is( 10 ) );
                     Assert.assertThat( dto.getAvgDirectTermsForGene(), Matchers.is( 21.4 ) );
                     Assert.assertThat( dto.getAvgInferredTermsForGene(), Matchers.is( 139.5 ) );
                     Assert.assertThat( dto.getAvgInferredGenesForTerm(), Matchers.closeTo( 1.883, 0.001 ) );
+                    Assert.assertThat( dto.getAvgMultifunctionality(),
+                            Matchers.closeTo( 0.000052782596, 0.000000001 ) );
                 } else if ( dto.getEdition() == 146 ) {
                     Assert.assertThat( dto.getGeneCount(), Matchers.is( 10 ) );
                     Assert.assertThat( dto.getAvgDirectTermsForGene(), Matchers.is( 21.8 ) );
                     Assert.assertThat( dto.getAvgInferredTermsForGene(), Matchers.is( 143.4 ) );
                     Assert.assertThat( dto.getAvgInferredGenesForTerm(), Matchers.closeTo( 1.860, 0.001 ) );
+                    Assert.assertThat( dto.getAvgMultifunctionality(),
+                            Matchers.closeTo( 0.000053296431, 0.000000001 ) );
                 } else if ( dto.getEdition() == 147 ) {
                     Assert.assertThat( dto.getGeneCount(), Matchers.is( 10 ) );
                     Assert.assertThat( dto.getAvgDirectTermsForGene(), Matchers.is( 21.8 ) );
                     Assert.assertThat( dto.getAvgInferredTermsForGene(), Matchers.is( 143.4 ) );
                     Assert.assertThat( dto.getAvgInferredGenesForTerm(), Matchers.closeTo( 1.860, 0.001 ) );
+                    Assert.assertThat( dto.getAvgMultifunctionality(),
+                            Matchers.closeTo( 0.000053310363, 0.000000001 ) );
                 }
             } else if ( dto.getSpecies() != 8 ) {
                 Assert.fail( "Unknown Species" );

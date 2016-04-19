@@ -434,6 +434,7 @@ public class GeneView {
 
         // Calculate multifunctionality of the gene in each edition
         Series multiSeries = new Series( "Multifunctionality" );
+        Series averageSeries = new Series( "Species Average" );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.INFERRED )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
@@ -448,7 +449,14 @@ public class GeneView {
                 }
                 multiSeries.addDataPoint( ed.getDate(), multi );
             }
+
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                averageSeries.addDataPoint( ed.getDate(), agg.getAvgMultifunctionality() );
+            }
         }
+        chart.addSeries( averageSeries );
         chart.addSeries( multiSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );

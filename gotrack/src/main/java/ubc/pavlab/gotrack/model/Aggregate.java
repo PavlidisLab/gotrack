@@ -33,13 +33,16 @@ public final class Aggregate {
     private final Double avgDirectByGene;
     private final Double avgInferredByGene;
     private final Double avgGenesByTerm;
+    private final Double avgMultifunctionality;
 
-    public Aggregate( Integer geneCount, Double avgDirectByGene, Double avgInferredByGene, Double avgGenesByTerm ) {
+    public Aggregate( Integer geneCount, Double avgDirectByGene, Double avgInferredByGene, Double avgGenesByTerm,
+            Double avgMulti ) {
         super();
         this.geneCount = geneCount;
         this.avgDirectByGene = avgDirectByGene;
         this.avgInferredByGene = avgInferredByGene;
         this.avgGenesByTerm = avgGenesByTerm;
+        this.avgMultifunctionality = avgMulti;
     }
 
     public Aggregate( AggregateDTO dto ) {
@@ -47,6 +50,7 @@ public final class Aggregate {
         this.avgDirectByGene = dto.getAvgDirectTermsForGene();
         this.avgInferredByGene = dto.getAvgInferredTermsForGene();
         this.avgGenesByTerm = dto.getAvgInferredGenesForTerm();
+        this.avgMultifunctionality = dto.getAvgMultifunctionality();
     }
 
     public Integer getGeneCount() {
@@ -65,10 +69,15 @@ public final class Aggregate {
         return avgGenesByTerm;
     }
 
+    public Double getAvgMultifunctionality() {
+        return avgMultifunctionality;
+    }
+
     @Override
     public String toString() {
         return "Aggregate [geneCount=" + geneCount + ", avgDirectByGene=" + avgDirectByGene + ", avgInferredByGene="
-                + avgInferredByGene + ", avgGenesByTerm=" + avgGenesByTerm + "]";
+                + avgInferredByGene + ", avgGenesByTerm=" + avgGenesByTerm + ", avgMultifunctionality="
+                + avgMultifunctionality + "]";
     }
 
 }
