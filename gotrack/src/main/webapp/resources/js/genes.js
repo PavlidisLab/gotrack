@@ -179,13 +179,13 @@ function handleFetchMultiChart(xhr, status, args) {
    var options = createGenericLineChart('hc_multi_container', args);
    //options.chart.type = 'area';
    //options.plotOptions.area = {fillColor: {
-   options.plotOptions.line = {color: {
-      linearGradient: [ 0,0,0,500],
-      stops: [
-          [0, MAXIMALLY_DISTINCT_COLORS[0]],
-          [1, MAXIMALLY_DISTINCT_COLORS[2]]
-      ]
-  }};
+//   options.plotOptions.line = {color: {
+//      linearGradient: [ 0,0,0,500],
+//      stops: [
+//          [0, MAXIMALLY_DISTINCT_COLORS[0]],
+//          [1, MAXIMALLY_DISTINCT_COLORS[2]]
+//      ]
+//  }};
    
    HC.charts.multi.options = options;
    HC.charts.multi.recreate(options);
