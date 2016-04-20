@@ -5,6 +5,7 @@ __author__ = 'mjacobson'
 from collections import namedtuple
 from parsers import parse_go_obo
 from datetime import datetime
+from collections import defaultdict
 
 Relationship = namedtuple("Relationship", ["term", "type"])
 
@@ -98,6 +99,7 @@ class Ontology:
                 raise ValueError("Cannot parse date")
 
         self.term_map = term_map
+        self.ancestor_cache = defaultdict(set)
 
     @classmethod
     def from_file_data(cls, date, file_or_data):
@@ -174,9 +176,7 @@ class Ontology:
             term = None
         return term
 
-    def get_ancestors(self, term_or_id, include_self=False, cache=None):
-        if cache is None:
-            cache = {}
+    def get_ancestors(self, term_or_id, include_self=False):
         if not isinstance(term_or_id, GOTerm):
             try:
                 term = self.term_map[term_or_id]
@@ -184,6 +184,9 @@ class Ontology:
                 raise e
         else:
             term = term_or_id
+
+        if term in self.ancestor_cache:
+            return self.ancestor_cache[term]
 
         ancestors = set()
         if include_self:
@@ -196,11 +199,12 @@ class Ontology:
 
             for rel in p.parents:
                 ancestors.add(rel.term)
-                if rel.term in cache:
-                    ancestors.update(cache[rel.term])
+                if rel.term in self.ancestor_cache:
+                    ancestors.update(self.ancestor_cache[rel.term])
                 else:
                     parent_queue.append(rel.term)
 
+        self.ancestor_cache[term] = ancestors
         return ancestors
 
     def get_ancestors_distances(self, term_or_id, include_self=False):

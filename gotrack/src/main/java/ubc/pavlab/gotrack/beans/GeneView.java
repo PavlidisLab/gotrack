@@ -383,24 +383,41 @@ public class GeneView {
 
         // For direct annotations
         Series directSeries = new Series( "Direct Similarity" );
+        Series averageDirectSeries = new Series( "Direct Species Average" );
 
         Set<GeneOntologyTerm> currentGOSet = directData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : directData.rowMap().entrySet() ) {
+            Edition ed = entry.getKey();
             Double jaccard = Jaccard.similarity( entry.getValue().keySet(), currentGOSet );
-            directSeries.addDataPoint( entry.getKey().getDate(), jaccard );
-        }
+            directSeries.addDataPoint( ed.getDate(), jaccard );
 
-        chart.addSeries( directSeries );
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
+            }
+        }
 
         // For Inferred annotations
         Series inferredSeries = new Series( "Inferred Similarity" );
+        Series averageInferredSeries = new Series( "Inferred Species Average" );
 
         currentGOSet = inferredData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : inferredData.rowMap().entrySet() ) {
+            Edition ed = entry.getKey();
             Double jaccard = Jaccard.similarity( entry.getValue().keySet(), currentGOSet );
-            inferredSeries.addDataPoint( entry.getKey().getDate(), jaccard );
+            inferredSeries.addDataPoint( ed.getDate(), jaccard );
+
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
+            }
         }
 
+        chart.addSeries( averageDirectSeries );
+        chart.addSeries( averageInferredSeries );
+        chart.addSeries( directSeries );
         chart.addSeries( inferredSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );

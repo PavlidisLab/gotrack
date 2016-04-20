@@ -643,15 +643,15 @@ class GOTrack:
             log.error("Problem with database connection, %s", e)
             raise
 
-    def write_aggregate(self, sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term, avg_mf):
+    def write_aggregate(self, sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term, avg_mf, avg_direct_jaccard, avg_inferred_jaccard):
         try:
             self.con = self.test_and_reconnect()
             with self.con as cur:
 
                 try:
                     self.insert_multiple(GOTrack.TABLES['pp_edition_aggregates_staging'],
-                                         ["species_id", "edition", "gene_count", "avg_direct_terms_for_gene", "avg_inferred_terms_for_gene", "avg_inferred_genes_for_term", "avg_multifunctionality"],
-                                         [[sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term, avg_mf]], 1, cur, False)
+                                         ["species_id", "edition", "gene_count", "avg_direct_terms_for_gene", "avg_inferred_terms_for_gene", "avg_inferred_genes_for_term", "avg_multifunctionality", "avg_direct_jaccard", "avg_inferred_jaccard"],
+                                         [[sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term, avg_mf, avg_direct_jaccard, avg_inferred_jaccard]], 1, cur, False)
 
                     self.con.commit()
                 except Exception as inst:

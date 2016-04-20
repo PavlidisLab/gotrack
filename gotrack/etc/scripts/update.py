@@ -301,8 +301,33 @@ def preprocess_aggregates(gotrack=None):
 
     log.info("Creating aggregate tables...")
     go_ed_to_sp_ed = defaultdict(list)
+    current_editions = defaultdict(list)
     for sp_id, ed, goa_date, go_ed, go_date in gotrack.fetch_editions():
         go_ed_to_sp_ed[go_ed].append((sp_id, ed))
+        try:
+            if ed > current_editions[sp_id][0]:
+                current_editions[sp_id] = [ed, go_ed]
+        except IndexError, e:
+            current_editions[sp_id] = [ed, go_ed]
+
+    # in order to calculate jaccard similarity of terms over time
+    # we need a reference edition. I have chosen the msot current edition.
+    # Load this data into memory.
+
+    # invert current editions for more memory efficient use of ontologies
+    inverted = defaultdict(list)
+    for sp_id, ce in current_editions.iteritems():
+        inverted[ce[1]] += [[sp_id, ce[0]]]
+
+    log.info("Caching term sets for genes in current editions")
+    current_term_set_cache = {}
+    for go_ed, eds in inverted.iteritems():
+        adjacency_list = gotrack.fetch_adjacency_list(go_ed)
+        ont = Ontology.from_adjacency("1900-01-01", adjacency_list)  
+        for sp_id, ed in eds:
+            log.info("Starting Species (%s), Edition (%s)", sp_id, ed)
+            annotation_count, direct_term_set_per_gene_id, term_set_per_gene_id, direct_counts_per_term, gene_id_set_per_term = aggregate_annotations(gotrack, ont, sp_id, ed)
+            current_term_set_cache[sp_id] = [direct_term_set_per_gene_id, term_set_per_gene_id]
 
     gotrack.create_aggregate_staging()
 
@@ -313,8 +338,14 @@ def preprocess_aggregates(gotrack=None):
         # node_list = gotrack.fetch_term_list(go_ed)
         adjacency_list = gotrack.fetch_adjacency_list(go_ed)
         ont = Ontology.from_adjacency("1900-01-01", adjacency_list)
+        j = 0
         for sp_id, ed in eds:
-            process_aggregate(gotrack, ont, sp_id, ed)  
+            j += 1
+            if j % 25 == 0:
+                log.info("Editions: %s / %s", j, len(eds))
+            caches = current_term_set_cache[sp_id]
+            process_aggregate(gotrack, ont, sp_id, ed, caches) 
+        log.info("Editions: %s / %s", j, len(eds))
 
 
 def push_to_production():
@@ -327,9 +358,7 @@ def push_to_production():
     log.info("Staging area has been pushed to production, a restart of GOTrack is now necessary")
     log.info("Remember to delete temporary old data tables if everything works")
 
-
-def process_aggregate(gotrack, ont, sp_id, ed):
-
+def aggregate_annotations(gotrack, ont, sp_id, ed):
     all_annotations_stream = gotrack.fetch_all_annotations(sp_id, ed)
 
     # These are for computing the number of genes associated with each go term
@@ -338,73 +367,83 @@ def process_aggregate(gotrack, ont, sp_id, ed):
 
     # These are for computing the number of go terms associated with each gene
     term_set_per_gene_id = defaultdict(set)
+    direct_term_set_per_gene_id = defaultdict(set)
 
     # Propagation Cache for performance purposes
     ancestor_cache = defaultdict(set)
     annotation_count = 0
-    # ancestor_total_time = 0
-    # ancestor_total_runs = 0
-    # ancestor_total_cache_hits = 0
+
     for go_id, gene_id in all_annotations_stream:
         term = ont.get_term(go_id)
 
         if term is not None:
             annotation_count += 1
-            # Deal with direct counts
 
+            # Deal with direct counts
             direct_counts_per_term[term] += 1
 
             # Deal with inferred counts
-            # tmp_time = time.time()
-            if term in ancestor_cache:
-                ancestors = ancestor_cache[term]
-                # ancestor_total_cache_hits += 1
-            else:
-                ancestors = ont.get_ancestors(term, True, ancestor_cache)
-                ancestor_cache[term] = ancestors
-            # ancestor_total_time += time.time() - tmp_time
-            # ancestor_total_runs += 1
+            ancestors = ont.get_ancestors(term, True)
+
 
             for anc in ancestors:  # gene counts
                 gene_id_set_per_term[anc].add(gene_id)
 
             term_set_per_gene_id[gene_id].update(ancestors)
-        # else:
-        #     log.warn(go_id + " not found in edition ({0}), go ediiton ({1})".format(ed, go_ed))
+            direct_term_set_per_gene_id[gene_id].add(term)
 
-    # print "Total Ancestor Time: {0}".format(ancestor_total_time)
-    # print "Total Ancestor Runs: {0}".format(ancestor_total_runs)
-    # print "Total Ancestor Cache Hits: {0}".format(ancestor_total_cache_hits)
-    # print "% Cache Hits: {0}".format(100 * ancestor_total_cache_hits / ancestor_total_runs)
+
+    return annotation_count, direct_term_set_per_gene_id, term_set_per_gene_id, direct_counts_per_term, gene_id_set_per_term
+
+
+
+def process_aggregate(gotrack, ont, sp_id, ed, caches):
+    direct_term_set_per_gene_id_cache, term_set_per_gene_id_cache = caches
+    annotation_count, direct_term_set_per_gene_id, term_set_per_gene_id, direct_counts_per_term, gene_id_set_per_term = aggregate_annotations(gotrack, ont, sp_id, ed)
 
     # Convert sets into counts
-
     inferred_counts_per_term = {t: len(s) for t, s in gene_id_set_per_term.iteritems()}
 
     total_gene_set_size = sum(len(s) for s in gene_id_set_per_term.itervalues())
     total_term_set_size = sum(len(s) for s in term_set_per_gene_id.itervalues())
     gene_count = len(term_set_per_gene_id)
 
-    # Calculate average multifunctionality
-    avg_mf = 0
-    for t, c in inferred_counts_per_term.iteritems():
-        if ( c < gene_count ):
-            avg_mf += 1.0/(gene_count - c)
-
-    avg_mf = avg_mf / gene_count
-
     # write_total_time = time.time()
 
     # Write aggregates
     if gene_count > 0:
+        # Calculate average multifunctionality
+        avg_mf = 0
+        for t, c in inferred_counts_per_term.iteritems():
+            if ( c < gene_count ):
+                avg_mf += 1.0/(gene_count - c)
+
+        avg_mf = avg_mf / gene_count
+
+        # Calculate average Jaccard similarity to current edition
+        sum_direct_jaccard = 0
+        sum_jaccard = 0
+        # Start with direct terms
+        for gene_id, s in direct_term_set_per_gene_id.iteritems():
+            cached_s = direct_term_set_per_gene_id_cache[gene_id]
+            sum_direct_jaccard += jaccard_similarity(s, cached_s)
+
+        # Now inferred terms
+        for gene_id, s in term_set_per_gene_id.iteritems():
+            cached_s = term_set_per_gene_id_cache[gene_id]
+            sum_jaccard += jaccard_similarity(s, cached_s)
+
+        avg_direct_jaccard = sum_direct_jaccard / gene_count
+        avg_jaccard = sum_jaccard / gene_count
+
         gotrack.write_aggregate(sp_id, ed, gene_count, annotation_count / gene_count,
-                                total_term_set_size / gene_count, total_gene_set_size / len(gene_id_set_per_term), avg_mf)
+                                total_term_set_size / gene_count, total_gene_set_size / len(gene_id_set_per_term), avg_mf, avg_direct_jaccard, avg_jaccard)
     else:
         log.warn("No Genes in Species ({0}), Edition ({1})".format(sp_id, ed))
 
     # Write Term Counts
     if total_gene_set_size > 0 or total_term_set_size > 0:
-        gotrack.write_term_counts(sp_id, ed, direct_counts_per_term, inferred_counts_per_term)
+        pass#gotrack.write_term_counts(sp_id, ed, direct_counts_per_term, inferred_counts_per_term)
     else:
         log.warn("No Annotations in Species ({0}), Edition ({1})".format(sp_id, ed))
 
@@ -418,6 +457,15 @@ def process_aggregate(gotrack, ont, sp_id, ed):
     # print "Ancestor %: {0}".format(100 * ancestor_total_time / total_time)
     # print "Write %: {0}".format(100 * write_total_time / total_time)
 
+def jaccard_similarity(s1, s2):
+    if s1==None or s2 == None:
+        return None
+    if len(s1) == 0 and len(s2) == 0:
+        return 1.0
+    if len(s1) == 0 or len(s2) == 0:
+        return 0.0
+
+    return len(s1.intersection(s2)) / len(s1.union(s2))
 
 def check_database_consistency(gotrack, verbose=True):
     results = gotrack.fetch_consistency()

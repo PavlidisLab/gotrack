@@ -35,9 +35,12 @@ public final class AggregateDTO {
     private final Double avgInferredTermsForGene;
     private final Double avgInferredGenesForTerm;
     private final Double avgMultifunctionality;
+    private final Double avgDirectSimilarity;
+    private final Double avgInferredSimilarity;
 
     public AggregateDTO( Integer species, Integer edition, Integer geneCount, Double avgDirectTermsForGene,
-            Double avgInferredTermsForGene, Double avgInferredGenesForTerm, Double avgMultifunctionality ) {
+            Double avgInferredTermsForGene, Double avgInferredGenesForTerm, Double avgMultifunctionality,
+            Double avgDirectSimilarity, Double avgInferredSimilarity ) {
         super();
         this.species = species;
         this.edition = edition;
@@ -46,6 +49,8 @@ public final class AggregateDTO {
         this.avgInferredTermsForGene = avgInferredTermsForGene;
         this.avgInferredGenesForTerm = avgInferredGenesForTerm;
         this.avgMultifunctionality = avgMultifunctionality;
+        this.avgDirectSimilarity = avgDirectSimilarity;
+        this.avgInferredSimilarity = avgInferredSimilarity;
     }
 
     public Integer getSpecies() {
@@ -74,6 +79,14 @@ public final class AggregateDTO {
 
     public Double getAvgMultifunctionality() {
         return avgMultifunctionality;
+    }
+
+    public Double getAvgDirectSimilarity() {
+        return avgDirectSimilarity;
+    }
+
+    public Double getAvgInferredSimilarity() {
+        return avgInferredSimilarity;
     }
 
 }
