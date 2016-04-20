@@ -411,7 +411,7 @@ public class GeneView {
             // Averages
             Aggregate agg = cache.getAggregates( species.getId(), ed );
             if ( agg != null ) {
-                averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
+                averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
             }
         }
 
