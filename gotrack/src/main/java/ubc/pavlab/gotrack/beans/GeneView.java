@@ -443,7 +443,7 @@ public class GeneView {
                 Double multi = 0.0;
                 for ( GeneOntologyTerm t : entry.getValue().keySet() ) {
                     Integer inGroup = cache.getInferredAnnotationCount( species.getId(), ed, t );
-                    if ( inGroup != null ) {
+                    if ( inGroup != null && inGroup < total ) {
                         multi += 1.0 / ( inGroup * ( total - inGroup ) );
                     }
                 }

@@ -388,7 +388,8 @@ def process_aggregate(gotrack, ont, sp_id, ed):
     # Calculate average multifunctionality
     avg_mf = 0
     for t, c in inferred_counts_per_term.iteritems():
-        avg_mf += 1.0/(gene_count - c)
+        if ( c < gene_count ):
+            avg_mf += 1.0/(gene_count - c)
 
     avg_mf = avg_mf / gene_count
 
