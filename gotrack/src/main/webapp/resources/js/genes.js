@@ -468,7 +468,10 @@ function createGenericLineChart(renderTo, args) {
                      dateTimeLabelFormats:{
                         hour:"%B %Y", 
                         minute:"%B %Y"
-                     }
+                     },
+                     pointFormatter:function(){
+                        return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+Number(this.y.toPrecision(5))+'</b><br/>';
+                        }
                   },
                   legend : {
 //                     align : 'right',
