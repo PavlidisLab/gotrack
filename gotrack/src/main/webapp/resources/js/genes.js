@@ -131,7 +131,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
       console.log(e);
    }
 
-   var options = createGenericLineChart('hc_annotation_container', args);
+   var options = createGenericLineChart('hc_annotation_container', args, 0, null);
    
    options.lang = {
                    axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
@@ -162,7 +162,9 @@ function handleFetchSimilarityChart(xhr, status, args) {
    } catch(e) {
       console.log(e);
    }
-   var options = createGenericLineChart('hc_similarity_container', args);
+   var options = createGenericLineChart('hc_similarity_container', args, 0, 1);
+   
+   options.yAxis.endOnTick = false; // Make sure log axis follows our given max
    
    HC.charts.similarity.options = options;
    HC.charts.similarity.recreate(options);
@@ -176,7 +178,7 @@ function handleFetchMultiChart(xhr, status, args) {
       console.log(e);
    }  
    
-   var options = createGenericLineChart('hc_multi_container', args);
+   var options = createGenericLineChart('hc_multi_container', args, 0, null);
    //options.chart.type = 'area';
    //options.plotOptions.area = {fillColor: {
 //   options.plotOptions.line = {color: {
@@ -367,7 +369,7 @@ function handleFetchTimeline(xhr, status, args) {
    
 }
 
-function createGenericLineChart(renderTo, args) {
+function createGenericLineChart(renderTo, args, baseMin, baseMax) {
    var options = {
                   chart: {
                      renderTo: renderTo,
@@ -407,7 +409,9 @@ function createGenericLineChart(renderTo, args) {
                         formatter: function () {
                            return this.value;
                         }
-                     }
+                     },
+                     min: baseMin,
+                     max: baseMax,
                   },
 
                   plotOptions : {
@@ -499,10 +503,10 @@ function createGenericLineChart(renderTo, args) {
                               // The toggling of the text is not using an official API, can break with version update!
                              if (this.yAxis[0].isLog) {
                                 this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
-                                this.yAxis[0].update({ type: 'linear'});
+                                this.yAxis[0].update({ type: 'linear', min:baseMin, max:baseMax});
                              } else {
                                 this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
-                                this.yAxis[0].update({ type: 'logarithmic'});
+                                this.yAxis[0].update({ type: 'logarithmic', min: null, max:baseMax});
                              }
                              
                            },
