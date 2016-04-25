@@ -132,10 +132,6 @@ function handleFetchAnnotationChart(xhr, status, args) {
    }
 
    var options = createGenericLineChart('hc_annotation_container', args, 0, null);
-   
-   options.lang = {
-                   axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
-   }
 
    options.plotOptions.series.point = {
                                        events: {
@@ -204,6 +200,14 @@ function handleFetchLossGainChart(xhr, status, args) {
    var options = createGenericLineChart('hc_lossgain_container', args);
    options.chart.type = 'column';
    options.plotOptions.series.stacking = 'normal';
+
+   options.plotOptions.column = {
+                                 states: {
+                                    hover: {
+                                        borderColor: 'yellow'
+                                    }
+                                }
+   };
    
    for (var i = 0; i < args.hc_data.series.length; i++) {
       options.series[i].stack = args.hc_data.series[i].extra;
@@ -217,6 +221,21 @@ function handleFetchLossGainChart(xhr, status, args) {
                            dateFormat: '%Y-%m-%d'
                         },
                      };
+   
+   // Click event functionality
+   options.plotOptions.series.point = {
+                                       events: {
+                                          click: function () {
+                                             fetchLossGainPointData([{name:'edition', value:GLOBALS.dateToEdition[this.x]} ]);
+                                          }
+                                       }
+   }
+   
+   options.chart.events = {
+         click: function(event) {
+            fetchLossGainPointData([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
+         }
+   }
    
    HC.charts.lossgain.options = options;
    HC.charts.lossgain.recreate(options);
@@ -518,7 +537,10 @@ function createGenericLineChart(renderTo, args, baseMin, baseMax) {
                            text: 'Linear'
                         }
                      }
-}
+               },
+               lang : {
+                       axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
+               }
                   
    }
    

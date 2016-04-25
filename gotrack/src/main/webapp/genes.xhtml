@@ -188,6 +188,10 @@
 				oncomplete="PF('clickTermsTableWdg').clearFilters();PF('clickTermsDlgWdg').show();"
 				update=":clickTermsForm:clickTermsTable"
 				actionListener="#{geneView.fetchAnnotationPointData()}" />
+			<p:remoteCommand name="fetchLossGainPointData"
+				oncomplete="PF('clickLGTermsTableWdg').clearFilters();PF('clickLGTermsDlgWdg').show();"
+				update=":clickLGTermsForm:clickLGTermsTable"
+				actionListener="#{geneView.fetchLossGainPointData()}" />
 			<p:remoteCommand name="fetchTimelinePointData"
 				update=":viewAnnotationsForm:viewAnnotationsTable" 
 				oncomplete="PF('viewAnnotationsDlgWdg').show()"
@@ -243,6 +247,63 @@
 			        <p:column style="width:32px;text-align: center">
 			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="PF('viewAnnotationsDlgWdg').show()" icon="ui-icon-search" title="View">
 			                <f:setPropertyActionListener value="#{term}" target="#{geneView.viewTerm}" />
+			            </p:commandButton>
+			        </p:column>
+			        <f:facet name="footer">
+			        	<h:outputText value="Date: #{geneView.clickEdition.date}, Edition: #{geneView.clickEdition.edition} "/>
+			        </f:facet>
+				</p:dataTable>
+			</h:form>
+		</p:dialog>
+		
+		<p:dialog id="clickLGTermsDlg" header="Terms"
+			widgetVar="clickLGTermsDlgWdg" modal="false" showEffect="fade"
+			hideEffect="fade" width="900"
+			fitViewport="true" closeOnEscape="true">
+			<h:form id="clickLGTermsForm">
+				<p:dataTable id="clickLGTermsTable" widgetVar="clickLGTermsTableWdg" var="lg"
+					value="#{geneView.clickLGTerms}" scrollable="true" sortMode="multiple"
+					style="margin-bottom:0"
+					emptyMessage="No annotations found with given criteria"
+					filteredValue="#{geneView.filteredClickLGTerms}" scrollHeight="600"
+					rowStyleClass="#{lg.type}-color">
+					<p:column filterBy="#{lg.annotationType}" filterMatchMode="in"
+						headerText="Type" style="width:80px;">
+						<f:facet name="filter">
+							<p:selectManyButton
+								onchange="PF('clickLGTermsTableWdg').filter()"
+								style="font-size: 75%" converter="annotationTypeConverter">
+								<f:selectItems value="#{cache.annotationTypes}"
+									var="annotationType" itemValue="#{annotationType}" itemLabel="#{annotationType.label}" />
+							</p:selectManyButton>
+						</f:facet>
+						<h:outputText value="#{lg.annotationType.label}"/>
+					</p:column>
+					<p:column filterBy="#{lg.term.goId}" filterMatchMode="contains"
+						headerText="Id" style="width:120px;">
+						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{lg.term.goId}"
+							target="_blank"><i class="fa fa-external-link fa-sm"
+							style="font-size: 0.7em;" /> </a>#{lg.term.goId}
+					</p:column>
+					<p:column filterBy="#{lg.term.aspect}" filterMatchMode="in"
+						headerText="Aspect" style="width:150px;">
+						<f:facet name="filter">
+							<p:selectManyButton
+								onchange="PF('clickLGTermsTableWdg').filter()"
+								style="font-size: 75%" converter="aspectConverter">
+								<f:selectItems value="#{cache.aspects}"
+									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
+							</p:selectManyButton>
+						</f:facet>
+						<h:outputText value="#{lg.term.aspect.label}"/>
+					</p:column>
+					<p:column filterBy="#{lg.term.name}" filterMatchMode="contains"
+						headerText="Name">
+						<h:outputText value="#{lg.term.name}" />
+					</p:column>
+			        <p:column style="width:32px;text-align: center">
+			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="PF('viewAnnotationsDlgWdg').show()" icon="ui-icon-search" title="View">
+			                <f:setPropertyActionListener value="#{lg.term}" target="#{geneView.viewTerm}" />
 			            </p:commandButton>
 			        </p:column>
 			        <f:facet name="footer">

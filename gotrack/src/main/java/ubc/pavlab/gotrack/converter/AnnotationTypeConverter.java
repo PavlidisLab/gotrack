@@ -1,7 +1,7 @@
 /*
  * The gotrack project
  * 
- * Copyright (c) 2015 University of British Columbia
+ * Copyright (c) 2016 University of British Columbia
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,28 +17,24 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.converter;
+
+import javax.faces.convert.EnumConverter;
+import javax.faces.convert.FacesConverter;
+
+import ubc.pavlab.gotrack.model.AnnotationType;
 
 /**
- * Represents a type of annotation.
- * 
- * Direct means the annotation was made directly between the given Term and Gene.
- * 
- * Inferred means the annotation was made to some child of the given Term and was propagated to be applied to this Gene.
+ * Enum converter for {@link AnnotationType}
  * 
  * @author mjacobson
  * @version $Id$
  */
-public enum AnnotationType {
-    DIRECT("D"), INFERRED("I");
+@FacesConverter(value = "annotationTypeConverter")
+public class AnnotationTypeConverter extends EnumConverter {
 
-    private String label;
-
-    private AnnotationType( String label ) {
-        this.label = label;
+    public AnnotationTypeConverter() {
+        super( AnnotationType.class );
     }
 
-    public String getLabel() {
-        return label;
-    }
 }

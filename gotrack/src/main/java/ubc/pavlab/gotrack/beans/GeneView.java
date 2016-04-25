@@ -44,6 +44,7 @@ import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -62,6 +63,8 @@ import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.AnnotationValues;
+import ubc.pavlab.gotrack.model.table.LossGainTableValues;
+import ubc.pavlab.gotrack.model.table.LossGainTableValues.LossGain;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
@@ -103,10 +106,17 @@ public class GeneView {
     private GeneOntologyTerm viewTerm;
 
     // Click event lists
+    private Edition clickEdition;
+
+    // Annotation clicks
     private Collection<GeneOntologyTerm> clickTerms = new HashSet<>();
     private List<GeneOntologyTerm> selectedClickTerms;
     private Collection<GeneOntologyTerm> filteredClickTerms;
-    private Edition clickEdition;
+
+    // Loss Gain Clicks
+    private List<LossGainTableValues> clickLGTerms = new ArrayList<>();
+    private List<LossGainTableValues> selectedClickLGTerms;
+    private Collection<LossGainTableValues> filteredClickLGTerms;
 
     public GeneView() {
         log.info( "GeneView created" );
@@ -756,6 +766,91 @@ public class GeneView {
     }
 
     /**
+     * Click event functionality for loss/gain chart
+     */
+    public void fetchLossGainPointData() {
+        log.debug( "fetchLossGainPointData" );
+        Integer editionId;
+        try {
+
+            editionId = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
+        } catch ( NumberFormatException e ) {
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            return;
+        }
+
+        clickEdition = cache.getEdition( species.getId(), editionId );
+
+        // get previous edition, yes this is ugly. I don't wanna talk about it.
+
+        Edition previousEdition = null;
+        for ( Edition e : rawData.get( AnnotationType.INFERRED ).rowMap().keySet() ) {
+            if ( e.equals( clickEdition ) ) {
+                break;
+            }
+            previousEdition = e;
+        }
+
+        if ( previousEdition == null ) {
+            clickLGTerms = Lists.newArrayList();
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            return;
+        }
+
+        try {
+            // Direct 
+            clickLGTerms = Lists.newArrayList();
+
+            ImmutableSet<GeneOntologyTerm> currentGOSet = rawData.get( AnnotationType.DIRECT ).row( clickEdition )
+                    .keySet();
+
+            ImmutableSet<GeneOntologyTerm> previousGOSet = rawData.get( AnnotationType.DIRECT ).row( previousEdition )
+                    .keySet();
+
+            for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.DIRECT );
+                clickLGTerms.add( lg );
+            }
+
+            for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.DIRECT );
+                clickLGTerms.add( lg );
+            }
+
+            // Inferred 
+
+            currentGOSet = rawData.get( AnnotationType.INFERRED ).row( clickEdition )
+                    .keySet();
+
+            previousGOSet = rawData.get( AnnotationType.INFERRED ).row( previousEdition )
+                    .keySet();
+
+            for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.INFERRED );
+                clickLGTerms.add( lg );
+            }
+
+            for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.INFERRED );
+                clickLGTerms.add( lg );
+            }
+
+            Collections.sort( clickLGTerms );
+
+        } catch ( NullPointerException e ) {
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            return;
+        }
+
+        selectedClickLGTerms = null;
+        filteredClickLGTerms = null;
+
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
+
+    }
+
+    /**
      * Click event functionality for clicking timeline gantt chart
      */
     public void fetchTimelinePointData() {
@@ -862,6 +957,26 @@ public class GeneView {
 
     public void setFilteredClickTerms( Collection<GeneOntologyTerm> filteredClickTerms ) {
         this.filteredClickTerms = filteredClickTerms;
+    }
+
+    public Collection<LossGainTableValues> getClickLGTerms() {
+        return clickLGTerms;
+    }
+
+    public List<LossGainTableValues> getSelectedClickLGTerms() {
+        return selectedClickLGTerms;
+    }
+
+    public void setSelectedClickLGTerms( List<LossGainTableValues> selectedClickLGTerms ) {
+        this.selectedClickLGTerms = selectedClickLGTerms;
+    }
+
+    public Collection<LossGainTableValues> getFilteredClickLGTerms() {
+        return filteredClickLGTerms;
+    }
+
+    public void setFilteredClickLGTerms( Collection<LossGainTableValues> filteredClickLGTerms ) {
+        this.filteredClickLGTerms = filteredClickLGTerms;
     }
 
     public void setCache( Cache cache ) {

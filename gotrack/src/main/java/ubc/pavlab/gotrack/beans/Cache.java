@@ -234,6 +234,10 @@ public class Cache implements Serializable {
         return Aspect.values();
     }
 
+    public AnnotationType[] getAnnotationTypes() {
+        return AnnotationType.values();
+    }
+
     /**
      * Create lots of static data caches to be used by Views.
      */
