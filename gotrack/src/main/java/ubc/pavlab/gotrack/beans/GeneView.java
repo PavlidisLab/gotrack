@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -215,6 +216,12 @@ public class GeneView {
             }
 
         }
+        rawdataBuilder.orderRowsBy( new Comparator<Edition>() {
+            @Override
+            public int compare( Edition o1, Edition o2 ) {
+                return o1.compareTo( o2 );
+            }
+        } );
 
         rawData.put( AnnotationType.DIRECT, rawdataBuilder.build() );
 
@@ -230,6 +237,12 @@ public class GeneView {
             }
 
         }
+        rawdataBuilder.orderRowsBy( new Comparator<Edition>() {
+            @Override
+            public int compare( Edition o1, Edition o2 ) {
+                return o1.compareTo( o2 );
+            }
+        } );
         rawData.put( AnnotationType.INFERRED, rawdataBuilder.build() );
 
         // If no data existed in cache and we did not filter it then cache the data
