@@ -23,6 +23,7 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -421,6 +422,8 @@ public class TermView {
 
         RequestContext.getCurrentInstance().addCallbackParam( "cyto_graph", new Gson().toJson( graph ) );
 
+        RequestContext.getCurrentInstance().addCallbackParam( "current_id", currentTerm.getId() );
+
     }
 
     /**
@@ -464,7 +467,16 @@ public class TermView {
             nodes.add( new Node( term.getId(), term.getName() ) );
             discovered.add( term );
 
-            for ( Relation<GeneOntologyTerm> p : term.getParents() ) {
+            // Sort for consistent graph layouts in the front-end
+            List<Relation<GeneOntologyTerm>> sortedParents = new ArrayList<>( term.getParents() );
+            Collections.sort( sortedParents, new Comparator<Relation<GeneOntologyTerm>>() {
+                @Override
+                public int compare( Relation<GeneOntologyTerm> o1, Relation<GeneOntologyTerm> o2 ) {
+                    return o1.getRelation().compareTo( o2.getRelation() );
+                }
+            } );
+
+            for ( Relation<GeneOntologyTerm> p : sortedParents ) {
                 edges.add( new Edge( term.getId(), p.getRelation().getId(), p.getType() ) );
                 if ( !discovered.contains( p.getRelation() ) ) {
                     termQ.add( p.getRelation() );
