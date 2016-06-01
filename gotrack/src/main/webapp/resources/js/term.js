@@ -445,6 +445,7 @@ function createVisGraph(args, selector) {
    var legend = drawLegend(svg);
 
    var legendWidth = legend.node().getBBox().width;
+   var legendHeight = legend.node().getBBox().height;
    
    legend.append("text")
    .attr("class", "title")
@@ -454,19 +455,28 @@ function createVisGraph(args, selector) {
    .attr("text-anchor", "middle")
    .text("Legend");
    
-   var rightMargin = 20;
+   var legendSideMargin = 20;
+   var globalMargin = 20;
       
    // Center the graph
    var initialScale = 0.75;
-   svg.attr('width', g.graph().width * initialScale + 40 + legendWidth + rightMargin);
+   
+   var adjustedHeight = g.graph().height * initialScale + 2 * globalMargin;
+   var yTranslate = globalMargin;
+   if ( g.graph().height * initialScale < legendHeight) {
+      adjustedHeight = legendHeight + 2 * globalMargin;
+      yTranslate = globalMargin + (legendHeight - g.graph().height * initialScale) / 2;
+   }
+     
+   svg.attr('width', g.graph().width * initialScale + 2 * globalMargin + legendWidth + legendSideMargin);
    zoom
-   .translate([(svg.attr("width") - g.graph().width * initialScale - legendWidth - rightMargin) / 2, 20])
+   .translate([(svg.attr("width") - g.graph().width * initialScale - legendWidth - legendSideMargin) / 2, yTranslate])
    .scale(initialScale)
    .event(svg);
-   svg.attr('height', g.graph().height * initialScale + 40);
+ 
+   svg.attr('height', adjustedHeight);
    
-
-   legend.attr("transform", "translate(" + ( svg.attr("width") - legendWidth - rightMargin) + ",50)");
+   legend.attr("transform", "translate(" + ( svg.attr("width") - legendWidth - legendSideMargin) + ","+ (globalMargin + 15) +")");
 
    return {graph: g, diff: false, args: args, selector: selector}
 
