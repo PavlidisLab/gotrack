@@ -66,7 +66,7 @@
 						<f:facet name="filter">
 							<p:selectManyButton
 								onchange="PF('funcTable').filter()"
-								style="font-size: 75%" converter="aspectConverter">
+								style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
 								<f:selectItems value="#{cache.aspects}"
 									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 							</p:selectManyButton>
@@ -233,7 +233,7 @@
 						<f:facet name="filter">
 							<p:selectManyButton
 								onchange="PF('clickTermsTableWdg').filter()"
-								style="font-size: 75%" converter="aspectConverter">
+								style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
 								<f:selectItems value="#{cache.aspects}"
 									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 							</p:selectManyButton>
@@ -272,12 +272,12 @@
 						<f:facet name="filter">
 							<p:selectManyButton
 								onchange="PF('clickLGTermsTableWdg').filter()"
-								style="font-size: 75%" converter="annotationTypeConverter">
+								style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
 								<f:selectItems value="#{cache.annotationTypes}"
-									var="annotationType" itemValue="#{annotationType}" itemLabel="#{annotationType.label}" />
+									var="annotationType" itemValue="#{annotationType}" itemLabel="#{annotationType}" />
 							</p:selectManyButton>
 						</f:facet>
-						<h:outputText value="#{lg.annotationType.label}"/>
+						<h:outputText value="#{lg.annotationType}"/>
 					</p:column>
 					<p:column filterBy="#{lg.term.goId}" filterMatchMode="contains"
 						headerText="Id" style="width:120px;">
@@ -290,7 +290,7 @@
 						<f:facet name="filter">
 							<p:selectManyButton
 								onchange="PF('clickLGTermsTableWdg').filter()"
-								style="font-size: 75%" converter="aspectConverter">
+								style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
 								<f:selectItems value="#{cache.aspects}"
 									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 							</p:selectManyButton>

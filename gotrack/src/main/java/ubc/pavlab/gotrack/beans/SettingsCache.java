@@ -23,11 +23,12 @@ import java.io.Serializable;
 import java.util.Map.Entry;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ApplicationScoped;
-import javax.faces.bean.ManagedBean;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.omnifaces.cdi.Eager;
 
 import ubc.pavlab.gotrack.utilities.PropertiesFile;
 
@@ -37,7 +38,8 @@ import ubc.pavlab.gotrack.utilities.PropertiesFile;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean(eager = true)
+@Named
+@Eager
 @ApplicationScoped
 public class SettingsCache implements Serializable {
     /**

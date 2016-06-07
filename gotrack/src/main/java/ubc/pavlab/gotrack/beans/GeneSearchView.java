@@ -23,13 +23,13 @@ import java.io.Serializable;
 import java.util.List;
 
 import javax.faces.application.FacesMessage;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.ViewScoped;
 import javax.faces.component.UIComponent;
 import javax.faces.component.UIInput;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ComponentSystemEvent;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
@@ -41,7 +41,7 @@ import ubc.pavlab.gotrack.model.table.GeneMatches;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ViewScoped
 public class GeneSearchView implements Serializable {
 
@@ -56,7 +56,7 @@ public class GeneSearchView implements Serializable {
     private Integer speciesId = 7;
     private String query;
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
     public GeneSearchView() {
@@ -136,10 +136,6 @@ public class GeneSearchView implements Serializable {
 
         return this.cache.complete( query, speciesId, MAX_RESULTS );
 
-    }
-
-    public void setCache( Cache cache ) {
-        this.cache = cache;
     }
 
 }

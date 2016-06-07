@@ -31,9 +31,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ApplicationScoped;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
@@ -61,7 +61,7 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ApplicationScoped
 public class AnnotationService implements Serializable {
 
@@ -72,10 +72,10 @@ public class AnnotationService implements Serializable {
 
     private static final Logger log = Logger.getLogger( AnnotationService.class );
 
-    @ManagedProperty("#{daoFactoryBean}")
+    @Inject
     private DAOFactoryBean daoFactoryBean;
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
     private AnnotationDAO annotationDAO;
@@ -345,14 +345,6 @@ public class AnnotationService implements Serializable {
             m2.put( ed, dto.getCount() );
         }
         return results;
-    }
-
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
-    }
-
-    public void setCache( Cache cache ) {
-        this.cache = cache;
     }
 
 }

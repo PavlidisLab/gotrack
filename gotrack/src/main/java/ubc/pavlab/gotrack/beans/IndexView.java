@@ -22,8 +22,8 @@ package ubc.pavlab.gotrack.beans;
 import java.io.Serializable;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ViewScoped;
+import javax.faces.view.ViewScoped;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
@@ -33,7 +33,7 @@ import org.apache.log4j.Logger;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ViewScoped
 public class IndexView implements Serializable {
 

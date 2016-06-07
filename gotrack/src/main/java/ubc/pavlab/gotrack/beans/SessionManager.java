@@ -19,11 +19,13 @@
 
 package ubc.pavlab.gotrack.beans;
 
+import java.io.Serializable;
+
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.SessionScoped;
+import javax.enterprise.context.SessionScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
@@ -33,18 +35,19 @@ import org.apache.log4j.Logger;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @SessionScoped
-public class SessionManager {
+public class SessionManager implements Serializable {
 
+    private static final long serialVersionUID = -5782108853082685874L;
     private static final Logger log = Logger.getLogger( SessionManager.class );
     private final int MAX_ENTRIES = 5;
     private Boolean authenticated = false;
 
-    @ManagedProperty(value = "#{security}")
+    @Inject
     private Security security;
 
-    @ManagedProperty("#{settingsCache}")
+    @Inject
     private SettingsCache settingsCache;
 
     public SessionManager() {
@@ -86,13 +89,5 @@ public class SessionManager {
 
     public Boolean getAuthenticated() {
         return authenticated;
-    }
-
-    public void setSecurity( Security security ) {
-        this.security = security;
-    }
-
-    public void setSettingsCache( SettingsCache settingsCache ) {
-        this.settingsCache = settingsCache;
     }
 }

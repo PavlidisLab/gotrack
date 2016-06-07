@@ -25,6 +25,7 @@ import javax.faces.context.FacesContext;
 import javax.faces.convert.Converter;
 import javax.faces.convert.ConverterException;
 import javax.faces.convert.FacesConverter;
+import javax.inject.Inject;
 
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Gene;
@@ -38,12 +39,15 @@ import ubc.pavlab.gotrack.model.Gene;
 @FacesConverter("geneConverter")
 public class GeneConverter implements Converter {
 
+    @Inject
+    private Cache cache;
+
     @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {
         if ( value != null && value.trim().length() > 0 ) {
             try {
                 Integer species = ( Integer ) uic.getAttributes().get( "species" );
-                Cache cache = ( Cache ) fc.getExternalContext().getApplicationMap().get( "cache" );
+                //                Cache cache = ( Cache ) fc.getExternalContext().getApplicationMap().get( "cache" );
                 return cache.getCurrentGene( species, value );
             } catch ( NumberFormatException e ) {
                 throw new ConverterException(

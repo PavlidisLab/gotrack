@@ -37,12 +37,13 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ApplicationScoped;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.omnifaces.cdi.Eager;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -95,7 +96,8 @@ import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean(eager = true)
+@Named
+@Eager
 @ApplicationScoped
 public class Cache implements Serializable {
 
@@ -109,13 +111,13 @@ public class Cache implements Serializable {
     private final int MAX_DATA_ENTRIES = 20;
     private final int MAX_ENRICHMENT_ENTRIES = 1000;
 
-    @ManagedProperty("#{settingsCache}")
+    @Inject
     private SettingsCache settingsCache;
 
-    @ManagedProperty("#{daoFactoryBean}")
+    @Inject
     private DAOFactoryBean daoFactoryBean;
 
-    @ManagedProperty("#{speciesService}")
+    @Inject
     private SpeciesService speciesService;
 
     // Maps species id -> species;
@@ -1233,20 +1235,6 @@ public class Cache implements Serializable {
         synchronized ( applicationLevelEnrichmentCache ) {
             applicationLevelEnrichmentCache.put( gene, data );
         }
-    }
-
-    // Bean Injection
-
-    public void setSettingsCache( SettingsCache settingsCache ) {
-        this.settingsCache = settingsCache;
-    }
-
-    public void setSpeciesService( SpeciesService speciesService ) {
-        this.speciesService = speciesService;
-    }
-
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
     }
 
 }

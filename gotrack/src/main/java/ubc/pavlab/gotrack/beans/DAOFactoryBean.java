@@ -22,9 +22,9 @@ package ubc.pavlab.gotrack.beans;
 import java.io.Serializable;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ApplicationScoped;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
@@ -37,7 +37,7 @@ import ubc.pavlab.gotrack.dao.DAOFactory;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean(name = "daoFactoryBean")
+@Named("daoFactoryBean")
 @ApplicationScoped
 public class DAOFactoryBean implements Serializable {
 
@@ -52,7 +52,7 @@ public class DAOFactoryBean implements Serializable {
 
     private static DAOFactory gotrack;
 
-    @ManagedProperty("#{settingsCache}")
+    @Inject
     private SettingsCache settingsCache;
 
     /**
@@ -79,10 +79,6 @@ public class DAOFactoryBean implements Serializable {
 
     public DAOFactory getGotrack() {
         return gotrack;
-    }
-
-    public void setSettingsCache( SettingsCache settingsCache ) {
-        this.settingsCache = settingsCache;
     }
 
 }

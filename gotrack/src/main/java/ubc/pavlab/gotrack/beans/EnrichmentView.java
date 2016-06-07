@@ -38,11 +38,11 @@ import java.util.TreeMap;
 
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
@@ -78,7 +78,7 @@ import ubc.pavlab.gotrack.model.table.StabilityTableValues;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ViewScoped
 public class EnrichmentView implements Serializable {
 
@@ -129,13 +129,13 @@ public class EnrichmentView implements Serializable {
     // Max size of hit list
     private static final int MAX_GENESET_SIZE = 20000;
 
-    @ManagedProperty("#{settingsCache}")
+    @Inject
     private SettingsCache settingsCache;
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
-    @ManagedProperty("#{annotationService}")
+    @Inject
     private AnnotationService annotationService;
 
     // View parameters
@@ -1509,17 +1509,5 @@ public class EnrichmentView implements Serializable {
 
     public SimilarityScore getSelectedSimilarityScore() {
         return selectedSimilarityScore;
-    }
-
-    public void setSettingsCache( SettingsCache settingsCache ) {
-        this.settingsCache = settingsCache;
-    }
-
-    public void setCache( Cache cache ) {
-        this.cache = cache;
-    }
-
-    public void setAnnotationService( AnnotationService annotationService ) {
-        this.annotationService = annotationService;
     }
 }

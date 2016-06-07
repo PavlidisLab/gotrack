@@ -39,10 +39,10 @@ import java.util.Set;
 import javax.annotation.PostConstruct;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
@@ -69,19 +69,19 @@ import ubc.pavlab.gotrack.model.go.Relation;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ViewScoped
 public class TermView {
 
     private static final Logger log = Logger.getLogger( TermView.class );
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
-    @ManagedProperty("#{statsService}")
+    @Inject
     private StatsService statsService;
 
-    @ManagedProperty("#{annotationService}")
+    @Inject
     private AnnotationService annotationService;
 
     private String query;
@@ -575,18 +575,6 @@ public class TermView {
 
     public List<GOEdition> getAllGOEditions() {
         return allGOEditions;
-    }
-
-    public void setCache( Cache cache ) {
-        this.cache = cache;
-    }
-
-    public void setStatsService( StatsService statsService ) {
-        this.statsService = statsService;
-    }
-
-    public void setAnnotationService( AnnotationService annotationService ) {
-        this.annotationService = annotationService;
     }
 
 }

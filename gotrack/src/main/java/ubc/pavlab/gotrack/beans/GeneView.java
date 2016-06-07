@@ -34,10 +34,10 @@ import java.util.Set;
 import javax.annotation.PostConstruct;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
@@ -73,19 +73,19 @@ import ubc.pavlab.gotrack.utilities.Jaccard;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ViewScoped
 public class GeneView {
 
     private static final Logger log = Logger.getLogger( GeneView.class );
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
-    @ManagedProperty("#{statsService}")
+    @Inject
     private StatsService statsService;
 
-    @ManagedProperty("#{annotationService}")
+    @Inject
     private AnnotationService annotationService;
 
     private Species species;
@@ -210,8 +210,8 @@ public class GeneView {
             directRawData = annotationService.fetchTrackData( species, gene );
             inferredRawData = propagate( directRawData );
         } else {
-            directRawData = cachedData.get( AnnotationType.DIRECT ).rowMap();
-            inferredRawData = cachedData.get( AnnotationType.INFERRED ).rowMap();
+            directRawData = cachedData.get( AnnotationType.D ).rowMap();
+            inferredRawData = cachedData.get( AnnotationType.I ).rowMap();
         }
 
         ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>> rawdataBuilder = new ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>>();
@@ -233,7 +233,7 @@ public class GeneView {
             }
         } );
 
-        rawData.put( AnnotationType.DIRECT, rawdataBuilder.build() );
+        rawData.put( AnnotationType.D, rawdataBuilder.build() );
 
         rawdataBuilder = new ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>>();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : inferredRawData.entrySet() ) {
@@ -253,7 +253,7 @@ public class GeneView {
                 return o1.compareTo( o2 );
             }
         } );
-        rawData.put( AnnotationType.INFERRED, rawdataBuilder.build() );
+        rawData.put( AnnotationType.I, rawdataBuilder.build() );
 
         // If no data existed in cache and we did not filter it then cache the data
         if ( cachedData == null && bypassFilter ) {
@@ -276,7 +276,7 @@ public class GeneView {
         // A map that will be needed in the front end for drilling down
         Map<Long, Integer> dateToEdition = new HashMap<>();
 
-        for ( Edition ed : rawData.get( AnnotationType.INFERRED ).rowKeySet() ) {
+        for ( Edition ed : rawData.get( AnnotationType.I ).rowKeySet() ) {
             dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
         }
 
@@ -289,7 +289,7 @@ public class GeneView {
         //allTerms = rawData.get( AnnotationType.DIRECT ).columnKeySet();
         allTerms = new HashSet<>();
         ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> reversedData = new ArrayList<>(
-                rawData.get( AnnotationType.INFERRED ).rowMap().entrySet() );
+                rawData.get( AnnotationType.I ).rowMap().entrySet() );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( reversedData ) ) {
 
             allTerms.addAll( entry.getValue().keySet() );
@@ -340,7 +340,7 @@ public class GeneView {
         Series directCountSeries = new Series( "Direct Annotation Count" );
         Series aggregateSeries = new Series( "Species Direct Avg" );
         Series aggregateInferredSeries = new Series( "Species Inferred Avg" );
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.DIRECT )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             int count = entry.getValue().size();
@@ -361,7 +361,7 @@ public class GeneView {
         // Create series for inferred annotations count
         Series inferredCountSeries = new Series( "Inferred Annotation Count" );
 
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.INFERRED )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             int count = entry.getValue().size();
@@ -395,9 +395,9 @@ public class GeneView {
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchJaccardChart" );
 
-        ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> directData = rawData.get( AnnotationType.DIRECT );
+        ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> directData = rawData.get( AnnotationType.D );
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> inferredData = rawData
-                .get( AnnotationType.INFERRED );
+                .get( AnnotationType.I );
 
         ChartValues chart = new ChartValues();
 
@@ -475,7 +475,7 @@ public class GeneView {
         // Calculate multifunctionality of the gene in each edition
         Series multiSeries = new Series( "Multifunctionality" );
         Series averageSeries = new Series( "Species Average" );
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.INFERRED )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             Integer total = cache.getGeneCount( species.getId(), ed );
@@ -535,7 +535,7 @@ public class GeneView {
         directGainSeries.setExtra( 0 ); //Stack 0
 
         Set<GeneOntologyTerm> previousGOSet = null;
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.DIRECT )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             Set<GeneOntologyTerm> currentGOSet = entry.getValue().keySet();
@@ -563,7 +563,7 @@ public class GeneView {
         inferredGainSeries.setExtra( 1 ); //Stack 1
 
         previousGOSet = null;
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.INFERRED )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             Set<GeneOntologyTerm> currentGOSet = entry.getValue().keySet();
@@ -647,7 +647,7 @@ public class GeneView {
         HashSet<GeneOntologyTerm> filterTerms = new HashSet<>( selectedTerms );
 
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> data = retrieveData( filterTerms )
-                .get( AnnotationType.INFERRED );
+                .get( AnnotationType.I );
 
         // Create an ordering for the categories
         int i = 0;
@@ -711,23 +711,23 @@ public class GeneView {
         //viewTerm = selectedClickTerms.iterator().next();
         log.debug( viewTerm );
 
-        Set<Annotation> data = rawData.get( AnnotationType.DIRECT ).get( clickEdition, viewTerm );
+        Set<Annotation> data = rawData.get( AnnotationType.D ).get( clickEdition, viewTerm );
 
         viewAnnotations = new HashSet<>();
         if ( data != null ) {
 
             // Add direct annotations
             for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.DIRECT ) );
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.D ) );
             }
         }
-        data = rawData.get( AnnotationType.INFERRED ).get( clickEdition, viewTerm );
+        data = rawData.get( AnnotationType.I ).get( clickEdition, viewTerm );
 
         if ( data != null ) {
 
             // Next add the inferred as they will not overwrite the direct if the direct already exists
             for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.INFERRED ) );
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.I ) );
             }
         }
 
@@ -752,7 +752,7 @@ public class GeneView {
         clickEdition = cache.getEdition( species.getId(), editionId );
 
         try {
-            clickTerms = rawData.get( AnnotationType.INFERRED ).row( clickEdition ).keySet();
+            clickTerms = rawData.get( AnnotationType.I ).row( clickEdition ).keySet();
         } catch ( NullPointerException e ) {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
             return;
@@ -785,7 +785,7 @@ public class GeneView {
         // get previous edition, yes this is ugly. I don't wanna talk about it.
 
         Edition previousEdition = null;
-        for ( Edition e : rawData.get( AnnotationType.INFERRED ).rowMap().keySet() ) {
+        for ( Edition e : rawData.get( AnnotationType.I ).rowMap().keySet() ) {
             if ( e.equals( clickEdition ) ) {
                 break;
             }
@@ -802,37 +802,37 @@ public class GeneView {
             // Direct 
             clickLGTerms = Lists.newArrayList();
 
-            ImmutableSet<GeneOntologyTerm> currentGOSet = rawData.get( AnnotationType.DIRECT ).row( clickEdition )
+            ImmutableSet<GeneOntologyTerm> currentGOSet = rawData.get( AnnotationType.D ).row( clickEdition )
                     .keySet();
 
-            ImmutableSet<GeneOntologyTerm> previousGOSet = rawData.get( AnnotationType.DIRECT ).row( previousEdition )
+            ImmutableSet<GeneOntologyTerm> previousGOSet = rawData.get( AnnotationType.D ).row( previousEdition )
                     .keySet();
 
             for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.DIRECT );
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.D );
                 clickLGTerms.add( lg );
             }
 
             for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.DIRECT );
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.D );
                 clickLGTerms.add( lg );
             }
 
             // Inferred 
 
-            currentGOSet = rawData.get( AnnotationType.INFERRED ).row( clickEdition )
+            currentGOSet = rawData.get( AnnotationType.I ).row( clickEdition )
                     .keySet();
 
-            previousGOSet = rawData.get( AnnotationType.INFERRED ).row( previousEdition )
+            previousGOSet = rawData.get( AnnotationType.I ).row( previousEdition )
                     .keySet();
 
             for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.INFERRED );
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.I );
                 clickLGTerms.add( lg );
             }
 
             for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.INFERRED );
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.I );
                 clickLGTerms.add( lg );
             }
 
@@ -869,23 +869,23 @@ public class GeneView {
 
         viewTerm = cache.getTerm( clickEdition, goId );
 
-        Set<Annotation> data = rawData.get( AnnotationType.DIRECT ).get( clickEdition, viewTerm );
+        Set<Annotation> data = rawData.get( AnnotationType.D ).get( clickEdition, viewTerm );
 
         viewAnnotations = new HashSet<>();
         if ( data != null ) {
 
             // Add direct annotations
             for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.DIRECT ) );
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.D ) );
             }
         }
-        data = rawData.get( AnnotationType.INFERRED ).get( clickEdition, viewTerm );
+        data = rawData.get( AnnotationType.I ).get( clickEdition, viewTerm );
 
         if ( data != null ) {
 
             // Next add the inferred as they will not overwrite the direct if the direct already exists
             for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.INFERRED ) );
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.I ) );
             }
         }
 
@@ -979,10 +979,6 @@ public class GeneView {
         this.filteredClickLGTerms = filteredClickLGTerms;
     }
 
-    public void setCache( Cache cache ) {
-        this.cache = cache;
-    }
-
     public Collection<GeneOntologyTerm> getAllTerms() {
         return allTerms;
     }
@@ -1001,14 +997,6 @@ public class GeneView {
 
     public void setFilteredAllTerms( Collection<GeneOntologyTerm> filteredAllTerms ) {
         this.filteredAllTerms = filteredAllTerms;
-    }
-
-    public void setStatsService( StatsService statsService ) {
-        this.statsService = statsService;
-    }
-
-    public void setAnnotationService( AnnotationService annotationService ) {
-        this.annotationService = annotationService;
     }
 
 }

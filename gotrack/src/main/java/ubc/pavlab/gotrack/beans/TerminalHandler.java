@@ -35,9 +35,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.RequestScoped;
+import javax.enterprise.context.RequestScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.log4j.Logger;
@@ -67,7 +67,7 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @RequestScoped
 public class TerminalHandler implements Serializable {
 
@@ -82,19 +82,19 @@ public class TerminalHandler implements Serializable {
     private static final List<String> AUTH_COMMANDS = Arrays.asList( "greet", "date", "genes", "aggregate", "term",
             "auth", "help", "genes", "reload_settings", "stability", "enrich" );
 
-    @ManagedProperty("#{sessionManager}")
+    @Inject
     private SessionManager sessionManager;
 
-    @ManagedProperty("#{settingsCache}")
+    @Inject
     private SettingsCache settingsCache;
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
-    @ManagedProperty("#{enrichmentView}")
+    @Inject
     EnrichmentView enrichmentView;
 
-    @ManagedProperty("#{annotationService}")
+    @Inject
     private AnnotationService annotationService;
 
     public TerminalHandler() {
@@ -384,26 +384,6 @@ public class TerminalHandler implements Serializable {
         }
 
         return command + " not found";
-    }
-
-    public void setSessionManager( SessionManager sessionManager ) {
-        this.sessionManager = sessionManager;
-    }
-
-    public void setCache( Cache cache ) {
-        this.cache = cache;
-    }
-
-    public void setEnrichmentView( EnrichmentView enrichmentView ) {
-        this.enrichmentView = enrichmentView;
-    }
-
-    public void setSettingsCache( SettingsCache settingsCache ) {
-        this.settingsCache = settingsCache;
-    }
-
-    public void setAnnotationService( AnnotationService annotationService ) {
-        this.annotationService = annotationService;
     }
 
 }

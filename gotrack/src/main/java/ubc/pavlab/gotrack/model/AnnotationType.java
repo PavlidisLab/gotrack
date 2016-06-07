@@ -30,7 +30,7 @@ package ubc.pavlab.gotrack.model;
  * @version $Id$
  */
 public enum AnnotationType {
-    DIRECT("D"), INFERRED("I");
+    D("Direct"), I("Inferred");
 
     private String label;
 
