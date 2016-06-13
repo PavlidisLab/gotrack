@@ -54,6 +54,7 @@ import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.beans.service.EnrichmentService;
 import ubc.pavlab.gotrack.model.Aggregate;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
@@ -93,6 +94,9 @@ public class TerminalHandler implements Serializable {
 
     @Inject
     EnrichmentView enrichmentView;
+
+    @Inject
+    private EnrichmentService enrichmentService;
 
     @Inject
     private AnnotationService annotationService;
@@ -288,8 +292,10 @@ public class TerminalHandler implements Serializable {
 
                         }
                     }
-                    StabilityAnalysis sa = enrichmentView.enrich( hitList, species, MultipleTestCorrection.BH, 0.05, 5,
-                            200, null, SimilarityCompareMethod.CURRENT, 5, new StatusPoller() ).getStabilityAnalysis();
+                    StabilityAnalysis sa = enrichmentService
+                            .enrich( hitList, species, MultipleTestCorrection.BH, 0.05, 5,
+                                    200, null, SimilarityCompareMethod.CURRENT, 5, new StatusPoller() )
+                            .getStabilityAnalysis();
 
                     String outputFile = outputFolder + "/" + systematicName + "_results.txt";
 
@@ -370,7 +376,7 @@ public class TerminalHandler implements Serializable {
                             returnString += "Could not find " + geneInput + "<br/>";
                         }
                     }
-                    enrichmentView.enrich( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200, null,
+                    enrichmentService.enrich( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200, null,
                             SimilarityCompareMethod.CURRENT, 5, new StatusPoller() );
 
                 } else {
