@@ -52,6 +52,7 @@ import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
+import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
@@ -278,6 +279,68 @@ public class AnnotationService implements Serializable {
 
             }
 
+        }
+
+        return data;
+
+    }
+
+    /**
+     * Method used to fetch data from database related to the Enrichment for a single edition
+     * 
+     * @param ed edition
+     * @param speciesId species id
+     * @param genes gene
+     * @return Sets of terms directly annotated to each gene in each edition
+     */
+    public Map<Gene, Set<GeneOntologyTerm>> fetchSingleEnrichmentData( Edition ed, Integer speciesId,
+            Collection<Gene> genes ) {
+        Set<Gene> geneSet = new HashSet<>( genes );
+
+        // Used to map strings back to genes, small efficiency boost as we don't have to hit gene cache in Cache service
+        Map<Integer, Gene> givenGenes = new HashMap<>();
+        for ( Gene g : genes ) {
+            givenGenes.put( g.getId(), g );
+        }
+
+        List<SimpleAnnotationDTO> resultset = annotationDAO.enrichSingleEdition( ed, geneSet );
+
+        Multimap<String, SimpleAnnotationDTO> missingTerms = ArrayListMultimap.create();
+
+        Map<Gene, Set<GeneOntologyTerm>> data = new HashMap<>();
+
+        for ( SimpleAnnotationDTO enrichmentDTO : resultset ) {
+
+            Integer geneId = enrichmentDTO.getGeneId();
+            Gene g = givenGenes.get( geneId );
+            if ( g == null ) {
+                log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
+                // g = new Gene( symbol, species );
+            }
+
+            GeneOntologyTerm go = cache.getTerm( ed, enrichmentDTO.getGoId() );
+
+            if ( go == null ) {
+                log.debug(
+                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEditionId() );
+                missingTerms.put( enrichmentDTO.getGoId(), enrichmentDTO );
+                continue;
+            }
+
+            Set<GeneOntologyTerm> goSet = data.get( g );
+            if ( goSet == null ) {
+                goSet = new HashSet<>();
+                data.put( g, goSet );
+            }
+
+            goSet.add( go );
+
+        }
+
+        // Because of reasons (badly annotated / misdated / mismatched annotations to GO editions / missing secondary ids)
+        // We will have terms that are not found in their given GO edition.
+        if ( !missingTerms.isEmpty() ) {
+            log.warn( "Could not find information for (" + missingTerms.size() + ") terms" );
         }
 
         return data;

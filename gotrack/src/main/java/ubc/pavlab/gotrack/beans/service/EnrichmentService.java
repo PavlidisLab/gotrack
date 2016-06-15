@@ -35,8 +35,10 @@ import javax.inject.Named;
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.analysis.CombinedAnalysis;
+import ubc.pavlab.gotrack.analysis.Enrichment;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
+import ubc.pavlab.gotrack.analysis.Population;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.beans.Cache;
@@ -321,4 +323,134 @@ public class EnrichmentService implements Serializable {
 
         return sampleSizes;
     }
+
+    /**
+     * Runs enrichment/similarity/stability analyses given input settings.
+     * 
+     * @param ed edition
+     * @param genes hitlist
+     * @param spId species id
+     * @param mtc method of multiple tests correction
+     * @param thresh Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
+     * @param min minimum geneset size a specific term must have to be included in results
+     * @param max maximum geneset size a specific term must have to be included in results
+     * @param aspects only add these aspects, ignore filter if null or empty
+     * @param scm method for similarity comparison
+     * @param topN number of top terms to use for top N series
+     * @return Enrichment Results
+     */
+    public Enrichment<GeneOntologyTerm, Gene> singleEnrichment( Edition ed, Set<Gene> genes, int spId,
+            MultipleTestCorrection mtc, double thresh, int min, int max, Set<Aspect> aspects ) {
+
+        Map<GeneOntologyTerm, Set<Gene>> data = retrieveData( ed, genes, spId, aspects );
+
+        if ( data == null || data.isEmpty() ) {
+            return null;
+        }
+
+        max = max < 1 ? Integer.MAX_VALUE : max;
+
+        Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, spId, ed );
+
+        Enrichment<GeneOntologyTerm, Gene> enrichment = new Enrichment<>( mtc, thresh, min, max );
+
+        enrichment.runAnalysis( Population.standardPopulation( data ), population );
+
+        return enrichment;
+    }
+
+    /**
+     * Retrieves data from cache/database for given hit list in given edition.
+     * 
+     * @param edition Edition to retrieve data from
+     * @param genes set of genes to either retrieve
+     * @param currentSpeciesId species id of genes
+     * @param filterAspect keep only terms of these aspects, if null or empty the filter is not applied
+     * @return data necessary for enrichment of given hitlist
+     */
+    private Map<GeneOntologyTerm, Set<Gene>> retrieveData( Edition ed, Set<Gene> genes, Integer currentSpeciesId,
+            Set<Aspect> filterAspect ) {
+
+        if ( genes != null && !genes.isEmpty() ) {
+            log.info( "Current species: " + currentSpeciesId );
+            log.info( "Geneset Size: " + genes.size() );
+
+            if ( genes.size() > MAX_GENESET_SIZE ) {
+                log.info( "Gene Hit List too large; maximum geneset size is " + MAX_GENESET_SIZE + "!" );
+                return null;
+            }
+
+            log.info( "retrieving gene data..." );
+
+            // Container for final enrichment data
+            Map<GeneOntologyTerm, Set<Gene>> geneGOMap = new HashMap<>();
+
+            Set<Gene> genesToLoad = new HashSet<>();
+            for ( Gene gene : genes ) {
+                Map<Edition, Set<GeneOntologyTerm>> cachedGeneData = cache.getEnrichmentData( gene );
+                if ( cachedGeneData != null ) {
+                    addGeneData( gene, cachedGeneData.get( ed ), filterAspect, geneGOMap );
+                } else {
+                    genesToLoad.add( gene );
+                }
+            }
+
+            // If not all genes have been loaded from cache we must hit the database for the rest and cache the results
+            if ( !genesToLoad.isEmpty() ) {
+
+                Map<Gene, Set<GeneOntologyTerm>> geneGOMapFromDB;
+
+                geneGOMapFromDB = annotationService.fetchSingleEnrichmentData( ed, currentSpeciesId, genesToLoad );
+
+                for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : geneGOMapFromDB.entrySet() ) {
+
+                    addGeneData( geneEntry.getKey(), propagate( ed, geneEntry.getValue() ), filterAspect, geneGOMap );
+                }
+
+                log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
+                        + ( genes.size() - genesToLoad.size() ) + ") from cache" );
+            } else {
+                log.info( "Retrieved all (" + genes.size() + ") genes from cache" );
+
+            }
+            // timer.stop();
+            // log.info( "Total time: " + timer );
+            // for ( Entry<String, Long> entry : timerMap.entrySet() ) {
+            // log.info( entry.getKey() + " - " + entry.getValue() + " - " + entry.getValue()
+            // / ( double ) timer.getNanoTime() );
+            // }
+
+            return geneGOMap;
+
+        } else {
+            log.info( "Empty geneset" );
+            return null;
+        }
+    }
+
+    private Set<GeneOntologyTerm> propagate( Edition ed, Set<GeneOntologyTerm> goSet ) {
+        return cache.propagate( goSet, ed );
+    }
+
+    private void addGeneData( Gene gene, Set<GeneOntologyTerm> goSet, Set<Aspect> filterAspect,
+            Map<GeneOntologyTerm, Set<Gene>> geneGOMap ) {
+        boolean bypassFilter = ( filterAspect == null || filterAspect.size() == 0
+                || filterAspect.size() == Aspect.values().length );
+
+        for ( GeneOntologyTerm term : goSet ) {
+            if ( bypassFilter || filterAspect.contains( term.getAspect() ) ) {
+                Set<Gene> geneSet = geneGOMap.get( term );
+                if ( geneSet == null ) {
+                    // Previously had no genes for this term
+                    geneSet = new HashSet<>();
+                    geneGOMap.put( term, geneSet );
+                }
+
+                geneSet.add( gene );
+            }
+
+        }
+
+    }
+
 }

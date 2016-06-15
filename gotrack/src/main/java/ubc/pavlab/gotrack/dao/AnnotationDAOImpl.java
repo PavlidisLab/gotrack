@@ -33,11 +33,13 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
+import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 
 /**
  * TODO Document Me
@@ -62,6 +64,12 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_ENRICH = "SELECT distinct edition, go_id, pp_current_genes.id gene_id from pp_current_genes "
             + "inner join pp_goa on pp_current_genes.id = pp_goa.pp_current_genes_id "
             + "where pp_current_genes.id in (%s) "
+            + "ORDER BY NULL";
+
+    // Get information from multiple genes for running enrichment in a single edition, should be extremely fast
+    private static final String SQL_ENRICH_SINGLE_EDITION = "SELECT distinct go_id, pp_current_genes.id gene_id from pp_current_genes "
+            + "inner join pp_goa on pp_current_genes.id = pp_goa.pp_current_genes_id "
+            + "where pp_current_genes.id in (%s) and pp_goa.edition=? "
             + "ORDER BY NULL";
 
     // Collect evidence breakdown for a specific term, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
@@ -201,6 +209,64 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
+    public List<SimpleAnnotationDTO> enrichSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException {
+
+        if ( genes == null || genes.size() == 0 || ed == null ) {
+            return Lists.newArrayList();
+        }
+
+        List<Object> params = new ArrayList<Object>();
+
+        String sql = String.format( SQL_ENRICH_SINGLE_EDITION, DAOUtil.preparePlaceHolders( genes.size() ) );
+
+        for ( Gene g : genes ) {
+            params.add( g.getId() );
+        }
+
+        params.add( ed.getEdition() );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<SimpleAnnotationDTO> results = new ArrayList<>();
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+
+                results.add( simpleEnrichmentMap( resultSet ) );
+
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
     public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException {
         // TODO This method of collecting the data is not robust, 
         // If editions across species in the same 'release' are have slightly differing dates, 
@@ -314,6 +380,12 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         Integer geneId = resultSet.getInt( "gene_id" );
         String goId = resultSet.getString( "go_id" );
         return new EnrichmentDTO( edition, geneId, goId );
+    }
+
+    private static SimpleAnnotationDTO simpleEnrichmentMap( ResultSet resultSet ) throws SQLException {
+        Integer geneId = resultSet.getInt( "gene_id" );
+        String goId = resultSet.getString( "go_id" );
+        return new SimpleAnnotationDTO( goId, geneId );
     }
 
 }

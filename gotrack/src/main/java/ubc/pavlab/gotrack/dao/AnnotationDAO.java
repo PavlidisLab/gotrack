@@ -22,11 +22,13 @@ package ubc.pavlab.gotrack.dao;
 import java.util.List;
 import java.util.Set;
 
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
 import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
+import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 
 /**
  * This interface represents a contract for {@link AnnotationDAOImpl}. Note that all methods are
@@ -53,5 +55,10 @@ public interface AnnotationDAO {
      * Retrieve data necessary for tracking a specific gene over time
      */
     public List<AnnotationDTO> track( Gene g ) throws DAOException;
+
+    /**
+     * Retrieve data necessary for enrichment of given set of genes in a given edition
+     */
+    public List<SimpleAnnotationDTO> enrichSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException;
 
 }
