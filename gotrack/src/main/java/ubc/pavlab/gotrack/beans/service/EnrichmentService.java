@@ -100,15 +100,52 @@ public class EnrichmentService implements Serializable {
      * @param statusPoller poller for live status updates
      * @return Container class holding the enrichment and stability/similarity analyses
      */
-    public CombinedAnalysis enrich( Set<Gene> genes, int spId, MultipleTestCorrection mtc, double thresh, int min,
-            int max, Set<Aspect> aspects, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
+    public CombinedAnalysis combinedAnalysis( Set<Gene> genes, int spId, MultipleTestCorrection mtc, double thresh,
+            int min, int max, Set<Aspect> aspects, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
+
         statusPoller.newStatus( "Starting Enrichment Analysis", 0 );
+        EnrichmentAnalysis analysis = enrichment( genes, spId, mtc, thresh, min, max, aspects, statusPoller );
+
+        if ( analysis == null ) {
+            statusPoller.newStatus( "Failed", 100 );
+            return new CombinedAnalysis( null, null, false );
+        }
+
+        log.info( "Running stability analysis" );
+
+        statusPoller.newStatus( "Running Stability Analyses on all editions...", 85 );
+
+        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, topN, scm, cache );
+        statusPoller.completeStatus();
+        log.info( "Analysis Complete" );
+
+        return new CombinedAnalysis( analysis, stabilityAnalysis, true );
+
+    }
+
+    /**
+     * Runs enrichment/similarity/stability analyses given input settings.
+     * 
+     * @param genes hitlist
+     * @param spId species id
+     * @param mtc method of multiple tests correction
+     * @param thresh Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
+     * @param min minimum geneset size a specific term must have to be included in results
+     * @param max maximum geneset size a specific term must have to be included in results
+     * @param aspects only add these aspects, ignore filter if null or empty
+     * @param scm method for similarity comparison
+     * @param topN number of top terms to use for top N series
+     * @param statusPoller poller for live status updates
+     * @return Container class holding the enrichment and stability/similarity analyses
+     */
+    public EnrichmentAnalysis enrichment( Set<Gene> genes, int spId, MultipleTestCorrection mtc, double thresh, int min,
+            int max, Set<Aspect> aspects, StatusPoller statusPoller ) {
 
         Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = retrieveData( genes, spId, aspects, statusPoller );
 
         if ( geneGOMap == null || geneGOMap.isEmpty() ) {
             statusPoller.newStatus( "Failed", 100 );
-            return new CombinedAnalysis( null, null, false );
+            return null;
         }
 
         statusPoller.newStatus( "Retrieving Sample Sizes...", 50 );
@@ -123,15 +160,7 @@ public class EnrichmentService implements Serializable {
 
         statusPoller.completeStatus();
 
-        log.info( "Running stability analysis" );
-
-        statusPoller.newStatus( "Running Stability Analyses on all editions...", 85 );
-
-        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, topN, scm, cache );
-        statusPoller.completeStatus();
-        log.info( "Analysis Complete" );
-
-        return new CombinedAnalysis( analysis, stabilityAnalysis, true );
+        return analysis;
 
     }
 

@@ -265,7 +265,7 @@ public class EnrichmentView implements Serializable {
         enrichmentSuccess = false;
         statusPoller = new StatusPoller( " completed" );
         double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
-        CombinedAnalysis ca = enrichmentService.enrich( new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ),
+        CombinedAnalysis ca = enrichmentService.combinedAnalysis( new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ),
                 currentSpeciesId,
                 multipleTestCorrection, thresh, minAnnotatedPopulation, maxAnnotatedPopulation,
                 new HashSet<>( aspects ), similarityCompareMethod, TOP_N_JACCARD, statusPoller );

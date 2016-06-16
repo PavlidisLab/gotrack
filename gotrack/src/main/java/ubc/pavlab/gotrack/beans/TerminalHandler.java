@@ -293,7 +293,7 @@ public class TerminalHandler implements Serializable {
                         }
                     }
                     StabilityAnalysis sa = enrichmentService
-                            .enrich( hitList, species, MultipleTestCorrection.BH, 0.05, 5,
+                            .combinedAnalysis( hitList, species, MultipleTestCorrection.BH, 0.05, 5,
                                     200, null, SimilarityCompareMethod.CURRENT, 5, new StatusPoller() )
                             .getStabilityAnalysis();
 
@@ -376,7 +376,7 @@ public class TerminalHandler implements Serializable {
                             returnString += "Could not find " + geneInput + "<br/>";
                         }
                     }
-                    enrichmentService.enrich( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200, null,
+                    enrichmentService.combinedAnalysis( hitList, currentSpeciesId, MultipleTestCorrection.BH, 0.05, 5, 200, null,
                             SimilarityCompareMethod.CURRENT, 5, new StatusPoller() );
 
                 } else {
