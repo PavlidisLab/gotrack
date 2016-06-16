@@ -733,12 +733,37 @@ public class Cache implements Serializable {
      * 
      * @param query query
      * @param species species
+     * @return list of all matches in order of goodness
+     */
+    public List<GeneMatches> complete( String query, Integer species ) {
+        return complete( query, species, Integer.MAX_VALUE );
+    }
+
+    /**
+     * Autocompletes genes by symbol
+     * 
+     * @param query query
+     * @param species species
      * @param maxResults max results to return
      * @return list of matches in order of goodness
      */
     public List<GeneMatches> complete( String query, Integer species, Integer maxResults ) {
+        return complete( query, species, Integer.MAX_VALUE, null );
+    }
+
+    /**
+     * Autocompletes genes by symbol
+     * 
+     * @param query query
+     * @param species species
+     * @param maxResults max results to return
+     * @param worstMatchType the worst match type from which to return results
+     * @return list of matches in order of goodness
+     */
+    public List<GeneMatches> complete( String query, Integer species, Integer maxResults, MatchType worstMatchType ) {
         List<GeneMatches> results = new ArrayList<>();
         Set<String> duplicateChecker = new HashSet<>();
+        worstMatchType = worstMatchType == null ? MatchType.NO_MATCH : worstMatchType;
         if ( query == null || maxResults < 1 ) return results;
 
         String queryUpper = query.toUpperCase();
@@ -753,7 +778,7 @@ public class Cache implements Serializable {
             }
         }
 
-        if ( results.size() >= maxResults ) {
+        if ( results.size() >= maxResults || worstMatchType == MatchType.EXACT ) {
             return results;
         }
 
@@ -762,6 +787,9 @@ public class Cache implements Serializable {
         if ( msec != null ) {
             Collection<Gene> gs = msec.get( queryUpper );
             MatchType type = gs.size() > 1 ? MatchType.MULTIPLE_EXACT_SYNONYMS : MatchType.EXACT_SYNONYM;
+            if ( worstMatchType.ordinal() < type.ordinal() ) {
+                return results;
+            }
             for ( Gene gene : gs ) {
                 if ( !duplicateChecker.contains( gene.getSymbol() ) ) {
                     results.add( new GeneMatches( query, gene, type ) );
@@ -771,12 +799,16 @@ public class Cache implements Serializable {
                     return results;
                 }
             }
+
         }
 
         // Find prefix matches
         RadixTree<Gene> rt = speciesToRadixGenes.get( species );
         boolean findSimilarMatches = true;
         if ( rt != null ) {
+            if ( worstMatchType.ordinal() < MatchType.PREFIX.ordinal() ) {
+                return results;
+            }
             Iterable<Gene> gs = rt.getValuesForKeysStartingWith( queryUpper );
             if ( gs.iterator().hasNext() ) {
                 // If prefix matches were found, do not return similar matches
@@ -791,6 +823,10 @@ public class Cache implements Serializable {
                 if ( results.size() >= maxResults ) {
                     return results;
                 }
+            }
+
+            if ( worstMatchType.ordinal() < MatchType.SIMILAR.ordinal() ) {
+                return results;
             }
 
             // Find similar matches
