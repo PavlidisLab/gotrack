@@ -217,7 +217,7 @@ def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
                 for e, f in files:
                     log.info("Edition: %s", e)
                     meta = parsers.retrieve_meta_goa(f)
-                    if meta[0] != "2.0":
+                    if meta[0] != "2.0" and meta[0] != "2.1":
                         log.warn('Illegal GAF Version: %s', meta[0])
                         continue
 
@@ -409,7 +409,7 @@ def process_aggregate(gotrack, ont, sp_id, ed, caches):
     gene_count = len(term_set_per_gene_id)
 
     # write_total_time = time.time()
-
+    
     # Write aggregates
     if gene_count > 0:
         # Calculate average multifunctionality
@@ -440,10 +440,10 @@ def process_aggregate(gotrack, ont, sp_id, ed, caches):
                                 total_term_set_size / gene_count, total_gene_set_size / len(gene_id_set_per_term), avg_mf, avg_direct_jaccard, avg_jaccard)
     else:
         log.warn("No Genes in Species ({0}), Edition ({1})".format(sp_id, ed))
-
+    
     # Write Term Counts
     if total_gene_set_size > 0 or total_term_set_size > 0:
-        pass#gotrack.write_term_counts(sp_id, ed, direct_counts_per_term, inferred_counts_per_term)
+        gotrack.write_term_counts(sp_id, ed, direct_counts_per_term, inferred_counts_per_term)
     else:
         log.warn("No Annotations in Species ({0}), Edition ({1})".format(sp_id, ed))
 
