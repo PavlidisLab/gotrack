@@ -356,6 +356,39 @@ public class EnrichmentService implements Serializable {
     /**
      * Runs enrichment/similarity/stability analyses given input settings.
      * 
+     * @param eds set of editions to run the analysis on
+     * @param genes hitlist
+     * @param spId species id
+     * @param mtc method of multiple tests correction
+     * @param thresh Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
+     * @param min minimum geneset size a specific term must have to be included in results
+     * @param max maximum geneset size a specific term must have to be included in results
+     * @param aspects only add these aspects, ignore filter if null or empty
+     * @param scm method for similarity comparison
+     * @param topN number of top terms to use for top N series
+     * @return Enrichment Results
+     */
+    public EnrichmentAnalysis enrichment( Set<Edition> eds, Set<Gene> genes, int spId,
+            MultipleTestCorrection mtc, double thresh, int min, int max, Set<Aspect> aspects ) {
+
+        Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = new HashMap<>();
+
+        for ( Edition ed : eds ) {
+            geneGOMap.put( ed, retrieveData( ed, genes, spId, aspects ) );
+        }
+
+        if ( geneGOMap == null || geneGOMap.isEmpty() ) {
+            return null;
+        }
+
+        EnrichmentAnalysis analysis = new EnrichmentAnalysis( geneGOMap, min, max, mtc, thresh, cache, spId );
+
+        return analysis;
+    }
+
+    /**
+     * Runs enrichment/similarity/stability analyses given input settings.
+     * 
      * @param ed edition
      * @param genes hitlist
      * @param spId species id
@@ -418,7 +451,10 @@ public class EnrichmentService implements Serializable {
             for ( Gene gene : genes ) {
                 Map<Edition, Set<GeneOntologyTerm>> cachedGeneData = cache.getEnrichmentData( gene );
                 if ( cachedGeneData != null ) {
-                    addGeneData( gene, cachedGeneData.get( ed ), filterAspect, geneGOMap );
+                    Set<GeneOntologyTerm> edData = cachedGeneData.get( ed );
+                    if ( edData != null ) {
+                        addGeneData( gene, cachedGeneData.get( ed ), filterAspect, geneGOMap );
+                    }
                 } else {
                     genesToLoad.add( gene );
                 }

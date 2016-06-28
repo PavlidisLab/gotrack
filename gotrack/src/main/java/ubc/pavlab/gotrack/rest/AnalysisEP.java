@@ -46,10 +46,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import jersey.repackaged.com.google.common.collect.Sets;
 import ubc.pavlab.gotrack.analysis.Enrichment;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
+import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
+import ubc.pavlab.gotrack.analysis.SimilarityScore;
+import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.beans.service.EnrichmentService;
 import ubc.pavlab.gotrack.model.Aspect;
@@ -95,7 +99,7 @@ public class AnalysisEP {
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    @Path("/")
+    @Path("/enrichment")
     public Response postEnrichmentCurrent( final EnrichmentRequest req ) {
         log.info( req );
         JSONObject response = new JSONObject();
@@ -187,7 +191,7 @@ public class AnalysisEP {
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    @Path("/historical")
+    @Path("/enrichment/historical")
     public Response postEnrichmentHistorical( final EnrichmentHistoricalRequest req ) {
         log.info( req );
         JSONObject response = new JSONObject();
@@ -211,18 +215,7 @@ public class AnalysisEP {
             c.set( req.year, req.month - 1, 1, 0, 0 );
             Date inputDate = c.getTime();
 
-            Collection<Edition> eds = cache.getAllEditions( species.getId() );
-            Edition closestEdition = eds.iterator().next();
-            long minDayDiff = Math.abs( getDateDiff( closestEdition.getDate(), inputDate ) );
-
-            for ( Edition edition : eds ) {
-                long dayDiff = Math.abs( getDateDiff( edition.getDate(), inputDate ) );
-                if ( dayDiff < minDayDiff ) {
-                    // new closest
-                    closestEdition = edition;
-                    minDayDiff = dayDiff;
-                }
-            }
+            Edition closestEdition = closestEdition( inputDate, species );
 
             response.put( "edition", new JSONObject( closestEdition ) );
 
@@ -302,7 +295,7 @@ public class AnalysisEP {
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    @Path("/complete")
+    @Path("/enrichment/complete")
     public Response postEnrichmentComplete( final EnrichmentRequest req ) {
         log.info( req );
         JSONObject response = new JSONObject();
@@ -395,6 +388,141 @@ public class AnalysisEP {
 
     }
 
+    /**
+     * @param request
+     * @param msg
+     * @return Enrichment results from most recent edition
+     */
+    @POST
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/stability")
+    public Response postStability( final EnrichmentHistoricalRequest req ) {
+        log.info( req );
+        JSONObject response = new JSONObject();
+        try {
+            // Get Species
+            Species species = cache.getSpecies( req.speciesId );
+
+            if ( species == null ) {
+                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).build();
+            }
+            Calendar c = Calendar.getInstance();
+
+            // Get date
+            if ( req.month < 1 || req.month > 12 ) {
+                return Response.status( 400 ).entity( fail( 400, "Invalid month." ).toString() ).build();
+            }
+            if ( req.year < 1990 || req.year > c.get( Calendar.YEAR ) ) {
+                return Response.status( 400 ).entity( fail( 400, "Invalid year." ).toString() ).build();
+            }
+
+            c.set( req.year, req.month - 1, 1, 0, 0 );
+            Date inputDate = c.getTime();
+
+            Edition closestEdition = closestEdition( inputDate, species );
+
+            response.put( "edition", new JSONObject( closestEdition ) );
+
+            MultipleTestCorrection mulTestCor = MultipleTestCorrection.BH;
+            double threshold = 0.05;
+            int min = 5;
+            int max = 200;
+            Set<Aspect> aspectsFilter = null;
+            int topN = 5;
+            SimilarityCompareMethod scm = SimilarityCompareMethod.CURRENT;
+
+            // Convert list of strings to best possible matches in genes
+            Map<MatchType, List<GeneMatches>> gmMap = deserializeGenes( req.genes, species );
+
+            Set<Gene> hitList = new HashSet<>();
+            Set<GeneMatches> unknown = new HashSet<>();
+            for ( Entry<MatchType, List<GeneMatches>> entry : gmMap.entrySet() ) {
+                if ( entry.getKey().equals( MatchType.EXACT ) || entry.getKey().equals( MatchType.EXACT_SYNONYM ) ) {
+                    // Create histlist from exact and exact_synonym matches
+                    for ( GeneMatches gm : entry.getValue() ) {
+                        hitList.add( gm.getSelectedGene() );
+                    }
+                } else {
+                    // Create unknown list from other types
+                    for ( GeneMatches gm : entry.getValue() ) {
+                        unknown.add( gm );
+                    }
+                }
+            }
+
+            // Attach genes
+
+            JSONObject genesJSON = new JSONObject();
+            genesJSON.put( "exact", gmMap.get( MatchType.EXACT ) );
+            genesJSON.put( "exact_synonym", gmMap.get( MatchType.EXACT_SYNONYM ) );
+            genesJSON.put( "unknown", unknown );
+            response.put( "input_genes", genesJSON );
+
+            // Attach Species
+
+            response.put( "species", new JSONObject( species ) );
+
+            // Settings
+
+            response.put( "mt_corr_method", new JSONObject( mulTestCor ).put( "key", mulTestCor ) );
+            response.put( "threshold", threshold );
+            response.put( "min_go_geneset", min );
+            response.put( "max_go_geneset", max );
+            response.put( "aspect_filter", aspectsFilter );
+            response.put( "similarity_compare_method", new JSONObject( scm ).put( "key", scm ) );
+            response.put( "topN", topN );
+
+            if ( hitList == null || hitList.size() == 0 ) {
+                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
+            }
+
+            Edition currentEdition = cache.getCurrentEditions( species.getId() );
+
+            EnrichmentAnalysis analysis = enrichmentService.enrichment(
+                    Sets.newHashSet( closestEdition, currentEdition ), hitList,
+                    species.getId(), mulTestCor, threshold, min, max, aspectsFilter );
+
+            StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, topN, scm, cache );
+
+            JSONArray dataJSON = new JSONArray();
+
+            for ( Entry<Edition, SimilarityScore> editionEntry : stabilityAnalysis.getSimilarityScores().entrySet() ) {
+
+                Edition ed = editionEntry.getKey();
+                SimilarityScore score = editionEntry.getValue();
+                JSONObject editionJSON = new JSONObject( ed );
+
+                JSONObject valuesJSON = new JSONObject();
+                valuesJSON.put( "CompleteTermJaccard", score.getCompleteTermJaccard() );
+                valuesJSON.put( "TopTermJaccard", score.getTopTermJaccard() );
+                valuesJSON.put( "TopGeneJaccard", score.getTopGeneJaccard() );
+                valuesJSON.put( "TopParentsJaccard", score.getTopParentsJaccard() );
+
+                JSONObject entryJSON = new JSONObject();
+
+                entryJSON.put( "edition", editionJSON );
+                entryJSON.put( "age_days", getDateDiff( ed.getDate(), currentEdition.getDate(), TimeUnit.DAYS ) );
+                entryJSON.put( "significant_terms", analysis.getTermsSignificant( ed ).size() );
+                entryJSON.put( "values", valuesJSON );
+
+                dataJSON.put( entryJSON );
+            }
+
+            response.put( "similarity_data", dataJSON );
+
+            response.put( "httpstatus", 202 );
+            response.put( "success", true );
+        } catch ( JSONException e1 ) {
+            log.error( "Malformed JSON", e1 );
+            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).build();
+        } catch ( Exception e1 ) {
+            log.error( "Something went wrong!", e1 );
+            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).build();
+        }
+        return Response.status( 202 ).entity( response.toString() ).build();
+
+    }
+
     private static JSONObject fail( int httpStatus, String message ) {
         JSONObject response = new JSONObject();
         try {
@@ -415,9 +543,28 @@ public class AnalysisEP {
      * @param timeUnit the unit in which you want the diff
      * @return the diff value, in the provided unit
      */
-    private static long getDateDiff( Date date1, Date date2 ) {
+    private static long getDateDiff( Date date1, Date date2, TimeUnit timeUnit ) {
         long diffInMillies = date2.getTime() - date1.getTime();
-        return TimeUnit.DAYS.convert( diffInMillies, TimeUnit.MILLISECONDS );
+        return timeUnit.convert( diffInMillies, TimeUnit.MILLISECONDS );
+    }
+
+    private Edition closestEdition( Date inputDate, Species species ) {
+        Edition closestEdition = cache.getCurrentEditions( species.getId() );
+        long minDayDiff = Math.abs( getDateDiff( closestEdition.getDate(), inputDate, TimeUnit.DAYS ) );
+
+        for ( Edition edition : cache.getAllEditions( species.getId() ) ) {
+            if ( cache.getAggregates( species.getId(), edition ) != null ) {
+                // Make sure there is data for this edition
+                long dayDiff = Math.abs( getDateDiff( edition.getDate(), inputDate, TimeUnit.DAYS ) );
+                if ( dayDiff < minDayDiff ) {
+                    // new closest
+                    closestEdition = edition;
+                    minDayDiff = dayDiff;
+                }
+            }
+        }
+
+        return closestEdition;
     }
 
     /**
