@@ -359,6 +359,17 @@ public class Cache implements Serializable {
             }
             log.info( "GO Adjacencies fetched" );
 
+            for ( AdjacencyDTO dto : cacheDAO.getAlternates() ) {
+                GOEdition goEdition = allGOEditions.get( dto.getGoEdition() );
+
+                if ( goEdition == null ) {
+                    log.error( "Cannot find GO Edition for: " + dto.getGoEdition() );
+                }
+                GeneOntology go = ontologies.get( goEdition );
+                go.addAlt( dto.getChild(), dto.getParent() );
+            }
+            log.info( "GO Alternates fetched" );
+
             for ( GeneOntology go : ontologies.values() ) {
                 go.freeze();
             }
@@ -1181,6 +1192,32 @@ public class Cache implements Serializable {
         }
 
         return found ? termsMap : null;
+    }
+
+    /**
+     * Used when comparing similarity of sets of terms in separate editions.
+     * Searching the term in the more current edition will account for obsoletion in the form
+     * of alternate ids.
+     * 
+     * @param ed
+     * @param terms
+     * @return
+     */
+    public Set<GeneOntologyTerm> convertTerms( Edition ed, Set<GeneOntologyTerm> terms ) {
+        Set<GeneOntologyTerm> results = new HashSet<>();
+
+        if ( terms == null || ed == null ) {
+            return null;
+        }
+        GeneOntology o = ontologies.get( ed.getGoEdition() );
+        if ( o == null ) {
+            return null;
+        }
+
+        for ( GeneOntologyTerm t : terms ) {
+            results.add( o.getTerm( t.getGoId() ) );
+        }
+        return results;
     }
 
     /**

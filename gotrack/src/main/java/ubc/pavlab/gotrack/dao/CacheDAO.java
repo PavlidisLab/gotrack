@@ -75,6 +75,11 @@ public interface CacheDAO {
     public List<AdjacencyDTO> getAdjacencies() throws DAOException;
 
     /**
+     * Retrieve all alternate GO Terms
+     */
+    public List<AdjacencyDTO> getAlternates() throws DAOException;
+
+    /**
      * Retrieve all evidence codes
      */
     public List<EvidenceDTO> getEvidence() throws DAOException;

@@ -96,6 +96,7 @@ public class CacheDAOImpl implements CacheDAO {
     // GeneOntology and GeneOntologyTerm
     private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from go_term";
     private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from go_adjacency";
+    private static final String SQL_GO_ALTERNATE = "select go_edition_id_fk, alt, `primary` from go_alternate";
 
     // Evidence
     private static final String SQL_EVIDENCE = "SELECT id, evidence, description, category FROM evidence_categories";
@@ -419,6 +420,34 @@ public class CacheDAOImpl implements CacheDAO {
                 // go_edition_id_fk, child, parent, relationship
                 results.add( new AdjacencyDTO( resultSet.getInt( "go_edition_id_fk" ), resultSet.getString( "child" ),
                         resultSet.getString( "parent" ), resultSet.getString( "relationship" ) ) );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
+    public List<AdjacencyDTO> getAlternates() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        List<AdjacencyDTO> results = new ArrayList<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_GO_ALTERNATE );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                // go_edition_id_fk, alt, primary
+                results.add( new AdjacencyDTO( resultSet.getInt( "go_edition_id_fk" ), resultSet.getString( "alt" ),
+                        resultSet.getString( "primary" ), null ) );
 
             }
 

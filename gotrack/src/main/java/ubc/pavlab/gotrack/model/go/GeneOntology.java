@@ -29,6 +29,8 @@ import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.GOEdition;
@@ -46,6 +48,7 @@ public class GeneOntology implements Ontology<GeneOntologyTerm> {
     private final GOEdition edition;
 
     private TIntObjectHashMap<GeneOntologyTerm> termMap = new TIntObjectHashMap<>();
+    private TIntIntMap altMap = new TIntIntHashMap();
 
     // private LoadingCache<GeneOntologyTerm, ImmutableSet<GeneOntologyTerm>> ancestorsCache = CacheBuilder.newBuilder()
     // .maximumWeight( 10000 ).weigher( new Weigher<GeneOntologyTerm, ImmutableSet<GeneOntologyTerm>>() {
@@ -128,6 +131,11 @@ public class GeneOntology implements Ontology<GeneOntologyTerm> {
         parent.getChildren().add( childRelation );
     }
 
+    public void addAlt( String alt, String primary ) {
+        altMap.put( Integer.parseInt( alt.substring( alt.length() - 7 ) ),
+                Integer.parseInt( primary.substring( primary.length() - 7 ) ) );
+    }
+
     /**
      * Makes the parent/children sets of all terms in this ontology immutable.
      */
@@ -146,7 +154,11 @@ public class GeneOntology implements Ontology<GeneOntologyTerm> {
     public GeneOntologyTerm getTerm( String goid ) {
         try {
             int id = Integer.parseInt( goid.substring( goid.length() - 7 ) );
-            return termMap.get( id );
+            GeneOntologyTerm res = getTerm( id );
+            if ( res == null && altMap.containsKey( id ) ) {
+                res = getTerm( altMap.get( id ) );
+            }
+            return res;
         } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
             return null;
         }

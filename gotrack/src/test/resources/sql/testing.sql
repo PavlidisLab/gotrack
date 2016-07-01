@@ -164,6 +164,15 @@ INSERT INTO `go_adjacency` VALUES (7321143,170,'GO:0000002','GO:0007005','IS_A')
 /*!40000 ALTER TABLE `go_adjacency` ENABLE KEYS */;
 UNLOCK TABLES;
 
+DROP TABLE IF EXISTS `go_alternate`;
+create table `go_alternate` ( `id` int(11) NOT NULL AUTO_INCREMENT, `go_edition_id_fk` bigint(20) unsigned  NOT NULL, `alt` varchar(10) NOT NULL, `primary` varchar(10) NOT NULL, PRIMARY KEY (`id`), UNIQUE KEY `ed_alt` (`go_edition_id_fk`, `alt`), KEY `ed_alt_primary` (`go_edition_id_fk`, `alt`, `primary`), KEY `alt_primary` (`alt`, `primary`), CONSTRAINT `fk_go_alt_go_edition` FOREIGN KEY (`go_edition_id_fk`) REFERENCES `go_edition` (`id`) );
+
+LOCK TABLES `go_alternate` WRITE;
+/*!40000 ALTER TABLE `go_edition` DISABLE KEYS */;
+INSERT INTO `go_alternate` VALUES (170,'GO:0030333','GO:0019882'),(175,'GO:0030333','GO:0019882'),(173,'GO:0030333','GO:0019882'),(174,'GO:0030333','GO:0019882');
+/*!40000 ALTER TABLE `go_edition` ENABLE KEYS */;
+UNLOCK TABLES;
+
 --
 -- Table structure for table `go_edition`
 --

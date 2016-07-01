@@ -102,13 +102,15 @@ public class StabilityAnalysis {
         for ( Edition testingEdition : orderedEditions ) {
 
             // Complete Terms
-            Double completeTermJaccard = Jaccard.similarity( analysis.getTermsSignificant( testingEdition ),
+            Double completeTermJaccard = Jaccard.similarity(
+                    cache.convertTerms( compareEdition, analysis.getTermsSignificant( testingEdition ) ),
                     analysis.getTermsSignificant( compareEdition ) );
 
             // Top Terms
             Set<GeneOntologyTerm> testingTopTerms = analysis.getTopNTerms( TOP_N_JACCARD, testingEdition );
 
-            Double topTermJaccard = Jaccard.similarity( testingTopTerms, compareTopTerms );
+            Double topTermJaccard = Jaccard.similarity( cache.convertTerms( compareEdition, testingTopTerms ),
+                    compareTopTerms );
 
             // Top Genes
             Set<Gene> testingTopGenes = new HashSet<>();
@@ -125,7 +127,8 @@ public class StabilityAnalysis {
             if ( cache != null ) {
                 testingTopParents = cache.propagate( testingTopTerms, testingEdition );
 
-                topParentsJaccard = Jaccard.similarity( testingTopParents, compareTopParents );
+                topParentsJaccard = Jaccard.similarity(
+                        cache.convertTerms( compareEdition, testingTopParents ), compareTopParents );
             }
 
             similarityScores.put( testingEdition,

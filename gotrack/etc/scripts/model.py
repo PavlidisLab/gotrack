@@ -11,12 +11,13 @@ Relationship = namedtuple("Relationship", ["term", "type"])
 
 
 class GOTerm:
-    def __init__(self, go_id, name=None, definition=None, aspect=None, parents=None, obsolete=None):
+    def __init__(self, go_id, name=None, definition=None, aspect=None, parents=None, alt_ids=None, obsolete=None):
         self.id = go_id
         self.name = name
         self.definition = definition
         self.aspect = aspect
         self.parents = parents if parents is not None else []  # We do this because default arguments are function member variables
+        self.alt_ids = alt_ids if alt_ids is not None else []  # We do this because default arguments are function member variables
         self.obsolete = obsolete
 
     @classmethod
@@ -43,6 +44,14 @@ class GOTerm:
             # No relationship
             pass
 
+        alt_ids = []
+        try:
+            alt = obo_entry['alt_id']
+            alt_ids += [r.split(' ', 1)[0] for r in alt]
+        except KeyError:
+            # No alts
+            pass
+
         name = obo_entry['name'][0]
 
         namespace = obo_entry['namespace'][0].upper()
@@ -59,7 +68,7 @@ class GOTerm:
 
         definition = obo_entry['def'][0].split("\"", 2)[1]
 
-        return cls(go_id, name, definition, aspect, parents, obsolete)
+        return cls(go_id, name, definition, aspect, parents, alt_ids, obsolete)
 
     def add_relationship(self, term, rel):
         if not isinstance(term, GOTerm):
@@ -258,6 +267,13 @@ class Ontology:
         """
         return ((goTerm.id, rel.term.id, rel.type.upper()) for goTerm in self.term_map.itervalues()
                 for rel in goTerm.parents)
+
+    def alternate_list(self):
+        """
+        Generate list of alternate ids to primary id.
+        """
+        return ((alt, goTerm.id) for goTerm in self.term_map.itervalues()
+                for alt in goTerm.alt_ids)
 
     def transitive_closure(self, reflexive=True):
         """
