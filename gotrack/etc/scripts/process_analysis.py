@@ -73,7 +73,7 @@ if __name__ == '__main__':
                         d_pubdate = dateutil.parser.parse(pubdate)
                         d_epubdate = dateutil.parser.parse(epubdate)
                         d = min(d_pubdate, d_epubdate)
-                        res = analysis.stability(d.month, d.year, genes, 7)
+                        res = analysis.similarity(d.month, d.year, genes, 7)
                         with open(out_folder + "/" + sys_name, 'w+') as out_file:
                             out_file.write("name:\t{0}".format(name) + "\n")
                             out_file.write("sys_name:\t{0}".format(sys_name) + "\n")

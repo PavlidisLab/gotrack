@@ -39,6 +39,7 @@ import ubc.pavlab.gotrack.analysis.Enrichment;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.Population;
+import ubc.pavlab.gotrack.analysis.SimilarityAnalysis;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.beans.Cache;
@@ -108,18 +109,24 @@ public class EnrichmentService implements Serializable {
 
         if ( analysis == null ) {
             statusPoller.newStatus( "Failed", 100 );
-            return new CombinedAnalysis( null, null, false );
+            return new CombinedAnalysis( null, null, null, false );
         }
+
+        log.info( "Running similarity analysis" );
+
+        statusPoller.newStatus( "Running Similarity Analyses on all editions...", 75 );
+
+        SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, cache );
 
         log.info( "Running stability analysis" );
 
         statusPoller.newStatus( "Running Stability Analyses on all editions...", 85 );
 
-        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, topN, scm, cache );
+        StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis );
         statusPoller.completeStatus();
         log.info( "Analysis Complete" );
 
-        return new CombinedAnalysis( analysis, stabilityAnalysis, true );
+        return new CombinedAnalysis( analysis, stabilityAnalysis, similarityAnalysis, true );
 
     }
 

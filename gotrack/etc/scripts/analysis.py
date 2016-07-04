@@ -61,9 +61,9 @@ def enrichment_ccomplete(genes, species_id):
 	location = BASE_URL + 'enrichment/complete/'
 	return __send_request(location, content)
 
-def stability(month, year, genes, species_id):
+def similarity(month, year, genes, species_id):
 	content = {'month':month, 'year':year, 'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'stability/'
+	location = BASE_URL + 'similarity/'
 	return __send_request(location, content)
 
 

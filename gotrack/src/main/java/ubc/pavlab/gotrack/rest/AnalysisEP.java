@@ -51,9 +51,9 @@ import ubc.pavlab.gotrack.analysis.Enrichment;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
+import ubc.pavlab.gotrack.analysis.SimilarityAnalysis;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
-import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.beans.service.EnrichmentService;
 import ubc.pavlab.gotrack.model.Aspect;
@@ -395,8 +395,8 @@ public class AnalysisEP {
      */
     @POST
     @Consumes(MediaType.APPLICATION_JSON)
-    @Path("/stability")
-    public Response postStability( final EnrichmentHistoricalRequest req ) {
+    @Path("/similarity")
+    public Response postSimilarity( final EnrichmentHistoricalRequest req ) {
         log.info( req );
         JSONObject response = new JSONObject();
         try {
@@ -482,11 +482,11 @@ public class AnalysisEP {
                     Sets.newHashSet( closestEdition, currentEdition ), hitList,
                     species.getId(), mulTestCor, threshold, min, max, aspectsFilter );
 
-            StabilityAnalysis stabilityAnalysis = new StabilityAnalysis( analysis, topN, scm, cache );
+            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, cache );
 
             JSONArray dataJSON = new JSONArray();
 
-            for ( Entry<Edition, SimilarityScore> editionEntry : stabilityAnalysis.getSimilarityScores().entrySet() ) {
+            for ( Entry<Edition, SimilarityScore> editionEntry : similarityAnalysis.getSimilarityScores().entrySet() ) {
 
                 Edition ed = editionEntry.getKey();
                 SimilarityScore score = editionEntry.getValue();

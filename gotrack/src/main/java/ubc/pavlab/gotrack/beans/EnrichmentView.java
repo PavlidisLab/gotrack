@@ -55,6 +55,7 @@ import ubc.pavlab.gotrack.analysis.CombinedAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
+import ubc.pavlab.gotrack.analysis.SimilarityAnalysis;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
 import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
@@ -191,6 +192,9 @@ public class EnrichmentView implements Serializable {
     private EnrichmentTableValues viewEnrichmentRow;
     private Set<Gene> viewEnrichmentRowGeneSet;
 
+    // Similarity Data
+    private SimilarityAnalysis similarityAnalysis;
+
     // Stability Data
     private StabilityAnalysis stabilityAnalysis;
 
@@ -265,7 +269,8 @@ public class EnrichmentView implements Serializable {
         enrichmentSuccess = false;
         statusPoller = new StatusPoller( " completed" );
         double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
-        CombinedAnalysis ca = enrichmentService.combinedAnalysis( new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ),
+        CombinedAnalysis ca = enrichmentService.combinedAnalysis(
+                new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ),
                 currentSpeciesId,
                 multipleTestCorrection, thresh, minAnnotatedPopulation, maxAnnotatedPopulation,
                 new HashSet<>( aspects ), similarityCompareMethod, TOP_N_JACCARD, statusPoller );
@@ -275,6 +280,7 @@ public class EnrichmentView implements Serializable {
 
         statusPoller.newStatus( "Creating tables and charts...", 90 );
 
+        similarityAnalysis = ca.getSimilarityAnalysis();
         stabilityAnalysis = ca.getStabilityAnalysis();
 
         createTables();
@@ -323,7 +329,7 @@ public class EnrichmentView implements Serializable {
         Map<Long, Integer> dateToEdition = new HashMap<>();
 
         // Fill in series
-        for ( Entry<Edition, SimilarityScore> editionEntry : stabilityAnalysis.getSimilarityScores().entrySet() ) {
+        for ( Entry<Edition, SimilarityScore> editionEntry : similarityAnalysis.getSimilarityScores().entrySet() ) {
             dateToEdition.put( editionEntry.getKey().getDate().getTime(), editionEntry.getKey().getEdition() );
             SimilarityScore score = editionEntry.getValue();
             Date date = editionEntry.getKey().getDate();
@@ -663,7 +669,7 @@ public class EnrichmentView implements Serializable {
         Integer edition = Integer.valueOf(
                 FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         Edition ed = cache.getEdition( currentSpeciesId, edition );
-        selectedSimilarityScore = stabilityAnalysis.getSimilarityScores( ed );
+        selectedSimilarityScore = similarityAnalysis.getSimilarityScores( ed );
     }
 
     /**

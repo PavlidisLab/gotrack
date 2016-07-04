@@ -28,13 +28,16 @@ package ubc.pavlab.gotrack.analysis;
 public final class CombinedAnalysis {
     private final EnrichmentAnalysis enrichmentAnalysis;
     private final StabilityAnalysis stabilityAnalysis;
+    private final SimilarityAnalysis similarityAnalysis;
     private final boolean success;
 
     public CombinedAnalysis( EnrichmentAnalysis enrichmentAnalysis, StabilityAnalysis stabilityAnalysis,
+            SimilarityAnalysis similarityAnalysis,
             boolean success ) {
         super();
         this.enrichmentAnalysis = enrichmentAnalysis;
         this.stabilityAnalysis = stabilityAnalysis;
+        this.similarityAnalysis = similarityAnalysis;
         this.success = success;
 
     }
@@ -45,6 +48,10 @@ public final class CombinedAnalysis {
 
     public StabilityAnalysis getStabilityAnalysis() {
         return stabilityAnalysis;
+    }
+
+    public SimilarityAnalysis getSimilarityAnalysis() {
+        return similarityAnalysis;
     }
 
     public boolean isSuccess() {
