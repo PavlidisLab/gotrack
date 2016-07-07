@@ -53,6 +53,7 @@ import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
 import ubc.pavlab.gotrack.analysis.SimilarityAnalysis;
 import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
+import ubc.pavlab.gotrack.analysis.SimilarityMethod;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.beans.service.EnrichmentService;
@@ -430,6 +431,7 @@ public class AnalysisEP {
             Set<Aspect> aspectsFilter = null;
             int topN = 5;
             SimilarityCompareMethod scm = SimilarityCompareMethod.CURRENT;
+            SimilarityMethod sm = SimilarityMethod.TVERSKY;
 
             // Convert list of strings to best possible matches in genes
             Map<MatchType, List<GeneMatches>> gmMap = deserializeGenes( req.genes, species );
@@ -470,6 +472,7 @@ public class AnalysisEP {
             response.put( "max_go_geneset", max );
             response.put( "aspect_filter", aspectsFilter );
             response.put( "similarity_compare_method", new JSONObject( scm ).put( "key", scm ) );
+            response.put( "similarity_method", new JSONObject( sm ).put( "key", sm ) );
             response.put( "topN", topN );
 
             if ( hitList == null || hitList.size() == 0 ) {
@@ -482,7 +485,7 @@ public class AnalysisEP {
                     Sets.newHashSet( closestEdition, currentEdition ), hitList,
                     species.getId(), mulTestCor, threshold, min, max, aspectsFilter );
 
-            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, cache );
+            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, sm, cache );
 
             JSONArray dataJSON = new JSONArray();
 
@@ -493,16 +496,21 @@ public class AnalysisEP {
                 JSONObject editionJSON = new JSONObject( ed );
 
                 JSONObject valuesJSON = new JSONObject();
-                valuesJSON.put( "CompleteTermJaccard", score.getCompleteTermJaccard() );
-                valuesJSON.put( "TopTermJaccard", score.getTopTermJaccard() );
-                valuesJSON.put( "TopGeneJaccard", score.getTopGeneJaccard() );
-                valuesJSON.put( "TopParentsJaccard", score.getTopParentsJaccard() );
+                valuesJSON.put( "CompleteTermSim", score.getCompleteTermSim() );
+                valuesJSON.put( "TopTermSim", score.getTopTermSim() );
+                valuesJSON.put( "TopGeneSim", score.getTopGeneSim() );
+                valuesJSON.put( "TopParentsSim", score.getTopParentsSim() );
 
                 JSONObject entryJSON = new JSONObject();
 
                 entryJSON.put( "edition", editionJSON );
                 entryJSON.put( "age_days", getDateDiff( ed.getDate(), currentEdition.getDate(), TimeUnit.DAYS ) );
                 entryJSON.put( "significant_terms", analysis.getTermsSignificant( ed ).size() );
+
+                entryJSON.put( "top_terms", goSetToJSON( score.getTopTerms() ) );
+                entryJSON.put( "top_parents", goSetToJSON( score.getTopParents() ) );
+                entryJSON.put( "top_genes", score.getTopGenes() );
+
                 entryJSON.put( "values", valuesJSON );
 
                 dataJSON.put( entryJSON );
@@ -628,6 +636,16 @@ public class AnalysisEP {
 
         results.put( "edition", new JSONObject( ed ) );
         results.put( "results", enrichmentData );
+
+        return results;
+    }
+
+    private static JSONArray goSetToJSON( Collection<GeneOntologyTerm> goset ) {
+        JSONArray results = new JSONArray();
+
+        for ( GeneOntologyTerm go : goset ) {
+            results.put( go.getGoId() );
+        }
 
         return results;
     }

@@ -33,10 +33,10 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
  */
 public class SimilarityScore {
 
-    private final Double completeTermJaccard;
-    private final Double topTermJaccard;
-    private final Double topGeneJaccard;
-    private final Double topParentsJaccard;
+    private final Double completeTermSim;
+    private final Double topTermSim;
+    private final Double topGeneSim;
+    private final Double topParentsSim;
     private final Set<GeneOntologyTerm> topTerms;
     private final Set<Gene> topGenes;
     private final Set<GeneOntologyTerm> topParents;
@@ -50,33 +50,33 @@ public class SimilarityScore {
      * @param topGenes genes backing top N terms
      * @param topParents parents of top N terms
      */
-    public SimilarityScore( Double completeTermJaccard, Double topTermJaccard, Double topGeneJaccard,
-            Double topParentsJaccard, Set<GeneOntologyTerm> topTerms, Set<Gene> topGenes,
+    public SimilarityScore( Double completeTermSim, Double topTermSim, Double topGeneSim,
+            Double topParentsSim, Set<GeneOntologyTerm> topTerms, Set<Gene> topGenes,
             Set<GeneOntologyTerm> topParents ) {
         super();
-        this.completeTermJaccard = completeTermJaccard;
-        this.topTermJaccard = topTermJaccard;
-        this.topGeneJaccard = topGeneJaccard;
-        this.topParentsJaccard = topParentsJaccard;
+        this.completeTermSim = completeTermSim;
+        this.topTermSim = topTermSim;
+        this.topGeneSim = topGeneSim;
+        this.topParentsSim = topParentsSim;
         this.topTerms = topTerms;
         this.topGenes = topGenes;
         this.topParents = topParents;
     }
 
-    public Double getCompleteTermJaccard() {
-        return completeTermJaccard;
+    public Double getCompleteTermSim() {
+        return completeTermSim;
     }
 
-    public Double getTopTermJaccard() {
-        return topTermJaccard;
+    public Double getTopTermSim() {
+        return topTermSim;
     }
 
-    public Double getTopGeneJaccard() {
-        return topGeneJaccard;
+    public Double getTopGeneSim() {
+        return topGeneSim;
     }
 
-    public Double getTopParentsJaccard() {
-        return topParentsJaccard;
+    public Double getTopParentsSim() {
+        return topParentsSim;
     }
 
     public Set<GeneOntologyTerm> getTopTerms() {

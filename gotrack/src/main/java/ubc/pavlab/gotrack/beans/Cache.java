@@ -971,6 +971,24 @@ public class Cache implements Serializable {
 
     /**
      * @param speciesId species id
+     * @return aggregates
+     */
+    public Map<Edition, Aggregate> getAggregates( Integer speciesId ) {
+        if ( speciesId == null ) return null;
+        return aggregates.get( speciesId );
+
+    }
+
+    /**
+     * @return aggregates
+     */
+    public Map<Integer, Map<Edition, Aggregate>> getAggregates() {
+        return aggregates;
+
+    }
+
+    /**
+     * @param speciesId species id
      * @param symbol gene symbol
      * @return gene with this symbol from this species or null
      */

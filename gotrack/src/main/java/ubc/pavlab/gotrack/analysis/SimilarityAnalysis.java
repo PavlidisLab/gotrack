@@ -36,6 +36,7 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Jaccard;
+import ubc.pavlab.gotrack.utilities.Tversky;
 
 /**
  * Calculates scores which attempt to explore the impact that annotation similarity has on the performance of
@@ -56,18 +57,25 @@ public class SimilarityAnalysis {
 
     private final Map<Edition, SimilarityScore> similarityScores;
     private final SimilarityCompareMethod similarityCompareMethod;
+    private final SimilarityMethod similarityMethod;
+
+    public SimilarityAnalysis( EnrichmentAnalysis analysis, int topN, SimilarityCompareMethod scm,
+            Cache cache ) {
+        this( analysis, topN, scm, SimilarityMethod.JACCARD, cache );
+    }
 
     /**
      * @param analysis results of enrichment analysis
-     * @param TOP_N_JACCARD number of top terms to use for top N series
+     * @param topN number of top terms to use for top N series
      * @param scm compare method to be used in the analysis
      * @param cache Cache bean in order to access propagation needed for parent similarity, null to leave out parent
      *        similarity
      */
-    public SimilarityAnalysis( EnrichmentAnalysis analysis, int TOP_N_JACCARD, SimilarityCompareMethod scm,
+    public SimilarityAnalysis( EnrichmentAnalysis analysis, int topN, SimilarityCompareMethod scm, SimilarityMethod sm,
             Cache cache ) {
         // Store method used to run this analysis
         this.similarityCompareMethod = scm;
+        this.similarityMethod = sm;
 
         // Container
         Map<Edition, SimilarityScore> similarityScores = new LinkedHashMap<>();
@@ -81,7 +89,7 @@ public class SimilarityAnalysis {
                 ? Iterables.getLast( orderedEditions, null ) : Iterables.getFirst( orderedEditions, null );
 
         // Top N terms of the compare Edition
-        Set<GeneOntologyTerm> compareTopTerms = analysis.getTopNTerms( TOP_N_JACCARD, compareEdition );
+        Set<GeneOntologyTerm> compareTopTerms = analysis.getTopNTerms( topN, compareEdition );
 
         // Genes of top N terms of the compare Edition
         Set<Gene> compareTopGenes = new HashSet<>();
@@ -98,24 +106,46 @@ public class SimilarityAnalysis {
         for ( Edition testingEdition : orderedEditions ) {
 
             // Complete Terms
-            Double completeTermJaccard = Jaccard.similarity(
-                    cache.convertTerms( compareEdition, analysis.getTermsSignificant( testingEdition ) ),
-                    analysis.getTermsSignificant( compareEdition ) );
+            Double completeTermJaccard = null;
+            if ( sm.equals( SimilarityMethod.JACCARD ) ) {
+                completeTermJaccard = Jaccard.similarity(
+                        cache.convertTerms( compareEdition, analysis.getTermsSignificant( testingEdition ) ),
+                        analysis.getTermsSignificant( compareEdition ) );
+            } else {
+                // Changes contents of backing similarity terms, should only be used for meta-analyses
+                completeTermJaccard = Tversky.similarityPrototypeWeighted(
+                        cache.convertTerms( compareEdition, analysis.getTermsSignificant( testingEdition ) ),
+                        analysis.getTermsSignificant( compareEdition ) );
+            }
 
             // Top Terms
-            Set<GeneOntologyTerm> testingTopTerms = analysis.getTopNTerms( TOP_N_JACCARD, testingEdition );
+            Set<GeneOntologyTerm> testingTopTerms = analysis.getTopNTerms( topN, testingEdition );
 
-            Double topTermJaccard = Jaccard.similarity( cache.convertTerms( compareEdition, testingTopTerms ),
-                    compareTopTerms );
-
-            // Top Genes
             Set<Gene> testingTopGenes = new HashSet<>();
 
             for ( GeneOntologyTerm term : testingTopTerms ) {
                 testingTopGenes.addAll( analysis.getGeneSet( testingEdition, term ) );
             }
 
-            Double topGeneJaccard = Jaccard.similarity( testingTopGenes, compareTopGenes );
+            Double topTermJaccard = null;
+            if ( sm.equals( SimilarityMethod.JACCARD ) ) {
+                topTermJaccard = Jaccard.similarity( cache.convertTerms( compareEdition, testingTopTerms ),
+                        compareTopTerms );
+            } else {
+                // Changes contents of backing similarity terms, should only be used for meta-analyses
+                testingTopTerms = cache.convertTerms( compareEdition, testingTopTerms );
+                topTermJaccard = Tversky.similarityPrototypeWeighted( testingTopTerms, compareTopTerms );
+            }
+
+            // Top Genes
+
+            Double topGeneJaccard = null;
+            if ( sm.equals( SimilarityMethod.JACCARD ) ) {
+                topGeneJaccard = Jaccard.similarity( testingTopGenes, compareTopGenes );
+            } else {
+                // Changes contents of backing similarity terms, should only be used for meta-analyses
+                topGeneJaccard = Tversky.similarityPrototypeWeighted( testingTopGenes, compareTopGenes );
+            }
 
             // Top Parents
             Set<GeneOntologyTerm> testingTopParents = new HashSet<>();
@@ -123,8 +153,14 @@ public class SimilarityAnalysis {
             if ( cache != null ) {
                 testingTopParents = cache.propagate( testingTopTerms, testingEdition );
 
-                topParentsJaccard = Jaccard.similarity(
-                        cache.convertTerms( compareEdition, testingTopParents ), compareTopParents );
+                if ( sm.equals( SimilarityMethod.JACCARD ) ) {
+                    topParentsJaccard = Jaccard.similarity( compareTopParents,
+                            cache.convertTerms( compareEdition, testingTopParents ) );
+                } else {
+                    // Changes contents of backing similarity terms, should only be used for meta-analyses
+                    testingTopParents = cache.convertTerms( compareEdition, testingTopParents );
+                    topParentsJaccard = Tversky.similarityPrototypeWeighted( testingTopParents, compareTopParents );
+                }
             }
 
             similarityScores.put( testingEdition,
@@ -156,6 +192,10 @@ public class SimilarityAnalysis {
 
     public SimilarityCompareMethod getSimilarityCompareMethod() {
         return similarityCompareMethod;
+    }
+
+    public SimilarityMethod getSimilarityMethod() {
+        return similarityMethod;
     }
 
 }

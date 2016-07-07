@@ -117,7 +117,7 @@ public class EnrichmentService implements Serializable {
         statusPoller.newStatus( "Running Similarity Analyses on all editions...", 75 );
 
         SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, cache );
-
+        statusPoller.completeStatus();
         log.info( "Running stability analysis" );
 
         statusPoller.newStatus( "Running Stability Analyses on all editions...", 85 );

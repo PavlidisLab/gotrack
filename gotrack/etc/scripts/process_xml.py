@@ -81,10 +81,12 @@ if __name__ == '__main__':
         input_xml = sys.argv[1]
         output = sys.argv[2]
         data_gen = parse_XML(input_xml)
+        print "Genesets: {0}".format(len(data_gen))
         pmids = set()
         for dat in data_gen:
             pmids.add(dat[2])
         pmids = list(pmids)
+        print "PMIDS: {0}".format(len(pmids))
         pmid_map = {}
         for pmids_chunk in chunker(pmids, 50):
             location = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=' + ",".join(pmids_chunk) + '&retmode=json'
@@ -99,20 +101,27 @@ if __name__ == '__main__':
                 try:
                     pubdate = req_info['pubdate']
                 except KeyError:
-                    continue
+                    pass
                 try:
                     epubdate = req_info['epubdate']
                 except KeyError:
-                    continue
+                    pass
                 pmid_map[pmid] = (pubdate, epubdate)
             time.sleep(1)
 
+        print "pmids mapped {0} / {1}".format(len(pmid_map), len(pmids))
+        errors = []
+        success = []
         with open(output, 'w+') as out_file:
             for dat in data_gen:
                 try:
                     req_data = pmid_map[dat[2]]
+                    success.append(dat[2])
                 except KeyError:
+                    errors.append(dat[2])
+                    print dat[2]
                     continue
             
                 dat = dat[0:-1] + [req_data[0]] + [req_data[1]] + [",".join(dat[-1])]
                 out_file.write("\t".join(dat) + "\n")
+        print "Success: {0}, Errors:{1}".format(len(success), len(errors))

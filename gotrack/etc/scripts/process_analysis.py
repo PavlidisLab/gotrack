@@ -91,11 +91,22 @@ if __name__ == '__main__':
                             out_file.write("significant_terms:\t{0}".format(sim['significant_terms']) + "\n")
                             out_file.write("significant_terms_current:\t{0}".format(res['similarity_data'][1]['significant_terms']) + "\n")
 
+                            out_file.write("top_terms:\t{0}".format(",".join(sim['top_terms'])) + "\n")
+                            out_file.write("top_terms_current:\t{0}".format(",".join(res['similarity_data'][1]['top_terms'])) + "\n")
+
+                            out_file.write("top_parents:\t{0}".format(",".join(sim['top_parents'])) + "\n")
+                            out_file.write("top_parents_current:\t{0}".format(",".join(res['similarity_data'][1]['top_parents'])) + "\n")
+
+                            out_file.write("top_genes:\t{0}".format(",".join([str(x['id']) for x in sim['top_genes']])) + "\n")
+                            out_file.write("top_genes_current:\t{0}".format(",".join([str(x['id']) for x in res['similarity_data'][1]['top_genes']])) + "\n")
+                            
+
                             for k,v in sim['values'].iteritems():
                                 out_file.write(k + ":\t{0}".format(v) + "\n")
                     except Exception, e:
+                        print res
                         with open(out_folder + "/errors", "a") as myfile:
-                            myfile.write(sys_name + "\t" + str(e) + "\n")
+                            myfile.write(sys_name + "\t" + repr(e) + "\n")
 
             print "{0} / {1}".format(i, total)
             print "Creating settings file"

@@ -333,11 +333,11 @@ public class EnrichmentView implements Serializable {
             dateToEdition.put( editionEntry.getKey().getDate().getTime(), editionEntry.getKey().getEdition() );
             SimilarityScore score = editionEntry.getValue();
             Date date = editionEntry.getKey().getDate();
-            completeTermJaccard.addDataPoint( date, score.getCompleteTermJaccard() );
-            topTermJaccard.addDataPoint( date, score.getTopTermJaccard() );
-            topGeneJaccard.addDataPoint( date, score.getTopGeneJaccard() );
-            if ( score.getTopParentsJaccard() != null ) {
-                topParentsJaccard.addDataPoint( date, score.getTopParentsJaccard() );
+            completeTermJaccard.addDataPoint( date, score.getCompleteTermSim() );
+            topTermJaccard.addDataPoint( date, score.getTopTermSim() );
+            topGeneJaccard.addDataPoint( date, score.getTopGeneSim() );
+            if ( score.getTopParentsSim() != null ) {
+                topParentsJaccard.addDataPoint( date, score.getTopParentsSim() );
             }
 
         }
