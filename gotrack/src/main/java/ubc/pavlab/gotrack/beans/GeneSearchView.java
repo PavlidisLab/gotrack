@@ -121,7 +121,7 @@ public class GeneSearchView implements Serializable {
             return null;
         }
         // return "track?faces-redirect=true&includeViewParams=true";
-        return "genes?faces-redirect=true&query=" + query + "&speciesId=" + speciesId;
+        return "/genes?faces-redirect=true&query=" + query + "&speciesId=" + speciesId;
     }
 
     public String getQuery() {
