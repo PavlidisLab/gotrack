@@ -28,7 +28,9 @@ import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 
 /**
- * The instances of this class may be shared between threads (sessions)
+ * Represents a node in a Gene Ontology. The instances of this class may be shared between threads (sessions).
+ * Two instances of this class with the same ID will be equal but may not both represent the same instance in time and
+ * thus might have different metadata.
  * 
  * @author mjacobson
  * @version $Id$
@@ -40,14 +42,21 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
     private final String name;
     private final Aspect aspect;
     private final boolean obsolete = false;
-    private Set<Relation> relations = new THashSet<>();
-    private Set<Relation> children = new THashSet<>();
+    private Set<Relation<GeneOntologyTerm>> relations = new THashSet<>();
+    private Set<Relation<GeneOntologyTerm>> children = new THashSet<>();
 
+    /**
+     * Make child/parent sets immutable
+     */
     public void freeze() {
         this.relations = ImmutableSet.copyOf( this.relations );
         this.children = ImmutableSet.copyOf( this.children );
     }
 
+    /**
+     * @param goid GO id (ex. 'GO:0000001')
+     * @return id portion of the GO Id (ex. 1)
+     */
     private int convertGOId( String goId ) {
         if ( goId.startsWith( "GO:" ) ) {
             int id;
@@ -62,6 +71,9 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         }
     }
 
+    /**
+     * Create Term from dto
+     */
     public GeneOntologyTerm( GOTermDTO dto ) {
 
         this.id = convertGOId( dto.getGoId() );
@@ -119,18 +131,17 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         return obsolete;
     }
 
-    public Set<Relation> getParents() {
+    public Set<Relation<GeneOntologyTerm>> getParents() {
         return relations;
     }
 
-    public Set<Relation> getChildren() {
+    public Set<Relation<GeneOntologyTerm>> getChildren() {
         return children;
     }
 
     @Override
     public String toString() {
-        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + ", parents=" + relations
-                + ", children=" + children + "]";
+        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + "]"; //", parents=" + relations + ", children=" + children + "]";
     }
 
     @Override
@@ -141,6 +152,13 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         return result;
     }
 
+    /*
+     * Keep in mind that terms can be equal to each other across edition (as long as they have the same ID).
+     * These terms, however, will most likely not have equivalent information.
+     * 
+     * This essentially means that Terms represent the same ontological node but may not represent the same instance in
+     * time.
+     */
     @Override
     public boolean equals( Object obj ) {
         if ( this == obj ) return true;

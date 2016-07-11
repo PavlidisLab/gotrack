@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model.chart;
 
 /**
- * TODO Document Me
+ * Represents a range of y values
  * 
  * @author mjacobson
  * @version $Id$

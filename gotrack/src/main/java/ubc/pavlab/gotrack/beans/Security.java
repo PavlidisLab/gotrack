@@ -20,27 +20,27 @@
 package ubc.pavlab.gotrack.beans;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ApplicationScoped;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 import org.mindrot.jbcrypt.BCrypt;
 
 /**
- * TODO Document Me
+ * Secure authorization handler for accessing protected methods in the terminal handler.
  * 
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ApplicationScoped
 public class Security {
 
     private static final Logger log = Logger.getLogger( Security.class );
     private String passwordHash;
 
-    @ManagedProperty(value = "#{settingsCache}")
+    @Inject
     private SettingsCache settingsCache;
 
     public Security() {
@@ -59,10 +59,6 @@ public class Security {
 
     private void loadPassword() {
         passwordHash = BCrypt.hashpw( settingsCache.getProperty( "gotrack.auth" ), BCrypt.gensalt() );
-    }
-
-    public void setSettingsCache( SettingsCache settingsCache ) {
-        this.settingsCache = settingsCache;
     }
 
 }

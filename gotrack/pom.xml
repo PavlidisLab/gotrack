@@ -17,12 +17,9 @@
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
 		<!-- Web -->
-		<jsp.version>2.2</jsp.version>
-		<jstl.version>1.2</jstl.version>
-		<servlet.version>2.4</servlet.version>
-		<jsf.version>2.1.9</jsf.version>
-		
-		
+		<servlet.version>3.0.1</servlet.version>
+		<jsf.version>2.2.2</jsf.version>
+
 		<!-- logging -->
 		<slf4j.version>1.6.6</slf4j.version>
 
@@ -32,6 +29,9 @@
 	</properties>
 
 	<dependencies>
+
+		<!-- Commons -->
+
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
@@ -42,46 +42,16 @@
 			<artifactId>commons-math3</artifactId>
 			<version>3.4.1</version>
 		</dependency>
-		<dependency>
-			<groupId>com.sun.jersey</groupId>
-			<artifactId>jersey-bundle</artifactId>
-			<version>1.13</version>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jdt.core.compiler</groupId>
-			<artifactId>ecj</artifactId>
-			<version>P20140317-1600</version>
-		</dependency>
 
 		<!-- Other Web dependencies -->
-		
+
 		<!-- Servlets -->
+
 		<dependency>
 			<groupId>javax.servlet</groupId>
-			<artifactId>jstl</artifactId>
-			<version>${jstl.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>javax.servlet</groupId>
-			<artifactId>servlet-api</artifactId>
+			<artifactId>javax.servlet-api</artifactId>
 			<version>${servlet.version}</version>
-			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>javax.servlet.jsp</groupId>
-			<artifactId>jsp-api</artifactId>
-			<version>${jsp.version}</version>
-			<scope>provided</scope>
-		</dependency>
-
-		<!-- Font Awesome -->
-		<dependency>
-			<groupId>org.webjars</groupId>
-			<artifactId>font-awesome</artifactId>
-			<version>4.2.0</version>
-		</dependency>
-
-
 
 		<!-- Facelets -->
 
@@ -95,15 +65,15 @@
 			<artifactId>jsf-impl</artifactId>
 			<version>${jsf.version}</version>
 		</dependency>
-		
+
 		<!-- Primefaces -->
-		
+
 		<dependency>
 			<groupId>org.primefaces</groupId>
 			<artifactId>primefaces</artifactId>
 			<version>5.1</version>
 		</dependency>
-		
+
 		<dependency>
 			<groupId>org.primefaces.themes</groupId>
 			<artifactId>bluesky</artifactId>
@@ -119,7 +89,14 @@
 			<artifactId>primefaces-extensions</artifactId>
 			<version>3.0.0</version>
 		</dependency>
-		
+
+		<!-- Font Awesome -->
+		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>font-awesome</artifactId>
+			<version>4.2.0</version>
+		</dependency>
+
 		<!-- PDF Exporting -->
 		<dependency>
 			<groupId>com.lowagie</groupId>
@@ -134,14 +111,12 @@
 			<version>3.11</version>
 		</dependency>
 
-
-		
 		<!-- Omnifaces -->
-		
+
 		<dependency>
 			<groupId>org.omnifaces</groupId>
 			<artifactId>omnifaces</artifactId>
-			<version>1.10</version>
+			<version>2.2</version>
 		</dependency>
 
 		<!-- Logging -->
@@ -164,19 +139,12 @@
 			<version>${slf4j.version}</version>
 			<type>jar</type>
 		</dependency>
-		
+
 		<!-- from java.util.logging to log4j -->
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>jul-to-slf4j</artifactId>
 			<version>${slf4j.version}</version>
-		</dependency>
-
-		<!-- Hibernate -->
-		<dependency>
-			<groupId>mysql</groupId>
-			<artifactId>mysql-connector-java</artifactId>
-			<version>5.1.9</version>
 		</dependency>
 
 		<!-- Test Artifacts -->
@@ -185,6 +153,19 @@
 			<artifactId>junit</artifactId>
 			<version>${junit.version}</version>
 			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>5.1.35</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>1.10.19</version>
 		</dependency>
 
 		<dependency>
@@ -199,58 +180,87 @@
 			<version>0.9.1</version>
 			<scope>test</scope>
 		</dependency>
-		
-		<!-- ErmineJ -->
-		
-<!-- 		<dependency>
-            <groupId>ermineJ</groupId>
-            <artifactId>ermineJ</artifactId>
-            <version>3.0.3-SNAPSHOT</version>
-            <type>jar</type>
-        </dependency> -->
-        
-        <!-- Guava -->
-        
-        <dependency>
+
+		<!-- Guava -->
+
+		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 			<version>18.0</version>
 		</dependency>
-		
+
 		<!-- Trove -->
-		
+
 		<dependency>
 			<groupId>net.sf.trove4j</groupId>
 			<artifactId>trove4j</artifactId>
 			<version>3.0.3</version>
 		</dependency>
-		
-				
+
+
 		<!-- BCrypt -->
 		<dependency>
 			<groupId>org.mindrot</groupId>
 			<artifactId>jbcrypt</artifactId>
 			<version>0.3m</version>
 		</dependency>
-		
+
 		<!-- dom4j Dependency -->
 		<dependency>
 			<groupId>dom4j</groupId>
 			<artifactId>dom4j</artifactId>
 			<version>1.6.1</version>
 		</dependency>
-		
-        <dependency>
+
+		<dependency>
 			<groupId>jaxen</groupId>
 			<artifactId>jaxen</artifactId>
 			<version>1.1.6</version>
 		</dependency>
-		
+
 		<!-- google concurrent-trees -->
-        <dependency>
-		    <groupId>com.googlecode.concurrent-trees</groupId>
-		    <artifactId>concurrent-trees</artifactId>
-		    <version>2.4.0</version>
+		<dependency>
+			<groupId>com.googlecode.concurrent-trees</groupId>
+			<artifactId>concurrent-trees</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+
+		<!-- Weld CDI -->
+
+		<dependency>
+			<groupId>org.jboss.weld.servlet</groupId>
+			<artifactId>weld-servlet</artifactId>
+			<version>2.2.9.Final</version>
+		</dependency>
+
+		<!-- JAX-RS RESTful Web Services -->
+
+		<dependency>
+			<groupId>org.glassfish.jersey.containers</groupId>
+			<artifactId>jersey-container-servlet</artifactId>
+			<version>2.22.1</version>
+		</dependency>
+
+		<!-- CDI Rest Dependency -->
+
+		<dependency>
+			<groupId>org.glassfish.jersey.containers.glassfish</groupId>
+			<artifactId>jersey-gf-cdi</artifactId>
+			<version>2.14</version>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.transaction</groupId>
+			<artifactId>javax.transaction-api</artifactId>
+			<version>1.2</version>
+		</dependency>
+		
+		<!-- Jersey JSON Jackson Support -->
+		
+		<dependency>
+		    <groupId>org.glassfish.jersey.media</groupId>
+		    <artifactId>jersey-media-json-jackson</artifactId>
+		    <version>2.21.1</version>
 		</dependency>
 
 	</dependencies>
@@ -304,152 +314,89 @@
 
 	</repositories>
 
-	<build>
-		<directory>target</directory>
-		<finalName>gotrack</finalName>
-		<sourceDirectory>src/main/java</sourceDirectory>
-		<outputDirectory>target/classes</outputDirectory>
-		<testSourceDirectory>src/test/java</testSourceDirectory>
-		<testOutputDirectory>target/test-classes</testOutputDirectory>
-		<resources>
-			<resource>
-				<directory>src/main/resources</directory>
-				<includes>
-					<include>**/*</include>
-				</includes>
-			</resource>
-			<resource>
-				<directory>target/generated-sources/resources</directory>
-				<includes>
-					<include>**/*</include>
-				</includes>
-			</resource>
-		</resources>
-		<testResources>
-			<testResource>
-				<directory>src/test/resources</directory>
-				<includes>
-					<include>**/*</include>
-				</includes>
-			</testResource>
-			<testResource>
-				<targetPath>WEB-INF</targetPath>
-				<directory>target/gotrack/WEB-INF</directory>
-				<includes>
-					<include>**/*.xml</include>
-				</includes>
-			</testResource>
-			<testResource>
-				<targetPath>WEB-INF</targetPath>
-				<directory>src/main/webapp/WEB-INF</directory>
-				<includes>
-					<include>**/*.xml</include>
-				</includes>
-			</testResource>
-		</testResources>
-		<plugins>
-			<plugin>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>2.8.1</version>
-				<configuration>
-					<additionalClasspathElements>
-						<additionalClasspathElement>\${project.build.sourceDirectory}</additionalClasspathElement>
-						<additionalClasspathElement>\${project.build.testSourceDirectory}</additionalClasspathElement>
-					</additionalClasspathElements>
-					<useManifestOnlyJar>false</useManifestOnlyJar>
-					<forkMode>always</forkMode>
-					<argLine>-Xmx1500M -ea -Djava.awt.headless=true
-						-XX:MaxPermSize=512m -XX:-UseSplitVerifier</argLine>
-					<redirectTestOutputToFile>true</redirectTestOutputToFile>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-eclipse-plugin</artifactId>
-				<version>2.8</version>
-				<configuration>
-					<downloadSources>true</downloadSources>
-					<downloadJavadocs>false</downloadJavadocs>
-					<additionalBuildcommands>
-						<buildcommand>org.eclipse.wst.common.modulecore.ComponentStructuralBuilder</buildcommand>
-						<buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
-						<buildcommand>org.eclipse.wst.common.modulecore.ComponentStructuralBuilderDependencyResolver
-						</buildcommand>
-					</additionalBuildcommands>
-					<additionalProjectnatures>
-						<projectnature>org.eclipse.jdt.core.javanature</projectnature>
-						<projectnature>org.eclipse.wst.common.modulecore.ModuleCoreNature</projectnature>
-					</additionalProjectnatures>
-				</configuration>
-			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>2.4</version>
-				<executions>
-					<execution>
-						<phase>package</phase>
-						<goals>
-							<goal>jar</goal>
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-antrun-plugin</artifactId>
-				<version>1.7</version>
-				<executions>
-					<execution>
-						<id>version-file</id>
-						<phase>process-classes</phase>
-						<goals>
-							<goal>run</goal>
-						</goals>
+  <build>
+    <plugins>
+        <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+            <source>1.7</source>
+            <target>1.7</target>
+        </configuration>
+    </plugin>
+    </plugins>
+</build>
+	<profiles>
+		<profile>
+			<id>testdb.build</id>
+			<activation>
+				<activeByDefault>false</activeByDefault>
+				<property>
+					<name>testdb.build</name>
+				</property>
+			</activation>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>sql-maven-plugin</artifactId>
+						<version>1.5</version>
+						<dependencies><!-- specify the dependent JDBC driver here -->
+							<dependency>
+								<groupId>mysql</groupId>
+								<artifactId>mysql-connector-java</artifactId>
+								<version>5.1.10</version>
+								<type>jar</type>
+							</dependency>
+						</dependencies>
+						<!-- common configuration shared by all executions -->
 						<configuration>
-							<target>
-								<echo append="false"
-									file="${project.build.directory}/${project.build.finalName}/WEB-INF/classes/version.properties">gotrack.version=${project.version} built
-									${maven.build.timestamp}</echo>
-							</target>
+							<driver>com.mysql.jdbc.Driver</driver>
+							<username>${gotrack.testdb.build.user}</username>
+							<password>${gotrack.testdb.build.password}</password>
+							<onError>abort</onError>
+							<autocommit>true</autocommit>
 						</configuration>
-					</execution>
-				</executions>
-			</plugin>
+						<executions>
+							<execution>
+								<id>drop-add-testdb</id>
+								<phase>initialize</phase>
+								<goals>
+									<goal>execute</goal>
+								</goals>
+								<configuration>
+									<url>${bootstrap.db.url}</url>
+									<username>${gotrack.testdb.build.user}</username>
+									<password>${gotrack.testdb.build.password}</password>
+									<autocommit>false</autocommit>
+									<sqlCommand>
+                                                                        <![CDATA[
+                                        drop database if exists ${gotrack.testdb.name};
+                                                                        create database ${gotrack.testdb.name}
+                                        ]]>
+									</sqlCommand>
+								</configuration>
+							</execution>
+							<execution>
+								<id>load-testdb-schema</id>
+								<phase>process-test-resources</phase>
+								<goals>
+									<goal>execute</goal>
+								</goals>
+								<configuration>
+									<url>${gotrack.testdb.build.url}</url>
+									<srcFiles>
+										<srcFile>src/test/resources/sql/testing.sql</srcFile>
+									</srcFiles>
+									<onError>abort</onError>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
-		</plugins>
-
-		<pluginManagement>
-			<plugins>
-				<!--This plugin's configuration is used to store Eclipse m2e settings 
-					only. It has no influence on the Maven build itself. -->
-				<plugin>
-					<groupId>org.eclipse.m2e</groupId>
-					<artifactId>lifecycle-mapping</artifactId>
-					<version>1.0.0</version>
-					<configuration>
-						<lifecycleMappingMetadata>
-							<pluginExecutions>
-								<pluginExecution>
-									<pluginExecutionFilter>
-										<groupId>org.apache.maven.plugins</groupId>
-										<artifactId>maven-antrun-plugin</artifactId>
-										<versionRange>[1.7,)</versionRange>
-										<goals>
-											<goal>run</goal>
-										</goals>
-									</pluginExecutionFilter>
-									<action>
-										<ignore></ignore>
-									</action>
-								</pluginExecution>
-							</pluginExecutions>
-						</lifecycleMappingMetadata>
-					</configuration>
-				</plugin>
-			</plugins>
-		</pluginManagement>
-	</build>
 </project>

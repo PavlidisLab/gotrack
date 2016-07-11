@@ -22,7 +22,7 @@ package ubc.pavlab.gotrack.model;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 
 /**
- * TODO Document Me
+ * Represents an evidence code to be applied to an annotation
  * 
  * @author mjacobson
  * @version $Id$

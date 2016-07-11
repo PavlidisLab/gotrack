@@ -21,25 +21,34 @@ package ubc.pavlab.gotrack.dao;
 
 import java.util.List;
 
-import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
 import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
 
 /**
- * This interface represents a contract for a DAO for the {@link Species} model. Note that all methods are read-only.
+ * This interface represents a contract for {@link StatsDAOImpl}.
  */
 public interface StatsDAO {
 
     // Actions ------------------------------------------------------------------------------------
 
-    public GeneStatsDTO find( Long id ) throws DAOException;
-
+    /**
+     * Retrieve all genes which have been stored as having a page hit along with how many times they have been hit.
+     */
     public List<GeneStatsDTO> listGenes() throws DAOException;
 
+    /**
+     * Increment a specific Gene's (symbol, species) hit count by 1
+     */
     public void incrementGeneHit( Integer id, String symbol ) throws DAOException;
 
+    /**
+     * Retrieve all terms which have been stored as having a page hit along with how many times they have been hit.
+     */
     public List<TermStatsDTO> listTerms() throws DAOException;
 
+    /**
+     * Increment a specific Term's (GO Id) hit count by 1
+     */
     public void incrementTermHit( String goId ) throws DAOException;
 
 }

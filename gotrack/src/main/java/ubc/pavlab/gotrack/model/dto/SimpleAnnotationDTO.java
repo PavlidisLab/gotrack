@@ -20,27 +20,27 @@
 package ubc.pavlab.gotrack.model.dto;
 
 /**
- * TODO Document Me
+ * Data Transfer Object for pre-processing of aggregate data in cache start-up.
  * 
  * @author mjacobson
  * @version $Id$
  */
 public final class SimpleAnnotationDTO {
     private final String goId;
-    private final String symbol;
+    private final int geneId;
 
-    public SimpleAnnotationDTO( String goId, String symbol ) {
+    public SimpleAnnotationDTO( String goId, int geneId ) {
         super();
         this.goId = goId;
-        this.symbol = symbol;
+        this.geneId = geneId;
     }
 
     public String getGoId() {
         return goId;
     }
 
-    public String getSymbol() {
-        return symbol;
+    public int getGeneId() {
+        return geneId;
     }
 
 }

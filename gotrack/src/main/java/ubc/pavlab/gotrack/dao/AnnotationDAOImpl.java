@@ -26,18 +26,20 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Lists;
+
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
+import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
+import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 
 /**
  * TODO Document Me
@@ -51,16 +53,38 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     /* CURRENT QUERIES */
 
+    // Get information from single gene, should be fast < 0.2s
     // species, symbol,species
-    private static final String SQL_TRACK = "select distinct edition, go_id, qualifier, evidence, reference from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where symbol=? and species_id=? order by edition";
+    private static final String SQL_TRACK = "SELECT distinct edition, go_id, qualifier, evidence, reference from pp_current_genes "
+            + "inner join pp_goa on pp_goa.pp_current_genes_id=pp_current_genes.id "
+            + "where pp_current_genes_id=? "
+            + "order by edition";
 
-    private static final String SQL_ENRICH = "select goa_symbol.edition, goa_annot.go_id, goa_symbol.symbol from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where goa_symbol.species_id=? and goa_symbol.symbol in (%s) GROUP BY goa_symbol.edition, go_id, goa_symbol.symbol ORDER BY NULL";
+    // Get information from multiple genes for running enrichment, should be quite fast and scale sublinearly
+    private static final String SQL_ENRICH = "SELECT distinct edition, go_id, pp_current_genes.id gene_id from pp_current_genes "
+            + "inner join pp_goa on pp_current_genes.id = pp_goa.pp_current_genes_id "
+            + "where pp_current_genes.id in (%s) "
+            + "ORDER BY NULL";
 
-    // Collect evidence breakdown for a specific term
-    private static final String SQL_CATEGORY_BREAKDOWN_FOR_TERM = "select date, evidence_categories.category , COUNT(*) count from goa_symbol inner join goa_annot on goa_symbol.id = goa_annot.goa_symbol_id inner join edition on edition.edition=goa_symbol.edition and edition.species_id = goa_symbol.species_id inner join evidence_categories on evidence_categories.evidence  = goa_annot.evidence where go_id=? group by date, evidence_categories.category order by date";
+    // Get information from multiple genes for running enrichment in a single edition, should be extremely fast
+    private static final String SQL_ENRICH_SINGLE_EDITION = "SELECT distinct go_id, pp_current_genes.id gene_id from pp_current_genes "
+            + "inner join pp_goa on pp_current_genes.id = pp_goa.pp_current_genes_id "
+            + "where pp_current_genes.id in (%s) and pp_goa.edition=? "
+            + "ORDER BY NULL";
 
-    // Collect unique ,directly annotated gene counts for a term
-    private static final String SQL_DIRECT_GENE_COUNTS_FOR_TERM = "select species_id, edition, COUNT(distinct symbol) count from goa_symbol inner join goa_annot on goa_symbol.id=goa_annot.goa_symbol_id where go_id = ? group by species_id, edition";
+    // Collect evidence breakdown for a specific term, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
+    private static final String SQL_CATEGORY_BREAKDOWN_FOR_TERM = "select date, evidence_categories.category , COUNT(*) count from pp_current_genes "
+            + "inner join pp_goa on pp_goa.pp_current_genes_id = pp_current_genes.id "
+            + "inner join edition on edition.edition=pp_goa.edition and edition.species_id = pp_current_genes.species_id "
+            + "inner join evidence_categories on evidence_categories.evidence = pp_goa.evidence "
+            + "where go_id=? group by date, evidence_categories.category "
+            + "order by date";
+
+    // Collect unique, directly annotated gene counts for a term, not used at the moment (pretty slow)
+    private static final String SQL_DIRECT_GENE_COUNTS_FOR_TERM = "select species_id, edition, COUNT(distinct symbol) count from pp_current_genes "
+            + "inner join pp_goa on pp_current_genes.id=pp_goa.pp_current_genes_id "
+            + "where go_id = ? "
+            + "group by species_id, edition";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -81,13 +105,11 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public List<AnnotationDTO> track( Integer speciesId, String symbol ) throws DAOException {
+    public List<AnnotationDTO> track( Gene g ) throws DAOException {
 
         List<Object> params = new ArrayList<Object>();
 
-        // species, symbol,species
-        params.add( symbol );
-        params.add( speciesId );
+        params.add( g.getId() );
 
         Connection connection = null;
         PreparedStatement statement = null;
@@ -131,18 +153,18 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<EnrichmentDTO> enrich( Integer species, Set<Gene> genes ) throws DAOException {
+    public List<EnrichmentDTO> enrich( Set<Gene> genes ) throws DAOException {
+
+        if ( genes == null || genes.size() == 0 ) {
+            return Lists.newArrayList();
+        }
+
         List<Object> params = new ArrayList<Object>();
 
         String sql = String.format( SQL_ENRICH, DAOUtil.preparePlaceHolders( genes.size() ) );
 
-        Map<String, Gene> givenGenes = new HashMap<>();
-
-        // species, symbols
-        params.add( species );
         for ( Gene g : genes ) {
-            params.add( g.getSymbol() );
-            givenGenes.put( g.getSymbol().toUpperCase(), g );
+            params.add( g.getId() );
         }
 
         Connection connection = null;
@@ -187,7 +209,72 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
+    public List<SimpleAnnotationDTO> enrichSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException {
+
+        if ( genes == null || genes.size() == 0 || ed == null ) {
+            return Lists.newArrayList();
+        }
+
+        List<Object> params = new ArrayList<Object>();
+
+        String sql = String.format( SQL_ENRICH_SINGLE_EDITION, DAOUtil.preparePlaceHolders( genes.size() ) );
+
+        for ( Gene g : genes ) {
+            params.add( g.getId() );
+        }
+
+        params.add( ed.getEdition() );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<SimpleAnnotationDTO> results = new ArrayList<>();
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+
+                results.add( simpleEnrichmentMap( resultSet ) );
+
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
     public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException {
+        // TODO This method of collecting the data is not robust, 
+        // If editions across species in the same 'release' are have slightly differing dates, 
+        // they will not be grouped appropriately
+
+        if ( goId == null || goId.equals( "" ) ) {
+            return Lists.newArrayList();
+        }
 
         List<Object> params = new ArrayList<Object>();
 
@@ -236,7 +323,11 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<AnnotationCountDTO> directGeneCounts( String goId ) throws DAOException {
+    public List<DirectAnnotationCountDTO> directGeneCounts( String goId ) throws DAOException {
+
+        if ( goId == null || goId.equals( "" ) ) {
+            return Lists.newArrayList();
+        }
 
         List<Object> params = new ArrayList<Object>();
 
@@ -247,7 +338,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        List<AnnotationCountDTO> results = new ArrayList<>();
+        List<DirectAnnotationCountDTO> results = new ArrayList<>();
         String sql = SQL_DIRECT_GENE_COUNTS_FOR_TERM;
 
         log.debug( sql );
@@ -270,8 +361,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
             startTime = System.currentTimeMillis();
             while ( resultSet.next() ) {
-                results.add( new AnnotationCountDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
-                        "", resultSet.getInt( "count" ) ) );
+                results.add( new DirectAnnotationCountDTO( resultSet.getInt( "species_id" ),
+                        resultSet.getInt( "edition" ), "", resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();
             log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
@@ -286,9 +377,15 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     private static EnrichmentDTO enrichmentMap( ResultSet resultSet ) throws SQLException {
         Integer edition = resultSet.getInt( "edition" );
-        String symbol = resultSet.getString( "symbol" );
+        Integer geneId = resultSet.getInt( "gene_id" );
         String goId = resultSet.getString( "go_id" );
-        return new EnrichmentDTO( edition, symbol, goId );
+        return new EnrichmentDTO( edition, geneId, goId );
+    }
+
+    private static SimpleAnnotationDTO simpleEnrichmentMap( ResultSet resultSet ) throws SQLException {
+        Integer geneId = resultSet.getInt( "gene_id" );
+        String goId = resultSet.getString( "go_id" );
+        return new SimpleAnnotationDTO( goId, geneId );
     }
 
 }

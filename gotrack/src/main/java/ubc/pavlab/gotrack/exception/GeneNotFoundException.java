@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.exception;
 
 /**
- * TODO Document Me
+ * Exception to be executed when a forced attempt at loading GeneView with a non-existent gene symbol, species occurs.
  * 
  * @author mjacobson
  * @version $Id$
@@ -66,7 +66,8 @@ public class GeneNotFoundException extends Exception {
      * @param enableSuppression
      * @param writableStackTrace
      */
-    public GeneNotFoundException( String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace ) {
+    public GeneNotFoundException( String message, Throwable cause, boolean enableSuppression,
+            boolean writableStackTrace ) {
         super( message, cause, enableSuppression, writableStackTrace );
     }
 

@@ -24,7 +24,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * TODO Document Me
+ * Represents a chart which holds series, points in a simple manner for conversion to JSON
  * 
  * @author mjacobson
  * @version $Id$

@@ -28,12 +28,11 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 /**
- * This class represents a DAO factory for a SQL database. You can use {@link #getInstance(String)} to obtain a new
+ * This class represents a DAO factory for an SQL database. You can use {@link #getInstance(String)} to obtain a new
  * instance for the given database name. The specific instance returned depends on the properties file configuration.
  * You can obtain DAO's for the DAO factory instance using the DAO getters.
  * <p>
- * This class requires a properties file named 'dao.properties' in the classpath with among others the following
- * properties:
+ * This class requires a properties file accessible by DAOProperties with among others the following properties:
  * 
  * <pre>
  * name.url *

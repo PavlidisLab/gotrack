@@ -19,8 +19,10 @@
 
 package ubc.pavlab.gotrack.model.dto;
 
+import ubc.pavlab.gotrack.model.Evidence;
+
 /**
- * TODO Document Me
+ * Data Transfer Object for {@link Evidence}
  * 
  * @author mjacobson
  * @version $Id$

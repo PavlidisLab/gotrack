@@ -20,7 +20,8 @@
 package ubc.pavlab.gotrack.model.chart;
 
 /**
- * TODO Document Me
+ * Contract for a point. Must have a long x (since we use them for ms since epoch) and a method for retrieving the y
+ * value
  * 
  * @author mjacobson
  * @version $Id$

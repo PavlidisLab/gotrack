@@ -98,7 +98,7 @@
 								Dataset:</i>
 						</p:column>
 						<p:column>
-							<p:selectManyButton value="#{enrichmentView.aspects}" converter="aspectConverter">
+							<p:selectManyButton value="#{enrichmentView.aspects}" converter="omnifaces.GenericEnumConverter">
 								<f:selectItems value="#{cache.aspects}"
 									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 							</p:selectManyButton>
@@ -359,7 +359,7 @@
 								<f:facet name="filter">
 									<p:selectManyButton
 										onchange="PF('tableStabilityWdg').filter()"
-										style="font-size: 75%" converter="aspectConverter">
+										style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
 										<f:selectItems value="#{cache.aspects}"
 											var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 									</p:selectManyButton>
@@ -520,7 +520,7 @@
 								<f:facet name="filter">
 									<p:selectManyButton
 										onchange="PF('tableEnrichmentWdg').filter()"
-										style="font-size: 75%" converter="aspectConverter">
+										style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
 										<f:selectItems value="#{cache.aspects}"
 											var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 									</p:selectManyButton>

@@ -21,8 +21,10 @@ package ubc.pavlab.gotrack.model.dto;
 
 import java.sql.Date;
 
+import ubc.pavlab.gotrack.model.Edition;
+
 /**
- * TODO Document Me
+ * Data Transfer Object for {@link Edition}
  * 
  * @author mjacobson
  * @version $Id$

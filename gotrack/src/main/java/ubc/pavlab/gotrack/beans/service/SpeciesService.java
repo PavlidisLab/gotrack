@@ -24,9 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ApplicationScoped;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
@@ -36,12 +36,12 @@ import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
 
 /**
- * TODO Document Me
+ * Service layer on top of species DAO. Contains methods for fetching information related to species from the database.
  * 
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ApplicationScoped
 public class SpeciesService implements Serializable {
 
@@ -52,7 +52,7 @@ public class SpeciesService implements Serializable {
 
     private static final Logger log = Logger.getLogger( SpeciesService.class );
 
-    @ManagedProperty("#{daoFactoryBean}")
+    @Inject
     private DAOFactoryBean daoFactoryBean;
 
     private SpeciesDAO speciesDAO;
@@ -68,6 +68,9 @@ public class SpeciesService implements Serializable {
 
     }
 
+    /**
+     * @return list of all species ordered by id.
+     */
     public List<Species> list() {
 
         List<SpeciesDTO> dto = speciesDAO.list();
@@ -82,7 +85,4 @@ public class SpeciesService implements Serializable {
 
     }
 
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
-    }
 }

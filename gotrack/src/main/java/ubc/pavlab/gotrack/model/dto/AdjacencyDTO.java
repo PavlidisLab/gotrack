@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.model.dto;
 
 /**
- * TODO Document Me
+ * Data Transfer Object for {@link Relation}
  * 
  * @author mjacobson
  * @version $Id$

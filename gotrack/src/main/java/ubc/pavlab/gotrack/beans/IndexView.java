@@ -20,22 +20,20 @@
 package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.List;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ViewScoped;
+import javax.faces.view.ViewScoped;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
 /**
- * TODO Document Me
+ * Backing bean for index page. Not actually used anywhere, maybe in the future.
  * 
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ViewScoped
 public class IndexView implements Serializable {
 
@@ -44,7 +42,6 @@ public class IndexView implements Serializable {
      */
     private static final long serialVersionUID = -2394751566929159597L;
     private static final Logger log = Logger.getLogger( IndexView.class );
-    private static final List<String> aspects = Arrays.asList( "BP", "MF", "CC" );
 
     public IndexView() {
         log.info( "IndexView created" );
@@ -54,10 +51,5 @@ public class IndexView implements Serializable {
     @PostConstruct
     public void postConstruct() {
         log.info( "IndexView postConstruct" );
-    }
-
-    public List<String> getAspects() {
-        return aspects;
-
     }
 }

@@ -22,7 +22,7 @@ package ubc.pavlab.gotrack.model.chart;
 import java.sql.Date;
 
 /**
- * TODO Document Me
+ * Represents a simple point with a long x value and an arbitrary number y value
  * 
  * @author mjacobson
  * @version $Id$
@@ -42,10 +42,12 @@ public class CartesianPoint implements Point {
         this.y = y;
     }
 
+    @Override
     public long getX() {
         return x;
     }
 
+    @Override
     public Number getY() {
         return y;
     }

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -33,16 +34,17 @@ import java.util.Set;
 import javax.annotation.PostConstruct;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.ViewScoped;
 import javax.faces.context.FacesContext;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -61,6 +63,8 @@ import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.AnnotationValues;
+import ubc.pavlab.gotrack.model.table.LossGainTableValues;
+import ubc.pavlab.gotrack.model.table.LossGainTableValues.LossGain;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
@@ -69,19 +73,19 @@ import ubc.pavlab.gotrack.utilities.Jaccard;
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ViewScoped
 public class GeneView {
 
     private static final Logger log = Logger.getLogger( GeneView.class );
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
-    @ManagedProperty("#{statsService}")
+    @Inject
     private StatsService statsService;
 
-    @ManagedProperty("#{annotationService}")
+    @Inject
     private AnnotationService annotationService;
 
     private Species species;
@@ -98,14 +102,21 @@ public class GeneView {
 
     // View Annotations List
     private Collection<AnnotationValues> viewAnnotations = new ArrayList<>();
-    private Collection<AnnotationValues> filteredViewAnnotations;
+    private Collection<AnnotationValues> filteredViewAnnotations; // TODO use this
     private GeneOntologyTerm viewTerm;
 
     // Click event lists
+    private Edition clickEdition;
+
+    // Annotation clicks
     private Collection<GeneOntologyTerm> clickTerms = new HashSet<>();
     private List<GeneOntologyTerm> selectedClickTerms;
     private Collection<GeneOntologyTerm> filteredClickTerms;
-    private Edition clickEdition;
+
+    // Loss Gain Clicks
+    private List<LossGainTableValues> clickLGTerms = new ArrayList<>();
+    private List<LossGainTableValues> selectedClickLGTerms;
+    private Collection<LossGainTableValues> filteredClickLGTerms;
 
     public GeneView() {
         log.info( "GeneView created" );
@@ -117,6 +128,11 @@ public class GeneView {
     public void postConstruct() {
     }
 
+    /**
+     * pre-render view
+     * 
+     * This is kept lightweight so that the page loads quickly and lazy loads the data using remote commands
+     */
     public String init() throws GeneNotFoundException, IOException {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
             return null; // Skip ajax requests.
@@ -132,6 +148,7 @@ public class GeneView {
             return null;
         } else if ( !( isSpeciesSet && isGeneSet ) ) {
             // malformed input if only one parameter is specified
+            // Send to error page
             FacesContext facesContext = FacesContext.getCurrentInstance();
             facesContext.getExternalContext().responseSendError( 400, "Missing Parameter" );
             facesContext.responseComplete();
@@ -147,6 +164,7 @@ public class GeneView {
         gene = cache.getCurrentGene( species.getId(), query );
         if ( gene == null ) {
             // gene symbol not found
+            // Send to error page
             throw new GeneNotFoundException();
         } else {
             // Count gene hit
@@ -192,8 +210,8 @@ public class GeneView {
             directRawData = annotationService.fetchTrackData( species, gene );
             inferredRawData = propagate( directRawData );
         } else {
-            directRawData = cachedData.get( AnnotationType.DIRECT ).rowMap();
-            inferredRawData = cachedData.get( AnnotationType.INFERRED ).rowMap();
+            directRawData = cachedData.get( AnnotationType.D ).rowMap();
+            inferredRawData = cachedData.get( AnnotationType.I ).rowMap();
         }
 
         ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>> rawdataBuilder = new ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>>();
@@ -208,8 +226,14 @@ public class GeneView {
             }
 
         }
+        rawdataBuilder.orderRowsBy( new Comparator<Edition>() {
+            @Override
+            public int compare( Edition o1, Edition o2 ) {
+                return o1.compareTo( o2 );
+            }
+        } );
 
-        rawData.put( AnnotationType.DIRECT, rawdataBuilder.build() );
+        rawData.put( AnnotationType.D, rawdataBuilder.build() );
 
         rawdataBuilder = new ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>>();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : inferredRawData.entrySet() ) {
@@ -223,7 +247,13 @@ public class GeneView {
             }
 
         }
-        rawData.put( AnnotationType.INFERRED, rawdataBuilder.build() );
+        rawdataBuilder.orderRowsBy( new Comparator<Edition>() {
+            @Override
+            public int compare( Edition o1, Edition o2 ) {
+                return o1.compareTo( o2 );
+            }
+        } );
+        rawData.put( AnnotationType.I, rawdataBuilder.build() );
 
         // If no data existed in cache and we did not filter it then cache the data
         if ( cachedData == null && bypassFilter ) {
@@ -234,15 +264,19 @@ public class GeneView {
 
     }
 
+    /**
+     * Entry point for initiating the retrieval of necessary data.
+     */
     public void fetchData() {
         log.debug( "fetchData" );
 
+        // retrieve data nad apply no filters
         rawData = retrieveData();
 
         // A map that will be needed in the front end for drilling down
         Map<Long, Integer> dateToEdition = new HashMap<>();
 
-        for ( Edition ed : rawData.get( AnnotationType.INFERRED ).rowKeySet() ) {
+        for ( Edition ed : rawData.get( AnnotationType.I ).rowKeySet() ) {
             dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
         }
 
@@ -255,7 +289,7 @@ public class GeneView {
         //allTerms = rawData.get( AnnotationType.DIRECT ).columnKeySet();
         allTerms = new HashSet<>();
         ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> reversedData = new ArrayList<>(
-                rawData.get( AnnotationType.INFERRED ).rowMap().entrySet() );
+                rawData.get( AnnotationType.I ).rowMap().entrySet() );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( reversedData ) ) {
 
             allTerms.addAll( entry.getValue().keySet() );
@@ -280,6 +314,12 @@ public class GeneView {
         return propagatedData;
     }
 
+    /**
+     * Create chart showing counts of unique terms annotated to this gene over time (both directly and through
+     * propagation)
+     * 
+     * @param rawData data
+     */
     private void fetchAnnotationChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchAnnotationChart" );
@@ -300,7 +340,7 @@ public class GeneView {
         Series directCountSeries = new Series( "Direct Annotation Count" );
         Series aggregateSeries = new Series( "Species Direct Avg" );
         Series aggregateInferredSeries = new Series( "Species Inferred Avg" );
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.DIRECT )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             int count = entry.getValue().size();
@@ -321,7 +361,7 @@ public class GeneView {
         // Create series for inferred annotations count
         Series inferredCountSeries = new Series( "Inferred Annotation Count" );
 
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.INFERRED )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             int count = entry.getValue().size();
@@ -337,18 +377,27 @@ public class GeneView {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
     }
 
+    /**
+     * Entry point for fetching the annotation chart
+     */
     public void fetchAnnotationChart() {
         fetchAnnotationChart( rawData );
 
     }
 
+    /**
+     * Create chart showing similarity of terms annotated to this gene in an edition compared to the most current
+     * edition (both directly and through propagation)
+     * 
+     * @param rawData data
+     */
     private void fetchJaccardChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchJaccardChart" );
 
-        ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> directData = rawData.get( AnnotationType.DIRECT );
+        ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> directData = rawData.get( AnnotationType.D );
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> inferredData = rawData
-                .get( AnnotationType.INFERRED );
+                .get( AnnotationType.I );
 
         ChartValues chart = new ChartValues();
 
@@ -357,24 +406,41 @@ public class GeneView {
 
         // For direct annotations
         Series directSeries = new Series( "Direct Similarity" );
+        Series averageDirectSeries = new Series( "Direct Species Average" );
 
         Set<GeneOntologyTerm> currentGOSet = directData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : directData.rowMap().entrySet() ) {
+            Edition ed = entry.getKey();
             Double jaccard = Jaccard.similarity( entry.getValue().keySet(), currentGOSet );
-            directSeries.addDataPoint( entry.getKey().getDate(), jaccard );
-        }
+            directSeries.addDataPoint( ed.getDate(), jaccard );
 
-        chart.addSeries( directSeries );
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
+            }
+        }
 
         // For Inferred annotations
         Series inferredSeries = new Series( "Inferred Similarity" );
+        Series averageInferredSeries = new Series( "Inferred Species Average" );
 
         currentGOSet = inferredData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : inferredData.rowMap().entrySet() ) {
+            Edition ed = entry.getKey();
             Double jaccard = Jaccard.similarity( entry.getValue().keySet(), currentGOSet );
-            inferredSeries.addDataPoint( entry.getKey().getDate(), jaccard );
+            inferredSeries.addDataPoint( ed.getDate(), jaccard );
+
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
+            }
         }
 
+        chart.addSeries( averageDirectSeries );
+        chart.addSeries( averageInferredSeries );
+        chart.addSeries( directSeries );
         chart.addSeries( inferredSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
@@ -386,11 +452,21 @@ public class GeneView {
 
     }
 
+    /**
+     * Entry point for fetching the similarity chart
+     */
     public void fetchJaccardChart() {
         fetchJaccardChart( rawData );
 
     }
 
+    /**
+     * Create chart showing multifunctionality of this gene over time (Gillis J, Pavlidis P (2011) The Impact of
+     * Multifunctional Genes on "Guilt by Association" Analysis. PLoS ONE 6(2): e17258. doi:
+     * 10.1371/journal.pone.0017258)
+     * 
+     * @param rawData data
+     */
     private void fetchMultifunctionalityChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchMultifunctionalityChart" );
@@ -398,7 +474,8 @@ public class GeneView {
 
         // Calculate multifunctionality of the gene in each edition
         Series multiSeries = new Series( "Multifunctionality" );
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.INFERRED )
+        Series averageSeries = new Series( "Species Average" );
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             Integer total = cache.getGeneCount( species.getId(), ed );
@@ -406,13 +483,20 @@ public class GeneView {
                 Double multi = 0.0;
                 for ( GeneOntologyTerm t : entry.getValue().keySet() ) {
                     Integer inGroup = cache.getInferredAnnotationCount( species.getId(), ed, t );
-                    if ( inGroup != null ) {
+                    if ( inGroup != null && inGroup < total ) {
                         multi += 1.0 / ( inGroup * ( total - inGroup ) );
                     }
                 }
                 multiSeries.addDataPoint( ed.getDate(), multi );
             }
+
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                averageSeries.addDataPoint( ed.getDate(), agg.getAvgMultifunctionality() );
+            }
         }
+        chart.addSeries( averageSeries );
         chart.addSeries( multiSeries );
 
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
@@ -423,10 +507,19 @@ public class GeneView {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
     }
 
+    /**
+     * Entry point for fetching the multifunctionality chart
+     */
     public void fetchMultifunctionalityChart() {
         fetchMultifunctionalityChart( rawData );
     }
 
+    /**
+     * Create chart showing total number of terms lost and gained between editions (both directly and through
+     * propagation)
+     * 
+     * @param rawData data
+     */
     private void fetchLossGainChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchLossGainChart" );
@@ -442,7 +535,7 @@ public class GeneView {
         directGainSeries.setExtra( 0 ); //Stack 0
 
         Set<GeneOntologyTerm> previousGOSet = null;
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.DIRECT )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             Set<GeneOntologyTerm> currentGOSet = entry.getValue().keySet();
@@ -470,7 +563,7 @@ public class GeneView {
         inferredGainSeries.setExtra( 1 ); //Stack 1
 
         previousGOSet = null;
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.INFERRED )
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             Set<GeneOntologyTerm> currentGOSet = entry.getValue().keySet();
@@ -499,11 +592,17 @@ public class GeneView {
 
     }
 
+    /**
+     * Entry point for fetching the loss/gain chart
+     */
     public void fetchLossGainChart() {
         fetchLossGainChart( rawData );
 
     }
 
+    /**
+     * Filter charts to include only those terms selected from right panel
+     */
     public void filterCharts() {
         if ( selectedTerms == null || selectedTerms.size() == 0 ) {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", false );
@@ -518,11 +617,17 @@ public class GeneView {
 
     }
 
+    /**
+     * Remove all filters on charts
+     */
     public void resetCharts() {
         rawData = retrieveData();
         RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", true );
     }
 
+    /**
+     * Entry point for fetching data to create a gantt chart of annotations categories over time
+     */
     public void fetchTimeline() {
         log.debug( "fetchTimeline" );
         if ( selectedTerms == null || selectedTerms.size() == 0 ) {
@@ -542,7 +647,7 @@ public class GeneView {
         HashSet<GeneOntologyTerm> filterTerms = new HashSet<>( selectedTerms );
 
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> data = retrieveData( filterTerms )
-                .get( AnnotationType.INFERRED );
+                .get( AnnotationType.I );
 
         // Create an ordering for the categories
         int i = 0;
@@ -594,7 +699,10 @@ public class GeneView {
 
     }
 
-    // View Term's Annotations
+    /**
+     * Entry point to view a terms annotations in a specific edition. This is reached by clicking a term in a table of
+     * terms after clicking a data point in the annotation chart.
+     */
     public void fetchAnnotations() {
         log.debug( "fetchAnnotations" );
         //        if ( selectedClickTerms == null || selectedClickTerms.isEmpty() ) {
@@ -603,31 +711,32 @@ public class GeneView {
         //viewTerm = selectedClickTerms.iterator().next();
         log.debug( viewTerm );
 
-        Set<Annotation> data = rawData.get( AnnotationType.DIRECT ).get( clickEdition, viewTerm );
+        Set<Annotation> data = rawData.get( AnnotationType.D ).get( clickEdition, viewTerm );
 
         viewAnnotations = new HashSet<>();
         if ( data != null ) {
 
             // Add direct annotations
             for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.DIRECT ) );
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.D ) );
             }
         }
-        data = rawData.get( AnnotationType.INFERRED ).get( clickEdition, viewTerm );
+        data = rawData.get( AnnotationType.I ).get( clickEdition, viewTerm );
 
         if ( data != null ) {
 
             // Next add the inferred as they will not overwrite the direct if the direct already exists
             for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.INFERRED ) );
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.I ) );
             }
         }
 
         filteredViewAnnotations = null;
     }
 
-    // Click event functionality
-
+    /**
+     * Click event functionality for annotation chart
+     */
     public void fetchAnnotationPointData() {
         log.debug( "fetchAnnotationPointData" );
         Integer editionId;
@@ -643,7 +752,7 @@ public class GeneView {
         clickEdition = cache.getEdition( species.getId(), editionId );
 
         try {
-            clickTerms = rawData.get( AnnotationType.INFERRED ).row( clickEdition ).keySet();
+            clickTerms = rawData.get( AnnotationType.I ).row( clickEdition ).keySet();
         } catch ( NullPointerException e ) {
             RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
             return;
@@ -656,6 +765,94 @@ public class GeneView {
 
     }
 
+    /**
+     * Click event functionality for loss/gain chart
+     */
+    public void fetchLossGainPointData() {
+        log.debug( "fetchLossGainPointData" );
+        Integer editionId;
+        try {
+
+            editionId = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
+        } catch ( NumberFormatException e ) {
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            return;
+        }
+
+        clickEdition = cache.getEdition( species.getId(), editionId );
+
+        // get previous edition, yes this is ugly. I don't wanna talk about it.
+
+        Edition previousEdition = null;
+        for ( Edition e : rawData.get( AnnotationType.I ).rowMap().keySet() ) {
+            if ( e.equals( clickEdition ) ) {
+                break;
+            }
+            previousEdition = e;
+        }
+
+        if ( previousEdition == null ) {
+            clickLGTerms = Lists.newArrayList();
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            return;
+        }
+
+        try {
+            // Direct 
+            clickLGTerms = Lists.newArrayList();
+
+            ImmutableSet<GeneOntologyTerm> currentGOSet = rawData.get( AnnotationType.D ).row( clickEdition )
+                    .keySet();
+
+            ImmutableSet<GeneOntologyTerm> previousGOSet = rawData.get( AnnotationType.D ).row( previousEdition )
+                    .keySet();
+
+            for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.D );
+                clickLGTerms.add( lg );
+            }
+
+            for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.D );
+                clickLGTerms.add( lg );
+            }
+
+            // Inferred 
+
+            currentGOSet = rawData.get( AnnotationType.I ).row( clickEdition )
+                    .keySet();
+
+            previousGOSet = rawData.get( AnnotationType.I ).row( previousEdition )
+                    .keySet();
+
+            for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.I );
+                clickLGTerms.add( lg );
+            }
+
+            for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
+                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.I );
+                clickLGTerms.add( lg );
+            }
+
+            Collections.sort( clickLGTerms );
+
+        } catch ( NullPointerException e ) {
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            return;
+        }
+
+        selectedClickLGTerms = null;
+        filteredClickLGTerms = null;
+
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
+
+    }
+
+    /**
+     * Click event functionality for clicking timeline gantt chart
+     */
     public void fetchTimelinePointData() {
         Integer editionId;
         try {
@@ -672,23 +869,23 @@ public class GeneView {
 
         viewTerm = cache.getTerm( clickEdition, goId );
 
-        Set<Annotation> data = rawData.get( AnnotationType.DIRECT ).get( clickEdition, viewTerm );
+        Set<Annotation> data = rawData.get( AnnotationType.D ).get( clickEdition, viewTerm );
 
         viewAnnotations = new HashSet<>();
         if ( data != null ) {
 
             // Add direct annotations
             for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.DIRECT ) );
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.D ) );
             }
         }
-        data = rawData.get( AnnotationType.INFERRED ).get( clickEdition, viewTerm );
+        data = rawData.get( AnnotationType.I ).get( clickEdition, viewTerm );
 
         if ( data != null ) {
 
             // Next add the inferred as they will not overwrite the direct if the direct already exists
             for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.INFERRED ) );
+                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.I ) );
             }
         }
 
@@ -762,8 +959,24 @@ public class GeneView {
         this.filteredClickTerms = filteredClickTerms;
     }
 
-    public void setCache( Cache cache ) {
-        this.cache = cache;
+    public Collection<LossGainTableValues> getClickLGTerms() {
+        return clickLGTerms;
+    }
+
+    public List<LossGainTableValues> getSelectedClickLGTerms() {
+        return selectedClickLGTerms;
+    }
+
+    public void setSelectedClickLGTerms( List<LossGainTableValues> selectedClickLGTerms ) {
+        this.selectedClickLGTerms = selectedClickLGTerms;
+    }
+
+    public Collection<LossGainTableValues> getFilteredClickLGTerms() {
+        return filteredClickLGTerms;
+    }
+
+    public void setFilteredClickLGTerms( Collection<LossGainTableValues> filteredClickLGTerms ) {
+        this.filteredClickLGTerms = filteredClickLGTerms;
     }
 
     public Collection<GeneOntologyTerm> getAllTerms() {
@@ -784,14 +997,6 @@ public class GeneView {
 
     public void setFilteredAllTerms( Collection<GeneOntologyTerm> filteredAllTerms ) {
         this.filteredAllTerms = filteredAllTerms;
-    }
-
-    public void setStatsService( StatsService statsService ) {
-        this.statsService = statsService;
-    }
-
-    public void setAnnotationService( AnnotationService annotationService ) {
-        this.annotationService = annotationService;
     }
 
 }

@@ -22,21 +22,21 @@ package ubc.pavlab.gotrack.beans;
 import java.io.Serializable;
 import java.util.List;
 
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
-import javax.faces.bean.ViewScoped;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * TODO Document Me
+ * Backing bean for a term search input that leads to the TermView page
  * 
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ViewScoped
 public class TermSearchView implements Serializable {
 
@@ -49,20 +49,20 @@ public class TermSearchView implements Serializable {
 
     private String query;
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
     public TermSearchView() {
         log.info( "TermSearchView created" );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() )
-                / 1000000 + " MB" );
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+                + " MB" );
     }
 
     public String go() {
         if ( !cache.termExists( query ) ) {
             return null;
         }
-        return "trends?faces-redirect=true&query=" + query;
+        return "/trends?faces-redirect=true&query=" + query;
     }
 
     public String getQuery() {
@@ -76,10 +76,6 @@ public class TermSearchView implements Serializable {
     public List<GeneOntologyTerm> complete( String query ) {
         return cache.completeTerm( query, MAX_RESULTS, true );
 
-    }
-
-    public void setCache( Cache cache ) {
-        this.cache = cache;
     }
 
 }

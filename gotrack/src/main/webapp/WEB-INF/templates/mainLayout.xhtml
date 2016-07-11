@@ -43,19 +43,19 @@
 			<p:layoutUnit id="top" position="north" size="50">
 				<h:form id="topForm">
 					<p:menubar toggleEvent="click">
-						<p:menuitem value="&nbsp; Home" url="index.xhtml"
+						<p:menuitem value="&nbsp; Home" outcome="/index.xhtml"
 							icon="fa fa-home" styleClass="right-border" />
-						<p:menuitem value="&nbsp; Track Gene" url="genes.xhtml"
+						<p:menuitem value="&nbsp; Track Gene" outcome="/genes.xhtml"
 							icon="fa fa-line-chart" styleClass="right-border" />
-						<p:menuitem value="&nbsp; Track Term" url="trends.xhtml"
+						<p:menuitem value="&nbsp; Track Term" outcome="/trends.xhtml"
 							icon="fa fa-globe" styleClass="right-border" />
-						<p:menuitem value="&nbsp; GO Enrichment" url="enrichment.xhtml"
+						<p:menuitem value="&nbsp; GO Enrichment" outcome="/enrichment.xhtml"
 							icon="fa fa-bar-chart" styleClass="right-border" />
-						<p:menuitem value="&nbsp; Tutorial" url="about.xhtml"
+						<p:menuitem value="&nbsp; Tutorial" outcome="/about.xhtml"
 							icon="fa fa-question-circle" styleClass="right-border" />
-						<p:menuitem value="&nbsp; Documentation" url="documentation.xhtml"
+						<p:menuitem value="&nbsp; Documentation" outcome="/documentation.xhtml"
 							icon="fa fa-book" styleClass="right-border" />
-						<p:menuitem value="&nbsp; Resources" url="resources.xhtml"
+						<p:menuitem value="&nbsp; Resources" outcome="/resources.xhtml"
 							icon="fa fa-info-circle" styleClass="right-border" />
 							<f:facet name="options">
 								<p:commandButton type="button" icon="fa fa-terminal" onclick="showTerminal()" rendered="#{facesContext.application.projectStage != 'Production'}"/>
@@ -66,8 +66,7 @@
 
 			<p:layoutUnit id="bottom" position="south" size="60">
 				<p id="bottom-footer" class="center">
-					&copy; UBC, Centre for High-Throughput Biology, 2015 <a
-						href="terms.xhtml">Terms and Conditions</a>
+					&copy; UBC, Centre for High-Throughput Biology, 2015 <p:link outcome="/terms.xhtml">Terms and Conditions</p:link>
 				</p>
 			</p:layoutUnit>
 			

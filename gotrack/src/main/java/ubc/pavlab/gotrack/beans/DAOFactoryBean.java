@@ -22,9 +22,9 @@ package ubc.pavlab.gotrack.beans;
 import java.io.Serializable;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ApplicationScoped;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
@@ -32,12 +32,12 @@ import ubc.pavlab.gotrack.dao.DAOConfigurationException;
 import ubc.pavlab.gotrack.dao.DAOFactory;
 
 /**
- * TODO Document Me
+ * Bean injected into services in order to give access to the DAO Factory
  * 
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean(name = "daoFactoryBean")
+@Named("daoFactoryBean")
 @ApplicationScoped
 public class DAOFactoryBean implements Serializable {
 
@@ -50,14 +50,9 @@ public class DAOFactoryBean implements Serializable {
 
     private static final String PROPERTY_DB = "gotrack.db";
 
-    private static final String PROPERTY_URL = "url";
-    private static final String PROPERTY_DRIVER = "driver";
-    private static final String PROPERTY_USERNAME = "username";
-    private static final String PROPERTY_PASSWORD = "password";
-
     private static DAOFactory gotrack;
 
-    @ManagedProperty("#{settingsCache}")
+    @Inject
     private SettingsCache settingsCache;
 
     /**
@@ -69,7 +64,6 @@ public class DAOFactoryBean implements Serializable {
 
     @PostConstruct
     public void init() {
-        // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "DAOFactoryBean init" );
         // Obtain DAOFactory.
         String dbKey = settingsCache.getProperty( PROPERTY_DB );
@@ -78,47 +72,13 @@ public class DAOFactoryBean implements Serializable {
                     + " is missing in properties file '" + settingsCache.getPropertiesFile() + "'." );
         }
 
-        String url = getProperty( dbKey, PROPERTY_URL, true );
-        String driverClassName = getProperty( dbKey, PROPERTY_DRIVER, false );
-        String password = getProperty( dbKey, PROPERTY_PASSWORD, false );
-        String username = getProperty( dbKey, PROPERTY_USERNAME, password != null );
+        gotrack = DAOFactory.getInstance( dbKey );
 
-        gotrack = DAOFactory.getInstance( url, driverClassName, password, username );
         log.info( "DAOFactory successfully obtained: " + gotrack );
     }
 
     public DAOFactory getGotrack() {
         return gotrack;
-    }
-
-    public void setSettingsCache( SettingsCache settingsCache ) {
-        this.settingsCache = settingsCache;
-    }
-
-    /**
-     * Returns the DAOProperties instance specific property value associated with the given key with the option to
-     * indicate whether the property is mandatory or not.
-     * 
-     * @param key The key to be associated with a DAOProperties instance specific value.
-     * @param mandatory Sets whether the returned property value should not be null nor empty.
-     * @return The DAOProperties instance specific property value associated with the given key.
-     * @throws DAOConfigurationException If the returned property value is null or empty while it is mandatory.
-     */
-    private String getProperty( String specificKey, String key, boolean mandatory ) throws DAOConfigurationException {
-        String fullKey = specificKey + "." + key;
-        String property = settingsCache.getProperty( fullKey );
-
-        if ( property == null || property.trim().length() == 0 ) {
-            if ( mandatory ) {
-                throw new DAOConfigurationException( "Required property '" + fullKey + "'"
-                        + " is missing in properties file '" + settingsCache.getPropertiesFile() + "'." );
-            } else {
-                // Make empty value null. Empty Strings are evil.
-                property = null;
-            }
-        }
-
-        return property;
     }
 
 }

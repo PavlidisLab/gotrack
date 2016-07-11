@@ -25,7 +25,7 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * TODO Document Me
+ * Represents a row in the enrichment table of EnrichmentView
  * 
  * @author mjacobson
  * @version $Id$
@@ -39,8 +39,8 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
     private final StabilityScore score;
     private final boolean significant;
 
-    public EnrichmentTableValues( Edition edition, GeneOntologyTerm term, EnrichmentResult result,
-            StabilityScore score, boolean significant ) {
+    public EnrichmentTableValues( Edition edition, GeneOntologyTerm term, EnrichmentResult result, StabilityScore score,
+            boolean significant ) {
         super();
         this.edition = edition;
         this.term = term;

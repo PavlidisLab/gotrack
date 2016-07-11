@@ -19,8 +19,10 @@
 
 package ubc.pavlab.gotrack.model.dto;
 
+import ubc.pavlab.gotrack.model.Species;
+
 /**
- * TODO Document Me
+ * Data Transfer Object for {@link Species}
  * 
  * @author mjacobson
  * @version $Id$

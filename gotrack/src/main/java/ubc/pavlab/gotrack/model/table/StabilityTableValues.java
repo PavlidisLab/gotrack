@@ -24,7 +24,7 @@ import ubc.pavlab.gotrack.analysis.StabilityScore;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * TODO Document Me
+ * Represents a row in the stability table of EnrichmentView
  * 
  * @author mjacobson
  * @version $Id$
@@ -37,8 +37,8 @@ public class StabilityTableValues implements Comparable<StabilityTableValues> {
     private final int quantileAvg;
     private final int quantile;
 
-    public StabilityTableValues( GeneOntologyTerm term, EnrichmentResult result, StabilityScore stability,
-            int quantile, int quantileAvg ) {
+    public StabilityTableValues( GeneOntologyTerm term, EnrichmentResult result, StabilityScore stability, int quantile,
+            int quantileAvg ) {
         super();
         this.term = term;
         this.result = result;

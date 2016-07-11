@@ -19,8 +19,10 @@
 
 package ubc.pavlab.gotrack.model;
 
+import ubc.pavlab.gotrack.model.dto.AggregateDTO;
+
 /**
- * TODO Document Me
+ * Represents a collection of aggregate statistics for a specific edition and species
  * 
  * @author mjacobson
  * @version $Id$
@@ -31,13 +33,30 @@ public final class Aggregate {
     private final Double avgDirectByGene;
     private final Double avgInferredByGene;
     private final Double avgGenesByTerm;
+    private final Double avgMultifunctionality;
+    private final Double avgDirectSimilarity;
+    private final Double avgInferredSimilarity;
 
-    public Aggregate( Integer geneCount, Double avgDirectByGene, Double avgInferredByGene, Double avgGenesByTerm ) {
+    public Aggregate( Integer geneCount, Double avgDirectByGene, Double avgInferredByGene, Double avgGenesByTerm,
+            Double avgMulti, Double avgDirectSimilarity, Double avgInferredSimilarity ) {
         super();
         this.geneCount = geneCount;
         this.avgDirectByGene = avgDirectByGene;
         this.avgInferredByGene = avgInferredByGene;
         this.avgGenesByTerm = avgGenesByTerm;
+        this.avgMultifunctionality = avgMulti;
+        this.avgDirectSimilarity = avgDirectSimilarity;
+        this.avgInferredSimilarity = avgInferredSimilarity;
+    }
+
+    public Aggregate( AggregateDTO dto ) {
+        this.geneCount = dto.getGeneCount();
+        this.avgDirectByGene = dto.getAvgDirectTermsForGene();
+        this.avgInferredByGene = dto.getAvgInferredTermsForGene();
+        this.avgGenesByTerm = dto.getAvgInferredGenesForTerm();
+        this.avgMultifunctionality = dto.getAvgMultifunctionality();
+        this.avgDirectSimilarity = dto.getAvgDirectSimilarity();
+        this.avgInferredSimilarity = dto.getAvgInferredSimilarity();
     }
 
     public Integer getGeneCount() {
@@ -56,10 +75,24 @@ public final class Aggregate {
         return avgGenesByTerm;
     }
 
+    public Double getAvgMultifunctionality() {
+        return avgMultifunctionality;
+    }
+
+    public Double getAvgDirectSimilarity() {
+        return avgDirectSimilarity;
+    }
+
+    public Double getAvgInferredSimilarity() {
+        return avgInferredSimilarity;
+    }
+
     @Override
     public String toString() {
         return "Aggregate [geneCount=" + geneCount + ", avgDirectByGene=" + avgDirectByGene + ", avgInferredByGene="
-                + avgInferredByGene + ", avgGenesByTerm=" + avgGenesByTerm + "]";
+                + avgInferredByGene + ", avgGenesByTerm=" + avgGenesByTerm + ", avgMultifunctionality="
+                + avgMultifunctionality + ", avgDirectSimilarity=" + avgDirectSimilarity + ", avgInferredSimilarity="
+                + avgInferredSimilarity + "]";
     }
 
 }

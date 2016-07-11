@@ -1,7 +1,7 @@
 /*
  * The gotrack project
  * 
- * Copyright (c) 2015 University of British Columbia
+ * Copyright (c) 2016 University of British Columbia
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,24 +17,14 @@
  *
  */
 
-package ubc.pavlab.gotrack.converter;
-
-import javax.faces.convert.EnumConverter;
-import javax.faces.convert.FacesConverter;
-
-import ubc.pavlab.gotrack.model.Aspect;
+package ubc.pavlab.gotrack.analysis;
 
 /**
- * TODO Document Me
+ * TODO Write Me
  * 
  * @author mjacobson
  * @version $Id$
  */
-@FacesConverter(value = "aspectConverter")
-public class AspectConverter extends EnumConverter {
-
-    public AspectConverter() {
-        super( Aspect.class );
-    }
+public class StabilityAnalysisTest {
 
 }

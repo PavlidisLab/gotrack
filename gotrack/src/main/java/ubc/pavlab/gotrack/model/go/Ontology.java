@@ -1,7 +1,7 @@
 /*
  * The gotrack project
  * 
- * Copyright (c) 2015 University of British Columbia
+ * Copyright (c) 2016 University of British Columbia
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,10 @@
  *
  */
 
-package ubc.pavlab.gotrack.converter;
+package ubc.pavlab.gotrack.model.go;
 
-import javax.faces.convert.EnumConverter;
-import javax.faces.convert.FacesConverter;
-
-import ubc.pavlab.gotrack.model.Dataset;
+import java.util.Collection;
+import java.util.Set;
 
 /**
  * TODO Document Me
@@ -30,12 +28,25 @@ import ubc.pavlab.gotrack.model.Dataset;
  * @author mjacobson
  * @version $Id$
  */
+public interface Ontology<T> {
+    public int getId();
 
-@FacesConverter(value = "datasetConverter")
-public class DatasetConverter extends EnumConverter {
+    public Collection<T> getAllTerms();
 
-    public DatasetConverter() {
-        super( Dataset.class );
-    }
+    public void addTerm( T t );
+
+    public void addRelationship( T child, T Parent, RelationshipType type );
+
+    public T getTerm( int id );
+
+    public int size();
+
+    // More complex methods
+
+    public Set<T> propagate( Collection<T> terms );
+
+    public Set<T> getAncestors( T t );
+
+    public Set<Relation<T>> getParents( T t );
 
 }

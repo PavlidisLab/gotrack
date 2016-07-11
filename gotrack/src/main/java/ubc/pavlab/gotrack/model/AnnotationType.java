@@ -20,11 +20,25 @@
 package ubc.pavlab.gotrack.model;
 
 /**
- * TODO Document Me
+ * Represents a type of annotation.
+ * 
+ * Direct means the annotation was made directly between the given Term and Gene.
+ * 
+ * Inferred means the annotation was made to some child of the given Term and was propagated to be applied to this Gene.
  * 
  * @author mjacobson
  * @version $Id$
  */
 public enum AnnotationType {
-    DIRECT, INFERRED;
+    D("Direct"), I("Inferred");
+
+    private String label;
+
+    private AnnotationType( String label ) {
+        this.label = label;
+    }
+
+    public String getLabel() {
+        return label;
+    }
 }

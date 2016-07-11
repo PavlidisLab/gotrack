@@ -17,6 +17,7 @@
 	<ui:define name="pageTitle">UBC-CHiBi|GOtrack</ui:define>
 	<ui:define name="css">
 		<h:outputStylesheet library="css" name="term.css" />
+		<h:outputStylesheet library="css" name="tipsy.css" />
 	</ui:define>
 	<ui:define name="js">
 		<h:outputScript library="js" name="utility.js" />
@@ -28,13 +29,12 @@
 		<h:outputScript library="js" name="highcharts-more.js" />
 		<h:outputScript library="js" name="exporting.js" />
 		<h:outputScript library="js" name="export-csv.js" />
-		<h:outputScript library="js" name="dagre.min.js" />
-		<h:outputScript library="js" name="cytoscape.min.js" />
 		
+		<h:outputScript library="js" name="tipsy.js" />
+        <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <h:outputScript library="js" name="dagre-d3.min.js" />
 		
-		
-		
-		
+
 		<h:outputScript library="js" name="term.js" />
 		
 		<h:outputScript rendered="#{termView.trackedTerms != null}">
@@ -90,7 +90,7 @@
 										<h:outputText value="Aspect" />
 									</p:column>
 									<p:column>
-										<h:outputText value="#{termView.currentTerm.aspect}"
+										<h:outputText value="#{termView.currentTerm.aspect.label}"
 											styleClass="sqlDialogText" />
 									</p:column>
 								</p:row>
@@ -150,7 +150,7 @@
                             <h3>Ancestry Chart</h3>
 						</p:outputPanel>
 						<div id="loading-spinner-DAG" class="loading" style="display: none;" />
-						<div id="currentAncestry" style="height:600px;width:900px;display: none;"/>
+						<svg id="currentAncestry" width="900" height="600"/>
 					</p:tab>
 					<p:tab title="Overview">
 					<p:outputPanel>
@@ -202,7 +202,7 @@
 		<p:dialog id="graphDlg" header="Ancestor Chart"
 			widgetVar="graphDlgWdg" modal="false" showEffect="fade"
 			hideEffect="fade" resizable="false" height="600px;" width="800px;">
-			<div id="cytoDialog" style="height:500px;width:700px;"/>
+			<svg id="dagDialog" height="500" width="700"/>
 		</p:dialog>
 	</ui:define>
 

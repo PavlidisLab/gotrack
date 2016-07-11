@@ -25,12 +25,13 @@ import javax.faces.context.FacesContext;
 import javax.faces.convert.Converter;
 import javax.faces.convert.ConverterException;
 import javax.faces.convert.FacesConverter;
+import javax.inject.Inject;
 
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Species;
 
 /**
- * TODO Document Me
+ * Converter for {@link Species}.
  * 
  * @author mjacobson
  * @version $Id$
@@ -38,12 +39,15 @@ import ubc.pavlab.gotrack.model.Species;
 @FacesConverter("speciesConverter")
 public class SpeciesConverter implements Converter {
 
+    @Inject
+    private Cache cache;
+
     @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {
         if ( value != null && value.trim().length() > 0 ) {
             try {
                 Integer speciesId = Integer.valueOf( value );
-                Cache cache = ( Cache ) fc.getExternalContext().getApplicationMap().get( "cache" );
+                //                Cache cache = ( Cache ) fc.getExternalContext().getApplicationMap().get( "cache" );
                 return cache.getSpecies( speciesId );
             } catch ( NumberFormatException e ) {
                 //                return null;

@@ -19,27 +19,35 @@
 
 package ubc.pavlab.gotrack.model;
 
+import java.util.Collection;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSet.Builder;
 
 /**
+ * Represents a Gene. Thread-safe.
+ * 
  * @author mjacobson
  * @version $Id$
  */
 public final class Gene {
-
+    private final int id;
     private final String symbol;
     private final Species species;
     private final Set<Accession> accessions;
     private final Set<String> synonyms;
 
-    public Gene( String symbol, Species species, Set<Accession> accessions, Set<String> synonyms ) {
-        super();
-        this.symbol = symbol;
-        this.species = species;
-        this.accessions = ImmutableSet.copyOf( accessions );
-        this.synonyms = ImmutableSet.copyOf( synonyms );
+    private Gene( GeneBuilder builder ) {
+        this.id = builder.id;
+        this.symbol = builder.symbol;
+        this.species = builder.species;
+        this.accessions = builder.accessions;
+        this.synonyms = builder.synonyms.build();
+    }
+
+    public int getId() {
+        return id;
     }
 
     public String getSymbol() {
@@ -85,6 +93,30 @@ public final class Gene {
             if ( other.symbol != null ) return false;
         } else if ( !symbol.equals( other.symbol ) ) return false;
         return true;
+    }
+
+    public static class GeneBuilder {
+        private final int id;
+        private final String symbol;
+        private final Species species;
+        private final Set<Accession> accessions;
+        private Builder<String> synonyms = new ImmutableSet.Builder<String>();
+
+        public GeneBuilder( int id, String symbol, Species species, Collection<Accession> accessions ) {
+            this.id = id;
+            this.symbol = symbol;
+            this.species = species;
+            this.accessions = ImmutableSet.copyOf( accessions );
+        }
+
+        public GeneBuilder synonym( String syn ) {
+            this.synonyms.add( syn );
+            return this;
+        }
+
+        public Gene build() {
+            return new Gene( this );
+        }
     }
 
 }

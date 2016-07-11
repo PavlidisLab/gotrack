@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- THIS FILE SHOULD BE ALTERED IN YOUR TOMCAT CONFIGURATION -->
-<Context>
-   
+<Context sessionCookiePath="/">
+
+	<Resource name="BeanManager" 
+	    auth="Container"
+	    type="javax.enterprise.inject.spi.BeanManager"
+	    factory="org.jboss.weld.resources.ManagerObjectFactory" />
+
 <!--  
     <Resource
         name="jdbc/gotrack_sandbox" 

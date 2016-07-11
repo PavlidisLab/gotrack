@@ -23,7 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Assume not thread-safe.
+ * Used to acquire live updates from running methods which can then be displayed using EL in the front-end. Assume not
+ * thread-safe.
  * 
  * @author mjacobson
  * @version $Id$

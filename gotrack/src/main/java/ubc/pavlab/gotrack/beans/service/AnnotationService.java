@@ -31,9 +31,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.annotation.PostConstruct;
-import javax.faces.bean.ApplicationScoped;
-import javax.faces.bean.ManagedBean;
-import javax.faces.bean.ManagedProperty;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
 
 import org.apache.log4j.Logger;
 
@@ -48,19 +48,21 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Evidence;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
 import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
+import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
+import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
- * TODO Document Me
+ * Service layer on top of annotation DAO. Contains methods for fetching information related to annotations and counts
+ * thereof from the database. This does NOT include methods that are purely for caching.
  * 
  * @author mjacobson
  * @version $Id$
  */
-@ManagedBean
+@Named
 @ApplicationScoped
 public class AnnotationService implements Serializable {
 
@@ -71,10 +73,10 @@ public class AnnotationService implements Serializable {
 
     private static final Logger log = Logger.getLogger( AnnotationService.class );
 
-    @ManagedProperty("#{daoFactoryBean}")
+    @Inject
     private DAOFactoryBean daoFactoryBean;
 
-    @ManagedProperty("#{cache}")
+    @Inject
     private Cache cache;
 
     private AnnotationDAO annotationDAO;
@@ -93,11 +95,18 @@ public class AnnotationService implements Serializable {
 
     }
 
+    /**
+     * Method used to fetch data from database related to the GeneView
+     * 
+     * @param species species
+     * @param g gene
+     * @return Sets of annotations for each term in each edition related to this gene
+     */
     public Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> fetchTrackData( Species species, Gene g ) {
 
         Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> trackData = new LinkedHashMap<>();
 
-        List<AnnotationDTO> resultset = annotationDAO.track( species.getId(), g.getSymbol() );
+        List<AnnotationDTO> resultset = annotationDAO.track( g );
 
         for ( AnnotationDTO dto : resultset ) {
 
@@ -143,16 +152,24 @@ public class AnnotationService implements Serializable {
 
     }
 
+    /**
+     * Method used to fetch data from database related to the EnrichmentView
+     * 
+     * @param speciesId species id
+     * @param genes gene
+     * @return Sets of terms directly annotated to each gene in each edition
+     */
     public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> fetchEnrichmentData( Integer speciesId,
             Collection<Gene> genes ) {
         Set<Gene> geneSet = new HashSet<>( genes );
 
-        Map<String, Gene> givenGenes = new HashMap<>();
+        // Used to map strings back to genes, small efficiency boost as we don't have to hit gene cache in Cache service
+        Map<Integer, Gene> givenGenes = new HashMap<>();
         for ( Gene g : genes ) {
-            givenGenes.put( g.getSymbol().toUpperCase(), g );
+            givenGenes.put( g.getId(), g );
         }
 
-        List<EnrichmentDTO> resultset = annotationDAO.enrich( speciesId, geneSet );
+        List<EnrichmentDTO> resultset = annotationDAO.enrich( geneSet );
 
         Multimap<String, EnrichmentDTO> missingTerms = ArrayListMultimap.create();
 
@@ -160,10 +177,10 @@ public class AnnotationService implements Serializable {
 
         for ( EnrichmentDTO enrichmentDTO : resultset ) {
 
-            String symbol = enrichmentDTO.getSymbol();
-            Gene g = givenGenes.get( symbol.toUpperCase() );
+            Integer geneId = enrichmentDTO.getGeneId();
+            Gene g = givenGenes.get( geneId );
             if ( g == null ) {
-                log.warn( "Could not find symbol:" + symbol + " in given genes." );
+                log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
                 // g = new Gene( symbol, species );
             }
 
@@ -172,7 +189,8 @@ public class AnnotationService implements Serializable {
             GeneOntologyTerm go = cache.getTerm( ed, enrichmentDTO.getGoId() );
 
             if ( go == null ) {
-                log.debug( "Could not find (" + enrichmentDTO.getGoId() + ") in go_edition: " + ed.getGoEditionId() );
+                log.debug(
+                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEditionId() );
                 missingTerms.put( enrichmentDTO.getGoId(), enrichmentDTO );
                 continue;
             }
@@ -193,6 +211,8 @@ public class AnnotationService implements Serializable {
 
         }
 
+        // Because of reasons (badly annotated / misdated / mismatched annotations to GO editions / missing secondary ids)
+        // We will have terms that are not found in their given GO edition. We attempt to find this term in another edition.
         if ( !missingTerms.isEmpty() ) {
             Map<EnrichmentDTO, GeneOntologyTerm> mapped = new HashMap<>();
             log.info( "Attempting to find information for (" + missingTerms.size() + ") missing terms" );
@@ -225,13 +245,17 @@ public class AnnotationService implements Serializable {
                 log.warn( "Could not find information for (" + missingTerms.size() + ") terms" );
             }
 
+            // For the terms which we have successfully found in another edition, we create 'dummy' terms as stand-ins.
+
+            // For those we couldn't match, that usually means it was annotated under an incorrect id or our annotation/GO 
+            // editions are mismatched. Either way we refrain from attempting to fix these. This is a big TODO.
             for ( Entry<EnrichmentDTO, GeneOntologyTerm> entry : mapped.entrySet() ) {
                 EnrichmentDTO enrichmentDTO = entry.getKey();
 
-                String symbol = enrichmentDTO.getSymbol();
-                Gene g = givenGenes.get( symbol.toUpperCase() );
+                Integer geneId = enrichmentDTO.getGeneId();
+                Gene g = givenGenes.get( geneId );
                 if ( g == null ) {
-                    log.warn( "Could not find symbol:" + symbol + " in given genes." );
+                    log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
                     // g = new Gene( symbol, species );
                 }
 
@@ -261,10 +285,84 @@ public class AnnotationService implements Serializable {
 
     }
 
+    /**
+     * Method used to fetch data from database related to the Enrichment for a single edition
+     * 
+     * @param ed edition
+     * @param speciesId species id
+     * @param genes gene
+     * @return Sets of terms directly annotated to each gene in each edition
+     */
+    public Map<Gene, Set<GeneOntologyTerm>> fetchSingleEnrichmentData( Edition ed, Integer speciesId,
+            Collection<Gene> genes ) {
+        Set<Gene> geneSet = new HashSet<>( genes );
+
+        // Used to map strings back to genes, small efficiency boost as we don't have to hit gene cache in Cache service
+        Map<Integer, Gene> givenGenes = new HashMap<>();
+        for ( Gene g : genes ) {
+            givenGenes.put( g.getId(), g );
+        }
+
+        List<SimpleAnnotationDTO> resultset = annotationDAO.enrichSingleEdition( ed, geneSet );
+
+        Multimap<String, SimpleAnnotationDTO> missingTerms = ArrayListMultimap.create();
+
+        Map<Gene, Set<GeneOntologyTerm>> data = new HashMap<>();
+
+        for ( SimpleAnnotationDTO enrichmentDTO : resultset ) {
+
+            Integer geneId = enrichmentDTO.getGeneId();
+            Gene g = givenGenes.get( geneId );
+            if ( g == null ) {
+                log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
+                // g = new Gene( symbol, species );
+            }
+
+            GeneOntologyTerm go = cache.getTerm( ed, enrichmentDTO.getGoId() );
+
+            if ( go == null ) {
+                log.debug(
+                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEditionId() );
+                missingTerms.put( enrichmentDTO.getGoId(), enrichmentDTO );
+                continue;
+            }
+
+            Set<GeneOntologyTerm> goSet = data.get( g );
+            if ( goSet == null ) {
+                goSet = new HashSet<>();
+                data.put( g, goSet );
+            }
+
+            goSet.add( go );
+
+        }
+
+        // Because of reasons (badly annotated / misdated / mismatched annotations to GO editions / missing secondary ids)
+        // We will have terms that are not found in their given GO edition.
+        if ( !missingTerms.isEmpty() ) {
+            log.warn( "Could not find information for (" + missingTerms.size() + ") terms" );
+        }
+
+        return data;
+
+    }
+
+    /**
+     * Method used to get annotation count grouped by evidence category for a term.
+     * 
+     * @param t term
+     * @return Counts annotations for each evidence category grouped by date
+     */
     public Map<String, Map<Date, Integer>> fetchCategoryCounts( GeneOntologyTerm t ) {
         return fetchCategoryCounts( t.getGoId() );
     }
 
+    /**
+     * Method used to get annotation count grouped by evidence category for a term.
+     * 
+     * @param goId term
+     * @return Counts annotations for each evidence category grouped by date
+     */
     public Map<String, Map<Date, Integer>> fetchCategoryCounts( String goId ) {
         Map<String, Map<Date, Integer>> results = new LinkedHashMap<>();
         List<CategoryCountDTO> resultset = annotationDAO.categoryCounts( goId );
@@ -279,14 +377,26 @@ public class AnnotationService implements Serializable {
         return results;
     }
 
+    /**
+     * This is not used as we are currently doing this with cached data.
+     * 
+     * @param goId term
+     * @return Counts of genes that are directly annotated with this term grouped by species and edition.
+     */
     public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( GeneOntologyTerm t ) {
         return fetchDirectGeneCounts( t.getGoId() );
     }
 
+    /**
+     * This is not used as we are currently doing this with cached data.
+     * 
+     * @param t term
+     * @return Counts of genes that are directly annotated with this term grouped by species and edition.
+     */
     public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( String goId ) {
         Map<Integer, Map<Edition, Integer>> results = new HashMap<>();
-        List<AnnotationCountDTO> resultset = annotationDAO.directGeneCounts( goId );
-        for ( AnnotationCountDTO dto : resultset ) {
+        List<DirectAnnotationCountDTO> resultset = annotationDAO.directGeneCounts( goId );
+        for ( DirectAnnotationCountDTO dto : resultset ) {
             Map<Edition, Integer> m2 = results.get( dto.getSpecies() );
             if ( m2 == null ) {
                 m2 = new HashMap<>();
@@ -298,14 +408,6 @@ public class AnnotationService implements Serializable {
             m2.put( ed, dto.getCount() );
         }
         return results;
-    }
-
-    public void setDaoFactoryBean( DAOFactoryBean daoFactoryBean ) {
-        this.daoFactoryBean = daoFactoryBean;
-    }
-
-    public void setCache( Cache cache ) {
-        this.cache = cache;
     }
 
 }
