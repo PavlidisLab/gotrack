@@ -9,7 +9,7 @@
 	<application>
 		<resource-handler>org.omnifaces.resourcehandler.UnmappedResourceHandler</resource-handler>
 		<!-- This View Handler should be uncommented in the production system, it modifies action and resource urls to be relative -->
-		<!-- <view-handler>ubc.pavlab.gotrack.handlers.ReverseProxyViewHandler</view-handler> -->
+		<view-handler>ubc.pavlab.gotrack.handlers.ReverseProxyViewHandler</view-handler>
 		<locale-config>
 			<default-locale>en</default-locale>
 		</locale-config>
