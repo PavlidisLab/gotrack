@@ -71,7 +71,7 @@
 					<p:remoteCommand name="fetchGraph"
 						oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
 						actionListener="#{termView.fetchGraph()}" />
-					<p:tabView onTabShow="tabShowed(index)">
+					<p:tabView widgetVar="centerTabWdg" onTabShow="tabShowed(index)">
 					<p:tab title="Current">						
 						<p:outputPanel>
 							<h3>Current Information</h3>
