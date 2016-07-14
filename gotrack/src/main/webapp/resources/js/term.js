@@ -15,11 +15,11 @@ function tabShowed(index) {
    try {
       if (index==0) {
          CS.overview.graph.resize();
-      } else if (index==1) {
-         HC.charts.overview.resize();
       } else if (index==2) {
-         HC.charts.gene.resize();
+         HC.charts.overview.resize();
       } else if (index==3) {
+         HC.charts.gene.resize();
+      } else if (index==4) {
          HC.charts.evidence.resize();
       }
    } catch(e) {
