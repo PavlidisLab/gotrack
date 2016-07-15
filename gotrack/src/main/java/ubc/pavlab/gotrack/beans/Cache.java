@@ -75,6 +75,7 @@ import ubc.pavlab.gotrack.model.dto.AggregateDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
+import ubc.pavlab.gotrack.model.dto.GODefinitionDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
@@ -150,6 +151,9 @@ public class Cache implements Serializable {
 
     // Most current GeneOntology
     private GeneOntology currentOntology;
+
+    // Most current GO Term definitions
+    private Map<String, String> geneOntologyDefinitions = new ConcurrentHashMap<>();
 
     // Maps species if, edition -> aggregate
     // Holds information about aggregate statistics, such as species averages in an edition, etc
@@ -369,6 +373,11 @@ public class Cache implements Serializable {
                 go.addAlt( dto.getChild(), dto.getParent() );
             }
             log.info( "GO Alternates fetched" );
+
+            for ( GODefinitionDTO dto : cacheDAO.getGODefinitions() ) {
+                geneOntologyDefinitions.put( dto.getGoId(), dto.getDefinition() );
+            }
+            log.info( "GO Definitions fetched" );
 
             for ( GeneOntology go : ontologies.values() ) {
                 go.freeze();
@@ -1252,6 +1261,13 @@ public class Cache implements Serializable {
 
         return null;
 
+    }
+
+    public String getCurrentDefinition( GeneOntologyTerm term ) {
+        if ( term == null ) {
+            return null;
+        }
+        return geneOntologyDefinitions.get( term.getGoId() );
     }
 
     /**

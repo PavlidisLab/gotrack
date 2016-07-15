@@ -80,30 +80,70 @@
 					oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
 					actionListener="#{termView.fetchGraph()}" />
 				<p:tabView widgetVar="centerTabWdg" onTabShow="tabShowed(index)">
-					<p:tab title="Ancestry Chart">
-						<p:outputPanel>
-							<div id="loading-spinner-DAG" class="loading"
-								style="display: none;" />
-							<svg id="currentAncestry" width="900" height="600" />
+					<p:tab title="Term Information">
+					<p:outputPanel>
+						<p:panelGrid styleClass="no-border">
+							<p:row>
+								<p:column>
+									<h:outputText value="ID" />
+								</p:column>
+								<p:column>
+									<h:outputText value="#{termView.currentTerm.goId}"
+										styleClass="sqlDialogText" />
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<h:outputText value="Aspect" />
+								</p:column>
+								<p:column>
+									<h:outputText value="#{termView.currentTerm.aspect.label}"
+										styleClass="sqlDialogText" />
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column>
+									<h:outputText value="Name" />
+								</p:column>
+								<p:column>
+									<h:outputText value="#{termView.currentTerm.name}"
+										styleClass="sqlDialogText" />
+								</p:column>
+							</p:row>
+							<p:row>
+								<p:column style="vertical-align: top">
+									<h:outputText value="Definition" />
+								</p:column>
+								<p:column>
+									<h:outputText value="#{termView.definition}"
+										styleClass="sqlDialogText" />
+								</p:column>
+							</p:row>
+						</p:panelGrid>
+						<h3>Ancestry Chart</h3>
+						<div id="loading-spinner-DAG" class="loading"
+							style="display: none;" />
+						<svg id="currentAncestry" width="900" height="600" />
 						</p:outputPanel>
-
 					</p:tab>
 					<p:tab title="Child Terms">
 						<p:outputPanel>
-							<p:dataTable var="child" value="#{termView.currentTerm.children}"  styleClass="child-table">
-							    <p:column headerText="Relationship"  width="25%">
-							        <h:outputText value="#{child.type}" />
-							    </p:column>
-							 
-							    <p:column headerText="Term"  width="25%">
-							        <p:link value="#{child.relation.goId}" outcome="trends" target="_blank">
+							<p:dataTable var="child" value="#{termView.currentTerm.children}"
+								styleClass="child-table">
+								<p:column headerText="Relationship" width="25%">
+									<h:outputText value="#{child.type}" />
+								</p:column>
+
+								<p:column headerText="Term" width="25%">
+									<p:link value="#{child.relation.goId}" outcome="trends"
+										target="_blank">
 										<f:param name="query" value="#{child.relation.goId}" />
 									</p:link>
-							    </p:column>
-							 
-							    <p:column headerText="Name"  width="50%">
-							        <h:outputText value="#{child.relation.name}" />
-							    </p:column>
+								</p:column>
+
+								<p:column headerText="Name" width="50%">
+									<h:outputText value="#{child.relation.name}" />
+								</p:column>
 							</p:dataTable>
 						</p:outputPanel>
 					</p:tab>

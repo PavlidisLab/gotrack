@@ -87,6 +87,7 @@ public class TermView {
     private String query;
     private GOEdition currentGOEdition;
     private GeneOntologyTerm currentTerm;
+    private String definition;
 
     private Integer compareEditionId;
     private List<GOEdition> allGOEditions;
@@ -163,6 +164,8 @@ public class TermView {
                 }
             }
             Collections.sort( allGOEditions );
+
+            definition = cache.getCurrentDefinition( currentTerm );
 
             statsService.countTermHit( currentTerm );
 
@@ -551,6 +554,10 @@ public class TermView {
 
     public GeneOntologyTerm getCurrentTerm() {
         return currentTerm;
+    }
+
+    public String getDefinition() {
+        return definition;
     }
 
     public Integer getCompareEditionId() {

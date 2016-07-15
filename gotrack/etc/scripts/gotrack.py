@@ -23,6 +23,7 @@ class GOTrack:
     TABLES = {'go_term': "go_term",
               'go_adjacency': "go_adjacency",
               'go_alternate': "go_alternate",
+              'go_definition': "go_definition",
               'gene_annotation': "gene_annotation",
               'edition': "edition",
               'species': "species",
@@ -710,6 +711,32 @@ class GOTrack:
                     data_generator = ((go_edition_id,) + x for x in ont.alternate_list())
                     self.insert_multiple(GOTrack.TABLES['go_alternate'],
                                          ["go_edition_id_fk", "alt", "`primary`"], data_generator,
+                                         self.CONCURRENT_INSERTIONS, cur, False)
+
+                    self.con.commit()
+                except Exception as inst:
+                    log.error('Error rolling back %s, %s', ont.date.strftime('%Y-%m-%d'), inst)
+                    self.con.rollback()
+                    raise
+                finally:
+                    if cur:
+                        cur.close()
+
+        except _mysql.Error, e:
+            log.error("Problem with database connection, %s", e)
+            raise
+
+    def write_definitions(self, ont):
+        try:
+            self.con = self.test_and_reconnect()
+            with self.con as cur:
+                try:
+
+                    # Insert definition table
+                    log.info("Inserting Definition Table")
+                    data_generator = ont.list_definitions()
+                    self.insert_multiple(GOTrack.TABLES['go_definition'],
+                                         ["go_id", "definition"], data_generator,
                                          self.CONCURRENT_INSERTIONS, cur, False)
 
                     self.con.commit()
