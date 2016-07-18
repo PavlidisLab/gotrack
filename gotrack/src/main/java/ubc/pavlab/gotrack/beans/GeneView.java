@@ -79,6 +79,8 @@ public class GeneView {
 
     private static final Logger log = Logger.getLogger( GeneView.class );
 
+    private static int MULTIFUNCTIONALITY_SCALE = 10000;
+
     @Inject
     private Cache cache;
 
@@ -470,6 +472,7 @@ public class GeneView {
     private void fetchMultifunctionalityChart(
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchMultifunctionalityChart" );
+
         ChartValues chart = new ChartValues();
 
         // Calculate multifunctionality of the gene in each edition
@@ -487,13 +490,15 @@ public class GeneView {
                         multi += 1.0 / ( inGroup * ( total - inGroup ) );
                     }
                 }
-                multiSeries.addDataPoint( ed.getDate(), multi );
+                // Scaled by 10^4
+                multiSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * multi );
             }
 
             // Averages
             Aggregate agg = cache.getAggregates( species.getId(), ed );
             if ( agg != null ) {
-                averageSeries.addDataPoint( ed.getDate(), agg.getAvgMultifunctionality() );
+                // Scaled by 10^4
+                averageSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * agg.getAvgMultifunctionality() );
             }
         }
         chart.addSeries( averageSeries );
