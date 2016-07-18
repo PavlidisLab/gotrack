@@ -215,12 +215,13 @@ function handleFetchLossGainChart(xhr, status, args) {
    
    // Remove axis scale toggle, because negative values and log don't mix
    options.exporting = {
-                        sourceWidth: 800,
-                        sourceHeight: 450,
+                        enabled: true,
+                        sourceWidth  : 1600,
+                        sourceHeight : 900,
                         csv: {
                            dateFormat: '%Y-%m-%d'
-                        },
-                     };
+                        }
+   };
    
    // Click event functionality
    options.plotOptions.series.point = {
@@ -294,12 +295,13 @@ function handleFetchTimeline(xhr, status, args) {
    
    // Remove axis scale toggle, because negative values and log don't mix
    options.exporting = {
-                        sourceWidth: 800,
-                        sourceHeight: 450,
+                        enabled: true,
+                        sourceWidth  : 1600,
+                        sourceHeight : 900,
                         csv: {
                            dateFormat: '%Y-%m-%d'
-                        },
-                     };
+                        }
+   };
    
    options.plotOptions.series.point = {
                                        events: {
@@ -508,8 +510,8 @@ function createGenericLineChart(renderTo, args, baseMin, baseMax) {
                   colors : MAXIMALLY_DISTINCT_COLORS,
 
                   exporting: {
-                     sourceWidth: 800,
-                     sourceHeight: 450,
+                     sourceWidth: 1600,
+                     sourceHeight: 900,
                      csv: {
                         dateFormat: '%Y-%m-%d'
                      },

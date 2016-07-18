@@ -283,6 +283,9 @@ function handleEnrichmentComplete(xhr, status, args) {
                   colors : MAXIMALLY_DISTINCT_COLORS,
 
                   exporting: {
+                     enabled: true,
+                     sourceWidth  : 1600,
+                     sourceHeight : 900,
                      csv: {
                         dateFormat: '%Y-%m-%d'
                      }
@@ -443,7 +446,14 @@ function handleGraphSelected(xhr, status, args) {
                   };
    options.series = [];
    options.colors = MAXIMALLY_DISTINCT_COLORS;
-   options.exporting = { csv: { dateFormat: '%Y-%m-%d' } };
+   options.exporting = {
+      enabled: true,
+      sourceWidth  : 1600,
+      sourceHeight : 900,
+      csv: {
+         dateFormat: '%Y-%m-%d'
+      }
+   }
    
    if ( args.hc_type == "pvalue") {
       options.plotOptions.series.point = {
