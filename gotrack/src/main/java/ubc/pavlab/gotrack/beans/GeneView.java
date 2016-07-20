@@ -20,6 +20,7 @@
 package ubc.pavlab.gotrack.beans;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -75,7 +76,9 @@ import ubc.pavlab.gotrack.utilities.Jaccard;
  */
 @Named
 @ViewScoped
-public class GeneView {
+public class GeneView implements Serializable {
+
+    private static final long serialVersionUID = -585608351928148001L;
 
     private static final Logger log = Logger.getLogger( GeneView.class );
 
