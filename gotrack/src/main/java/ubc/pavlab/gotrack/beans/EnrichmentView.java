@@ -51,6 +51,7 @@ import org.primefaces.context.RequestContext;
 
 import com.google.gson.Gson;
 
+import jersey.repackaged.com.google.common.collect.Lists;
 import ubc.pavlab.gotrack.analysis.CombinedAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
@@ -166,7 +167,7 @@ public class EnrichmentView implements Serializable {
     private MultipleTestCorrection multipleTestCorrection = MultipleTestCorrection.BH; // method of multiple test correction
     private double pThreshold = 0.05; // threshold for bonferroni
     private double fdr = 0.05; //  fdr level for BH Step-up
-    private List<Aspect> aspects = Arrays.asList( Aspect.values() ); // Aspect restriction
+    private List<Aspect> aspects = Lists.newArrayList( Aspect.values() ); // Aspect restriction
 
     // Enrichment Feedback
     private StatusPoller statusPoller = new StatusPoller( " completed" ); // Used to display feedback in the overview tab
