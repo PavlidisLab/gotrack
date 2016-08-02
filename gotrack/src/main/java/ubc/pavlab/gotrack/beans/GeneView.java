@@ -648,7 +648,7 @@ public class GeneView implements Serializable {
         if ( selectedTerms.size() > 20 ) {
             // Too many terms
             RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_info", "Too Many Terms Selected." );
+            RequestContext.getCurrentInstance().addCallbackParam( "hc_info", "Too Many Terms Selected. Maximum 20." );
             return;
         }
 
