@@ -172,10 +172,10 @@ function handleEnrichmentComplete(xhr, status, args) {
                      zoomType: 'x',
                      resetZoomButton: {
                         position: {
-                           // align: 'right', // by default
+                           align: 'left',
                            // verticalAlign: 'top', // by default
-                           x: -10,
-                           y: -30
+                           x: 0,
+                           y: -35,
                         }
                      },
                      events: {
@@ -335,12 +335,12 @@ function handleGraphSelected(xhr, status, args) {
                     zoomType: 'xy',
                     resetZoomButton: {
                        position: {
-                          // align: 'right', // by default
+                          align: 'left',
                           // verticalAlign: 'top', // by default
-                          x: -10,
-                          y: -30
+                          x: 0,
+                          y: -35,
                        }
-                    }
+                    },
                  };
    options.title = { text: args.hc_title };
    options.subtitle = {
@@ -663,7 +663,7 @@ function handleGraphSelected(xhr, status, args) {
 
       for (var j = 0; j < series.data.length; j++) {
          var point = series.data[j];
-         data.push([point.x,point.y]);
+         data.push({x:point.x,y:utility.isUndefined( point.y ) ? null : point.y, marker:{enabled:false}});
       }
       options.series.push({
          name : name,
@@ -681,7 +681,9 @@ function handleGraphSelected(xhr, status, args) {
 
       for (var j = 0; j < series.data.length; j++) {
          var point = series.data[j];
-         data.push([point.x,point.y.left, point.y.right]);
+         // We disabled markers on the point level because disabling it at the series level removes series symbols from the legend.
+         // This is the least intrusive way of getting around this.
+         data.push({x:point.x,y:utility.isUndefined( point.y ) ? null : point.y, marker:{enabled:false}});
       }
       
       options.series.push({

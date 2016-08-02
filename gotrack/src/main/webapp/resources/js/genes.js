@@ -39,6 +39,31 @@ function timelineDlgResize() {
 }
 
 
+function handleDatatableDialog(wdgDlgId, wdgTabId, noLoop) {
+   var dlg = PF(wdgDlgId);
+   
+   if ( dlg.isVisible() ) {
+      // If the dialog is already visible, we may safely filter
+      PF(wdgTabId).filter();
+   } else {
+      // Dialog has yet to  be shown, filtering now will error, leave it to dialog's onShow
+      if (!noLoop) {
+         dlg.show();
+      }
+      
+   } 
+}
+
+function showViewAnnotationsDlg() {
+   try {
+   var dlg = PF('viewAnnotationsDlgWdg');
+   dlg.show();
+   dlg.moveToTop();
+   } catch (e) {
+     console.log(e); 
+   }
+}
+
 function HChart(id) {
    this.id = id;
    this.chart = null;
@@ -368,6 +393,13 @@ function handleFetchTimeline(xhr, status, args) {
       
    }
    
+   // Highcharts requires sorted data
+   for (var k = 0; k < options.series.length; k++) {
+      options.series[k].data.sort( function(a, b) {
+         return a.x-b.x;
+      });
+   }
+   
    options.tooltip.formatter = function() {
       var s = '<b>' + Highcharts.dateFormat('%b %Y',
          new Date(this.x)) + '</b>';
@@ -397,10 +429,10 @@ function createGenericLineChart(renderTo, args, baseMin, baseMax) {
                      zoomType: 'x',
                      resetZoomButton: {
                         position: {
-                           // align: 'right', // by default
+                           align: 'left',
                            // verticalAlign: 'top', // by default
-                           x: -30,
-                           y: -35
+                           x: 0,
+                           y: -35,
                         }
                      },
 //                     events: {

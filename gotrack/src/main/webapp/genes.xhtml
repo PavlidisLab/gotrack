@@ -137,25 +137,41 @@
 		<p:outputPanel rendered="#{geneView.gene == null}">
 			<h:form>
 				<h3 style="text-align: center;">Track a Gene</h3>
-				<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5" styleClass="geneSearchTable">
-
-					<h:outputText value="Select the species of interest (required): " />
-				<p:selectOneMenu id="selectspecies"
-					value="#{geneSearchView.speciesId}" style="margin-right:5px;">
-					<p:ajax event="change" process="@this" />
-					<f:selectItems value="#{cache.speciesList}" var="spec"
-						itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
-				</p:selectOneMenu>
-				<h:outputText value="Write the gene symbol to visualize: " />
-				<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
-					completeMethod="#{geneSearchView.complete}" queryDelay="600"
-					minQueryLength="2" forceSelection="true" label="ID"
-					emptyMessage="No gene suggestions available, please try again."
-					var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
-					groupBy="#{gene.type.label}" style="margin-right:8px;"/>
-				<p:commandButton type="submit" value="Go"
-					action="#{geneSearchView.go}" />
-					</h:panelGrid>
+				<p:panelGrid style="margin-bottom:10px" cellpadding="5" styleClass="geneSearchTable no-border">
+					<p:row>
+						<p:column>
+							<h:outputText value="Select the species of interest: " />
+						</p:column>
+						<p:column>
+							<p:selectOneMenu id="selectspecies"
+								value="#{geneSearchView.speciesId}" style="margin-right:5px;">
+								<p:ajax event="change" process="@this" />
+								<f:selectItems value="#{cache.speciesList}" var="spec"
+									itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
+							</p:selectOneMenu>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputText value="Write the gene symbol to visualize: " />
+						</p:column>
+						<p:column>
+							<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
+								completeMethod="#{geneSearchView.complete}" queryDelay="600"
+								minQueryLength="2" forceSelection="true" label="ID"
+								emptyMessage="No gene suggestions available, please try again."
+								var="gene" itemLabel="#{gene.selectedGene.symbol}"
+								itemValue="#{gene.selectedGene.symbol}"
+								groupBy="#{gene.type.label}" style="margin-right:8px;" />
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column colspan="2">
+							<p:commandButton type="submit" value="Go"
+								action="#{geneSearchView.go}" />
+						</p:column>
+					</p:row>
+				</p:panelGrid>
 			</h:form>
 			 
 		</p:outputPanel>
@@ -182,19 +198,19 @@
 				oncomplete="handleFilterCharts(xhr, status, args);"
 				actionListener="#{geneView.filterCharts()}" />
 			<p:remoteCommand name="fetchTimeline"
-				oncomplete="handleFetchTimeline(xhr, status, args);PF('timelineDlgWdg').show();"
+				oncomplete="PF('timelineDlgWdg').show();handleFetchTimeline(xhr, status, args);"
 				actionListener="#{geneView.fetchTimeline()}" />
 			<p:remoteCommand name="fetchAnnotationPointData"
-				oncomplete="PF('clickTermsTableWdg').clearFilters();PF('clickTermsDlgWdg').show();"
+				oncomplete="handleDatatableDialog('clickTermsDlgWdg', 'clickTermsTableWdg', false);"
 				update=":clickTermsForm:clickTermsTable"
 				actionListener="#{geneView.fetchAnnotationPointData()}" />
 			<p:remoteCommand name="fetchLossGainPointData"
-				oncomplete="PF('clickLGTermsTableWdg').clearFilters();PF('clickLGTermsDlgWdg').show();"
+				oncomplete="handleDatatableDialog('clickLGTermsDlgWdg', 'clickLGTermsTableWdg', false);"
 				update=":clickLGTermsForm:clickLGTermsTable"
 				actionListener="#{geneView.fetchLossGainPointData()}" />
 			<p:remoteCommand name="fetchTimelinePointData"
 				update=":viewAnnotationsForm:viewAnnotationsTable" 
-				oncomplete="PF('viewAnnotationsDlgWdg').show()"
+				oncomplete="showViewAnnotationsDlg();"
 				action="#{geneView.fetchTimelinePointData()}" />
 				
 		</h:form>
@@ -202,7 +218,7 @@
 		<p:dialog id="timelineDlg" widgetVar="timelineDlgWdg" modal="true" showEffect="fade"
 			hideEffect="fade" height="800" width="1200"
 			fitViewport="true" closeOnEscape="true"
-			onHide="timelineDlgHide()">
+			onHide="timelineDlgHide();" onShow="">
 			<!-- return false so that the ajax request is not executed. -->
 			<p:ajax event="maximize"
 				onstart="timelineDlgResize();return false;" />
@@ -215,7 +231,7 @@
 		<p:dialog id="clickTermsDlg" header="Terms"
 			widgetVar="clickTermsDlgWdg" modal="false" showEffect="fade"
 			hideEffect="fade" width="900"
-			fitViewport="true" closeOnEscape="true">
+			fitViewport="true" closeOnEscape="true" onShow="handleDatatableDialog('clickTermsDlgWdg', 'clickTermsTableWdg', true);">
 			<h:form id="clickTermsForm">
 				<p:dataTable id="clickTermsTable" widgetVar="clickTermsTableWdg" var="term"
 					value="#{geneView.clickTerms}" scrollable="true" sortMode="multiple"
@@ -245,7 +261,7 @@
 						<h:outputText value="#{term.name}" />
 					</p:column>
 			        <p:column style="width:32px;text-align: center">
-			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="PF('viewAnnotationsDlgWdg').show()" icon="ui-icon-search" title="View">
+			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="showViewAnnotationsDlg();" icon="ui-icon-search" title="View">
 			                <f:setPropertyActionListener value="#{term}" target="#{geneView.viewTerm}" />
 			            </p:commandButton>
 			        </p:column>
@@ -259,7 +275,7 @@
 		<p:dialog id="clickLGTermsDlg" header="Terms"
 			widgetVar="clickLGTermsDlgWdg" modal="false" showEffect="fade"
 			hideEffect="fade" width="900"
-			fitViewport="true" closeOnEscape="true">
+			fitViewport="true" closeOnEscape="true" onShow="handleDatatableDialog('clickLGTermsDlgWdg', 'clickLGTermsTableWdg', true);">
 			<h:form id="clickLGTermsForm">
 				<p:dataTable id="clickLGTermsTable" widgetVar="clickLGTermsTableWdg" var="lg"
 					value="#{geneView.clickLGTerms}" scrollable="true" sortMode="multiple"
@@ -302,7 +318,7 @@
 						<h:outputText value="#{lg.term.name}" />
 					</p:column>
 			        <p:column style="width:32px;text-align: center">
-			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="PF('viewAnnotationsDlgWdg').show()" icon="ui-icon-search" title="View">
+			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="showViewAnnotationsDlg();" icon="ui-icon-search" title="View">
 			                <f:setPropertyActionListener value="#{lg.term}" target="#{geneView.viewTerm}" />
 			            </p:commandButton>
 			        </p:column>

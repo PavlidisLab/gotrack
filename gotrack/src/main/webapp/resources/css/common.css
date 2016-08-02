@@ -64,12 +64,24 @@ div.ui-terminal {
 	color: white;
 }
 
-button.icon-only {
-	height: 0px;
-	width: 0px;
-	top: 14px;
-	left: 5px;
+button.ui-button.icon-only {
+	background:none;
+	border:none;
+	width:16px;
 }
+
+button.ui-button.icon-only:focus {
+	outline:none;
+}
+
+button.ui-button.icon-only span {
+	left:0;
+}
+
+span.ui-column-title > button.ui-button.icon-only span {
+	margin-top: -12px;
+}
+	
 
 #body tr.ui-state-highlight td {
 	text-shadow: none;
@@ -119,4 +131,9 @@ button.icon-only {
 
 i.fa.fa-external-link:hover {
 	color: #0000ff;
+}
+
+table.no-border tr, 
+table.no-border td {
+	border: none !important;
 }

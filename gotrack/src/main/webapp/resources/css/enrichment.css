@@ -107,10 +107,6 @@ span.filter-spinner input {
 	width:75px;
 }
 
-body .ui-selectonemenu .ui-selectonemenu-label {
-	width:auto;
-}
-
 div.data-grid-height-restricted > div.ui-datagrid-content {
   height: 300px;
   overflow-y: auto;

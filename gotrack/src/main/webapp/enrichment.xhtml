@@ -315,7 +315,7 @@
 										value="Graph Selected Term"
 										actionListener="#{enrichmentView.createStabilityChartFromSelected()}"
 										icon="fa fa-line-chart"
-										oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();" />
+										oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);" />
 								</span>
 								<h:commandLink>
 									<h:graphicImage library="img" name="excel.png" width="24" />
@@ -476,7 +476,7 @@
 										value="GO"
 										actionListener="#{enrichmentView.createChart()}"
 										icon="fa fa-line-chart"
-										oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();" />
+										oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);" />
 								</span>
 								<h:commandLink>
 									<h:graphicImage library="img" name="excel.png" width="24" />
