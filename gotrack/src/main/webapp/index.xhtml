@@ -4,7 +4,8 @@
 	xmlns:h="http://java.sun.com/jsf/html"
 	xmlns:f="http://java.sun.com/jsf/core"
 	xmlns:p="http://primefaces.org/ui"
-	xmlns:of="http://omnifaces.org/functions">
+	xmlns:of="http://omnifaces.org/functions"
+	xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
 <h:head>
 	<title>GOtrack</title>
 	<h:outputStylesheet library="css" name="style.css" />
@@ -20,6 +21,13 @@
 	<meta name="keywords"
 		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software,enrichment,GO" />
 	<meta name="author" content="GOtrack admin (jacobsonmt+gotrack@gmail.com)" />
+
+	<ui:include src="/WEB-INF/templates/analytics.xhtml" />
+
+	<script type="text/javascript">
+        	googleAnalyticsTrackPageviewIfConfigured( "/gotrack/index" );
+    </script>
+
 
 </h:head>
 

@@ -19,6 +19,9 @@
 		<h:outputStylesheet library="css" name="enrichment.css" />
 	</ui:define>
 	<ui:define name="js">
+		<script type="text/javascript">
+	        	googleAnalyticsTrackPageviewIfConfigured( "/gotrack/enrichment" );
+	    </script>
 		<h:outputScript library="js" name="utility.js" />
 
 		<!-- Highcharts stuff -->
