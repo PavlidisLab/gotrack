@@ -62,7 +62,7 @@ public class TermSearchView implements Serializable {
         if ( !cache.termExists( query ) ) {
             return null;
         }
-        return "/trends?faces-redirect=true&query=" + query;
+        return "/terms?faces-redirect=true&query=" + query;
     }
 
     public String getQuery() {

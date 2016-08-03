@@ -134,7 +134,7 @@ function createVisGraph(args, selector) {
       }
       //var label = utility.wordwrap(n.label.substring(0, 30) + ( (n.label.length > 30) ? "...": "" ),15,'\n');
       var label = n.label.substring(0, 15) + ( (n.label.length > 15) ? "...": "" );
-      opts = { class: clazzz.join(" "), label: label, href: "trends.xhtml?query=GO%3A" + utility.pad(n.id,7), description: n.label, go_id:"GO:"+utility.pad(n.id,7) } ;
+      opts = { class: clazzz.join(" "), label: label, href: "terms.xhtml?query=GO%3A" + utility.pad(n.id,7), description: n.label, go_id:"GO:"+utility.pad(n.id,7) } ;
       return opts;
    }
 
@@ -770,7 +770,7 @@ function showDiff(cs, args) {
          data: { 
             id: String(n.id), 
             label: label,
-            href: "trends.xhtml?query=GO%3A" + utility.pad(n.id,7),
+            href: "terms.xhtml?query=GO%3A" + utility.pad(n.id,7),
             added: 1
          } ,
          //position: { x: 0, y: 0 }
