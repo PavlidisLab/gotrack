@@ -431,7 +431,7 @@ function createGenericLineChart(renderTo, args, baseMin, baseMax) {
                         position: {
                            align: 'left',
                            // verticalAlign: 'top', // by default
-                           x: 0,
+                           x: 35,
                            y: -35,
                         }
                      },
