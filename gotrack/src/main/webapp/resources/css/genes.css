@@ -34,3 +34,7 @@ tr.GAIN-color {
 	background-image: none;
 	color: #000000;
 }
+
+div.ui-lightbox-content-wrapper > div.ui-lightbox-content {
+	background: #FCFFFF;
+}

@@ -49,6 +49,12 @@
 		<p:layoutUnit id="right" position="east" size="40%" minSize="300"
 			header="Functionality" resizable="true" collapsible="true"
 			style="text-align:center" collapsed="#{geneView.gene == null}">
+			<f:facet name="header">
+				<h:outputText value="Functionality" />
+				<p:commandButton id="rightLayoutHelpBtn" value=""
+								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								type="button" />
+			</f:facet>
 			<h:form id="rightForm" style="height:100%;">
 				<p:dataTable id="funcTable" widgetVar="funcTable" var="term"
 					value="#{geneView.allTerms}" scrollable="true" sortMode="multiple"
@@ -112,21 +118,45 @@
 				
 			</div>
 			<p:separator style="max-width:400px" />
-			<h:form>
-				<p:tabView widgetVar="centerTabWdg" onTabShow="tabShowed(index)">
-					<p:tab title="Annotation">	
+			<h:form id="centerTabViewForm">
+				<p:tabView id="centerTabView" widgetVar="centerTabWdg" onTabShow="tabShowed(index)">
+					<p:tab>	
+						<f:facet name='title'>
+							<h:outputText value="Annotation " />
+							<p:commandButton id="annotationTabHelpBtn" value=""
+								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								type="button" />
+						</f:facet>
 						<div id="loading-spinner-annotation" class="loading" style="display: none;" />					
 						<div id="hc_annotation_container" style="width: 100%; height: 600px;"/>
 					</p:tab>
-					<p:tab title="Similarity">	
+					<p:tab>	
+						<f:facet name='title'>
+							<h:outputText value="Similarity " />
+							<p:commandButton id="similarityTabHelpBtn" value=""
+								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								type="button" />
+						</f:facet>
 						<div id="loading-spinner-similarity" class="loading" style="display: none;" />					
 						<div id="hc_similarity_container" style="width: 100%; height: 600px;"/>
 					</p:tab>
-					<p:tab title="Multifunctionality">	
+					<p:tab>
+						<f:facet name='title'>
+							<h:outputText value="Multifunctionality " />
+							<p:commandButton id="multifunctionalityTabHelpBtn" value=""
+								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								type="button" />
+						</f:facet>
 						<div id="loading-spinner-multifunctionality" class="loading" style="display: none;" />					
 						<div id="hc_multi_container" style="width: 100%; height: 600px;"/>
 					</p:tab>
-					<p:tab title="Loss/Gain">	
+					<p:tab>
+						<f:facet name='title'>
+							<h:outputText value="Loss/Gain " />
+							<p:commandButton id="lossgainTabHelpBtn" value=""
+								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								type="button" />
+						</f:facet>
 						<div id="loading-spinner-lossgain" class="loading" style="display: none;" />					
 						<div id="hc_lossgain_container" style="width: 100%; height: 600px;"/>
 					</p:tab>
@@ -222,6 +252,11 @@
 			hideEffect="fade" height="800" width="1200"
 			fitViewport="true" closeOnEscape="true"
 			onHide="timelineDlgHide();" onShow="">
+			<f:facet name="header">
+				<p:commandButton id="timelineHelpBtn" value=""
+					styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+					type="button" />
+			</f:facet>
 			<!-- return false so that the ajax request is not executed. -->
 			<p:ajax event="maximize"
 				onstart="timelineDlgResize();return false;" />
@@ -347,7 +382,29 @@
 					<p:column headerText="Evidence">
 						<h:outputText value="#{annot.annotation.evidence.evidence}" />
 					</p:column>
-					<p:column headerText="Category">
+					<p:column>
+						<f:facet name="header">
+							<h:outputText value="Category" />
+							<p:commandButton id="categoryHelpBtn" value=""
+								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								type="button" />
+							<p:overlayPanel for="categoryHelpBtn" hideEffect="fade"
+								style="width:400px;text-align:left;">
+								<p>Manually-assigned evidence codes fall into four general
+									categories: experimental, computational analysis, author
+									statements, and curatorial statements. Out of all the evidence codes available, only Inferred
+									from Electronic Annotation (IEA) is not assigned by a curator.</p>
+								<p:lightBox>
+									<h:outputLink
+										value="/gotrack/javax.faces.resource/diag-evCodeFlowChartGood.png?ln=img"
+										title="Evidence Code Flow Chart">
+										<h:graphicImage library="img" width="100" height="56"
+											name="diag-evCodeFlowChartGood.png" />
+									</h:outputLink>
+								</p:lightBox>
+							</p:overlayPanel>
+						</f:facet>
+
 						<h:outputText value="#{annot.annotation.evidence.category}" />
 					</p:column>
 					<p:column headerText="Description">
@@ -366,6 +423,54 @@
 				</p:dataTable>
 			</h:form>
 		</p:dialog>
+		
+				<p:overlayPanel for=":centerTabViewForm:centerTabView:annotationTabHelpBtn" hideEffect="fade"
+						style="width:600px;text-align:left;">
+					<p>The <b>annotation plot</b> shows distinct counts of both direct and inferred GO annotations connected to this gene. 
+					   A distinct annotation is defined as being both unique in GO Term and Evidence.</p>
+					<p><b>Direct Annotation Count:</b> Distinct count of directly applied annotations.</p>
+					<p><b>Inferred Annotation Count:</b> Distinct count of directly applied annotations as well as their GO ancestors. 
+					   <i>Example: A gene directly annotated with <a target="_blank" class="underline" href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0033058">directional locomotion</a> is also implicitly annotated with its parents (<a target="_blank" class="underline" href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0040011">locomotion</a>).</i></p>
+				</p:overlayPanel>
+				<p:overlayPanel for=":centerTabViewForm:centerTabView:similarityTabHelpBtn" hideEffect="fade"
+							style="width:600px;text-align:left;">
+					<p>The <b>similarity plot</b> shows the semantic similarity of the set of annotated GO terms from previous dates as compared to the most current set. 
+					   Semantic similarity is measured using the Jaccard Index.</p>
+					<p><b>Direct Similarity:</b> Similarity of directly annotated GO terms.</p>
+					<p><b>Inferred Similarity:</b> Similarity of directly annotated GO terms as well as their ancestors.</p>
+				</p:overlayPanel>
+				<p:overlayPanel for=":centerTabViewForm:centerTabView:multifunctionalityTabHelpBtn" hideEffect="fade"
+								style="width:600px;text-align:left;">
+					<p>The <b>multifunctionality plot</b> shows the multifunctionality of the selected gene. 
+					   Gene multifunctionality is measured as per <a href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258" class="underline" target="_blank">Gillis and Pavlidis, 2011</a>.</p>
+				</p:overlayPanel>
+				<p:overlayPanel for=":centerTabViewForm:centerTabView:lossgainTabHelpBtn" hideEffect="fade"
+					style="width:600px;text-align:left;">
+					<p>The <b>loss/gain plot</b> shows the total loss and gain of distinct GO terms between consecutive editions of GO Annotations.</p>
+					<p><b>Loss:</b> Number of GO terms that are <i>no longer annotated</i> to the gene since the previous edition.</p>
+					<p><b>Gain:</b> Number of GO terms that are <i>newly annotated</i> to the gene since the previous edition.</p>
+					<p><b>Direct vs Inferred:</b> Direct measure look only at those terms wihch are directly annotated to this gene. Inferred also includes the ancestors of said terms.</p>
+				</p:overlayPanel>
+				<p:overlayPanel for="timelineHelpBtn" hideEffect="fade"
+					style="width:600px;text-align:left;">
+					<p>The Following is the <b>Evidence Timeline</b> of the selected GO terms.</p> 
+					<p>For each GO term horizontal bars represent the existence of specific types of evidence for a given GO Annotation Edition.</p>
+					<p>See the following for an explanation of Evidence Codes:</p>
+					<p:lightBox>
+						<h:outputLink value="/gotrack/javax.faces.resource/diag-evCodeFlowChartGood.png?ln=img" title="Evidence Code Flow Chart">
+							<h:graphicImage library="img" width="100" height="56" name="diag-evCodeFlowChartGood.png" />
+						</h:outputLink>
+					</p:lightBox>
+				</p:overlayPanel>
+				<p:overlayPanel for=":rightLayoutHelpBtn" hideEffect="fade"
+					style="width:600px;text-align:left;">
+					<p>The following table shows all GO Terms that have ever been annotated to this gene.</p>
+					<p>You may select GO terms for use with the following functionalities by clicking on their checkmark in the leftmost column.</p>
+					<p><b>View Terms:</b> View the Evidence Code timeline of selected GO terms.</p>
+					<p><b>Filter Charts:</b> Filter the various plots on this page to use a selected subset of GO terms.</p>
+					<p><b>Reset Charts:</b> Reset your filtered GO term subsets.</p>
+				</p:overlayPanel>
+				
 
 	</ui:define>
 

@@ -510,7 +510,7 @@ public class GeneView implements Serializable {
         RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
                 "Multifunctionality of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Multifunctionality" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Multifunctionality [10^-5]" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
         RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
     }
