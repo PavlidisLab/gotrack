@@ -45,15 +45,15 @@ svg .edgePath {
             transition: opacity 0.1s ease-in-out;
 }
 
-svg .edgePath.added, svg .edgePath.deleted {
+svg g.edgePath.added, svg g.edgePath.deleted {
 	stroke-dasharray: 5, 5;
 }
 
-svg .edgePath.deleted > path {
+svg g.edgePath.deleted > path {
 	stroke: #cc0000;
 }
 
-svg .edgePath.added > path {
+svg g.edgePath.added > path {
 	stroke: #73d216;
 }
 
@@ -173,4 +173,8 @@ div.child-table {
 
 div.child-table table {
 	 table-layout: auto !important;
+}
+
+div.ui-lightbox-content-wrapper > div.ui-lightbox-content {
+	background: #FCFFFF;
 }
