@@ -20,7 +20,6 @@
 package ubc.pavlab.gotrack.beans;
 
 import java.io.Serializable;
-import java.util.Map.Entry;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -67,9 +66,9 @@ public class SettingsCache implements Serializable {
         log.info( "SettingsCache init" );
 
         prop.load( PROPERTIES_FILE, PROPERTIES_PATH, PROPERTIES_BACKUP_PATH );
-        for ( Entry<Object, Object> e : prop.entrySet() ) {
-            log.info( e.getKey().toString() + " : " + e.getValue().toString() );
-        }
+        //        for ( Entry<Object, Object> e : prop.entrySet() ) {
+        //            log.info( e.getKey().toString() + " : " + e.getValue().toString() );
+        //        }
 
     }
 
