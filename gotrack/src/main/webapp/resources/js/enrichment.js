@@ -19,6 +19,31 @@ var showLoadingSpinner = function() {
 //});
 //});
 
+function runEnrichmentOnClick() {
+   try {
+      PF('runEnrichmentBtnWdg').disable();
+      PF('enrichmentProgressBarWdg').start();
+      window.progressBarId=PF('enrichmentProgressBarWdg').progressPoll;
+   } catch (e) {
+      console.log(e);
+   }
+}
+
+function runEnrichmentComplete(xhr, status, args) {
+   try {
+   reInitializeCharts();
+   handleEnrichmentComplete(xhr, status, args);
+   
+   var wdg = PF('tabEnrichWdg');
+   for (var j = 0; j < wdg.getLength(); j++) {
+      wdg.enable(j);
+    }
+   
+   } catch (e) {
+      console.log(e);
+   }
+}
+
 function centerResize() {
    //updateCenterPanel();
    try {

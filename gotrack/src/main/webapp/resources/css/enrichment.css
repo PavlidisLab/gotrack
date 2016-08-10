@@ -192,3 +192,16 @@ tr.ui-widget-content.not-significant td:last-child, tr.ui-widget-content.not-sig
 .stability-gradient.stability-gradient20 {
 	background: #E47C84;
 }
+
+div.ui-overlaypanel-content {
+	width:600px;
+	text-align:left;
+}
+
+div.options-overlay > div.ui-overlaypanel-content {
+	width:400px;
+}
+
+div.options-overlay > div.ui-overlaypanel-content > p {
+	margin:0.5em;
+}
