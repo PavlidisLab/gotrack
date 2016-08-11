@@ -19,6 +19,31 @@ var showLoadingSpinner = function() {
 //});
 //});
 
+function runEnrichmentOnClick() {
+   try {
+      PF('runEnrichmentBtnWdg').disable();
+      PF('enrichmentProgressBarWdg').start();
+      window.progressBarId=PF('enrichmentProgressBarWdg').progressPoll;
+   } catch (e) {
+      console.log(e);
+   }
+}
+
+function runEnrichmentComplete(xhr, status, args) {
+   try {
+   reInitializeCharts();
+   handleEnrichmentComplete(xhr, status, args);
+   
+   var wdg = PF('tabEnrichWdg');
+   for (var j = 0; j < wdg.getLength(); j++) {
+      wdg.enable(j);
+    }
+   
+   } catch (e) {
+      console.log(e);
+   }
+}
+
 function centerResize() {
    //updateCenterPanel();
    try {
@@ -172,10 +197,10 @@ function handleEnrichmentComplete(xhr, status, args) {
                      zoomType: 'x',
                      resetZoomButton: {
                         position: {
-                           // align: 'right', // by default
+                           align: 'left',
                            // verticalAlign: 'top', // by default
-                           x: -10,
-                           y: -30
+                           x: 0,
+                           y: -35,
                         }
                      },
                      events: {
@@ -283,6 +308,9 @@ function handleEnrichmentComplete(xhr, status, args) {
                   colors : MAXIMALLY_DISTINCT_COLORS,
 
                   exporting: {
+                     enabled: true,
+                     sourceWidth  : 1600,
+                     sourceHeight : 900,
                      csv: {
                         dateFormat: '%Y-%m-%d'
                      }
@@ -332,12 +360,12 @@ function handleGraphSelected(xhr, status, args) {
                     zoomType: 'xy',
                     resetZoomButton: {
                        position: {
-                          // align: 'right', // by default
+                          align: 'left',
                           // verticalAlign: 'top', // by default
-                          x: -10,
-                          y: -30
+                          x: 0,
+                          y: -35,
                        }
-                    }
+                    },
                  };
    options.title = { text: args.hc_title };
    options.subtitle = {
@@ -443,7 +471,14 @@ function handleGraphSelected(xhr, status, args) {
                   };
    options.series = [];
    options.colors = MAXIMALLY_DISTINCT_COLORS;
-   options.exporting = { csv: { dateFormat: '%Y-%m-%d' } };
+   options.exporting = {
+      enabled: true,
+      sourceWidth  : 1600,
+      sourceHeight : 900,
+      csv: {
+         dateFormat: '%Y-%m-%d'
+      }
+   }
    
    if ( args.hc_type == "pvalue") {
       options.plotOptions.series.point = {
@@ -653,7 +688,9 @@ function handleGraphSelected(xhr, status, args) {
 
       for (var j = 0; j < series.data.length; j++) {
          var point = series.data[j];
-         data.push([point.x,point.y]);
+         // We disabled markers on the point level because disabling it at the series level removes series symbols from the legend.
+         // This is the least intrusive way of getting around this.
+         data.push({x:point.x,y:utility.isUndefined( point.y ) ? null : point.y, marker:{enabled:false}});
       }
       options.series.push({
          name : name,

@@ -7,4 +7,9 @@
     <ui:define name="errorContent">
         <p>The requested resource as specified in your browser's address bar cannot be found.</p>
     </ui:define>
+    <ui:define name="js">
+		<script type="text/javascript">
+	        	googleAnalyticsTrackPageviewIfConfigured( "/gotrack/error/404" );
+	    </script>
+	</ui:define>
 </ui:composition>

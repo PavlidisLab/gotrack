@@ -20,6 +20,7 @@ table.geneSearchTable {
 
 div.ui-datatable button.ui-button.ui-widget.ui-state-default.ui-corner-all.ui-button-icon-only {
 	height: 16px;
+	outline: none;
 }
 
 tr.LOSS-color {
@@ -32,4 +33,8 @@ tr.GAIN-color {
 	background-color: #bbfcb4;
 	background-image: none;
 	color: #000000;
+}
+
+div.ui-lightbox-content-wrapper > div.ui-lightbox-content {
+	background: #FCFFFF;
 }

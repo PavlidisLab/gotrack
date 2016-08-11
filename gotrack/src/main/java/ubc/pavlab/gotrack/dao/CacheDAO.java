@@ -30,6 +30,7 @@ import ubc.pavlab.gotrack.model.dto.AggregateDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
+import ubc.pavlab.gotrack.model.dto.GODefinitionDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
@@ -99,6 +100,11 @@ public interface CacheDAO {
      * pre-processing to be done.
      */
     public List<SimpleAnnotationDTO> getSimpleAnnotations( Integer speciesId, Edition ed ) throws DAOException;
+
+    /**
+     * Retrieve all definitions for most current ontology
+     */
+    public List<GODefinitionDTO> getGODefinitions() throws DAOException;
 
     /**
      * Write annotation counts on a per species, edition, GO Term basis to the DB for fast cache creation in later

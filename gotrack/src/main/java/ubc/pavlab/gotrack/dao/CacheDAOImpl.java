@@ -42,6 +42,7 @@ import ubc.pavlab.gotrack.model.dto.AggregateDTO;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
+import ubc.pavlab.gotrack.model.dto.GODefinitionDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 import ubc.pavlab.gotrack.model.dto.GeneDTO;
@@ -97,6 +98,7 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from go_term";
     private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from go_adjacency";
     private static final String SQL_GO_ALTERNATE = "select go_edition_id_fk, alt, `primary` from go_alternate";
+    private static final String SQL_GO_DEFINITION = "select go_id, definition from go_definition";
 
     // Evidence
     private static final String SQL_EVIDENCE = "SELECT id, evidence, description, category FROM evidence_categories";
@@ -511,6 +513,34 @@ public class CacheDAOImpl implements CacheDAO {
         }
 
         return list;
+    }
+
+    @Override
+    public List<GODefinitionDTO> getGODefinitions() throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        List<GODefinitionDTO> results = new ArrayList<>();
+
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( SQL_GO_DEFINITION );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+            while ( resultSet.next() ) {
+                // go_edition_id_fk, alt, primary
+                results.add(
+                        new GODefinitionDTO( resultSet.getString( "go_id" ), resultSet.getString( "definition" ) ) );
+
+            }
+
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
     }
 
     // WRITE ORIENTED ***************** THESE ARE NO LONGER USED BUT ARE BEING KEPT FOR NOW... JUST IN CASE ******************

@@ -14,11 +14,14 @@
 			<f:event type="preRenderView" listener="#{enrichmentView.init}" />
 		</f:metadata>
 	</ui:define>
-	<ui:define name="pageTitle">UBC-CHiBi|GOtrack</ui:define>
+	<ui:define name="pageTitle">GOtrack</ui:define>
 	<ui:define name="css">
 		<h:outputStylesheet library="css" name="enrichment.css" />
 	</ui:define>
 	<ui:define name="js">
+		<script type="text/javascript">
+	        	googleAnalyticsTrackPageviewIfConfigured( "/gotrack/enrichment" );
+	    </script>
 		<h:outputScript library="js" name="utility.js" />
 
 		<!-- Highcharts stuff -->
@@ -33,13 +36,21 @@
 		<h:outputScript library="js" name="common.js" />
 	</ui:define>
 	<ui:define name="left_right_layout">
-		<p:layoutUnit id="left" position="west" size="350" resizable="true"
+		<p:layoutUnit id="left" position="west" size="350" resizable="false"
 			collapsible="true" header="Options" minSize="350">
 			<h:form id="formSelect">
 
 				<h3 class="center">Global Settings</h3>
-				<h:panelGrid columns="2" style="margin-bottom:10px" cellpadding="5">
-					<h:outputText value="Species: " />
+				<p:panelGrid style="margin-bottom:10px" cellpadding="5" styleClass="no-border">
+					<p:row>
+					<p:column>
+					<p:commandButton id="speciesOptionHelpBtn" value=""
+								styleClass="icon-only" icon="fa fa-question-circle"
+								type="button" />
+					<h:outputText value="Species:" />
+					</p:column>
+					
+					<p:column>
 					<p:selectOneMenu id="selectspecies"
 						value="#{enrichmentView.currentSpeciesId}">
 						<p:ajax event="change" process="@this"
@@ -47,7 +58,9 @@
 						<f:selectItems value="#{cache.speciesList}" var="spec"
 							itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
 					</p:selectOneMenu>
-				</h:panelGrid>
+					</p:column>
+					</p:row>
+				</p:panelGrid>
 
 				<p:dataList id="geneList" value="#{enrichmentView.selectedGenes}"
 					var="gene" type="unordered" itemType="none" styleClass="geneList">
@@ -88,14 +101,15 @@
 
 				<p:separator style="max-width:200px" />
 				<h3 class="center">Enrichment Settings</h3>
-				<p:panelGrid id="enrichmentSettingsPanel" style="margin-bottom:10px"
-					cellpadding="5" styleClass="no-border">
+				<p:panelGrid id="enrichmentSettingsPanel" style="margin-bottom:10px;width:100%;"
+					cellpadding="5" styleClass="no-border" columns="2" columnClasses="ui-grid-col-5, ui-grid-col-7">
 					
-					<p:row>
+					
 						<p:column>
-							<i class="fa fa-info-circle"
-								title="Which aspects (Cellular Component, Biological Process, Molecular Function) to include in the analysis.">&#160;
-								Dataset:</i>
+							<p:commandButton id="datasetOptionHelpBtn" value=""
+									styleClass="icon-only" icon="fa fa-question-circle" 
+									type="button" />
+							<h:outputText value="Dataset:" />
 						</p:column>
 						<p:column>
 							<p:selectManyButton value="#{enrichmentView.aspects}" converter="omnifaces.GenericEnumConverter">
@@ -103,71 +117,60 @@
 									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 							</p:selectManyButton>
 						</p:column>
-					</p:row>
+					
 
-					<p:row>
+					
 						<p:column>
-							<i class="fa fa-info-circle"
-								title="Type of multiple tests correction to apply.">&#160;
-								Multiple Tests:</i>
+							<p:commandButton id="multipleOptionHelpBtn" value=""
+									styleClass="icon-only" icon="fa fa-question-circle" 
+									type="button" />
+							<h:outputText value="Multiple Tests:" />
 						</p:column>
 						<p:column>
 							<p:selectOneMenu value="#{enrichmentView.multipleTestCorrection}">
-								<p:ajax event="change"
-									update=":formSelect:enrichmentSettingsPanel" />
 								<f:selectItems value="#{cache.multipleTestCorrections}"
 									var="test" itemValue="#{test}" itemLabel="#{test.label}" />
 							</p:selectOneMenu>
 						</p:column>
-					</p:row>
-
-					<p:row
-						rendered="#{enrichmentView.multipleTestCorrection == 'BONFERRONI'}">
+						
 						<p:column>
-							<i class="fa fa-info-circle"
-								title="Select only those terms who have ever been below this threshold">&#160;
-								P-value threshold:</i>
+							<p:commandButton id="thresholdOptionHelpBtn" value=""
+									styleClass="icon-only" icon="fa fa-question-circle" 
+									type="button" />
+							<h:outputText value="Threshold:" />
 						</p:column>
+						
 						<p:column>
 							<pe:inputNumber value="#{enrichmentView.pThreshold}"
 								emptyValue="zero" decimalPlaces="4" style="max-width: 100px" />
 						</p:column>
-					</p:row>
+					
 
-					<p:row rendered="#{enrichmentView.multipleTestCorrection == 'BH'}">
+					
 						<p:column>
-							<i class="fa fa-info-circle"
-								title="Control the FDR at this level">&#160; FDR level:</i>
-						</p:column>
-						<p:column>
-							<pe:inputNumber value="#{enrichmentView.pThreshold}"
-								emptyValue="zero" decimalPlaces="4" style="max-width: 100px" />
-						</p:column>
-					</p:row>
-
-					<p:row>
-						<p:column>
-							<i class="fa fa-info-circle"
-								title="Select only those terms with at least this number of genes associated with them">&#160;
-								Min Geneset:</i>
+								<p:commandButton id="minOptionHelpBtn" value=""
+									styleClass="icon-only" icon="fa fa-question-circle" 
+									type="button" />
+								<h:outputText value="Min Geneset:" />
 						</p:column>
 						<p:column>
 							<p:spinner id="annotatedPopulationMinInput"
 								value="#{enrichmentView.minAnnotatedPopulation}" min="0" />
 						</p:column>
-					</p:row>
+					
 
-					<p:row>
+					
 						<p:column>
-							<i class="fa fa-info-circle"
-								title="Select only those terms with at most this number of genes associated with them (0 for disabled)">&#160;
-								Max Geneset:</i>
+								<p:commandButton id="maxOptionHelpBtn" value=""
+									styleClass="icon-only" icon="fa fa-question-circle" 
+									type="button" />
+								<h:outputText value="Max Geneset:" />
 						</p:column>
 						<p:column>
 							<p:spinner id="annotatedPopulationMaxInput"
 								value="#{enrichmentView.maxAnnotatedPopulation}" min="0" />
 						</p:column>
-					</p:row>
+					
 
 				</p:panelGrid>
 
@@ -178,9 +181,10 @@
 
 					<p:row>
 						<p:column>
-							<i class="fa fa-info-circle"
-								title="Compare analysis results to previous edition (PROXIMAL) or current edition (CURRENT) ">&#160;
-								Similarity Between:</i>
+								<p:commandButton id="similarityOptionHelpBtn" value=""
+									styleClass="icon-only" icon="fa fa-question-circle" 
+									type="button" />
+								<h:outputText value="Similarity Between:" />
 						</p:column>
 						<p:column>
 							<p:selectOneMenu
@@ -197,9 +201,9 @@
 					<p:commandButton value="Run Enrichment"
 						widgetVar="runEnrichmentBtnWdg"
 						actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
-						update=":formEnrich, :formSelect"
-						onclick="PF('runEnrichmentBtnWdg').disable();PF('enrichmentProgressBarWdg').start();window.progressBarId=PF('enrichmentProgressBarWdg').progressPoll;"
-						oncomplete="reInitializeCharts();handleEnrichmentComplete(xhr, status, args);"
+						update=":formSelect :formEnrich:tabEnrich:overviewForm :formEnrich:tabEnrich:similarityChartPanel :formEnrich:tabEnrich:tableStability :formEnrich:tabEnrich:tablePanel"
+						onclick="runEnrichmentOnClick();"
+						oncomplete="runEnrichmentComplete(xhr, status, args);"
 						disabled="#{fn:length(enrichmentView.selectedGenes) == 0}" />
 				</div>
 
@@ -218,10 +222,10 @@
 		<h:form id="formEnrich">
 			<p:remoteCommand name="updateCenterPanel" update=":formEnrich" />
 
-			<p:tabView id="tabEnrich" onTabShow="tabShowed(index)" dynamic="true" cache="true">
+			<p:tabView id="tabEnrich" widgetVar="tabEnrichWdg" onTabShow="tabShowed(index)">
 				<p:tab title="Overview">
 
-					<h:form>
+					<h:form id="overviewForm">
 						<p:progressBar widgetVar="enrichmentProgressBarWdg" interval="500"
 							ajax="true" value="#{enrichmentView.enrichmentProgress}"
 							labelTemplate="{value}%" styleClass="animated" global="false"
@@ -282,14 +286,23 @@
 						</p:outputPanel>
 					</h:form>
 				</p:tab>
-				<p:tab title="Similarity"
-					rendered="#{enrichmentView.enrichmentSuccess}">
+				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">
+					<f:facet name='title'>
+							<h:outputText value="Similarity " />
+							<p:commandButton id="similarityTabHelpBtn" value=""
+								styleClass="icon-only noupdate" icon="fa fa-question-circle" type="button"/>
+					</f:facet>
 					<p:outputPanel id="similarityChartPanel">
 						<div id="hc_similarity_container"
 							style="width: 100%; height: 600px;"></div>
 					</p:outputPanel>
 				</p:tab>
-				<p:tab title="Stability" rendered="#{enrichmentView.enrichmentSuccess}">
+				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">
+					<f:facet name='title'>
+							<h:outputText value="Stability " />
+							<p:commandButton id="stabilityTabHelpBtn" value=""
+								styleClass="icon-only noupdate" icon="fa fa-question-circle" type="button" />
+					</f:facet>
 						<p:contextMenu for="tableStability">
 							<p:menuitem value="View" icon="ui-icon-search"
 								actionListener="#{enrichmentView.viewStabilityTableValue()}"
@@ -315,7 +328,7 @@
 										value="Graph Selected Term"
 										actionListener="#{enrichmentView.createStabilityChartFromSelected()}"
 										icon="fa fa-line-chart"
-										oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();" />
+										oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);" />
 								</span>
 								<h:commandLink>
 									<h:graphicImage library="img" name="excel.png" width="24" />
@@ -412,7 +425,12 @@
 
 						</p:dataTable>
 				</p:tab>
-				<p:tab title="Enrichment" rendered="#{enrichmentView.enrichmentSuccess}">
+				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">
+					<f:facet name='title'>
+							<h:outputText value="Enrichment " />
+							<p:commandButton id="enrichmentTabHelpBtn" value=""
+								styleClass="icon-only noupdate" icon="fa fa-question-circle" type="button"/>
+					</f:facet>
 					<p:outputPanel id="tablePanel">
 						<p:contextMenu for="tableEnrichment">
 							<p:menuitem value="View" icon="ui-icon-search"
@@ -476,7 +494,7 @@
 										value="GO"
 										actionListener="#{enrichmentView.createChart()}"
 										icon="fa fa-line-chart"
-										oncomplete="handleGraphSelected(xhr, status, args);PF('enrichmentChartWdg').show();" />
+										oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);" />
 								</span>
 								<h:commandLink>
 									<h:graphicImage library="img" name="excel.png" width="24" />
@@ -996,6 +1014,86 @@
 				</f:facet>
 
 			</p:dialog>
+			
+			<p:overlayPanel for=":formSelect:speciesOptionHelpBtn" hideEffect="fade" styleClass="options-overlay" >
+				<p>Select the species you would like to run an enrichment analysis for.</p>
+			</p:overlayPanel>
+			<p:overlayPanel for=":formSelect:datasetOptionHelpBtn" hideEffect="fade" styleClass="options-overlay" >
+				<p>Which aspects (Cellular Component, Biological Process, Molecular Function) to include in the analysis.</p>
+			</p:overlayPanel>
+			<p:overlayPanel for=":formSelect:multipleOptionHelpBtn" hideEffect="fade" styleClass="options-overlay" >
+				<p>Type of multiple tests correction to apply.</p>
+				<ul>
+				<li><b>Bonferroni:</b> Reject null hypotheses who P-values are less than the given threshold.</li>
+				<li><b>BH step-up:</b> Benjamini–Hochberg procedure, controls FDR at given threshold level.</li>
+				</ul>
+			</p:overlayPanel>
+			
+			
+			<p:overlayPanel for=":formSelect:thresholdOptionHelpBtn" hideEffect="fade" styleClass="options-overlay" >
+				<p>Threshold to use for the above multiple test correction method.</p>
+				
+			</p:overlayPanel>
+			
+			<p:overlayPanel for=":formSelect:minOptionHelpBtn" hideEffect="fade" styleClass="options-overlay" >
+				<p>Select only those terms with at least this number of genes associated with them. Used to to remove overly-specific terms from analysis.</p>
+			</p:overlayPanel>
+			<p:overlayPanel for=":formSelect:maxOptionHelpBtn" hideEffect="fade" styleClass="options-overlay" >
+				<p>Select only those terms with at most this number of genes associated with them (0 for no maximum). Used to remove overly-general terms from analysis.</p>
+			</p:overlayPanel>
+			<p:overlayPanel for=":formSelect:similarityOptionHelpBtn" hideEffect="fade" styleClass="options-overlay" >
+				<p>The analysis will generate a similarity plot. This plot can compare subsequent editions to each-other (<b>PROXIMAL</b>) or compare each edition to the most current (<b>CURRENT</b>).</p>
+			</p:overlayPanel>
+			
+			<p:overlayPanel for=":formEnrich:tabEnrich:similarityTabHelpBtn" widgetVar="similarityTabHelpWdg" hideEffect="fade">
+				<p>The <b>Similarity plot</b> shows metrics that correspond to how similar the sets of significantly enriched terms are over time.</p>
+				<p>The method for computing similarity is the <b>Jaccard Similarity Index</b>.</p>
+				<p>The series differ in which sets we are comparing between editions:</p>
+				<ul>
+				<li><b>All Terms:</b> Compare all significant terms.</li>
+				<li><b>Top 5 Terms:</b> Compare the top 5 terms.</li>
+				<li><b>Parents of Top Terms:</b> Compare the top 5 terms and all of their ancestors.</li>
+				<li><b>Genes Backing Top Terms:</b> Compare the genes that are responsible for the top 5 terms.</li>
+				</ul>
+				<p><i>Clicking</i> on the plot will display the sets corresponding to: Top 5 Terms, Parents of Top Terms, and Genes Backing Top Terms.</p>
+			</p:overlayPanel>
+			
+			<p:overlayPanel for=":formEnrich:tabEnrich:stabilityTabHelpBtn" widgetVar="stabilityTabHelpWdg" hideEffect="fade">
+				<p>The <b>Stability</b> tab shows p-value stability metrics for those terms that still currently exist and were significantly enriched at some point in their history.</p>
+				<p>The table shows <b>stability score</b> and <b>stability score avg</b> for the current edition for each of these terms.</p>
+				<ul>
+				<li><b>Stability score:</b> Attempts to represent the variability of the term's p-value in its recent past.</li>
+				<li><b>Stability score avg:</b> Averages the term's stability scores over its history, which attempts to represent how stable this term has been overall.</li>
+				</ul>
+								
+				<p><i>Select</i> a term and <i>Right Click</i> to <i>View</i> more details about the term's stability.</p>
+				<p><i>Select</i> a term and press <i>Graph Selected Term</i> to see a plot of the term's p-value and 95% confidence interval over its history.</p>
+				
+				<h5>Method</h5>
+				<p>The stability metrics are calculated using <b>six month rolling regressions</b> on the historical changes in two numbers:</p>
+				<ul>
+				<li><b>Sample:</b> Number of genes in the hitlist annotated with the given term.</li>
+				<li><b>Population:</b> Number of genes in the background (currently all annotated genes) annotated with the given term.</li>
+				</ul>
+				<p>Given the results of these regressions we use the 95% confidence interval of these numbers to calculate a 95% confidence interval around the p-value for every edition. From this interval we calculate something akin to the coefficient of variation (and take its logarithm for easier digestion).</p>
+				<p><b>Note:</b> A score of -&#x221e; means we saw no significant variation in Sample or Population numbers over a given timeline (keep in mind this does <b>not</b> mean the p-value stays constant as other numbers go into its calculation). A score with &#65533; or NaN means there was not enough data.</p>
+			
+			</p:overlayPanel>
+			
+			<p:overlayPanel for=":formEnrich:tabEnrich:enrichmentTabHelpBtn" widgetVar="enrichmentTabHelpWdg" hideEffect="fade">
+				<p>The <b>Enrichment</b> tab shows enrichment data for those terms that were significantly enriched at some point in their history. You may change the currently selected edition using the dropdown selector.</p>
+				<p>Column Definitions:</p>
+				<ul>
+				<li><b>Population:</b> Number of genes in the background (currently all annotated genes) annotated with the given term.</li>
+				<li><b>Sample:</b> Number of genes in the hitlist annotated with the given term.</li>
+				<li><b>P-Value:</b> P-Value (after correction if Bonferroni).</li>
+				<li><b>Rank:</b> Fractional rank of term in the enrichment analysis.</li>
+				</ul>
+				<p><i>Select</i> a term and <i>Right Click</i> to <i>View</i> more details about the term's enrichment results.</p>
+				<p>Along the footer of the table is the means to visualize the changes in enrichment results over the history of this hitlist. The inputs allow you to choose from visualizing the <b>Rank</b> or <b>P-Value</b> of the <b>Top N</b> terms or the <b>Selected</b> selected terms.</p>
+				<p><b>Note:</b> The Top N plots will include more than N terms, this is because it plots all the terms who have ever been in the top N.</p>
+			</p:overlayPanel>
+			
 		</h:form>
 	</ui:define>
 </ui:composition>

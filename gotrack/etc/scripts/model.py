@@ -261,6 +261,12 @@ class Ontology:
         return ((goTerm.id, goTerm.name, goTerm.aspect, goTerm.obsolete) for goTerm in
                 self.term_map.itervalues())
 
+    def list_definitions(self):
+        """
+        Generate list of nodes (GO Terms) definitions in this ontology.
+        """
+        return ((goTerm.id, goTerm.definition) for goTerm in self.term_map.itervalues())
+
     def adjacency_list(self):
         """
         Generate adjacency list of relationships in this ontology.

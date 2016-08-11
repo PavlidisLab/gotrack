@@ -2,15 +2,24 @@ var MAXIMALLY_DISTINCT_COLORS = ["#2bce48", "#0075dc", "#993f00", "#4c005c", "#1
 
 function onLoad() {}
 
+function centerResize() {
+   try {
+      var index = PrimeFaces.widgets.centerTabWdg.getActiveIndex();
+      tabShowed(index);
+   } catch (e) {
+      console.log(e);
+   }
+}
+
 function tabShowed(index) {
    try {
       if (index==0) {
          CS.overview.graph.resize();
-      } else if (index==1) {
-         HC.charts.overview.resize();
       } else if (index==2) {
-         HC.charts.gene.resize();
+         HC.charts.overview.resize();
       } else if (index==3) {
+         HC.charts.gene.resize();
+      } else if (index==4) {
          HC.charts.evidence.resize();
       }
    } catch(e) {
@@ -125,7 +134,7 @@ function createVisGraph(args, selector) {
       }
       //var label = utility.wordwrap(n.label.substring(0, 30) + ( (n.label.length > 30) ? "...": "" ),15,'\n');
       var label = n.label.substring(0, 15) + ( (n.label.length > 15) ? "...": "" );
-      opts = { class: clazzz.join(" "), label: label, href: "trends.xhtml?query=GO%3A" + utility.pad(n.id,7), description: n.label, go_id:"GO:"+utility.pad(n.id,7) } ;
+      opts = { class: clazzz.join(" "), label: label, href: "terms.xhtml?query=GO%3A" + utility.pad(n.id,7), description: n.label, go_id:"GO:"+utility.pad(n.id,7) } ;
       return opts;
    }
 
@@ -761,7 +770,7 @@ function showDiff(cs, args) {
          data: { 
             id: String(n.id), 
             label: label,
-            href: "trends.xhtml?query=GO%3A" + utility.pad(n.id,7),
+            href: "terms.xhtml?query=GO%3A" + utility.pad(n.id,7),
             added: 1
          } ,
          //position: { x: 0, y: 0 }
@@ -790,10 +799,10 @@ function createOverviewChart(args) {
                      zoomType: 'x',
                      resetZoomButton: {
                         position: {
-                           // align: 'right', // by default
+                           align: 'left',
                            // verticalAlign: 'top', // by default
-                           x: -20,
-                           y: -20
+                           x: 0,
+                           y: -35
                         }
                      },
                   },
@@ -861,6 +870,9 @@ function createOverviewChart(args) {
                   colors : [],
 
                   exporting: {
+                     enabled: true,
+                     sourceWidth  : 1600,
+                     sourceHeight : 900,
                      csv: {
                         dateFormat: '%Y-%m-%d'
                      }
@@ -931,125 +943,7 @@ function createOverviewChart(args) {
 }
 
 function createGeneCountChart(args) {
-   var options = {
-                  chart: {
-                     renderTo: 'hc_gene_container',
-                     zoomType: 'x',
-                     resetZoomButton: {
-                        position: {
-                           // align: 'right', // by default
-                           // verticalAlign: 'top', // by default
-                           x: -10,
-                           y: -30
-                        }
-                     },
-//                   events: {
-//                   click: function(event) {
-//                   fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.hoverPoint.x]} ]);
-//                   }
-//                   }
-                  },
-                  title: {
-                     text: args.hc_gene_title
-                  },
-
-                  xAxis: {
-                     type: 'datetime',
-                     title: {
-                        text: args.hc_gene_xlabel
-                     },
-                     minRange: 60 * 24 * 3600000 // fourteen days
-                  },
-
-                  yAxis: {
-                     type: 'linear',
-                     title: {
-                        text: args.hc_gene_ylabel
-                     },
-                     labels: {
-                        formatter: function () {
-                           return this.value;
-                        }
-                     }
-                  },
-
-                  plotOptions : {
-                     series : {
-//                      point: {
-//                      events: {
-//                      click: function () {
-//                      fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.x]} ]);
-//                      }
-//                      }
-//                      },
-                        events: {
-                           legendItemClick: function(event) {
-
-                              var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
-
-                              if (!defaultBehaviour) {
-
-                                 var seriesIndex = this.index;
-                                 var series = this.chart.series;
-
-                                 var reset = this.isolated;
-
-
-                                 for (var i = 0; i < series.length; i++)
-                                 {
-                                    if (series[i].index != seriesIndex)
-                                    {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(false, false)
-                                          series[i].isolated=false; 
-                                       }
-
-                                    } else {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=true;
-                                       }
-                                    }
-                                 }
-                                 this.chart.redraw();
-
-                                 return false;
-                              }
-                           }
-                        }
-                     }
-                  },
-
-                  tooltip: {
-                     shared:true,
-                     dateTimeLabelFormats:{
-                        hour:"%B %Y", 
-                        minute:"%B %Y"
-                     }
-                  },
-                  legend : {
-                     align : 'right',
-                     verticalAlign: 'top',
-                     layout: 'vertical',
-                     y:20
-                  },
-
-                  series: [],
-
-                  colors : MAXIMALLY_DISTINCT_COLORS,
-
-                  exporting: {
-                     csv: {
-                        dateFormat: '%Y-%m-%d'
-                     }
-                  }
-   }
+   var options = defaultHCOptions(hc_gene_container, args.hc_gene_title, args.hc_gene_xlabel, args.hc_gene_ylabel);
 
    if (!utility.isUndefined( args.hc_gene_data ) ){
       //args.hc_gene_data.series.sort(function(a,b) {return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);} );
@@ -1065,138 +959,123 @@ function createGeneCountChart(args) {
 
          options.series.push({
             name : name,
-            data : data
+            data : data,
+            visible: name.indexOf("Direct") > -1,
+            isolated: false,
          })
 
       }
+      
+      options.exporting.buttons = {
+         toggleSubsets: {
+            align: 'right',
+            verticalAlign: "top",
+            x: -138,
+            y: 0,
+            onclick: function () {
+               console.log(this);
+               this.toggleSubsets = (this.toggleSubsets + 1) % 3;
+               var button = this.exportSVGElements[3];
+               button.attr({fill:'#33cc33'});
+               
+               var test =  function() {
+                  return true;
+               }
+               switch(this.toggleSubsets) {
+                  case 0: //Direct only
+                     text = "Subset: Direct";
+                     test = function(s) {
+                        return  s.name.indexOf("Direct")  > -1;
+                     }
+                     break; 
+                  case 1: //Indirect only
+                     text = "Subset: Indirect";
+                     test = function(s) {
+                        return  s.name.indexOf("Direct") == -1;
+                     }
+                     break;
+                  case 2: //All
+                     text = "Subset: All";
+                     break;
+               }
+               
+               button.parentGroup.attr({text:text});
+               var series = this.series;
+               for (var i = 0; i < series.length; i++) {
+                  var s = series[i];
+                  if (test(s)) {
+                     s.setVisible(true, false)
+                     s.isolated=false;
+                  } else {
+                     s.setVisible(false, false)
+                     s.isolated=false;
+                  }
+               }
+               this.redraw();
+            },
+            symbol: 'circle',
+            symbolFill: '#33cc33',
+            _titleKey: "toggleSubsetsTitle",
+            text: 'Subset: Direct'
+         }                   
+      };
+      
+      options.plotOptions.series.events.legendItemClick = function(event) {
+
+         var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
+         
+         var button = this.chart.exportSVGElements[3];
+         button.attr({fill:'#E0E0E0'});
+         button.parentGroup.attr({text:"Subset: Custom"});
+         this.chart.toggleSubsets = -1;
+
+         if (!defaultBehaviour) {
+
+            var seriesIndex = this.index;
+            var series = this.chart.series;
+
+            var reset = this.isolated;
+
+
+            for (var i = 0; i < series.length; i++) {
+               if (series[i].index != seriesIndex)
+               {
+                  if (reset) {
+                     series[i].setVisible(true, false)
+                     series[i].isolated=false;
+                  } else {
+                     series[i].setVisible(false, false)
+                     series[i].isolated=false; 
+                  }
+
+               } else {
+                  if (reset) {
+                     series[i].setVisible(true, false)
+                     series[i].isolated=false;
+                  } else {
+                     series[i].setVisible(true, false)
+                     series[i].isolated=true;
+                  }
+               }
+            }
+
+            this.chart.redraw();
+
+            return false;
+         }
+      };
 
 
       HC.charts.gene.options = options;
-      HC.charts.gene.recreate(options);
+      HC.charts.gene.recreate(options, function(c) {
+         c.toggleSubsets = 0;
+       });
 
    }
 }
 
 function createEvidenceCountChart(args) {
-   var options = {
-                  chart: {
-                     renderTo: 'hc_evidence_container',
-                     zoomType: 'x',
-                     resetZoomButton: {
-                        position: {
-                           // align: 'right', // by default
-                           // verticalAlign: 'top', // by default
-                           x: -10,
-                           y: -30
-                        }
-                     },
-//                   events: {
-//                   click: function(event) {
-//                   fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.hoverPoint.x]} ]);
-//                   }
-//                   }
-                  },
-                  title: {
-                     text: args.hc_evidence_title
-                  },
-
-                  xAxis: {
-                     type: 'datetime',
-                     title: {
-                        text: args.hc_evidence_xlabel
-                     },
-                     minRange: 60 * 24 * 3600000 // fourteen days
-                  },
-
-                  yAxis: {
-                     type: 'linear',
-                     title: {
-                        text: args.hc_evidence_ylabel
-                     },
-                     labels: {
-                        formatter: function () {
-                           return this.value;
-                        }
-                     }
-                  },
-
-                  plotOptions : {
-                     series : {
-//                      point: {
-//                      events: {
-//                      click: function () {
-//                      fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.x]} ]);
-//                      }
-//                      }
-//                      },
-                        events: {
-                           legendItemClick: function(event) {
-
-                              var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
-
-                              if (!defaultBehaviour) {
-
-                                 var seriesIndex = this.index;
-                                 var series = this.chart.series;
-
-                                 var reset = this.isolated;
-
-
-                                 for (var i = 0; i < series.length; i++)
-                                 {
-                                    if (series[i].index != seriesIndex)
-                                    {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(false, false)
-                                          series[i].isolated=false; 
-                                       }
-
-                                    } else {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=true;
-                                       }
-                                    }
-                                 }
-                                 this.chart.redraw();
-
-                                 return false;
-                              }
-                           }
-                        }
-                     }
-                  },
-
-                  tooltip: {
-                     shared:true,
-                     dateTimeLabelFormats:{
-                        hour:"%B %Y", 
-                        minute:"%B %Y"
-                     }
-                  },
-                  legend : {
-                     align : 'right',
-                     verticalAlign: 'top',
-                     layout: 'vertical',
-                     y:20
-                  },
-
-                  series: [],
-
-                  colors : MAXIMALLY_DISTINCT_COLORS,
-
-                  exporting: {
-                     csv: {
-                        dateFormat: '%Y-%m-%d'
-                     }
-                  }
-   }
+   var options = defaultHCOptions(hc_evidence_container, args.hc_evidence_title, args.hc_evidence_xlabel, args.hc_evidence_ylabel);
 
    if (!utility.isUndefined( args.hc_evidence_data ) ){
       for (var i = 0; i < args.hc_evidence_data.series.length; i++) {
@@ -1223,6 +1102,130 @@ function createEvidenceCountChart(args) {
    } 
 }
 
+function defaultHCOptions(renderTo, title, xLabel, yLabel ) {
+   return {
+                  chart: {
+                     renderTo: renderTo,
+                     zoomType: 'x',
+                     resetZoomButton: {
+                        position: {
+                           align: 'left',
+                           // verticalAlign: 'top', // by default
+                           x: 0,
+                           y: -35,
+                        }
+                     },
+//                   events: {
+//                   click: function(event) {
+//                   fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.hoverPoint.x]} ]);
+//                   }
+//                   }
+                  },
+                  title: {
+                     text: title
+                  },
+
+                  xAxis: {
+                     type: 'datetime',
+                     title: {
+                        text: xLabel
+                     },
+                     minRange: 60 * 24 * 3600000 // fourteen days
+                  },
+
+                  yAxis: {
+                     type: 'linear',
+                     title: {
+                        text: yLabel
+                     },
+                     labels: {
+                        formatter: function () {
+                           return this.value;
+                        }
+                     }
+                  },
+
+                  plotOptions : {
+                     series : {
+//                      point: {
+//                      events: {
+//                      click: function () {
+//                      fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.x]} ]);
+//                      }
+//                      }
+//                      },
+                        events: {
+                           legendItemClick: function(event) {
+
+                              var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
+
+                              if (!defaultBehaviour) {
+
+                                 var seriesIndex = this.index;
+                                 var series = this.chart.series;
+
+                                 var reset = this.isolated;
+
+
+                                 for (var i = 0; i < series.length; i++) {
+                                    if (series[i].index != seriesIndex)
+                                    {
+                                       if (reset) {
+                                          series[i].setVisible(true, false)
+                                          series[i].isolated=false;
+                                       } else {
+                                          series[i].setVisible(false, false)
+                                          series[i].isolated=false; 
+                                       }
+
+                                    } else {
+                                       if (reset) {
+                                          series[i].setVisible(true, false)
+                                          series[i].isolated=false;
+                                       } else {
+                                          series[i].setVisible(true, false)
+                                          series[i].isolated=true;
+                                       }
+                                    }
+                                 }
+                                 this.chart.redraw();
+
+                                 return false;
+                              }
+                           }
+                        }
+                     }
+                  },
+
+                  tooltip: {
+                     shared:true,
+                     dateTimeLabelFormats:{
+                        hour:"%B %Y", 
+                        minute:"%B %Y"
+                     }
+                  },
+                  legend : {
+                     align : 'right',
+                     verticalAlign: 'top',
+                     layout: 'vertical',
+                     y:20
+                  },
+
+                  series: [],
+
+                  colors : MAXIMALLY_DISTINCT_COLORS,
+
+                  exporting: {
+                     enabled: true,
+                     sourceWidth  : 1600,
+                     sourceHeight : 900,
+                     csv: {
+                        dateFormat: '%Y-%m-%d'
+                     }
+                  }
+   }
+}
+
 function HChart(id) {
    this.id = id;
    this.chart = null;
@@ -1244,9 +1247,12 @@ function HChart(id) {
       this._exists=false;
 
    }
-   this.create = function() {
+   this.create = function(callback) {
+      if(typeof callback === 'undefined'){
+         callback = function(){};
+      }
       if ( !this.exists() ) {
-         this.chart = new Highcharts.Chart(this.options);
+         this.chart = new Highcharts.Chart(this.options, callback);
          this._exists=true;
          console.log("Chart created");
       }
@@ -1254,7 +1260,10 @@ function HChart(id) {
    this.reset = function() {
       this.recreate(this.options);
    }
-   this.recreate = function(options) {
+   this.recreate = function(options, callback) {
+      if(typeof callback === 'undefined'){
+         callback = function(){};
+      }
       try {
          if(typeof options === 'undefined'){
             // options not supplied
@@ -1266,7 +1275,7 @@ function HChart(id) {
          console.log(e);
       } finally {
          try{
-            this.chart = new Highcharts.Chart(options);
+            this.chart = new Highcharts.Chart(options, callback);
             this._exists=true;
          } catch (e) {
             console.log("Failed to create chart");
@@ -1287,6 +1296,17 @@ function HChart(id) {
 
 $(document).ready(function() {
    //escDialog();
+   
+   try {
+
+      Highcharts.setOptions({
+         lang: {
+            toggleSubsetsTitle: "Toggle Subsets"
+         }
+      });
+   } catch(err) {
+
+   }
 
    /**
     * Highcharts X-range series plugin

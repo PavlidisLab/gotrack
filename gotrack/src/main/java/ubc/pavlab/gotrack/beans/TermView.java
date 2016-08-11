@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.beans;
 
+import java.io.Serializable;
 import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -71,7 +72,9 @@ import ubc.pavlab.gotrack.model.go.Relation;
  */
 @Named
 @ViewScoped
-public class TermView {
+public class TermView implements Serializable {
+
+    private static final long serialVersionUID = 3768269202724289260L;
 
     private static final Logger log = Logger.getLogger( TermView.class );
 
@@ -87,6 +90,7 @@ public class TermView {
     private String query;
     private GOEdition currentGOEdition;
     private GeneOntologyTerm currentTerm;
+    private String definition;
 
     private Integer compareEditionId;
     private List<GOEdition> allGOEditions;
@@ -163,6 +167,8 @@ public class TermView {
                 }
             }
             Collections.sort( allGOEditions );
+
+            definition = cache.getCurrentDefinition( currentTerm );
 
             statsService.countTermHit( currentTerm );
 
@@ -551,6 +557,10 @@ public class TermView {
 
     public GeneOntologyTerm getCurrentTerm() {
         return currentTerm;
+    }
+
+    public String getDefinition() {
+        return definition;
     }
 
     public Integer getCompareEditionId() {

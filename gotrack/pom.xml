@@ -18,7 +18,7 @@
 
 		<!-- Web -->
 		<servlet.version>3.0.1</servlet.version>
-		<jsf.version>2.2.2</jsf.version>
+		<jsf.version>2.2.13</jsf.version>
 
 		<!-- logging -->
 		<slf4j.version>1.6.6</slf4j.version>
@@ -71,7 +71,7 @@
 		<dependency>
 			<groupId>org.primefaces</groupId>
 			<artifactId>primefaces</artifactId>
-			<version>5.1</version>
+			<version>6.0</version>
 		</dependency>
 
 		<dependency>
@@ -230,7 +230,7 @@
 		<dependency>
 			<groupId>org.jboss.weld.servlet</groupId>
 			<artifactId>weld-servlet</artifactId>
-			<version>2.2.9.Final</version>
+			<version>2.3.5.Final</version>
 		</dependency>
 
 		<!-- JAX-RS RESTful Web Services -->
@@ -238,7 +238,7 @@
 		<dependency>
 			<groupId>org.glassfish.jersey.containers</groupId>
 			<artifactId>jersey-container-servlet</artifactId>
-			<version>2.22.1</version>
+			<version>2.22.2</version>
 		</dependency>
 
 		<!-- CDI Rest Dependency -->
