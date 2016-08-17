@@ -20,6 +20,7 @@ var showLoadingSpinner = function() {
 //});
 
 function runEnrichmentOnClick() {
+   $('#progressBarContainer').removeClass('disabled');
    try {
       PF('runEnrichmentBtnWdg').disable();
       PF('enrichmentProgressBarWdg').start();
@@ -30,14 +31,30 @@ function runEnrichmentOnClick() {
 }
 
 function runEnrichmentComplete(xhr, status, args) {
+   // Slight hack here to make sure that the polling functionality of the progress bar stops
+   // Ran into a problem with viewexpiredexception not stopping the polling while also
+   // clearing the PrimeFaces widgets...
    try {
-   reInitializeCharts();
-   handleEnrichmentComplete(xhr, status, args);
+      PF('enrichmentProgressBarWdg').stop()
+   } catch (e) {
+      window.clearInterval(window.progressBarId);
+      window.clearTimeout(window.progressBarId);      
+   }
+   try {
+      PF('runEnrichmentBtnWdg').enable();
+   } catch (e) {
+      
+   }
    
-   var wdg = PF('tabEnrichWdg');
-   for (var j = 0; j < wdg.getLength(); j++) {
-      wdg.enable(j);
-    }
+   try {
+      reInitializeCharts();
+      createTermsChart(xhr, status, args);
+      createSimilarityChart(xhr, status, args);
+      
+      var wdg = PF('tabEnrichWdg');
+      for (var j = 0; j < wdg.getLength(); j++) {
+         wdg.enable(j);
+       }
    
    } catch (e) {
       console.log(e);
@@ -98,8 +115,10 @@ function tabChanged(index)
 }
 function tabShowed(index)
 {
-   if (index==1) {
-      HC.charts.similarity.create();
+   if (index==0) {
+      HC.charts.terms.resize();
+   } else if (index==1) {
+      // HC.charts.similarity.create();
       HC.charts.similarity.resize();
    }
 
@@ -155,7 +174,7 @@ function HChart(id) {
             this.chart = new Highcharts.Chart(options);
             this._exists=true;
          } catch (e) {
-            console.log("Failed to create chart");
+            console.log("Failed to create chart", e);
          }
          
       }
@@ -170,183 +189,181 @@ function HChart(id) {
    }
      
 }
+function createTermsChart(xhr, status, args) {
+   console.log(xhr, status, args);
 
-function handleEnrichmentComplete(xhr, status, args) {
-   console.log(xhr, status, args)
-   // Slight hack here to make sure that the polling functionality of the progress bar stops
-   // Ran into a problem with viewexpiredexception not stopping the polling while also
-   // clearing the PrimeFaces widgets...
-   try {
-      PF('enrichmentProgressBarWdg').stop()
-   } catch (e) {
-      window.clearInterval(window.progressBarId);
-      window.clearTimeout(window.progressBarId);      
-   }
-   try {
-      PF('runEnrichmentBtnWdg').enable();
-   } catch (e) {
-      
-   }
-   console.log(args);
+   var options = createGenericLineChart('hc_terms_container', args.hc_terms_title, args.hc_terms_xlabel, args.hc_terms_ylabel, args.hc_terms_data);
+
+   HC.charts.terms.options = options;
+   HC.charts.terms.recreate(options);
+}
+
+function createSimilarityChart(xhr, status, args) {
+   console.log(xhr, status, args);
+
+   var options = createGenericLineChart('hc_similarity_container', args.hc_sim_title, args.hc_sim_xlabel, args.hc_sim_ylabel, args.hc_sim_data);
+   
+   options.yAxis.min = 0;
+   options.yAxis.max = 1;
+   options.yAxis.minorTickInterval = 0.05;
    
    var dateToEdition = JSON.parse(args.hc_dateToEdition);
-
-   var options = {
-                  chart: {
-                     renderTo: 'hc_similarity_container',
-                     zoomType: 'x',
-                     resetZoomButton: {
-                        position: {
-                           align: 'left',
-                           // verticalAlign: 'top', // by default
-                           x: 0,
-                           y: -35,
-                        }
-                     },
-                     events: {
-                        click: function(event) {
-                           fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.hoverPoint.x]} ]);
-                     }
-                     }
-                  },
-                  title: {
-                     text: args.hc_title
-                  },
-
-                  xAxis: {
-                     type: 'datetime',
-                     title: {
-                        text: args.hc_xlabel
-                     },
-                     minRange: 60 * 24 * 3600000 // fourteen days
-                  },
-
-                  yAxis: {
-                     type: 'linear',
-                     title: {
-                        text: args.hc_ylabel
-                     },
-                     max:1,
-                     min:0,
-                     minorTickInterval: 0.05,
-                     labels: {
-                        formatter: function () {
-                           return this.value;
-                        }
-                     }
-                  },
-
-                  plotOptions : {
-                     series : {
-                        point: {
-                           events: {
-                              click: function () {
-                                 fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.x]} ]);
-                              }
-                           }
-                        },
-                        events: {
-                           legendItemClick: function(event) {
-
-                              var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
-
-                              if (!defaultBehaviour) {
-
-                                 var seriesIndex = this.index;
-                                 var series = this.chart.series;
-
-                                 var reset = this.isolated;
-
-
-                                 for (var i = 0; i < series.length; i++)
-                                 {
-                                    if (series[i].index != seriesIndex)
-                                    {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(false, false)
-                                          series[i].isolated=false; 
-                                       }
-
-                                    } else {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=true;
-                                       }
-                                    }
-                                 }
-                                 this.chart.redraw();
-
-                                 return false;
-                              }
-                           }
-                        }
-                     }
-                  },
-
-                  tooltip: {
-                     shared:true,
-                     dateTimeLabelFormats:{
-                        hour:"%B %Y", 
-                        minute:"%B %Y"
-                     }
-                  },
-                  legend : {
-                     align : 'right',
-                     verticalAlign: 'top',
-                     layout: 'vertical',
-                     y:20
-                  },
-
-                  series: [],
-
-                  colors : MAXIMALLY_DISTINCT_COLORS,
-
-                  exporting: {
-                     enabled: true,
-                     sourceWidth  : 1600,
-                     sourceHeight : 900,
-                     csv: {
-                        dateFormat: '%Y-%m-%d'
-                     }
-                  }
-   }
    
-   if (!utility.isUndefined( args.hc_data ) ){
-      for (var i = 0; i < args.hc_data.series.length; i++) {
-         var series = args.hc_data.series[i];
+   options.chart.events = {
+                           click: function(event) {
+                              fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.hoverPoint.x]} ]);
+                        }
+                        };
+   
+   options.plotOptions.series.point = {
+                                       events: {
+                                          click: function () {
+                                             fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.x]} ]);
+                                          }
+                                       }
+                                    };
+   
+   
+
+   HC.charts.similarity.options = options;
+   HC.charts.similarity.recreate(options);
+
+}
+   
+function createGenericLineChart(renderTo, title, xlabel, ylabel, chart_data) {
+
+   var options =  {
+                   chart: {
+                      renderTo: renderTo,
+                      zoomType: 'x',
+                      resetZoomButton: {
+                         position: {
+                            align: 'left',
+                            // verticalAlign: 'top', // by default
+                            x: 0,
+                            y: -35,
+                         }
+                      }
+                   },
+                   title: {
+                      text: title
+                   },
+
+                   xAxis: {
+                      type: 'datetime',
+                      title: {
+                         text: xlabel
+                      },
+                      minRange: 60 * 24 * 3600000 // fourteen days
+                   },
+
+                   yAxis: {
+                      type: 'linear',
+                      title: {
+                         text:ylabel
+                      },
+                      labels: {
+                         formatter: function () {
+                            return this.value;
+                         }
+                      }
+                   },
+
+                   plotOptions : {
+                      series : {
+                         events: {
+                            legendItemClick: function(event) {
+
+                               var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
+
+                               if (!defaultBehaviour) {
+
+                                  var seriesIndex = this.index;
+                                  var series = this.chart.series;
+
+                                  var reset = this.isolated;
+
+
+                                  for (var i = 0; i < series.length; i++)
+                                  {
+                                     if (series[i].index != seriesIndex)
+                                     {
+                                        if (reset) {
+                                           series[i].setVisible(true, false)
+                                           series[i].isolated=false;
+                                        } else {
+                                           series[i].setVisible(false, false)
+                                           series[i].isolated=false; 
+                                        }
+
+                                     } else {
+                                        if (reset) {
+                                           series[i].setVisible(true, false)
+                                           series[i].isolated=false;
+                                        } else {
+                                           series[i].setVisible(true, false)
+                                           series[i].isolated=true;
+                                        }
+                                     }
+                                  }
+                                  this.chart.redraw();
+
+                                  return false;
+                               }
+                            }
+                         }
+                      }
+                   },
+
+                   tooltip: {
+                      shared:true,
+                      dateTimeLabelFormats:{
+                         hour:"%B %Y", 
+                         minute:"%B %Y"
+                      }
+                   },
+                   legend : {
+                      align : 'right',
+                      verticalAlign: 'top',
+                      layout: 'vertical',
+                      y:20
+                   },
+
+                   series: [],
+
+                   colors : MAXIMALLY_DISTINCT_COLORS,
+
+                   exporting: {
+                      enabled: true,
+                      sourceWidth  : 1600,
+                      sourceHeight : 900,
+                      csv: {
+                         dateFormat: '%Y-%m-%d'
+                      }
+                   }
+   }
+
+   if (!utility.isUndefined( chart_data ) ){
+      for (var i = 0; i < chart_data.series.length; i++) {
+         var series = chart_data.series[i];
          var name = series.name;
          var data = []
-   
+
          for (var j = 0; j < series.data.length; j++) {
             var point = series.data[j];
             data.push([point.x,point.y]);
          }
-   
+
          options.series.push({
             name : name,
             data : data
          })
-   
-      }
-   
 
-   HC.charts.similarity.options = options;
-   
-   
-   //This will fail the first time around since the tabs in tab view are dynamic. This means
-   // that the container for the chart does not yet exist. We will create the chart on tab switch.
-   if ($('#hc_similarity_container').length != 0) {
-      HC.charts.similarity.recreate(options);
-   }
-   //PF('tableEnrichmentWdg').filter()
-   }
+      }      
 
+   }
+   
+   return options;
 }
 
 function handleGraphSelected(xhr, status, args) {
@@ -855,6 +872,7 @@ function enrichmentChartDlgResize() {
 function reInitializeCharts() {
    try {
       HC.removeAllCharts();
+      HC.createNewChart( 'terms' );
       HC.createNewChart( 'similarity' );
       HC.createNewChart( 'enrichment' );
       HC.createNewChart( 'enrichmentMaster' );

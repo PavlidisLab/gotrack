@@ -137,3 +137,7 @@ table.no-border tr,
 table.no-border td {
 	border: none !important;
 }
+
+div.disabled {
+	opacity:0.35;
+}

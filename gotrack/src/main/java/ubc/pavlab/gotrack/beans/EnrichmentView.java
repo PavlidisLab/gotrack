@@ -53,6 +53,7 @@ import com.google.gson.Gson;
 
 import jersey.repackaged.com.google.common.collect.Lists;
 import ubc.pavlab.gotrack.analysis.CombinedAnalysis;
+import ubc.pavlab.gotrack.analysis.Enrichment;
 import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
@@ -288,6 +289,16 @@ public class EnrichmentView implements Serializable {
 
         createSimilarityChart();
 
+        createTermCountChart();
+
+        // Container for a mapping that will be used on the front-end for ajax queries
+        Map<Long, Integer> dateToEdition = new HashMap<>();
+        for ( Edition ed : cache.getAllEditions( currentSpeciesId ) ) {
+            dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
+        }
+
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToEdition", new Gson().toJson( dateToEdition ) );
+
         statusPoller.completeStatus();
         timer.stop();
         statusPoller.newStatus( "Finished in: " + timer.getTime() / 1000.0 + " seconds", 100 );
@@ -311,6 +322,36 @@ public class EnrichmentView implements Serializable {
 
     }
 
+    // GO Term Count Chart ---------------------------------------------------------------------------------------
+
+    /**
+     * Create Term Count chart
+     */
+    private void createTermCountChart() {
+        ChartValues cv = new ChartValues();
+        Series significantTerms = new Series( "Significant Terms" );
+        Series allTerms = new Series( "All Terms" );
+        Series rejectedTerms = new Series( "Rejected Terms" );
+
+        for ( Entry<Edition, Enrichment<GeneOntologyTerm, Gene>> rawResultsEntry : analysis.getRawResults()
+                .entrySet() ) {
+            Date date = rawResultsEntry.getKey().getDate();
+            Enrichment<GeneOntologyTerm, Gene> enrichment = rawResultsEntry.getValue();
+            significantTerms.addDataPoint( date, enrichment.getSignificantTerms().size() );
+            allTerms.addDataPoint( date, enrichment.getResults().size() );
+            rejectedTerms.addDataPoint( date, enrichment.getRejectedTerms().size() );
+        }
+
+        cv.addSeries( allTerms );
+        cv.addSeries( significantTerms );
+        cv.addSeries( rejectedTerms );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_terms_data", cv );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_terms_title", "GO Term Counts by Edition" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_terms_ylabel", "Count of Unique GO Terms" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_terms_xlabel", "Date" );
+    }
+
     // Similarity Charts ---------------------------------------------------------------------------------------
 
     /**
@@ -326,12 +367,8 @@ public class EnrichmentView implements Serializable {
         Series topGeneJaccard = new Series( "Genes Backing Top Terms" );
         Series topParentsJaccard = new Series( "Parents of Top Terms" );
 
-        // Container for a mapping that will be used on the front-end for ajax queries
-        Map<Long, Integer> dateToEdition = new HashMap<>();
-
         // Fill in series
         for ( Entry<Edition, SimilarityScore> editionEntry : similarityAnalysis.getSimilarityScores().entrySet() ) {
-            dateToEdition.put( editionEntry.getKey().getDate().getTime(), editionEntry.getKey().getEdition() );
             SimilarityScore score = editionEntry.getValue();
             Date date = editionEntry.getKey().getDate();
             completeTermJaccard.addDataPoint( date, score.getCompleteTermSim() );
@@ -351,13 +388,12 @@ public class EnrichmentView implements Serializable {
             cv.addSeries( topParentsJaccard );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Similarity to "
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_sim_data", cv );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_sim_title", "Enrichment Similarity to "
                 + ( similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current" )
                 + " Edition" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Similarity Index" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToEdition", new Gson().toJson( dateToEdition ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_sim_ylabel", "Jaccard Similarity Index" );
+        RequestContext.getCurrentInstance().addCallbackParam( "hc_sim_xlabel", "Date" );
 
     }
 
@@ -1216,6 +1252,10 @@ public class EnrichmentView implements Serializable {
 
     public int getEnrichmentProgress() {
         return statusPoller.getProgress();
+    }
+
+    public StatusPoller getStatusPoller() {
+        return statusPoller;
     }
 
     public SimilarityCompareMethod getSimilarityCompareMethod() {
