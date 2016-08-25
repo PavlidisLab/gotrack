@@ -62,12 +62,8 @@ function runEnrichmentComplete(xhr, status, args) {
 }
 
 function centerResize() {
-   //updateCenterPanel();
-   try {
-      PrimeFaces.widgets.similarityChartWdg.plot.replot( {resetAxes:true} );
-   } catch (e) {
-
-   }
+   var activeTabIndex = PF('tabEnrichWdg').getActiveIndex();
+   tabShowed(activeTabIndex);
 }
 
 function escDialog() {
@@ -945,6 +941,12 @@ $(document).ready(function() {
          id = setTimeout(enrichmentChartDlgResize, 200);
       });
    })();
+   
+   // Resize plots on window resize
+   window.onresize = function(event) {
+      var activeTabIndex = PF('tabEnrichWdg').getActiveIndex();
+      tabShowed(activeTabIndex);
+  }
       
    /**
     * Extend the Axis.getLinePath method in order to visualize breaks with two parallel

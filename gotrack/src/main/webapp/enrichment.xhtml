@@ -213,12 +213,8 @@
 								style="width:250px;margin: 25px auto 5px auto;" />
 	
 							<p:outputPanel autoUpdate="true" style="font-size:80%;">
-								<h:outputText value="#{enrichmentView.statusPoller.currentStatus}"/>
-	<!-- 							<ul>
-									<ui:repeat value="#{enrichmentView.enrichmentStatus}" var="msg">
-										<li style="margin-bottom: 10px;">#{msg}</li>
-									</ui:repeat>
-								</ul> -->
+								<!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
+								<h:outputText value="#{enrichmentView.statusPoller.currentStatus}"/>&#8203;
 							</p:outputPanel>
 						</div>
 
@@ -234,7 +230,7 @@
 		</p:layoutUnit>
 	</ui:define>
 	<ui:define name="center_layout">
-		<h:form id="formEnrich">
+		<h:form id="formEnrich" styleClass="expand-tables">
 			<p:remoteCommand name="updateCenterPanel" update=":formEnrich" />
 
 			<p:tabView id="tabEnrich" widgetVar="tabEnrichWdg" onTabShow="tabShowed(index)">
@@ -282,7 +278,9 @@
 							scrollable="true" scrollHeight="450"
 							selectionMode="single"
 							selection="#{enrichmentView.selectedStabilityTableValue}"
-							rowKey="#{entry.term.goId}">
+							rowKey="#{entry.term.goId}"
+							liveScroll="true"
+							scrollRows="25" >
 							
 							<p:ajax event="filter"
 								oncomplete="postAjaxSortTable(PF('tableStabilityWdg'))" />
@@ -345,7 +343,7 @@
 							</p:column>
 							<p:column filterBy="#{entry.term.name}"
 								filterMatchMode="contains" sortBy="#{entry.term.name}"
-								headerText="Name">
+								headerText="Name" style="width:400px;">
 								<h:outputText value="#{entry.term.name}" />
 							</p:column>
 							
@@ -412,7 +410,9 @@
 							scrollable="true" scrollHeight="450"
 							selectionMode="multiple"
 							selection="#{enrichmentView.selectedEnrichmentTableValues}"
-							rowKey="#{entry.term.goId}">
+							rowKey="#{entry.term.goId}"
+							liveScroll="true"
+							scrollRows="25">
 							<p:ajax event="filter"
 								oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))" />
 							<f:facet name="header">
@@ -511,7 +511,7 @@
 							</p:column>
 							<p:column filterBy="#{entry.term.name}"
 								filterMatchMode="contains" sortBy="#{entry.term.name}"
-								headerText="Name">
+								headerText="Name" style="width:500px;">
 								<h:outputText value="#{entry.term.name}" />
 							</p:column>
 
