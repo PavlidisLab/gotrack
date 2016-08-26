@@ -527,7 +527,7 @@ function createGenericLineChart(renderTo, args, baseMin, baseMax) {
                         minute:"%B %Y"
                      },
                      pointFormatter:function(){
-                        return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+Number(this.y.toPrecision(5))+'</b><br/>';
+                        return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 3)+'</b><br/>';
                         }
                   },
                   legend : {

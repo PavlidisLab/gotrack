@@ -330,7 +330,7 @@ public class EnrichmentView implements Serializable {
     private void createTermCountChart() {
         ChartValues cv = new ChartValues();
         Series significantTerms = new Series( "Significant Terms" );
-        Series allTerms = new Series( "All Terms" );
+        Series allTerms = new Series( "All Tested Terms" );
         Series rejectedTerms = new Series( "Rejected Terms" );
 
         for ( Entry<Edition, Enrichment<GeneOntologyTerm, Gene>> rawResultsEntry : analysis.getRawResults()
@@ -621,7 +621,7 @@ public class EnrichmentView implements Serializable {
                     StabilityScore sc = scores.get( ed );
                     rangeSeries.addDataPoint( ed.getDate(), sc.getMinPvalue(), sc.getMaxPvalue() );
                     Double s = sc.getScore();
-                    // JSON does not support NaN types so we convert them to strings and deal with them in the front-end
+                    // JSON does not support special Double types so we convert them to strings and deal with them in the front-end
                     dateToStabilityScore.put( ed.getDate().getTime(), s.isInfinite() || s.isNaN() ? s.toString() : s );
                 }
 

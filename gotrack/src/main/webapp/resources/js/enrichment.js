@@ -219,6 +219,10 @@ function createSimilarityChart(xhr, status, args) {
                                        }
                                     };
    
+   options.tooltip.pointFormatter = function(){
+      return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 2)+'</b><br/>';
+   }
+   
    
 
    HC.charts.similarity.options = options;
@@ -530,7 +534,7 @@ function handleGraphSelected(xhr, status, args) {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
                          formatter:function(){
-                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> p-value: " + this.y;
+                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> p-value: " + utility.sigFigs(this.y, 3);
                          }
       };
       
@@ -749,11 +753,19 @@ function handleGraphSelected(xhr, status, args) {
       
       var dateToStabilityScore = JSON.parse(args.hc_dateToStabilityScore);
       
+      // This is necessary as special double types are not allowed in the JSON spec
+      // We bypass this via a string type adaptor for Infinity and NaN
+      for(var key in dateToStabilityScore) {
+         if(dateToStabilityScore.hasOwnProperty(key)) {
+            dateToStabilityScore[key] = Number(dateToStabilityScore[key]);
+         }
+     }
+           
       options.tooltip = {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
                          formatter:function(){
-                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> p-value: " + this.y + "<br/> Stability Score: " + dateToStabilityScore[this.x];
+                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> p-value: " + utility.sigFigs(this.y, 3) + "<br/> Stability Score: " + utility.sigFigs(dateToStabilityScore[this.x], 3);
                          }
       }
       
