@@ -93,7 +93,7 @@
 							styleClass="smallBtn" />
 						<p:commandButton icon="fa fa-trash" value="Clear"
 							actionListener="#{enrichmentView.removeAllGenes}"
-							update=":formSelect" styleClass="smallBtn" />
+							update=":formSelect:geneList :formSelect:runEnrichmentBtn" styleClass="smallBtn" />
 					</f:facet>
 				</p:dataList>
 
@@ -200,16 +200,16 @@
 
 				<p:separator style="max-width:200px; height:5px;" />
 				<div align="center" style="margin-top: 20px;">
-					<p:commandButton value="Run Enrichment"
+					<p:commandButton id="runEnrichmentBtn" value="Run Enrichment"
 						widgetVar="runEnrichmentBtnWdg"
 						actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
-						update=":formSelect :formEnrich:tabEnrich:termsChartPanel :formEnrich:tabEnrich:similarityChartPanel :formEnrich:tabEnrich:tableStability :formEnrich:tabEnrich:tablePanel"
+						update=":formSelect:geneList :formSelect:runEnrichmentBtn :formSelect:enrichmentProgressBar :formEnrich:tabEnrich:termsChartPanel :formEnrich:tabEnrich:similarityChartPanel :formEnrich:tabEnrich:tableStability :formEnrich:tabEnrich:tablePanel"
 						onclick="runEnrichmentOnClick();"
 						oncomplete="runEnrichmentComplete(xhr, status, args);"
 						disabled="#{fn:length(enrichmentView.selectedGenes) == 0}" />
 				</div>
 						<div id="progressBarContainer" class="center disabled">
-							<p:progressBar widgetVar="enrichmentProgressBarWdg" interval="500"
+							<p:progressBar id="enrichmentProgressBar" widgetVar="enrichmentProgressBarWdg" interval="500"
 								ajax="true" value="#{enrichmentView.enrichmentProgress}"
 								labelTemplate="{value}%" styleClass="animated" global="false"
 								style="width:250px;margin: 25px auto 5px auto;" />
@@ -892,7 +892,7 @@
 				<f:facet name="footer">
 					<p:commandButton value="&#160; Add"
 						actionListener="#{enrichmentView.addGene}" icon="fa fa-plus"
-						update=":formSelect, :globalGrowl" styleClass="smallBtn"
+						update=":formSelect:geneList, :globalGrowl, :formSelect:runEnrichmentBtn" styleClass="smallBtn"
 						oncomplete="PF('addGenesDlg').hide();" />
 				</f:facet>
 
@@ -975,7 +975,7 @@
 				<f:facet name="footer">
 					<p:commandButton value="&#160; Confirm"
 						actionListener="#{enrichmentView.confirmMatches}"
-						icon="fa fa-plus-circle" update=":globalGrowl, :formSelect"
+						icon="fa fa-plus-circle" update=":globalGrowl, :formSelect:geneList, :formSelect:runEnrichmentBtn"
 						styleClass="smallBtn" oncomplete="PF('confirmGenesDlg').hide();" />
 				</f:facet>
 
