@@ -40,8 +40,7 @@
 			collapsible="true" header="Options" minSize="350">
 			<h:form id="formSelect">
 
-				<h3 class="center">Global Settings</h3>
-				<p:panelGrid style="margin-bottom:10px" cellpadding="5" styleClass="no-border">
+				<p:panelGrid style="margin:10px 0 10px 0" cellpadding="5" styleClass="no-border">
 					<p:row>
 					<p:column>
 					<p:commandButton id="speciesOptionHelpBtn" value=""
@@ -98,18 +97,16 @@
 					</f:facet>
 				</p:dataList>
 
-
-				<p:separator style="max-width:200px" />
-				<h3 class="center">Enrichment Settings</h3>
+				<h3 class="center">Settings</h3>
 				<p:panelGrid id="enrichmentSettingsPanel" style="margin-bottom:10px;width:100%;"
-					cellpadding="5" styleClass="no-border" columns="2" columnClasses="ui-grid-col-5, ui-grid-col-7">
+					cellpadding="5" styleClass="no-border">
 					
-					
+						<p:row>
 						<p:column>
 							<p:commandButton id="datasetOptionHelpBtn" value=""
 									styleClass="icon-only" icon="fa fa-question-circle" 
 									type="button" />
-							<h:outputText value="Dataset:" />
+							<h:outputText value="Aspect:" />
 						</p:column>
 						<p:column>
 							<p:selectManyButton value="#{enrichmentView.aspects}" converter="omnifaces.GenericEnumConverter">
@@ -117,9 +114,9 @@
 									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 							</p:selectManyButton>
 						</p:column>
-					
+						</p:row>
 
-					
+						<p:row>
 						<p:column>
 							<p:commandButton id="multipleOptionHelpBtn" value=""
 									styleClass="icon-only" icon="fa fa-question-circle" 
@@ -132,7 +129,9 @@
 									var="test" itemValue="#{test}" itemLabel="#{test.label}" />
 							</p:selectOneMenu>
 						</p:column>
+						</p:row>
 						
+						<p:row>
 						<p:column>
 							<p:commandButton id="thresholdOptionHelpBtn" value=""
 									styleClass="icon-only" icon="fa fa-question-circle" 
@@ -144,9 +143,10 @@
 							<pe:inputNumber value="#{enrichmentView.pThreshold}"
 								emptyValue="zero" decimalPlaces="4" style="max-width: 100px" />
 						</p:column>
+						</p:row>
 					
 
-					
+						<p:row>
 						<p:column>
 								<p:commandButton id="minOptionHelpBtn" value=""
 									styleClass="icon-only" icon="fa fa-question-circle" 
@@ -157,9 +157,10 @@
 							<p:spinner id="annotatedPopulationMinInput"
 								value="#{enrichmentView.minAnnotatedPopulation}" min="0" />
 						</p:column>
+						</p:row>
 					
 
-					
+						<p:row>
 						<p:column>
 								<p:commandButton id="maxOptionHelpBtn" value=""
 									styleClass="icon-only" icon="fa fa-question-circle" 
@@ -170,21 +171,20 @@
 							<p:spinner id="annotatedPopulationMaxInput"
 								value="#{enrichmentView.maxAnnotatedPopulation}" min="0" />
 						</p:column>
-					
-
-				</p:panelGrid>
-
-				<p:separator style="max-width:200px" />
-				<h3 class="center">Similarity Settings</h3>
-				<p:panelGrid style="margin-bottom:10px" cellpadding="5"
-					styleClass="no-border">
-
-					<p:row>
+						</p:row>
+						
+						<p:row>
+						<p:column colspan="2">
+							<p:separator style="max-width:200px" />
+						</p:column>
+						</p:row>
+						
+						<p:row>
 						<p:column>
 								<p:commandButton id="similarityOptionHelpBtn" value=""
 									styleClass="icon-only" icon="fa fa-question-circle" 
 									type="button" />
-								<h:outputText value="Similarity Between:" />
+								<h:outputText value="Similarity:" />
 						</p:column>
 						<p:column>
 							<p:selectOneMenu
@@ -193,7 +193,9 @@
 									var="method" itemValue="#{method}" itemLabel="#{method.label}" />
 							</p:selectOneMenu>
 						</p:column>
-					</p:row>
+						</p:row>
+					
+
 				</p:panelGrid>
 
 				<p:separator style="max-width:200px; height:5px;" />
