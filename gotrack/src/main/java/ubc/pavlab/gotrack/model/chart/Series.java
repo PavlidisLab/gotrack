@@ -72,11 +72,15 @@ public class Series {
     }
 
     public Collection<Point> getData() {
+        this.sort();
+        return data;
+    }
+
+    public void sort() {
         if ( !this.sorted ) {
             Collections.sort( data );
             this.sorted = true;
         }
-        return data;
     }
 
     public void setData( Collection<Point> data ) {

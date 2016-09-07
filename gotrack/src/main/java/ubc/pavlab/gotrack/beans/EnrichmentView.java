@@ -49,6 +49,7 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 
 import jersey.repackaged.com.google.common.collect.Lists;
@@ -297,7 +298,7 @@ public class EnrichmentView implements Serializable {
             dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToEdition", new Gson().toJson( dateToEdition ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
 
         statusPoller.completeStatus();
         timer.stop();
@@ -320,6 +321,19 @@ public class EnrichmentView implements Serializable {
         loadEnrichmentTableData();
         loadStabilityTableData();
 
+    }
+
+    private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
+            Integer max, ChartValues chart ) {
+        Map<String, Object> hcGsonMap = Maps.newHashMap();
+        hcGsonMap.put( "success", true );
+        hcGsonMap.put( "title", title );
+        hcGsonMap.put( "yLabel", yLabel );
+        hcGsonMap.put( "xLabel", xLabel );
+        hcGsonMap.put( "min", min );
+        hcGsonMap.put( "max", max );
+        hcGsonMap.put( "data", chart );
+        return hcGsonMap;
     }
 
     // GO Term Count Chart ---------------------------------------------------------------------------------------
@@ -346,10 +360,10 @@ public class EnrichmentView implements Serializable {
         cv.addSeries( significantTerms );
         cv.addSeries( rejectedTerms );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_terms_data", cv );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_terms_title", "GO Term Counts by Edition" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_terms_ylabel", "Count of Unique GO Terms" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_terms_xlabel", "Date" );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "GO Term Counts by Edition",
+                "Count of Unique GO Terms", "Date", null, null, cv );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_terms", new Gson().toJson( hcGsonMap ) );
     }
 
     // Similarity Charts ---------------------------------------------------------------------------------------
@@ -388,12 +402,12 @@ public class EnrichmentView implements Serializable {
             cv.addSeries( topParentsJaccard );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_sim_data", cv );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_sim_title", "Enrichment Similarity to "
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Enrichment Similarity to "
                 + ( similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current" )
-                + " Edition" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_sim_ylabel", "Jaccard Similarity Index" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_sim_xlabel", "Date" );
+                + " Edition",
+                "Jaccard Similarity Index", "Date", 0, 1, cv );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_similarity", new Gson().toJson( hcGsonMap ) );
 
     }
 
@@ -421,19 +435,17 @@ public class EnrichmentView implements Serializable {
         List<Edition> eds = new ArrayList<>( data.keySet() );
         Collections.sort( eds );
 
-        // Container for a mapping that will be used on the front-end for ajax queries
-        Map<Long, Integer> dateToEdition = new HashMap<>();
-
         // Chart
         ChartValues cv = null;
 
         double maxRank = -1; // for use in rank metric
 
+        Map<String, Object> hcGsonMap = null;
+
         if ( pvalue ) {
             // Graph p-values
             Map<GeneOntologyTerm, Series> series = new HashMap<>();
             for ( Edition ed : eds ) {
-                dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
                 for ( GeneOntologyTerm term : selectedTerms ) {
                     EnrichmentResult er = data.get( ed ).get( term );
                     if ( er != null ) {
@@ -452,20 +464,18 @@ public class EnrichmentView implements Serializable {
             for ( Series s : series.values() ) {
                 cv.addSeries( s );
             }
-            if ( selectedTerms.size() == 1 ) {
-                RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Stability Results" );
-            } else {
-                RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Results" );
-            }
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "P-Value" );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_type", "pvalue" );
 
             Map<Long, Double> cutoffs = new TreeMap<>();
             for ( Edition ed : eds ) {
                 cutoffs.put( ed.getDate().getTime(), analysis.getCutoff( ed ) );
             }
 
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_cutoffs", new Gson().toJson( cutoffs ) );
+            hcGsonMap = createHCCallbackParamMap(
+                    selectedTerms.size() == 1 ? "Enrichment Stability Results" : "Enrichment Results",
+                    "P-Value", "Date", null, null, cv );
+            hcGsonMap.put( "type", "pvalue" );
+            hcGsonMap.put( "cutoffs", cutoffs );
+
         } else {
             // rank
 
@@ -481,7 +491,6 @@ public class EnrichmentView implements Serializable {
                 int maxSignificantRank = analysis.getTermsSignificant( ed ).size() - 1;
 
                 // First we compute the relative ranks among the terms selected
-                dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
                 Map<GeneOntologyTerm, EnrichmentResult> editionData = data.get( ed );
                 ArrayList<Entry<GeneOntologyTerm, EnrichmentResult>> sortedData = new ArrayList<>(
                         editionData.entrySet() );
@@ -578,14 +587,15 @@ public class EnrichmentView implements Serializable {
             for ( Series s : series.values() ) {
                 cv.addSeries( s );
             }
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_title", "Enrichment Results by Relative Rank" );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Relative Rank" );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_maxRank", maxRank );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToMaxSigRank",
-                    new Gson().toJson( dateToMaxSigRank ) );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_insignificantCheck", insignificantCheck );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_outsideTopNCheck", outsideTopNCheck );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_type", "rank" );
+
+            hcGsonMap = createHCCallbackParamMap( "Enrichment Results by Relative Rank",
+                    "Relative Rank", "Date", null, null, cv );
+            hcGsonMap.put( "maxRank", maxRank );
+            hcGsonMap.put( "dateToMaxSigRank", dateToMaxSigRank );
+            hcGsonMap.put( "insignificantCheck", insignificantCheck );
+            hcGsonMap.put( "outsideTopNCheck", outsideTopNCheck );
+            hcGsonMap.put( "type", "rank" );
+            hcGsonMap.put( "topN", topN );
             // if ( topN != null ) {
             // if ( insigCheck ) {
             // RequestContext.getCurrentInstance().addCallbackParam(
@@ -600,11 +610,6 @@ public class EnrichmentView implements Serializable {
 
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", cv );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToEdition", new Gson().toJson( dateToEdition ) );
-
         if ( selectedTerms.size() == 1 && pvalue ) {
             // if there is a single graphed term and pvalue is the chosen metric we also create error bands to display
             // the 95% confidence around each point
@@ -615,7 +620,6 @@ public class EnrichmentView implements Serializable {
             Series rangeSeries = new Series( "95% Confidence" );
 
             for ( Edition ed : eds ) {
-                dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
                 EnrichmentResult er = data.get( ed ).get( term );
                 if ( er != null ) {
                     StabilityScore sc = scores.get( ed );
@@ -628,13 +632,12 @@ public class EnrichmentView implements Serializable {
             }
             cv = new ChartValues();
             cv.addSeries( rangeSeries );
-
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_errors", cv );
-
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_dateToStabilityScore",
-                    new Gson().toJson( dateToStabilityScore ) );
+            hcGsonMap.put( "errors", cv );
+            hcGsonMap.put( "dateToStabilityScore", dateToStabilityScore );
 
         }
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_enrichment", new Gson().toJson( hcGsonMap ) );
     }
 
     /**
@@ -650,8 +653,6 @@ public class EnrichmentView implements Serializable {
 
             createChart( selectedTerms, enrichmentChartTopN,
                     enrichmentChartMeasure.equals( EnrichmentChartMeasure.PVALUE ) );
-
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_topN", enrichmentChartTopN );
         } else {
             if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.isEmpty() ) {
                 // If nothing selected graph everything

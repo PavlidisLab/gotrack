@@ -48,6 +48,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 
@@ -319,6 +320,26 @@ public class GeneView implements Serializable {
         return propagatedData;
     }
 
+    private Map<String, Object> createHCCallbackParamFail( String info ) {
+        Map<String, Object> hcGsonMap = Maps.newHashMap();
+        hcGsonMap.put( "success", false );
+        hcGsonMap.put( "info", info );
+        return hcGsonMap;
+    }
+
+    private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
+            Integer max, ChartValues chart ) {
+        Map<String, Object> hcGsonMap = Maps.newHashMap();
+        hcGsonMap.put( "success", true );
+        hcGsonMap.put( "title", title );
+        hcGsonMap.put( "yLabel", yLabel );
+        hcGsonMap.put( "xLabel", xLabel );
+        hcGsonMap.put( "min", min );
+        hcGsonMap.put( "max", max );
+        hcGsonMap.put( "data", chart );
+        return hcGsonMap;
+    }
+
     /**
      * Create chart showing counts of unique terms annotated to this gene over time (both directly and through
      * propagation)
@@ -374,12 +395,10 @@ public class GeneView implements Serializable {
         }
         chart.addSeries( inferredCountSeries );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Terms Annotated to " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Annotations Count" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Terms Annotated to " + gene.getSymbol() + " vs Time",
+                "Annotations Count", "Date", 0, null, chart );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
 
     /**
@@ -448,13 +467,10 @@ public class GeneView implements Serializable {
         chart.addSeries( directSeries );
         chart.addSeries( inferredSeries );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Similarity of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Similarity Index" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Similarity of " + gene.getSymbol() + " vs Time",
+                "Jaccard Similarity Index", "Date", 0, 1, chart );
 
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
 
     /**
@@ -507,12 +523,11 @@ public class GeneView implements Serializable {
         chart.addSeries( averageSeries );
         chart.addSeries( multiSeries );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Multifunctionality of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Multifunctionality [10^-5]" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap(
+                "Multifunctionality of " + gene.getSymbol() + " vs Time", "Multifunctionality [10^-5]",
+                "Date", 0, null, chart );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
 
     /**
@@ -591,12 +606,9 @@ public class GeneView implements Serializable {
         chart.addSeries( inferredGainSeries );
         chart.addSeries( inferredLossSeries );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Loss/Gain of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Change" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Loss/Gain of " + gene.getSymbol() + " vs Time",
+                "Change", "Date", null, null, chart );
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
 
     }
 
@@ -613,7 +625,7 @@ public class GeneView implements Serializable {
      */
     public void filterCharts() {
         if ( selectedTerms == null || selectedTerms.size() == 0 ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", false );
+            RequestContext.getCurrentInstance().addCallbackParam( "filtered", false );
             return;
         }
 
@@ -621,7 +633,7 @@ public class GeneView implements Serializable {
 
         rawData = retrieveData( filterTerms );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", true );
+        RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
 
     }
 
@@ -630,7 +642,7 @@ public class GeneView implements Serializable {
      */
     public void resetCharts() {
         rawData = retrieveData();
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", true );
+        RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
     }
 
     /**
@@ -640,15 +652,15 @@ public class GeneView implements Serializable {
         log.debug( "fetchTimeline" );
         if ( selectedTerms == null || selectedTerms.size() == 0 ) {
             // No Terms
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_info", "No Terms Selected." );
+            RequestContext.getCurrentInstance().addCallbackParam( "HC",
+                    new Gson().toJson( createHCCallbackParamFail( "No Terms Selected." ) ) );
             return;
         }
 
         if ( selectedTerms.size() > 20 ) {
             // Too many terms
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_info", "Too Many Terms Selected. Maximum 20." );
+            RequestContext.getCurrentInstance().addCallbackParam( "HC",
+                    new Gson().toJson( createHCCallbackParamFail( "Too Many Terms Selected. Maximum 20." ) ) );
             return;
         }
 
@@ -694,16 +706,12 @@ public class GeneView implements Serializable {
             chart.addSeries( s );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Annotation Categories of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
-
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_category_positions",
-                new Gson().toJson( categoryPositions ) );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_term_names", new Gson().toJson( termNames ) );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap(
+                "Annotation Categories of " + gene.getSymbol() + " vs Time",
+                "", "Date", null, null, chart );
+        hcGsonMap.put( "category_positions", categoryPositions );
+        hcGsonMap.put( "term_names", termNames );
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
 
     }
 
@@ -753,7 +761,7 @@ public class GeneView implements Serializable {
             editionId = Integer.valueOf(
                     FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         } catch ( NumberFormatException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            log.error( e );
             return;
         }
 
@@ -762,14 +770,12 @@ public class GeneView implements Serializable {
         try {
             clickTerms = rawData.get( AnnotationType.I ).row( clickEdition ).keySet();
         } catch ( NullPointerException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            log.error( e );
             return;
         }
 
         selectedClickTerms = null;
         filteredClickTerms = null;
-
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
 
     }
 
@@ -784,7 +790,7 @@ public class GeneView implements Serializable {
             editionId = Integer.valueOf(
                     FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         } catch ( NumberFormatException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            log.error( e );
             return;
         }
 
@@ -802,7 +808,7 @@ public class GeneView implements Serializable {
 
         if ( previousEdition == null ) {
             clickLGTerms = Lists.newArrayList();
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            log.warn( "Selected Edition on Loss/Gain Chart which has no previous edition to compare to." );
             return;
         }
 
@@ -847,14 +853,12 @@ public class GeneView implements Serializable {
             Collections.sort( clickLGTerms );
 
         } catch ( NullPointerException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            log.error( e );
             return;
         }
 
         selectedClickLGTerms = null;
         filteredClickLGTerms = null;
-
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
 
     }
 
@@ -868,7 +872,7 @@ public class GeneView implements Serializable {
             editionId = Integer.valueOf(
                     FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         } catch ( NumberFormatException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            log.error( e );
             return;
         }
         clickEdition = cache.getEdition( species.getId(), editionId );

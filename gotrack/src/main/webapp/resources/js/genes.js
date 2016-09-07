@@ -1,5 +1,3 @@
-var MAXIMALLY_DISTINCT_COLORS = ["#2bce48", "#0075dc", "#993f00", "#4c005c", "#191919", "#005c31", "#f0a3ff", "#ffcc99", "#808080", "#94ffb5", "#8f7c00", "#9dcc00", "#c20088", "#003380", "#ffa405", "#ffa8bb", "#426600", "#ff0010", "#5ef1f2", "#00998f", "#e0ff66", "#740aff", "#990000", "#ffff80", "#ffff00", "#ff5005"]
-
 function onLoad() {
    $("#right-toggler").append('<span class="vertical toggled-header">Functionality</span>');
 }
@@ -17,13 +15,13 @@ function centerResize() {
 function tabShowed(index) {
    try {
       if (index==0) {
-         HC.charts.annotation.resize();
+         plotting.charts.annotation.resize();
       } else if (index==1) {
-         HC.charts.similarity.resize();
+         plotting.charts.similarity.resize();
       } else if (index==2) {
-         HC.charts.multi.resize();
+         plotting.charts.multi.resize();
       } else if (index==3) {
-         HC.charts.lossgain.resize();
+         plotting.charts.lossgain.resize();
       }
    } catch(e) {
       console.log(e);
@@ -31,11 +29,11 @@ function tabShowed(index) {
 }
 
 function timelineDlgHide() {
-   HC.charts.timeline.destroy();
+   plotting.charts.timeline.destroy();
 }
 
 function timelineDlgResize() {
-   HC.charts.timeline.resize();
+   plotting.charts.timeline.resize();
 }
 
 
@@ -64,68 +62,6 @@ function showViewAnnotationsDlg() {
    }
 }
 
-function HChart(id) {
-   this.id = id;
-   this.chart = null;
-   this.options = {};
-   this._exists = false;
-   this.exists = function() {
-      return (this.chart!=null && this._exists);
-   }
-   this.destroy = function() {
-      if ( this.exists() ) {
-         try {
-            this.chart.destroy(); 
-         } catch (e) {
-            console.log(e);
-         }
-      } else {
-         console.log('Chart not yet created');
-      }
-      this._exists=false;
-      
-   }
-   this.create = function() {
-      if ( !this.exists() ) {
-         this.chart = new Highcharts.Chart(this.options);
-         this._exists=true;
-         console.log("Chart created");
-      }
-   }
-   this.reset = function() {
-      this.recreate(this.options);
-   }
-   this.recreate = function(options) {
-      try {
-         if(typeof options === 'undefined'){
-            // options not supplied
-            options = this.options; //fallback incase chart is not made yet
-            options = this.chart.options;
-          }
-         this.destroy();
-      } catch (e) {
-         console.log(e);
-      } finally {
-         try{
-            this.chart = new Highcharts.Chart(options);
-            this._exists=true;
-         } catch (e) {
-            console.log("Failed to create chart",e);
-         }
-         
-      }
-
-   }
-   this.resize = function() {
-      try {
-         this.chart.reflow();
-      } catch (e) {
-         console.log(e);
-      }
-   }
-     
-}
-
 function handleFetchData(xhr, status, args) {
    if (!utility.isUndefined(args.dateToEdition)) {
       GLOBALS.dateToEdition = JSON.parse(args.dateToEdition);
@@ -134,7 +70,7 @@ function handleFetchData(xhr, status, args) {
 }
 
 function fetchCharts() {
-   HC.destroyAllCharts();
+   plotting.destroyAllCharts();
    fetchAnnotationChart();
    fetchSimilarityChart();
    fetchMultiChart();
@@ -143,20 +79,36 @@ function fetchCharts() {
 
 function handleFilterCharts(xhr, status, args) {
    console.log(args);
-   if (args.hc_filtered) {
+   if (args.filtered) {
       fetchCharts();
    }
 }
 
 function handleFetchAnnotationChart(xhr, status, args) {
-   console.log('handleFetchAnnotationChart', args);
+   
    try {
       $('#loading-spinner-annotation').hide();
    } catch(e) {
       console.log(e);
    }
+   
+   try {
+      args.HC = JSON.parse(args.HC);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
+   
+   console.log('handleFetchAnnotationChart', args);
 
-   var options = createGenericLineChart('hc_annotation_container', args, 0, null);
+   args.HC.renderTo = 'hc_annotation_container';
+   var options = plotting.defaultHCOptions(args.HC, true);
+   
+   options.legend = {};
+   
+   options.tooltip.pointFormatter = function(){
+      return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 3)+'</b><br/>';
+   };
 
    options.plotOptions.series.point = {
                                        events: {
@@ -172,57 +124,93 @@ function handleFetchAnnotationChart(xhr, status, args) {
          }
    }
       
-   HC.charts.annotation.options = options;
-   HC.charts.annotation.recreate(options);
+   plotting.charts.annotation.options = options;
+   plotting.charts.annotation.recreate(options);
 }
 
 function handleFetchSimilarityChart(xhr, status, args) {
-   console.log('handleFetchSimilarityChart', args);
+   
    try {
       $('#loading-spinner-similarity').hide();
    } catch(e) {
       console.log(e);
    }
-   var options = createGenericLineChart('hc_similarity_container', args, 0, 1);
+   
+   try {
+      args.HC = JSON.parse(args.HC);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
+   
+   console.log('handleFetchSimilarityChart', args);
+
+   args.HC.renderTo = 'hc_similarity_container';
+   var options = plotting.defaultHCOptions(args.HC, true);
+   
+   options.legend = {};
+   
+   options.tooltip.pointFormatter = function(){
+      return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 3)+'</b><br/>';
+   };
    
    options.yAxis.endOnTick = false; // Make sure log axis follows our given max
    
-   HC.charts.similarity.options = options;
-   HC.charts.similarity.recreate(options);
+   plotting.charts.similarity.options = options;
+   plotting.charts.similarity.recreate(options);
 }
 
 function handleFetchMultiChart(xhr, status, args) {
-   console.log('handleFetchMultiChart', args);
+   
    try {
       $('#loading-spinner-multifunctionality').hide();
    } catch(e) {
       console.log(e);
    }  
    
-   var options = createGenericLineChart('hc_multi_container', args, 0, null);
-   //options.chart.type = 'area';
-   //options.plotOptions.area = {fillColor: {
-//   options.plotOptions.line = {color: {
-//      linearGradient: [ 0,0,0,500],
-//      stops: [
-//          [0, MAXIMALLY_DISTINCT_COLORS[0]],
-//          [1, MAXIMALLY_DISTINCT_COLORS[2]]
-//      ]
-//  }};
+   try {
+      args.HC = JSON.parse(args.HC);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
+   console.log('handleFetchMultiChart', args);
+
+   args.HC.renderTo = 'hc_multi_container';
+   var options = plotting.defaultHCOptions(args.HC, true);
    
-   HC.charts.multi.options = options;
-   HC.charts.multi.recreate(options);
+   options.legend = {};
+   
+   options.tooltip.pointFormatter = function(){
+      return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 3)+'</b><br/>';
+   };
+   
+   plotting.charts.multi.options = options;
+   plotting.charts.multi.recreate(options);
 }
 
 function handleFetchLossGainChart(xhr, status, args) {
-   console.log('handleFetchLossGainChart', args);
+   
    try {
       $('#loading-spinner-lossgain').hide();
    } catch(e) {
       console.log(e);
    } 
    
-   var options = createGenericLineChart('hc_lossgain_container', args);
+   try {
+      args.HC = JSON.parse(args.HC);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
+   
+   console.log('handleFetchLossGainChart', args);
+      
+   args.HC.renderTo = 'hc_lossgain_container';
+   var options = plotting.defaultHCOptions(args.HC, false);
+   
+   options.legend = {};
+   
    options.chart.type = 'column';
    options.plotOptions.series.stacking = 'normal';
 
@@ -234,19 +222,9 @@ function handleFetchLossGainChart(xhr, status, args) {
                                 }
    };
    
-   for (var i = 0; i < args.hc_data.series.length; i++) {
-      options.series[i].stack = args.hc_data.series[i].extra;
+   for (var i = 0; i < args.HC.data.series.length; i++) {
+      options.series[i].stack = args.HC.data.series[i].extra;
    }
-   
-   // Remove axis scale toggle, because negative values and log don't mix
-   options.exporting = {
-                        enabled: true,
-                        sourceWidth  : 1600,
-                        sourceHeight : 900,
-                        csv: {
-                           dateFormat: '%Y-%m-%d'
-                        }
-   };
    
    // Click event functionality
    options.plotOptions.series.point = {
@@ -263,21 +241,29 @@ function handleFetchLossGainChart(xhr, status, args) {
          }
    }
    
-   HC.charts.lossgain.options = options;
-   HC.charts.lossgain.recreate(options);
+   plotting.charts.lossgain.options = options;
+   plotting.charts.lossgain.recreate(options);
 }
 
 function handleFetchTimeline(xhr, status, args) {
+   try {
+      args.HC = JSON.parse(args.HC);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
    console.log('handleFetchTimeline', args);
    
-   if (!args.hc_success) {
-      console.log(args.hc_info);
+   
+   
+   if (!args.HC.success) {
+      console.log(args.HC.info);
       $('#hc_timeline_container').empty();
-      $('#hc_timeline_container').append( "<p>"+args.hc_info+"</p>" );
+      $('#hc_timeline_container').append( "<p>"+args.HC.info+"</p>" );
       return;
    }
    
-   var tmp = JSON.parse(args.hc_category_positions);
+   var tmp = args.HC.category_positions;
    var evidenceCategories = new Array(tmp.length);
    
    // Inverse the map
@@ -288,15 +274,18 @@ function handleFetchTimeline(xhr, status, args) {
    
    var categories = [];
    var tooltipData = {};
-   for (var i = 0; i < args.hc_data.series.length; i++) {
-      categories.push(args.hc_data.series[i].name);
+   for (var i = 0; i < args.HC.data.series.length; i++) {
+      categories.push(args.HC.data.series[i].name);
       tooltipData[i] = {};
    }
    
-   var termNames = JSON.parse(args.hc_term_names);
+   var termNames = args.HC.term_names;
+      
+   args.HC.renderTo = 'hc_timeline_container';
+   var options = plotting.defaultHCOptions(args.HC, false);
    
+   options.legend = {};
    
-   var options = createGenericLineChart('hc_timeline_container', args);
    options.chart.type = 'xrange';
    options.chart.zoomType = 'xy';
    options.yAxis =  {
@@ -317,16 +306,6 @@ function handleFetchTimeline(xhr, status, args) {
    //options.legend.enabled = false;
    options.series = []; // Not optimal as we're recreating for no reason, change later
    //options.colors = [];
-   
-   // Remove axis scale toggle, because negative values and log don't mix
-   options.exporting = {
-                        enabled: true,
-                        sourceWidth  : 1600,
-                        sourceHeight : 900,
-                        csv: {
-                           dateFormat: '%Y-%m-%d'
-                        }
-   };
    
    options.plotOptions.series.point = {
                                        events: {
@@ -365,8 +344,8 @@ function handleFetchTimeline(xhr, status, args) {
       });
    }
    
-   for (var i = 0; i < args.hc_data.series.length; i++) {
-      var series = args.hc_data.series[i];
+   for (var i = 0; i < args.HC.data.series.length; i++) {
+      var series = args.HC.data.series[i];
       var name = series.name;
       var data = []
       var tData = tooltipData[i];
@@ -417,188 +396,9 @@ function handleFetchTimeline(xhr, status, args) {
 //      return { x: 80, y: 50 };
 //   }
    
-   HC.charts.timeline.options = options;
-   HC.charts.timeline.recreate(options);
+   plotting.charts.timeline.options = options;
+   plotting.charts.timeline.recreate(options);
    
-}
-
-function createGenericLineChart(renderTo, args, baseMin, baseMax) {
-   var options = {
-                  chart: {
-                     renderTo: renderTo,
-                     zoomType: 'x',
-                     resetZoomButton: {
-                        position: {
-                           align: 'left',
-                           // verticalAlign: 'top', // by default
-                           x: 35,
-                           y: -35,
-                        }
-                     },
-//                     events: {
-//                        click: function(event) {
-//                           fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.hoverPoint.x]} ]);
-//                     }
-//                     }
-                  },
-                  title: {
-                     text: args.hc_title
-                  },
-
-                  xAxis: {
-                     type: 'datetime',
-                     title: {
-                        text: args.hc_xlabel
-                     },
-                     minRange: 60 * 24 * 3600000 // fourteen days
-                  },
-
-                  yAxis: {
-                     type: 'linear',
-                     title: {
-                        text: args.hc_ylabel
-                     },
-                     labels: {
-                        formatter: function () {
-                           return this.value;
-                        }
-                     },
-                     min: baseMin,
-                     max: baseMax,
-                  },
-
-                  plotOptions : {
-                     series : {
-//                        point: {
-//                           events: {
-//                              click: function () {
-//                                 fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.x]} ]);
-//                              }
-//                           }
-//                        },
-                        events: {
-                           legendItemClick: function(event) {
-
-                              var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
-
-                              if (!defaultBehaviour) {
-
-                                 var seriesIndex = this.index;
-                                 var series = this.chart.series;
-
-                                 var reset = this.isolated;
-
-
-                                 for (var i = 0; i < series.length; i++)
-                                 {
-                                    if (series[i].index != seriesIndex)
-                                    {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(false, false)
-                                          series[i].isolated=false; 
-                                       }
-
-                                    } else {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=true;
-                                       }
-                                    }
-                                 }
-                                 this.chart.redraw();
-
-                                 return false;
-                              }
-                           }
-                        }
-                     }
-                  },
-
-                  tooltip: {
-                     shared:true,
-                     dateTimeLabelFormats:{
-                        hour:"%B %Y", 
-                        minute:"%B %Y"
-                     },
-                     pointFormatter:function(){
-                        return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 3)+'</b><br/>';
-                        }
-                  },
-                  legend : {
-//                     align : 'right',
-//                     verticalAlign: 'top',
-//                     layout: 'vertical',
-//                     y:20
-                  },
-
-                  series: [],
-
-                  colors : MAXIMALLY_DISTINCT_COLORS,
-
-                  exporting: {
-                     sourceWidth: 1600,
-                     sourceHeight: 900,
-                     csv: {
-                        dateFormat: '%Y-%m-%d'
-                     },
-                     buttons: {
-                        scaleToggle: {
-                           align:'left',
-                           //verticalAlign:'middle', 
-                           x: 20, 
-                           onclick: function () {
-                              // The toggling of the text is not using an official API, can break with version update!
-                             if (this.yAxis[0].isLog) {
-                                this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
-                                this.yAxis[0].update({ type: 'linear', min:baseMin, max:baseMax});
-                             } else {
-                                this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
-                                this.yAxis[0].update({ type: 'logarithmic', min: null, max:baseMax});
-                             }
-                             
-                           },
-                           symbol: 'circle',
-                           symbolFill: '#bada55',
-                           symbolStroke: '#330033',
-                           symbolStrokeWidth: 1,
-                           _titleKey: 'axis_toggle', 
-                           text: 'Linear'
-                        }
-                     }
-               },
-               lang : {
-                       axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
-               }
-                  
-   }
-   
-   if (!utility.isUndefined( args.hc_data ) ){
-      //args.hc_gene_data.series.sort(function(a,b) {return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);} );
-      for (var i = 0; i < args.hc_data.series.length; i++) {
-         var series = args.hc_data.series[i];
-         var name = series.name;
-         var data = []
-   
-         for (var j = 0; j < series.data.length; j++) {
-            var point = series.data[j];
-            data.push([point.x,point.y]);
-         }
-   
-         options.series.push({
-            name : name,
-            data : data
-         })
-   
-      }
-   
-   }
-   return options;
 }
 
 $(document).ready(function() {
@@ -685,49 +485,14 @@ $(document).ready(function() {
            }                
        });
    }(Highcharts));
-
-
-   HC = {
-         charts: {},
-         chart : function(id) {
-            return this.charts[id];
-         },
-         createNewChart :  function(id) {
-            if ( this.charts[id] ) {
-               throw "Id already exists"
-            } else {
-               this.charts[id]= new HChart(id) ;
-            }
-         },
-         removeAllCharts: function() {
-            
-            for (name in this.charts) {
-               
-               this.charts[name].destroy();
-               
-            }
-            
-            this.charts = {};
-            
-         },
-         destroyAllCharts: function() {
-            
-            for (name in this.charts) {
-               
-               this.charts[name].destroy();
-               
-            }
-            
-         }
-   };
    
    GLOBALS = {};
       
 
-   HC.createNewChart( 'annotation' );
-   HC.createNewChart( 'similarity' );
-   HC.createNewChart( 'multi' );
-   HC.createNewChart( 'lossgain' );
-   HC.createNewChart( 'timeline' );
+   plotting.createNewChart( 'annotation' );
+   plotting.createNewChart( 'similarity' );
+   plotting.createNewChart( 'multi' );
+   plotting.createNewChart( 'lossgain' );
+   plotting.createNewChart( 'timeline' );
    
 })

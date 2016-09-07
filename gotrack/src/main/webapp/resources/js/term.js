@@ -1,5 +1,3 @@
-var MAXIMALLY_DISTINCT_COLORS = ["#2bce48", "#0075dc", "#993f00", "#4c005c", "#191919", "#005c31", "#f0a3ff", "#ffcc99", "#808080", "#94ffb5", "#8f7c00", "#9dcc00", "#c20088", "#003380", "#ffa405", "#ffa8bb", "#426600", "#ff0010", "#5ef1f2", "#00998f", "#e0ff66", "#740aff", "#990000", "#ffff80", "#ffff00", "#ff5005"]
-
 function onLoad() {}
 
 function centerResize() {
@@ -16,11 +14,11 @@ function tabShowed(index) {
       if (index==0) {
          CS.overview.graph.resize();
       } else if (index==2) {
-         HC.charts.overview.resize();
+         plotting.charts.overview.resize();
       } else if (index==3) {
-         HC.charts.gene.resize();
+         plotting.charts.gene.resize();
       } else if (index==4) {
-         HC.charts.evidence.resize();
+         plotting.charts.evidence.resize();
       }
    } catch(e) {
       console.log(e);
@@ -47,6 +45,13 @@ function handleFetchOverviewChart(xhr, status, args) {
    } catch(e) {
       console.log(e);
    }
+   
+   try {
+      args.HC_overview = JSON.parse(args.HC_overview);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
 
    createOverviewChart(args);
 }
@@ -58,6 +63,13 @@ function handleFetchGeneChart(xhr, status, args) {
    } catch(e) {
       console.log(e);
    }
+   
+   try {
+      args.HC_gene = JSON.parse(args.HC_gene);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
    createGeneCountChart(args);
 }
 
@@ -68,6 +80,14 @@ function handleFetchEvidenceChart(xhr, status, args) {
    } catch(e) {
       console.log(e);
    }
+   
+   try {
+      args.HC_evidence = JSON.parse(args.HC_evidence);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
+   
    createEvidenceCountChart(args);
 }
 
@@ -792,99 +812,40 @@ function showDiff(cs, args) {
 }
 
 function createOverviewChart(args) {
-   var options = {
-                  chart: {
-                     renderTo: 'hc_overview_container',
-                     type: 'xrange',
-                     zoomType: 'x',
-                     resetZoomButton: {
-                        position: {
-                           align: 'left',
-                           // verticalAlign: 'top', // by default
-                           x: 0,
-                           y: -35
-                        }
-                     },
-                  },
-                  title: {
-                     text: args.hc_overview_title
-                  },
+   args.HC_overview.renderTo = 'hc_overview_container';
+   var options = plotting.defaultHCOptions(args.HC_overview, false, true); // Custom data importer ahead
+   
+   options.chart.type = 'xrange';
+   options.yAxis.categories = ['Name Change', 'Structure Change','Existence']
+   options.yAxis.title = '';
+   options.plotOptions = {
+                          series : {
+                             grouping: false,
+                             point: {
+                                events: {
+                                   click: function () {
+                                      if (this.y != 0){
+                                         fetchGraph([{name:'edition', value:GLOBALS.dateToGOEditionId[this.x]},{name:'showDiff', value:this.y==1} ]);
+                                      }
+                                   }
+                                }
+                             },
+                          }
+                       };
+   options.tooltip.shared = false;
+   options.tooltip.formatter = function() {
+      return  '<b>' + Highcharts.dateFormat('%b %Y',
+         new Date(this.x)) +'</b><br/>' + this.key
+   };
+   options.legend.enabled = false;
+   options.colors = [];
 
-                  xAxis: {
-                     type: 'datetime',
-                     title: {
-                        text: args.hc_overview_xlabel
-                     },
-                     minRange: 60 * 24 * 3600000 // fourteen days
-                  },
-
-                  yAxis: {
-                     categories: ['Name Change', 'Structure Change','Existence'],
-                     min:0,
-                     max:2,
-                     title: '',
-                     labels: {
-                        formatter: function () {
-                           return this.value;
-                        }
-                     }
-                  },
-
-                  plotOptions : {
-                     series : {
-                        grouping: false,
-                        point: {
-                           events: {
-                              click: function () {
-                                 if (this.y != 0){
-                                    fetchGraph([{name:'edition', value:GLOBALS.dateToGOEditionId[this.x]},{name:'showDiff', value:this.y==1} ]);
-                                 }
-                              }
-                           }
-                        },
-                     }
-                  },
-
-                  tooltip: {
-                     shared:false,
-                     dateTimeLabelFormats:{
-                        millisecond:"%B %Y",
-                        hour:"%B %Y", 
-                        minute:"%B %Y"
-                     },
-                     formatter: function() {
-                        return  '<b>' + Highcharts.dateFormat('%b %Y',
-                           new Date(this.x)) +'</b><br/>' + this.key
-                     }
-                  },
-                  legend : {
-                     enabled: false,
-                     align : 'right',
-                     verticalAlign: 'top',
-                     layout: 'vertical',
-                     y:20
-                  },
-
-                  series: [],
-
-                  colors : [],
-
-                  exporting: {
-                     enabled: true,
-                     sourceWidth  : 1600,
-                     sourceHeight : 900,
-                     csv: {
-                        dateFormat: '%Y-%m-%d'
-                     }
-                  }
-   }
-
-   if (!utility.isUndefined( args.hc_overview_data ) ){
+   if (!utility.isUndefined( args.HC_overview.data ) ){
       var existenceSeries;
       var structureSeries;
       var nameSeries;
-      for (var i = 0; i < args.hc_overview_data.series.length; i++) {
-         var series = args.hc_overview_data.series[i];
+      for (var i = 0; i < args.HC_overview.data.series.length; i++) {
+         var series = args.HC_overview.data.series[i];
          var name = series.name;
          if (name == "Existence" ) {
             existenceSeries = series;
@@ -936,19 +897,21 @@ function createOverviewChart(args) {
          data : nameData
       });
 
-      HC.charts.overview.options = options;
-      HC.charts.overview.recreate(options);
+      plotting.charts.overview.options = options;
+      plotting.charts.overview.recreate(options);
 
    }
 }
 
 function createGeneCountChart(args) {
-   var options = defaultHCOptions(hc_gene_container, args.hc_gene_title, args.hc_gene_xlabel, args.hc_gene_ylabel);
-
-   if (!utility.isUndefined( args.hc_gene_data ) ){
+   
+   args.HC_gene.renderTo = 'hc_gene_container';
+   var options = plotting.defaultHCOptions(args.HC_gene, false, true);
+   
+   if (!utility.isUndefined( args.HC_gene.data ) ){
       //args.hc_gene_data.series.sort(function(a,b) {return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);} );
-      for (var i = 0; i < args.hc_gene_data.series.length; i++) {
-         var series = args.hc_gene_data.series[i];
+      for (var i = 0; i < args.HC_gene.data.series.length; i++) {
+         var series = args.HC_gene.data.series[i];
          var name = series.name;
          var data = []
 
@@ -973,7 +936,6 @@ function createGeneCountChart(args) {
             x: -138,
             y: 0,
             onclick: function () {
-               console.log(this);
                this.toggleSubsets = (this.toggleSubsets + 1) % 3;
                var button = this.exportSVGElements[3];
                button.attr({fill:'#33cc33'});
@@ -1066,8 +1028,8 @@ function createGeneCountChart(args) {
       };
 
 
-      HC.charts.gene.options = options;
-      HC.charts.gene.recreate(options, function(c) {
+      plotting.charts.gene.options = options;
+      plotting.charts.gene.recreate(options, function(c) {
          c.toggleSubsets = 0;
        });
 
@@ -1075,222 +1037,14 @@ function createGeneCountChart(args) {
 }
 
 function createEvidenceCountChart(args) {
-   var options = defaultHCOptions(hc_evidence_container, args.hc_evidence_title, args.hc_evidence_xlabel, args.hc_evidence_ylabel);
 
-   if (!utility.isUndefined( args.hc_evidence_data ) ){
-      for (var i = 0; i < args.hc_evidence_data.series.length; i++) {
-         var series = args.hc_evidence_data.series[i];
-         var name = series.name;
-         var data = []
-
-         for (var j = 0; j < series.data.length; j++) {
-            var point = series.data[j];
-            data.push([point.x,point.y]);
-         }
-
-         options.series.push({
-            name : name,
-            data : data
-         })
-
-      }
+   args.HC_evidence.renderTo = 'hc_evidence_container';
+   var options = plotting.defaultHCOptions(args.HC_evidence, false);
 
 
-      HC.charts.evidence.options = options;
-      HC.charts.evidence.recreate(options);
+   plotting.charts.evidence.options = options;
+   plotting.charts.evidence.recreate(options);
 
-   } 
-}
-
-function defaultHCOptions(renderTo, title, xLabel, yLabel ) {
-   return {
-                  chart: {
-                     renderTo: renderTo,
-                     zoomType: 'x',
-                     resetZoomButton: {
-                        position: {
-                           align: 'left',
-                           // verticalAlign: 'top', // by default
-                           x: 0,
-                           y: -35,
-                        }
-                     },
-//                   events: {
-//                   click: function(event) {
-//                   fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.hoverPoint.x]} ]);
-//                   }
-//                   }
-                  },
-                  title: {
-                     text: title
-                  },
-
-                  xAxis: {
-                     type: 'datetime',
-                     title: {
-                        text: xLabel
-                     },
-                     minRange: 60 * 24 * 3600000 // fourteen days
-                  },
-
-                  yAxis: {
-                     type: 'linear',
-                     title: {
-                        text: yLabel
-                     },
-                     labels: {
-                        formatter: function () {
-                           return this.value;
-                        }
-                     }
-                  },
-
-                  plotOptions : {
-                     series : {
-//                      point: {
-//                      events: {
-//                      click: function () {
-//                      fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.x]} ]);
-//                      }
-//                      }
-//                      },
-                        events: {
-                           legendItemClick: function(event) {
-
-                              var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
-
-                              if (!defaultBehaviour) {
-
-                                 var seriesIndex = this.index;
-                                 var series = this.chart.series;
-
-                                 var reset = this.isolated;
-
-
-                                 for (var i = 0; i < series.length; i++) {
-                                    if (series[i].index != seriesIndex)
-                                    {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(false, false)
-                                          series[i].isolated=false; 
-                                       }
-
-                                    } else {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=true;
-                                       }
-                                    }
-                                 }
-                                 this.chart.redraw();
-
-                                 return false;
-                              }
-                           }
-                        }
-                     }
-                  },
-
-                  tooltip: {
-                     shared:true,
-                     dateTimeLabelFormats:{
-                        hour:"%B %Y", 
-                        minute:"%B %Y"
-                     }
-                  },
-                  legend : {
-                     align : 'right',
-                     verticalAlign: 'top',
-                     layout: 'vertical',
-                     y:20
-                  },
-
-                  series: [],
-
-                  colors : MAXIMALLY_DISTINCT_COLORS,
-
-                  exporting: {
-                     enabled: true,
-                     sourceWidth  : 1600,
-                     sourceHeight : 900,
-                     csv: {
-                        dateFormat: '%Y-%m-%d'
-                     }
-                  }
-   }
-}
-
-function HChart(id) {
-   this.id = id;
-   this.chart = null;
-   this.options = {};
-   this._exists = false;
-   this.exists = function() {
-      return (this.chart!=null && this._exists);
-   }
-   this.destroy = function() {
-      if ( this.exists() ) {
-         try {
-            this.chart.destroy(); 
-         } catch (e) {
-            console.log(e);
-         }
-      } else {
-         console.log('Chart not yet created');
-      }
-      this._exists=false;
-
-   }
-   this.create = function(callback) {
-      if(typeof callback === 'undefined'){
-         callback = function(){};
-      }
-      if ( !this.exists() ) {
-         this.chart = new Highcharts.Chart(this.options, callback);
-         this._exists=true;
-         console.log("Chart created");
-      }
-   }
-   this.reset = function() {
-      this.recreate(this.options);
-   }
-   this.recreate = function(options, callback) {
-      if(typeof callback === 'undefined'){
-         callback = function(){};
-      }
-      try {
-         if(typeof options === 'undefined'){
-            // options not supplied
-            options = this.options; //fallback incase chart is not made yet
-            options = this.chart.options;
-         }
-         this.destroy();
-      } catch (e) {
-         console.log(e);
-      } finally {
-         try{
-            this.chart = new Highcharts.Chart(options, callback);
-            this._exists=true;
-         } catch (e) {
-            console.log("Failed to create chart");
-         }
-
-      }
-
-   }
-   this.resize = function() {
-      try {
-         this.chart.reflow();
-      } catch (e) {
-         console.log(e);
-      }
-   }
 
 }
 
@@ -1390,39 +1144,13 @@ $(document).ready(function() {
       });
    }(Highcharts));
 
-
-   HC = {
-         charts: {},
-         chart : function(id) {
-            return this.charts[id];
-         },
-         createNewChart :  function(id) {
-            if ( this.charts[id] ) {
-               throw "Id already exists"
-            } else {
-               this.charts[id]= new HChart(id) ;
-            }
-         },
-         removeAllCharts: function() {
-
-            for (name in this.charts) {
-
-               this.charts[name].destroy();
-
-            }
-
-            this.charts = {};
-
-         }
-   };
-
    CS = {};
 
    GLOBALS = {};
 
 
-   HC.createNewChart( 'overview' );
-   HC.createNewChart( 'gene' );
-   HC.createNewChart( 'evidence' );
+   plotting.createNewChart( 'overview' );
+   plotting.createNewChart( 'gene' );
+   plotting.createNewChart( 'evidence' );
 
 })
