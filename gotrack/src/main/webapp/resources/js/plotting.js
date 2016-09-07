@@ -314,11 +314,15 @@
                var point = series.data[j];
                data.push([point.x,point.y]);
             }
-
-            options.series.push({
-               name : name,
-               data : data
-            })
+            
+            var seriesOptions = {
+                                 name : name,
+                                 data : data
+                              };
+            if ( !isUndefined( series.extra ) && !isUndefined( series.extra.color ) ) {
+               seriesOptions.color = series.extra.color;
+            }
+            options.series.push(seriesOptions)
 
          }      
 

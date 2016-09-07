@@ -63,6 +63,7 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
+import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.AnnotationValues;
 import ubc.pavlab.gotrack.model.table.LossGainTableValues;
@@ -364,8 +365,10 @@ public class GeneView implements Serializable {
 
         //Create series for direct annotations count
         Series directCountSeries = new Series( "Direct Annotation Count" );
-        Series aggregateSeries = new Series( "Species Direct Avg" );
-        Series aggregateInferredSeries = new Series( "Species Inferred Avg" );
+        SeriesExtra aggregateSeries = new SeriesExtra( "Species Direct Mean" );
+        aggregateSeries.putExtra( "color", "#939393" );
+        SeriesExtra aggregateInferredSeries = new SeriesExtra( "Species Inferred Mean" );
+        aggregateInferredSeries.putExtra( "color", "#939393" );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
@@ -430,7 +433,8 @@ public class GeneView implements Serializable {
 
         // For direct annotations
         Series directSeries = new Series( "Direct Similarity" );
-        Series averageDirectSeries = new Series( "Direct Species Average" );
+        SeriesExtra averageDirectSeries = new SeriesExtra( "Direct Species Mean" );
+        averageDirectSeries.putExtra( "color", "#939393" );
 
         Set<GeneOntologyTerm> currentGOSet = directData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : directData.rowMap().entrySet() ) {
@@ -447,7 +451,8 @@ public class GeneView implements Serializable {
 
         // For Inferred annotations
         Series inferredSeries = new Series( "Inferred Similarity" );
-        Series averageInferredSeries = new Series( "Inferred Species Average" );
+        SeriesExtra averageInferredSeries = new SeriesExtra( "Inferred Species Average" );
+        averageInferredSeries.putExtra( "color", "#939393" );
 
         currentGOSet = inferredData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : inferredData.rowMap().entrySet() ) {
@@ -496,7 +501,8 @@ public class GeneView implements Serializable {
 
         // Calculate multifunctionality of the gene in each edition
         Series multiSeries = new Series( "Multifunctionality" );
-        Series averageSeries = new Series( "Species Average" );
+        SeriesExtra averageSeries = new SeriesExtra( "Multifunctionality Species Mean" );
+        averageSeries.putExtra( "color", "#939393" );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
@@ -552,10 +558,10 @@ public class GeneView implements Serializable {
         // Calculate both the losses of GO terms and gains of GO terms between editions
 
         // For direct annotations
-        Series directLossSeries = new Series( "Direct Loss" );
-        Series directGainSeries = new Series( "Direct Gain" );
-        directLossSeries.setExtra( 0 ); //Stack 0
-        directGainSeries.setExtra( 0 ); //Stack 0
+        SeriesExtra directLossSeries = new SeriesExtra( "Direct Loss" );
+        SeriesExtra directGainSeries = new SeriesExtra( "Direct Gain" );
+        directLossSeries.putExtra( "stack", 0 ); //Stack 0
+        directGainSeries.putExtra( "stack:", 0 ); //Stack 0
 
         Set<GeneOntologyTerm> previousGOSet = null;
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
@@ -580,10 +586,10 @@ public class GeneView implements Serializable {
 
         // For inferred annotations
 
-        Series inferredLossSeries = new Series( "Inferred Loss" );
-        Series inferredGainSeries = new Series( "Inferred Gain" );
-        inferredLossSeries.setExtra( 1 ); //Stack 1
-        inferredGainSeries.setExtra( 1 ); //Stack 1
+        SeriesExtra inferredLossSeries = new SeriesExtra( "Inferred Loss" );
+        SeriesExtra inferredGainSeries = new SeriesExtra( "Inferred Gain" );
+        inferredLossSeries.putExtra( "stack", 1 ); //Stack 1
+        inferredGainSeries.putExtra( "stack", 1 ); //Stack 1
 
         previousGOSet = null;
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
@@ -686,7 +692,6 @@ public class GeneView implements Serializable {
         for ( GeneOntologyTerm t : filterTerms ) {
             termNames.put( t.getGoId(), t.getName() );
             Series s = new Series( t.getGoId() );
-            s.setExtra( t.getName() );
             ImmutableMap<Edition, Set<Annotation>> termData = data.column( t );
             // We iterate over this collection to insure that every term has all of the editions in its data
             // otherwise we get wonky date ranges

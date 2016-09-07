@@ -223,7 +223,7 @@ function handleFetchLossGainChart(xhr, status, args) {
    };
    
    for (var i = 0; i < args.HC.data.series.length; i++) {
-      options.series[i].stack = args.HC.data.series[i].extra;
+      options.series[i].stack = args.HC.data.series[i].extra.stack;
    }
    
    // Click event functionality
