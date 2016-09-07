@@ -114,7 +114,7 @@
    };
    
 
-   
+
    
    plotting.defaultHCOptions = function(config, scaleToggle, noData) {
       /*
@@ -127,6 +127,53 @@
        * config.data
        * 
        * */
+      
+      var doubleClicker = {
+                           target: -1,
+                           clickedOnce : false,
+                           timer : null,
+                           timeBetweenClicks : 400
+                       };
+      
+      var resetDoubleClick = function() {
+         clearTimeout(doubleClicker.timer);
+         doubleClicker.timer = null;
+         doubleClicker.clickedOnce = false;
+         doubleClicker.target = -1;
+       };
+       
+       var isolate = function(self) {
+          var seriesIndex = self.index;
+          var series = self.chart.series;
+
+          var reset = self.isolated;
+
+
+          for (var i = 0; i < series.length; i++)
+          {
+             if (series[i].index != seriesIndex)
+             {
+                if (reset) {
+                   series[i].setVisible(true, false)
+                   series[i].isolated=false;
+                } else {
+                   series[i].setVisible(false, false)
+                   series[i].isolated=false; 
+                }
+
+             } else {
+                if (reset) {
+                   series[i].setVisible(true, false)
+                   series[i].isolated=false;
+                } else {
+                   series[i].setVisible(true, false)
+                   series[i].isolated=true;
+                }
+             }
+          }
+          self.chart.redraw();
+       }
+      
       var scaleToggle = isUndefined(scaleToggle) ? false : scaleToggle;
       var noData = isUndefined(noData) ? false : noData;
       var options =  {
@@ -173,42 +220,28 @@
                             events: {
                                legendItemClick: function(event) {
 
-                                  var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
+                                  var isolateBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
 
-                                  if (!defaultBehaviour) {
+                                  if (isolateBehaviour) {
 
-                                     var seriesIndex = this.index;
-                                     var series = this.chart.series;
-
-                                     var reset = this.isolated;
-
-
-                                     for (var i = 0; i < series.length; i++)
-                                     {
-                                        if (series[i].index != seriesIndex)
-                                        {
-                                           if (reset) {
-                                              series[i].setVisible(true, false)
-                                              series[i].isolated=false;
-                                           } else {
-                                              series[i].setVisible(false, false)
-                                              series[i].isolated=false; 
-                                           }
-
-                                        } else {
-                                           if (reset) {
-                                              series[i].setVisible(true, false)
-                                              series[i].isolated=false;
-                                           } else {
-                                              series[i].setVisible(true, false)
-                                              series[i].isolated=true;
-                                           }
-                                        }
-                                     }
-                                     this.chart.redraw();
+                                     isolate(this);
 
                                      return false;
+                                  } else {
+                                  
+                                     if (doubleClicker.clickedOnce === true && doubleClicker.target === this.index && doubleClicker.timer) {
+                                        resetDoubleClick();
+                                        isolate(this);
+                                        return false;
+                                      } else {
+                                         doubleClicker.clickedOnce = true;
+                                         doubleClicker.target = this.index;
+                                         doubleClicker.timer = setTimeout(function(){
+                                           resetDoubleClick();
+                                         }, doubleClicker.timeBetweenClicks);
+                                      }
                                   }
+                                  
                                }
                             }
                          }
