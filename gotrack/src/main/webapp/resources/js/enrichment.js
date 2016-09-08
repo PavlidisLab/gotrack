@@ -339,7 +339,7 @@ function handleGraphSelected(xhr, status, args) {
                        }
       };
       options.plotOptions.series.shadow = {opacity:opacity};
-      options.plotOptions.series.lineWidth = 0;
+      options.plotOptions.series.lineWidth = 0.01;
 
       options.tooltip = {
                          headerFormat: '<b>{series.name}</b><br />',
@@ -447,13 +447,12 @@ function handleGraphSelected(xhr, status, args) {
 
       for (var j = 0; j < series.data.length; j++) {
          var point = series.data[j];
-         // We disabled markers on the point level because disabling it at the series level removes series symbols from the legend.
-         // This is the least intrusive way of getting around this.
-         data.push({x:point.x,y:utility.isUndefined( point.y ) ? null : point.y, marker:{enabled:false}});
+         data.push({x:point.x,y:utility.isUndefined( point.y ) ? null : point.y});
       }
       options.series.push({
          name : name,
-         data : data
+         data : data,
+         marker: {enabled: false}
       });
 
    }
