@@ -51,6 +51,7 @@ import org.primefaces.context.RequestContext;
 
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import jersey.repackaged.com.google.common.collect.Lists;
 import ubc.pavlab.gotrack.analysis.CombinedAnalysis;
@@ -637,7 +638,8 @@ public class EnrichmentView implements Serializable {
 
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "HC_enrichment", new Gson().toJson( hcGsonMap ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_enrichment",
+                new GsonBuilder().serializeNulls().create().toJson( hcGsonMap ) );
     }
 
     /**

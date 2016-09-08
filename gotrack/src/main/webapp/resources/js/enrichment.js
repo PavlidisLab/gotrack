@@ -447,7 +447,7 @@ function handleGraphSelected(xhr, status, args) {
 
       for (var j = 0; j < series.data.length; j++) {
          var point = series.data[j];
-         data.push({x:point.x,y:utility.isUndefined( point.y ) ? null : point.y});
+         data.push({x:point.x,y: point.y});
       }
       options.series.push({
          name : name,
