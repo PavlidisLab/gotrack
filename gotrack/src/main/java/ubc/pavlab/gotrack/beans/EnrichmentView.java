@@ -71,6 +71,7 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.StatusPoller;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
+import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
 import ubc.pavlab.gotrack.model.table.GeneMatches;
@@ -445,14 +446,15 @@ public class EnrichmentView implements Serializable {
 
         if ( pvalue ) {
             // Graph p-values
-            Map<GeneOntologyTerm, Series> series = new HashMap<>();
+            Map<GeneOntologyTerm, SeriesExtra> series = new HashMap<>();
             for ( Edition ed : eds ) {
                 for ( GeneOntologyTerm term : selectedTerms ) {
                     EnrichmentResult er = data.get( ed ).get( term );
                     if ( er != null ) {
-                        Series s = series.get( term );
+                        SeriesExtra s = series.get( term );
                         if ( s == null ) {
-                            s = new Series( term.getGoId() );
+                            s = new SeriesExtra( term.getGoId() );
+                            s.putExtra( "title", term.getName() );
                             series.put( term, s );
                         }
                         s.addDataPoint( ed.getDate(), er.getPvalue() );
@@ -484,7 +486,7 @@ public class EnrichmentView implements Serializable {
             // to determine the regions of the graph
             Map<Long, Double> dateToMaxSigRank = new HashMap<>();
 
-            Map<GeneOntologyTerm, Series> series = new HashMap<>();
+            Map<GeneOntologyTerm, SeriesExtra> series = new HashMap<>();
 
             boolean outsideTopNCheck = false; // Is any term outside of the topN in any edition
             boolean insignificantCheck = false; // Are there any terms which are insignificant in an edition
@@ -550,9 +552,10 @@ public class EnrichmentView implements Serializable {
                 for ( GeneOntologyTerm term : selectedTerms ) {
                     // for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : editionData ) {
                     // GeneOntologyTerm term = entry.getKey();
-                    Series s = series.get( term );
+                    SeriesExtra s = series.get( term );
                     if ( s == null ) {
-                        s = new Series( term.getGoId() );
+                        s = new SeriesExtra( term.getGoId() );
+                        s.putExtra( "title", term.getName() );
                         series.put( term, s );
                     }
                     EnrichmentResult er = editionData.get( term );

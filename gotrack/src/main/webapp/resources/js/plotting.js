@@ -188,7 +188,7 @@
    }
 
    
-   plotting.defaultHCOptions = function(config, scaleToggle) {
+   plotting.defaultHCOptions = function(config, scaleToggle, legendTooltips) {
       /*
        * config.renderTo
        * config.title
@@ -200,6 +200,7 @@
        * 
        * */
       var scaleToggle = isUndefined(scaleToggle) ? false : scaleToggle;
+      var legendTooltips = isUndefined(legendTooltips) ? false : legendTooltips;
       
       var doubleClicker = {
                            target: -1,
@@ -374,6 +375,28 @@
             axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
          };
       }
+      
+      if ( legendTooltips ) {
+         var styleTooltip = function(description) {
+            return "<p class='description'>" + description + "</p>";
+         };
+         options.chart.events = {
+            load: function () {
+               var chart = this,
+                   legend = chart.legend;
+               for (var i = 0, len = legend.allItems.length; i < len; i++) {
+                   (function(i) {
+                       var item = legend.allItems[i];
+                       if (!isUndefined( item.userOptions.title ) ) {
+                          item.legendGroup.element.setAttribute("title", styleTooltip(item.userOptions.title));
+                          $(item.legendGroup.element).tipsy({ gravity: "w", opacity: 0.8, html: true });
+                       }
+                   })(i);
+               }
+
+           }
+         };
+      }
 
       if ( !isUndefined(config.data) ){
          for (var i = 0; i < config.data.series.length; i++) {
@@ -392,6 +415,9 @@
                               };
             if ( !isUndefined( series.extra ) && !isUndefined( series.extra.color ) ) {
                seriesOptions.color = series.extra.color;
+            }
+            if ( !isUndefined( series.extra ) && !isUndefined( series.extra.title ) ) {
+               seriesOptions.title = series.extra.title;
             }
             options.series.push(seriesOptions)
 

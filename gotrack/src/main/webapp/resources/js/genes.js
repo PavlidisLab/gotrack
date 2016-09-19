@@ -321,7 +321,10 @@ function handleFetchTimeline(xhr, status, args) {
       if (name.length > 25) {
          trimName = name.substring(0, 22) + "...";
       }
-      return '<span title="'+name+'"><div style="text-align: right;">' + this.value + '</div><div style="text-align: right;">' + trimName + '</div></span>'
+      var styleTooltip = function(n, d) {
+         return "<p class='name'>" + n + "</p><p class='description'>" + d + "</p>";
+      };
+      return '<span class="timeline-yaxis-category clearfix" title="'+styleTooltip(this.value, name)+'"><div style="text-align: right;">' + this.value + '</div><div style="text-align: right;">' + trimName + '</div></span>'
       //return '<span title="'+termNames[this.value]+'">' + this.value + '</span><span>'+termNames[this.value]+'</span>';
    };
    options.yAxis.labels.useHTML = true;
@@ -397,7 +400,10 @@ function handleFetchTimeline(xhr, status, args) {
 //   }
    
    plotting.charts.timeline.options = options;
-   plotting.charts.timeline.recreate(options);
+   plotting.charts.timeline.recreate(options, function(c) {
+      $("span.timeline-yaxis-category").tipsy({ gravity: "w", opacity: 0.8, html: true });
+   });
+   
    
 }
 

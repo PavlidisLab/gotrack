@@ -196,7 +196,7 @@ function handleGraphSelected(xhr, status, args) {
    console.log(args);
    
    args.HC_enrichment.renderTo = 'hc_enrichment_container';
-   var options = plotting.defaultHCOptions(args.HC_enrichment, false);
+   var options = plotting.defaultHCOptions(args.HC_enrichment, false, true);
    options.chart.zoomType = 'xy';
   
    options.subtitle = {
