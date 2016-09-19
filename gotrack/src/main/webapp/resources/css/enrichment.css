@@ -209,3 +209,8 @@ div.options-overlay > div.ui-overlaypanel-content > p {
 div#hc_enrichment_container g.highcharts-legend g.highcharts-legend-item > path {
 	stroke-width: 2 !important;
 }
+
+/* Fixes white background display issue for tables embedded within other table headers */
+div.ui-datatable-header table > tbody > tr.ui-widget-content {
+	background: inherit;
+}
