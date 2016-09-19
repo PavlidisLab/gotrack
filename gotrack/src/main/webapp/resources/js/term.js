@@ -37,21 +37,15 @@ function handleFetchDAGData(xhr, status, args) {
 }
 
 function handleFetchOverviewChart(xhr, status, args) {
-   console.log(args);
-   try {
-      $('#loading-spinner-overview').hide();
-      GLOBALS.dateToGOEditionId = JSON.parse(args.dateToGOEditionId);
-      GLOBALS.nameChange = JSON.parse(args.dateToNameChange);
-   } catch(e) {
-      console.log(e);
-   }
    
    try {
+      $('#loading-spinner-overview').hide();
       args.HC_overview = JSON.parse(args.HC_overview);
    } catch(e) {
       console.log(e);
       return;
    }
+   console.log(args);
 
    createOverviewChart(args);
 }
@@ -812,12 +806,15 @@ function showDiff(cs, args) {
 }
 
 function createOverviewChart(args) {
-   args.HC_overview.renderTo = 'hc_overview_container';
-   var options = plotting.defaultHCOptions(args.HC_overview, false, true); // Custom data importer ahead
    
-   options.chart.type = 'xrange';
-   options.yAxis.categories = ['Name Change', 'Structure Change','Existence']
-   options.yAxis.title = '';
+   var dateToGOEditionId = args.HC_overview.dateToGOEditionId;
+   var nameChange = args.HC_overview.dateToNameChange;
+   
+   args.HC_overview.renderTo = 'hc_overview_container';
+   var options = plotting.ganttHCOptions(args.HC_overview); // Custom data importer ahead
+   
+   //options.yAxis.categories = ['Name Change', 'Structure Change','Existence']
+
    options.plotOptions = {
                           series : {
                              grouping: false,
@@ -825,108 +822,88 @@ function createOverviewChart(args) {
                                 events: {
                                    click: function () {
                                       if (this.y != 0){
-                                         fetchGraph([{name:'edition', value:GLOBALS.dateToGOEditionId[this.x]},{name:'showDiff', value:this.y==1} ]);
+                                         fetchGraph([{name:'edition', value:dateToGOEditionId[this.x]},{name:'showDiff', value:this.y==1} ]);
                                       }
                                    }
                                 }
                              },
                           }
                        };
-   options.tooltip.shared = false;
-   options.tooltip.formatter = function() {
-      return  '<b>' + Highcharts.dateFormat('%b %Y',
-         new Date(this.x)) +'</b><br/>' + this.key
-   };
-   options.legend.enabled = false;
-   options.colors = [];
 
    if (!utility.isUndefined( args.HC_overview.data ) ){
-      var existenceSeries;
-      var structureSeries;
-      var nameSeries;
+
       for (var i = 0; i < args.HC_overview.data.series.length; i++) {
          var series = args.HC_overview.data.series[i];
          var name = series.name;
-         if (name == "Existence" ) {
-            existenceSeries = series;
-         } else if (name == "Structure Change"){
-            structureSeries = series;
+
+         options.yAxis.categories.push(name);
+
+         var data = [];
+         // Ugly but effective
+         var pointAdder = function(){};
+         if (i === 0) {
+            pointAdder = function(point, nextPointX) {
+               if (point.y == 1) {
+                  return {x:point.x,x2:nextPointX, y:0, name:'Name Has Changed From <b>' + nameChange[point.x][0] + '</b> To <b>' + nameChange[point.x][1] +'</b>', color:'#2bce48'};
+               } else {
+                  return null;
+               }
+            };
+         } else if (i === 1) {
+            pointAdder = function(point, nextPointX) {
+               if (point.y == 1) {
+                  return {x:point.x,x2:nextPointX, y:i, name:'Structure Has Changed', color:'#2bce48'};
+               } else {
+                  return null;
+               }
+            };
+         } else if (i === 2) {
+            
+            pointAdder = function(point, nextPointX) {
+               return {x:point.x,x2:nextPointX, y:i,name:point.y==1 ? 'Exists': 'Does Not Exist', color:point.y==1?'#2bce48':'#d63232'};
+            };
+
          } else {
-            nameSeries = series;
+            console.log("Unknown History Category", name);
          }
+
+         for (var j = 0; j < series.data.length; j++) {
+            var point = series.data[j];
+            var nextPointX = (j > series.data.length - 2) ? point.x + 2629740000: series.data[j+1].x; //add month
+            var dataPoint = pointAdder(point, nextPointX);
+            if (dataPoint != null) {
+               data.push(dataPoint);
+            }
+
+         } 
+         
+         options.series.push({
+            name : name,
+            pointWidth: 40,
+            data : data
+         });
       }
-
-      //console.log(existenceSeries)
-
-      var data = []
-      var structureData = [];
-      var nameData = [];
-
-      for (var j = 0; j < existenceSeries.data.length; j++) {
-         var point = existenceSeries.data[j];
-         var nextPointX = (j > existenceSeries.data.length - 2) ? point.x + 2629740000: existenceSeries.data[j+1].x; //add month
-         data.push({x:point.x,x2:nextPointX, y:2,name:point.y==1 ? 'Exists': 'Does Not Exist', color:point.y==1?'#2bce48':'#d63232'});
-         //' From <b>' + GLOBALS.nameChange[this.x][0] + '</b> To <b>' + GLOBALS.nameChange[this.x][1] +'</b>'
-         if (structureSeries.data[j].y == 1) {
-            structureData.push({x:point.x,x2:nextPointX, y:1, name:'Structure Has Changed', color:'#2bce48'})
-         } else {
-            //structureData.push({x:point.x,x2:nextPointX, y:1, name:'Structure Has Not Changed'})
-         }
-
-         if (nameSeries.data[j].y == 1) {
-            nameData.push({x:point.x,x2:nextPointX, y:0, name:'Name Has Changed From <b>' + GLOBALS.nameChange[point.x][0] + '</b> To <b>' + GLOBALS.nameChange[point.x][1] +'</b>', color:'#2bce48'})
-         }
-
-      }
-
-      options.series.push({
-         name : "Existence",
-         pointWidth: 40,
-         data : data
-      });
-
-      options.series.push({
-         name : "Structure",
-         pointWidth: 40,
-         data : structureData
-      });
-
-      options.series.push({
-         name : "Name",
-         pointWidth: 40,
-         data : nameData
-      });
-
       plotting.charts.overview.options = options;
       plotting.charts.overview.recreate(options);
 
+
    }
+
 }
 
 function createGeneCountChart(args) {
    
    args.HC_gene.renderTo = 'hc_gene_container';
-   var options = plotting.defaultHCOptions(args.HC_gene, false, true);
+   var options = plotting.defaultHCOptions(args.HC_gene, false);
+   
+
    
    if (!utility.isUndefined( args.HC_gene.data ) ){
       //args.hc_gene_data.series.sort(function(a,b) {return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);} );
-      for (var i = 0; i < args.HC_gene.data.series.length; i++) {
-         var series = args.HC_gene.data.series[i];
-         var name = series.name;
-         var data = []
-
-         for (var j = 0; j < series.data.length; j++) {
-            var point = series.data[j];
-            data.push([point.x,point.y]);
-         }
-
-         options.series.push({
-            name : name,
-            data : data,
-            visible: name.indexOf("Direct") > -1,
-            isolated: false,
-         })
-
+      for (var i = 0; i <  options.series.length; i++) {
+         var series = options.series[i];
+         series.visible = series.name.indexOf("Direct") > -1;
+         series.isolated = false;
       }
       
       options.exporting.buttons = {
@@ -982,51 +959,16 @@ function createGeneCountChart(args) {
          }                   
       };
       
+      // Monkey patch some functionality to happen before any existing legendItemClick event
+      var oldLegendItemClick = options.plotOptions.series.events.legendItemClick || function(){};
+      
       options.plotOptions.series.events.legendItemClick = function(event) {
-
-         var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
-         
          var button = this.chart.exportSVGElements[3];
          button.attr({fill:'#E0E0E0'});
          button.parentGroup.attr({text:"Subset: Custom"});
-         this.chart.toggleSubsets = -1;
-
-         if (!defaultBehaviour) {
-
-            var seriesIndex = this.index;
-            var series = this.chart.series;
-
-            var reset = this.isolated;
-
-
-            for (var i = 0; i < series.length; i++) {
-               if (series[i].index != seriesIndex)
-               {
-                  if (reset) {
-                     series[i].setVisible(true, false)
-                     series[i].isolated=false;
-                  } else {
-                     series[i].setVisible(false, false)
-                     series[i].isolated=false; 
-                  }
-
-               } else {
-                  if (reset) {
-                     series[i].setVisible(true, false)
-                     series[i].isolated=false;
-                  } else {
-                     series[i].setVisible(true, false)
-                     series[i].isolated=true;
-                  }
-               }
-            }
-
-            this.chart.redraw();
-
-            return false;
-         }
-      };
-
+         event.target.chart.toggleSubsets = -1;
+         return oldLegendItemClick(event);
+      }
 
       plotting.charts.gene.options = options;
       plotting.charts.gene.recreate(options, function(c) {
@@ -1145,10 +1087,7 @@ $(document).ready(function() {
    }(Highcharts));
 
    CS = {};
-
-   GLOBALS = {};
-
-
+   
    plotting.createNewChart( 'overview' );
    plotting.createNewChart( 'gene' );
    plotting.createNewChart( 'evidence' );

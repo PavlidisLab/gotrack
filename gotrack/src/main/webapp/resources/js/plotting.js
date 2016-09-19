@@ -113,10 +113,82 @@
       
    };
    
+   plotting.ganttHCOptions = function(config) {
+      var options =  {
+                      chart: {
+                         renderTo: config.renderTo,
+                         type: 'xrange',
+                         zoomType: 'x',
+                         resetZoomButton: {
+                            position: {
+                               align: 'left',
+                               // verticalAlign: 'top', // by default
+                               x: 0,
+                               y: -35,
+                            }
+                         }
+                      },
+                      title: {
+                         text: config.title
+                      },
 
+                      xAxis: {
+                         type: 'datetime',
+                         title: {
+                            text: config.xLabel
+                         },
+                         minRange: 60 * 24 * 3600000 // fourteen days
+                      },
+
+                      yAxis: {
+                         type: 'linear',
+                         title: {
+                            text: ''
+                         },
+                         labels: {
+                            formatter: function () {
+                               return this.value;
+                            }
+                         },
+                         min: isUndefined(config.min) ? null : config.min,
+                         max: isUndefined(config.max) ? null : config.max,
+                         categories: []
+                      },
+
+                      tooltip: {
+                         shared:false,
+                         formatter: function() {
+                            return  '<b>' + Highcharts.dateFormat('%b %Y',
+                               new Date(this.x)) +'</b><br/>' + this.key
+                         },
+                         dateTimeLabelFormats:{
+                            hour:"%B %Y", 
+                            minute:"%B %Y"
+                         }
+                      },
+                      legend : {
+                         enabled: false
+                      },
+
+                      series: [],
+
+                      colors : [],
+
+                      exporting: {
+                         enabled: true,
+                         sourceWidth  : 1600,
+                         sourceHeight : 900,
+                         csv: {
+                            dateFormat: '%Y-%m-%d'
+                         }
+                      }
+      };
+            
+      return options;
+   }
 
    
-   plotting.defaultHCOptions = function(config, scaleToggle, noData) {
+   plotting.defaultHCOptions = function(config, scaleToggle) {
       /*
        * config.renderTo
        * config.title
@@ -127,6 +199,7 @@
        * config.data
        * 
        * */
+      var scaleToggle = isUndefined(scaleToggle) ? false : scaleToggle;
       
       var doubleClicker = {
                            target: -1,
@@ -174,8 +247,6 @@
           self.chart.redraw();
        }
       
-      var scaleToggle = isUndefined(scaleToggle) ? false : scaleToggle;
-      var noData = isUndefined(noData) ? false : noData;
       var options =  {
                       chart: {
                          renderTo: config.renderTo,
@@ -219,23 +290,23 @@
                          series : {
                             events: {
                                legendItemClick: function(event) {
-
+                                  var s = event.target;
                                   var isolateBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
 
                                   if (isolateBehaviour) {
 
-                                     isolate(this);
+                                     isolate(s);
 
                                      return false;
                                   } else {
                                   
-                                     if (doubleClicker.clickedOnce === true && doubleClicker.target === this.index && doubleClicker.timer) {
+                                     if (doubleClicker.clickedOnce === true && doubleClicker.target === s.index && doubleClicker.timer) {
                                         resetDoubleClick();
-                                        isolate(this);
+                                        isolate(s);
                                         return false;
                                       } else {
                                          doubleClicker.clickedOnce = true;
-                                         doubleClicker.target = this.index;
+                                         doubleClicker.target = s.index;
                                          doubleClicker.timer = setTimeout(function(){
                                            resetDoubleClick();
                                          }, doubleClicker.timeBetweenClicks);
@@ -304,7 +375,7 @@
          };
       }
 
-      if ( !noData && !isUndefined(config.data) ){
+      if ( !isUndefined(config.data) ){
          for (var i = 0; i < config.data.series.length; i++) {
             var series = config.data.series[i];
             var name = series.name;

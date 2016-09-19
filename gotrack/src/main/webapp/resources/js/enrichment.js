@@ -196,7 +196,7 @@ function handleGraphSelected(xhr, status, args) {
    console.log(args);
    
    args.HC_enrichment.renderTo = 'hc_enrichment_container';
-   var options = plotting.defaultHCOptions(args.HC_enrichment, false, true);
+   var options = plotting.defaultHCOptions(args.HC_enrichment, false);
    options.chart.zoomType = 'xy';
   
    options.subtitle = {
@@ -288,7 +288,7 @@ function handleGraphSelected(xhr, status, args) {
          cutoffsData.push([parseInt(key,10), args.HC_enrichment.cutoffs[key]]);
       }
       
-      options.series.push({
+      options.series.unshift({
          name: "Threshold",
          data: cutoffsData,
          type: 'line',
@@ -396,7 +396,7 @@ function handleGraphSelected(xhr, status, args) {
             var p = polygonPoints[0];
             s.data.push([ p[0], maxRank +0.5 ])
 
-            options.series.push(s);
+            options.series.unshift(s);
             //console.log(s);
          }
          if (outsideTopNCheck ) {
@@ -426,7 +426,7 @@ function handleGraphSelected(xhr, status, args) {
             s.data.push([ p[0], topN - 0.5 ])
             var p = polygonPoints[0];
             s.data.push([ p[0], topN - 0.5 ])
-            options.series.push(s);
+            options.series.unshift(s);
             //console.log(s);
          }
       }
@@ -439,22 +439,10 @@ function handleGraphSelected(xhr, status, args) {
 
 
    }
-
-   for (var i = 0; i < args.HC_enrichment.data.series.length; i++) {
-      var series = args.HC_enrichment.data.series[i];
-      var name = series.name;
-      var data = []
-
-      for (var j = 0; j < series.data.length; j++) {
-         var point = series.data[j];
-         data.push({x:point.x,y: point.y});
-      }
-      options.series.push({
-         name : name,
-         data : data,
-         marker: {enabled: false}
-      });
-
+   
+   for (var i = 0; i <  options.series.length; i++) {
+      var series = options.series[i];
+      series.marker =  {enabled: false};
    }
    
    if (!utility.isUndefined( args.HC_enrichment.errors ) && args.HC_enrichment.type == "pvalue" ){

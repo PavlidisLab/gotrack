@@ -255,12 +255,13 @@ public class TermView implements Serializable {
             }
         }
 
-        existChart.addSeries( existSeries );
-        existChart.addSeries( structureSeries );
+        // Order here is order in the chart, so it matters.
         existChart.addSeries( nameChange );
+        existChart.addSeries( structureSeries );
+        existChart.addSeries( existSeries );
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Overview of " + query + " vs Time",
-                "Exists", "Date", 0, 2, existChart );
+                "", "Date", 0, 2, existChart );
 
         hcGsonMap.put( "dateToGOEditionId", dateToGOEditionId );
         hcGsonMap.put( "dateToNameChange", dateToNameChange );
