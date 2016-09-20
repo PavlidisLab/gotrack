@@ -522,24 +522,24 @@
 							</p:column>
 							<p:column filterBy="#{entry.term.name}"
 								filterMatchMode="contains" sortBy="#{entry.term.name}"
-								headerText="Name" style="width:500px;">
+								headerText="Name" style="width:500px;" styleClass="ui-column-filter-big">
 								<h:outputText value="#{entry.term.name}" />
 							</p:column>
 
 							<p:column filterBy="#{entry.result.populationAnnotated}"
-								headerText="Population"
+								headerText="Set Size"
 								sortBy="#{entry.result.populationAnnotated}"
 								filterFunction="#{enrichmentView.filterByNumberLT}"
-								style="width:120px;">
+								style="width:70px;" styleClass="ui-column-filter-small">
 								<h:outputText value="#{entry.result.populationAnnotated}">
 									<f:convertNumber type="number" />
 								</h:outputText>
 							</p:column>
 
 							<p:column filterBy="#{entry.result.sampleAnnotated}"
-								headerText="Sample" sortBy="#{entry.result.sampleAnnotated}"
+								headerText="Hits" sortBy="#{entry.result.sampleAnnotated}"
 								filterFunction="#{enrichmentView.filterByNumberLT}"
-								style="width:120px;">
+								style="width:60px;" styleClass="ui-column-filter-small">
 								<h:outputText value="#{entry.result.sampleAnnotated}">
 									<f:convertNumber type="number" />
 								</h:outputText>
