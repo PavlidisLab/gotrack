@@ -38,6 +38,14 @@
 		<h:outputScript library="js" name="plotting.js" />
 		<h:outputScript library="js" name="enrichment.js" />
 		<h:outputScript library="js" name="common.js" />
+		
+		<h:outputScript rendered="#{enrichmentView.enrichmentSuccess}">
+			$(document).ready(function() {
+				console.log('Loading Previous Enrichment Analysis');
+				loadPreviousEnrichment();
+			});
+		</h:outputScript>
+		
 	</ui:define>
 	<ui:define name="left_right_layout">
 		<p:layoutUnit id="left" position="west" size="350" resizable="false"
@@ -238,6 +246,11 @@
 	<ui:define name="center_layout">
 		<h:form id="formEnrich" styleClass="expand-tables">
 			<p:remoteCommand name="updateCenterPanel" update=":formEnrich" />
+			
+			<p:remoteCommand name="loadPreviousEnrichment"
+				update=":formEnrich:tabEnrich:termsChartPanel :formEnrich:tabEnrich:similarityChartPanel :formEnrich:tabEnrich:tableStability :formEnrich:tabEnrich:tablePanel"
+				oncomplete="loadPreviousEnrichmentComplete(xhr, status, args);"
+				actionListener="#{enrichmentView.loadPreviousEnrichment}" />
 
 			<p:tabView id="tabEnrich" widgetVar="tabEnrichWdg" onTabShow="tabShowed(index)">
 				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">
@@ -878,14 +891,17 @@
 							<h:outputText value="Single Gene: " />
 						</p:column>
 						<p:column>
-							<p:autoComplete id="geneInput" value="#{enrichmentView.query}"
-								completeMethod="#{enrichmentView.complete}" minQueryLength="2"
-								forceSelection="true" label="ID"
-								emptyMessage="No gene suggestions available,  please try again."
-								var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
-								groupBy="#{gene.type.label}" placeholder="BRCA1">
-								<p:ajax event="itemSelect" process="@this" />
-							</p:autoComplete>
+							<p:autoComplete id="geneInput" value="#{enrichmentView.queryGene}"
+									completeMethod="#{enrichmentView.complete}" minQueryLength="2"
+									forceSelection="true" label="ID"
+									emptyMessage="No gene suggestions available,  please try again."
+									var="genematch" itemLabel="#{genematch.symbol}" itemValue="#{genematch}" 
+									groupBy="#{genematch.type.label}"
+									placeholder="BRCA1" converter="geneMatchConverter">
+									<f:attribute name="species"
+										value="#{enrichmentView.currentSpeciesId}" />
+									<p:ajax event="itemSelect" process="@this" />
+								</p:autoComplete>
 						</p:column>
 					</p:row>
 				</p:panelGrid>

@@ -28,6 +28,16 @@ function runEnrichmentOnClick() {
    }
 }
 
+function loadPreviousEnrichmentComplete(xhr, status, args) {
+   if (args.success) {
+      console.log('Processing Previous Enrichment Analysis.');
+      runEnrichmentComplete(xhr, status, args);
+   } else {
+      console.log('Load Previous Encrichment Analysis Failed.');
+   }
+   
+}
+
 function runEnrichmentComplete(xhr, status, args) {
    // Slight hack here to make sure that the polling functionality of the progress bar stops
    // Ran into a problem with viewexpiredexception not stopping the polling while also

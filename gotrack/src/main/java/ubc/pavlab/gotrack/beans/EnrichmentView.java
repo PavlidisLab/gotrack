@@ -36,11 +36,11 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
+import javax.enterprise.context.SessionScoped;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
 import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
-import javax.faces.view.ViewScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
 
@@ -85,7 +85,7 @@ import ubc.pavlab.gotrack.model.table.StabilityTableValues;
  * @version $Id$
  */
 @Named
-@ViewScoped
+@SessionScoped
 public class EnrichmentView implements Serializable {
 
     /**
@@ -139,7 +139,7 @@ public class EnrichmentView implements Serializable {
     private EnrichmentService enrichmentService;
 
     // View parameters
-    private String query;
+    private Gene queryGene;
     // LEE_LIVER_CANCER
     // http://www.broadinstitute.org/gsea/msigdb/geneset_page.jsp?geneSetName=LEE_LIVER_CANCER&keywords=lee%20AND%20liver
     // ACAA1 ACADS ADH1B ADH4 ADRA1A APOF C6 C8A C8B C9orf103 CD4 CETN2 CIDEB COLEC10 CYP2C18 CYP2C19 CYP2C8 CYP2E1
@@ -181,6 +181,7 @@ public class EnrichmentView implements Serializable {
     private EnrichmentAnalysis analysis; // Enrichment analysis
     private Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults; // Results of the enrichment analysis
     private boolean enrichmentSuccess = false; // Whether the analysis succeeded
+    private Integer analysisSpeciesId;
 
     // Similarity Settings
     private static final int TOP_N_JACCARD = 5; // Number of terms to use in the similarity top N
@@ -257,9 +258,14 @@ public class EnrichmentView implements Serializable {
             FacesContext.getCurrentInstance().addMessage( "betaMessage", new FacesMessage( FacesMessage.SEVERITY_WARN,
                     "This is the DEVELOPMENT version of GOTrack!", null ) );
         }
-
-        enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
-        currentEdition = cache.getCurrentEditions( currentSpeciesId );
+        if ( enrichmentSuccess ) {
+            // When loading a previous analysis, we want to show the gene hit list that is associated with it, 
+            // not the most recently viewed one.
+            currentSpeciesId = analysisSpeciesId;
+        } else {
+            enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
+            currentEdition = cache.getCurrentEditions( currentSpeciesId );
+        }
         return null;
     }
 
@@ -280,6 +286,7 @@ public class EnrichmentView implements Serializable {
                 multipleTestCorrection, thresh, minAnnotatedPopulation, maxAnnotatedPopulation,
                 new HashSet<>( aspects ), similarityCompareMethod, TOP_N_JACCARD, statusPoller );
         enrichmentSuccess = ca.isSuccess();
+        analysisSpeciesId = currentSpeciesId;
         analysis = ca.getEnrichmentAnalysis();
         enrichmentResults = analysis.getResults();
 
@@ -306,6 +313,29 @@ public class EnrichmentView implements Serializable {
         timer.stop();
         statusPoller.newStatus( "Finished in: " + timer.getTime() / 1000.0 + " seconds", 100 );
 
+    }
+
+    /**
+     * Load the current enrichment analysis results stored in this session.
+     */
+    public void loadPreviousEnrichment() {
+        if ( enrichmentSuccess ) {
+
+            createSimilarityChart();
+            createTermCountChart();
+
+            // Container for a mapping that will be used on the front-end for ajax queries
+            Map<Long, Integer> dateToEdition = new HashMap<>();
+            for ( Edition ed : cache.getAllEditions( currentSpeciesId ) ) {
+                dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
+            }
+
+            RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
+
+            RequestContext.getCurrentInstance().addCallbackParam( "success", true );
+        } else {
+            RequestContext.getCurrentInstance().addCallbackParam( "success", false );
+        }
     }
 
     /**
@@ -905,22 +935,22 @@ public class EnrichmentView implements Serializable {
      * Add gene to to hit list
      */
     public void addGene( ActionEvent actionEvent ) {
-        Gene gene = cache.getCurrentGene( currentSpeciesId, query );
         List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
         if ( selectGenes == null ) {
             selectGenes = new ArrayList<>();
             speciesToSelectedGenes.put( currentSpeciesId, selectGenes );
         }
-        if ( gene != null ) {
-            if ( !selectGenes.contains( gene ) ) {
-                selectGenes.add( gene );
-                addMessage( "Gene (" + query + ") successfully added.", FacesMessage.SEVERITY_INFO );
+        if ( this.queryGene != null ) {
+            if ( !selectGenes.contains( this.queryGene ) ) {
+                selectGenes.add( this.queryGene );
+                addMessage( "Gene (" + this.queryGene.getSymbol() + ") successfully added.",
+                        FacesMessage.SEVERITY_INFO );
             } else {
-                addMessage( "Gene (" + query + ") already added.", FacesMessage.SEVERITY_WARN );
+                addMessage( "Gene (" + this.queryGene.getSymbol() + ") already added.", FacesMessage.SEVERITY_WARN );
             }
 
         } else {
-            addMessage( "Gene (" + query + ") could not be found.", FacesMessage.SEVERITY_WARN );
+            addMessage( "Gene (" + this.queryGene.getSymbol() + ") could not be found.", FacesMessage.SEVERITY_WARN );
         }
 
     }
@@ -1119,12 +1149,12 @@ public class EnrichmentView implements Serializable {
         this.currentSpeciesId = currentSpeciesId;
     }
 
-    public String getQuery() {
-        return this.query;
+    public Gene getQueryGene() {
+        return this.queryGene;
     }
 
-    public void setQuery( String query ) {
-        this.query = query;
+    public void setQueryGene( Gene queryGene ) {
+        this.queryGene = queryGene;
     }
 
     public String getBulkQuery() {
