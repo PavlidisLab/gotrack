@@ -282,12 +282,6 @@
 							<p:commandButton id="stabilityTabHelpBtn" value=""
 								styleClass="icon-only noupdate" icon="fa fa-question-circle" type="button" />
 					</f:facet>
-						<p:contextMenu for="tableStability">
-							<p:menuitem value="View" icon="ui-icon-search"
-								actionListener="#{enrichmentView.viewStabilityTableValue()}"
-								update=":enrichmentResultDetailsDlg"
-								oncomplete="PF('enrichmentResultDetailsWdg').show()" />
-						</p:contextMenu>
 					<p:dataTable id="tableStability" widgetVar="tableStabilityWdg"
 							var="entry" value="#{enrichmentView.stabilityTableValues}"
 							sortMode="multiple" style="margin-bottom:0"
@@ -405,6 +399,12 @@
 
 
 						</p:dataTable>
+						<p:contextMenu for="tableStability">
+							<p:menuitem value="View" icon="ui-icon-search"
+								actionListener="#{enrichmentView.viewStabilityTableValue()}"
+								update=":enrichmentResultDetailsDlg"
+								oncomplete="PF('enrichmentResultDetailsWdg').show()" />
+						</p:contextMenu>
 				</p:tab>
 				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">
 					<f:facet name='title'>
@@ -413,12 +413,6 @@
 								styleClass="icon-only noupdate" icon="fa fa-question-circle" type="button"/>
 					</f:facet>
 					<p:outputPanel id="tablePanel">
-						<p:contextMenu for="tableEnrichment">
-							<p:menuitem value="View" icon="ui-icon-search"
-								actionListener="#{enrichmentView.viewEnrichmentTableValue()}"
-								update=":enrichmentResultDetailsDlg"
-								oncomplete="PF('enrichmentResultDetailsWdg').show()" />
-						</p:contextMenu>
 						<p:dataTable id="tableEnrichment" widgetVar="tableEnrichmentWdg"
 							var="entry" value="#{enrichmentView.enrichmentTableValues}"
 							sortMode="multiple" style="margin-bottom:0"
@@ -571,7 +565,12 @@
 							</p:column>
 
 						</p:dataTable>
-
+						<p:contextMenu for="tableEnrichment">
+							<p:menuitem value="View" icon="ui-icon-search"
+								actionListener="#{enrichmentView.viewEnrichmentTableValue()}"
+								update=":enrichmentResultDetailsDlg"
+								oncomplete="PF('enrichmentResultDetailsWdg').show()" />
+						</p:contextMenu>
 					</p:outputPanel>
 				</p:tab>
 
