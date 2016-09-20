@@ -549,8 +549,11 @@
 								sortBy="#{entry.result.pvalue}"
 								filterFunction="#{enrichmentView.filterByNumberLT}"
 								style="width:120px;">
-								<h:outputText value="#{entry.result.pvalue}">
-									<f:convertNumber type="number" pattern="#.##E0" />
+								<h:outputText value="#{entry.result.pvalue}" rendered="#{entry.result.pvalue lt 0.0001}">
+									<f:convertNumber type="number" pattern="#.##E0"  />
+								</h:outputText>
+								<h:outputText value="#{entry.result.pvalue}" rendered="#{entry.result.pvalue ge 0.0001}">
+									<f:convertNumber type="number" pattern="0.######" />
 								</h:outputText>
 							</p:column>
 
