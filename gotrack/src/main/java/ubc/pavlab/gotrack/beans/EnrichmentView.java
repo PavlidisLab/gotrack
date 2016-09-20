@@ -778,10 +778,17 @@ public class EnrichmentView implements Serializable {
                 }
             }
 
-            selectedTerm = null;
-
         }
+        // If ti makes it here, we didn't find any matches.
+        resetFetchTermInformation();
 
+    }
+
+    private void resetFetchTermInformation() {
+        selectedTerm = null;
+        selectedEnrichmentResult = null;
+        selectedStabilityScore = null;
+        selectedValueName = null;
     }
 
     // Stability Table ---------------------------------------------------------------------------------------

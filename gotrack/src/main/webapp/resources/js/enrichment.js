@@ -416,7 +416,6 @@ function handleGraphSelected(xhr, status, args) {
             for (var i = 0; i < polygonPoints.length; i++) {
                var barrierPoint = polygonPoints[i];
                if ( barrierPoint[1] < topN - 0.5 ) {
-                     console.log(i)
                   polygonPoints[i][1] = topN - 0.5;
                }
                
