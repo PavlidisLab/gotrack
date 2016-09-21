@@ -141,3 +141,7 @@ table.no-border td {
 div.disabled {
 	opacity:0.35;
 }
+
+div.ui-datatable-scrollable-body {
+	outline: none;
+}
