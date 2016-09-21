@@ -86,18 +86,9 @@ div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph > sp
 
 /* ************************ */
 
-tbody > tr.ui-widget-content.ui-state-highlight {
-/* 	background:#f7e9b0; */
-	border:inherit;
-	
-}
 /* tbody > tr.ui-widget-content.ui-state-highlight td:not(:first-child) {
     background:#FFFFFF;
 } */
-
-tbody > tr.ui-widget-content.ui-state-highlight > td {
-	color:#4F4F4F;
-}
 
 i.fa.fa-external-link.fa-sm:hover {
 	color:blue;

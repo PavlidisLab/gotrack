@@ -145,3 +145,15 @@ div.disabled {
 div.ui-datatable-scrollable-body {
 	outline: none;
 }
+
+/* Yellow Datatable Select */
+tbody > tr.ui-widget-content.ui-state-highlight {
+	background:#f7e9b0;
+	border:inherit;
+	
+}
+
+tbody > tr.ui-widget-content.ui-state-highlight > td {
+	color:#4F4F4F;
+}
+/***************************/
