@@ -196,6 +196,7 @@ public class EnrichmentView implements Serializable {
     private Integer enrichmentTableEdition; // currently displayed edition
     private EnrichmentTableValues viewEnrichmentRow;
     private Set<Gene> viewEnrichmentRowGeneSet;
+    private int enrichmentTableTotalSignificant;
 
     // Similarity Data
     private SimilarityAnalysis similarityAnalysis;
@@ -825,10 +826,12 @@ public class EnrichmentView implements Serializable {
     public void loadEnrichmentTableData() {
         filteredEnrichmentTableValues = null;
         enrichmentTableValues = new ArrayList<>();
+        enrichmentTableTotalSignificant = 0;
         Edition ed = enrichmentTableAllEditions.get( enrichmentTableEdition );
         if ( ed != null ) {
             double[] stabilityRange = stabilityRange( ed );
             Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant( ed );
+            enrichmentTableTotalSignificant = sigTerms.size();
             Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
             for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
@@ -1197,6 +1200,10 @@ public class EnrichmentView implements Serializable {
 
     public List<EnrichmentTableValues> getEnrichmentTableValues() {
         return enrichmentTableValues;
+    }
+
+    public int getEnrichmentTableTotalSignificant() {
+        return enrichmentTableTotalSignificant;
     }
 
     public EnrichmentChartMeasure getEnrichmentChartMeasure() {

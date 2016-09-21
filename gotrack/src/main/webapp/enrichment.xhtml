@@ -317,8 +317,10 @@
 											itemValue="#{ed.edition}" />
 									</p:selectOneMenu>
 									</p:column>
-									<p:column style="width: 150px">
-									<h:outputText value="Total: #{fn:length(enrichmentView.enrichmentTableValues)}"/>
+									<p:column style="width: 250px">
+									<h:outputText value="Currently Significant: #{enrichmentView.enrichmentTableTotalSignificant}"/>
+									<br/>
+									<h:outputText value="Historically Significant: #{fn:length(enrichmentView.enrichmentTableValues)}"/>
 									</p:column>
 									</p:row>
 
