@@ -215,7 +215,7 @@
 					<p:commandButton id="runEnrichmentBtn" value="Run Enrichment"
 						widgetVar="runEnrichmentBtnWdg"
 						actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
-						update=":formSelect:geneList :formSelect:runEnrichmentBtn :formSelect:enrichmentProgressBar :formEnrich:tabEnrich:termsChartPanel :formEnrich:tabEnrich:similarityChartPanel :formEnrich:tabEnrich:tableStability :formEnrich:tabEnrich:tablePanel"
+						update=":formSelect:geneList :formSelect:runEnrichmentBtn :formSelect:enrichmentProgressBar :formEnrich:tabEnrich:termsChartPanel :formEnrich:tabEnrich:similarityChartPanel :formEnrich:tabEnrich:tablePanel"
 						onclick="runEnrichmentOnClick();"
 						oncomplete="runEnrichmentComplete(xhr, status, args);"
 						disabled="#{fn:length(enrichmentView.selectedGenes) == 0}" />
@@ -248,7 +248,7 @@
 			<p:remoteCommand name="updateCenterPanel" update=":formEnrich" />
 			
 			<p:remoteCommand name="loadPreviousEnrichment"
-				update=":formEnrich:tabEnrich:termsChartPanel :formEnrich:tabEnrich:similarityChartPanel :formEnrich:tabEnrich:tableStability :formEnrich:tabEnrich:tablePanel"
+				update=":formEnrich:tabEnrich:termsChartPanel :formEnrich:tabEnrich:similarityChartPanel :formEnrich:tabEnrich:tablePanel"
 				oncomplete="loadPreviousEnrichmentComplete(xhr, status, args);"
 				actionListener="#{enrichmentView.loadPreviousEnrichment}" />
 
@@ -275,136 +275,6 @@
 						<div id="hc_similarity_container"
 							style="width: 100%; height: 600px;"></div>
 					</p:outputPanel>
-				</p:tab>
-				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">
-					<f:facet name='title'>
-							<h:outputText value="Stability " />
-							<p:commandButton id="stabilityTabHelpBtn" value=""
-								styleClass="icon-only noupdate" icon="fa fa-question-circle" type="button" />
-					</f:facet>
-					<p:dataTable id="tableStability" widgetVar="tableStabilityWdg"
-							var="entry" value="#{enrichmentView.stabilityTableValues}"
-							sortMode="multiple" style="margin-bottom:0"
-							emptyMessage="No stability data found"
-							filteredValue="#{enrichmentView.filteredStabilityTableValues}"
-							styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
-							scrollable="true" scrollHeight="450"
-							selectionMode="single"
-							selection="#{enrichmentView.selectedStabilityTableValue}"
-							rowKey="#{entry.term.goId}"
-							liveScroll="true"
-							scrollRows="25" >
-							
-							<p:ajax event="filter"
-								oncomplete="postAjaxSortTable(PF('tableStabilityWdg'))" />
-							<f:facet name="footer">
-								<span class="footer-graph"> 
-									<p:commandButton
-										value="Graph Selected Term"
-										actionListener="#{enrichmentView.createStabilityChartFromSelected()}"
-										icon="fa fa-line-chart"
-										oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);" />
-								</span>
-								<h:commandLink>
-									<h:graphicImage library="img" name="excel.png" width="24" />
-									<p:dataExporter type="xls" target="tableStability"
-										fileName="stability" />
-								</h:commandLink>
-
-								<h:commandLink>
-									<h:graphicImage library="img" name="pdf.png" width="24" />
-									<p:dataExporter type="pdf" target="tableStability"
-										fileName="stability" />
-								</h:commandLink>
-
-								<h:commandLink>
-									<h:graphicImage library="img" name="csv.png" width="24" />
-									<p:dataExporter type="csv" target="tableStability"
-										fileName="stability" />
-								</h:commandLink>
-
-								<h:commandLink>
-									<h:graphicImage library="img" name="xml.png" width="24" />
-									<p:dataExporter type="xml" target="tableStability"
-										fileName="stability" />
-								</h:commandLink>
-							</f:facet>
-
-							<p:column style="width:10px;" exportable="false">
-								<a
-									href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.term.goId}"
-									target="_blank"><i class="fa fa-external-link fa-sm"
-									style="font-size: 0.7em;" /> </a>
-							</p:column>
-							<p:column filterBy="#{entry.term.goId}"
-								filterMatchMode="contains" sortBy="#{entry.term.goId}"
-								headerText="Id" style="width:120px;">
-								<h:outputText value="#{entry.term.goId}" />
-							</p:column>
-							<p:column filterBy="#{entry.term.aspect}" filterMatchMode="in"
-								sortBy="#{entry.term.aspect}" headerText="Aspect"
-								style="width:150px;">
-								<f:facet name="filter">
-									<p:selectManyButton
-										onchange="PF('tableStabilityWdg').filter()"
-										style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
-										<f:selectItems value="#{cache.aspects}"
-											var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
-									</p:selectManyButton>
-								</f:facet>
-								<h:outputText value="#{entry.term.aspect.label}"/>
-							</p:column>
-							<p:column filterBy="#{entry.term.name}"
-								filterMatchMode="contains" sortBy="#{entry.term.name}"
-								headerText="Name" style="width:400px;">
-								<h:outputText value="#{entry.term.name}" />
-							</p:column>
-							
-							<p:column filterBy="#{entry.stability.sampleSigma}"
-								headerText="Sample Sigma" sortBy="#{entry.stability.sampleSigma}"
-								filterFunction="#{enrichmentView.filterByNumberLT}"
-								style="width:120px;">
-								<h:outputText value="#{entry.stability.sampleSigma}">
-									<f:convertNumber type="number" />
-								</h:outputText>
-							</p:column>
-							
-							<p:column filterBy="#{entry.stability.populationSigma}"
-								headerText="Population Sigma" sortBy="#{entry.stability.populationSigma}"
-								filterFunction="#{enrichmentView.filterByNumberLT}"
-								style="width:160px;">
-								<h:outputText value="#{entry.stability.populationSigma}">
-									<f:convertNumber type="number" />
-								</h:outputText>
-							</p:column>
-							
-							<p:column filterBy="#{entry.stability.score}" headerText="Stability Score"
-								sortBy="#{entry.stability.score}"
-								filterFunction="#{enrichmentView.filterByNumberLT}"
-								style="width:120px;" styleClass="stability-gradient stability-gradient#{entry.quantile}">
-								<h:outputText value="#{entry.stability.score}">
-									<f:convertNumber type="number" />
-								</h:outputText>
-							</p:column>
-							
-							<p:column filterBy="#{entry.stability.averageScore}" headerText="Stability Score Avg"
-								sortBy="#{entry.stability.averageScore}"
-								filterFunction="#{enrichmentView.filterByNumberLT}"
-								style="width:160px;" styleClass="stability-gradient stability-gradient#{entry.quantileAvg}">
-								<h:outputText value="#{entry.stability.averageScore}">
-									<f:convertNumber type="number" />
-								</h:outputText>
-							</p:column>
-
-
-
-						</p:dataTable>
-						<p:contextMenu for="tableStability">
-							<p:menuitem value="View" icon="ui-icon-search"
-								actionListener="#{enrichmentView.viewStabilityTableValue()}"
-								update=":enrichmentResultDetailsDlg"
-								oncomplete="PF('enrichmentResultDetailsWdg').show()" />
-						</p:contextMenu>
 				</p:tab>
 				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">
 					<f:facet name='title'>
@@ -563,6 +433,15 @@
 									<f:convertNumber type="number" pattern="0.######" />
 								</h:outputText>
 							</p:column>
+							
+							<p:column filterBy="#{entry.stability.score}" headerText="Recent Stability"
+								sortBy="#{entry.stability.score}"
+								filterFunction="#{enrichmentView.filterByNumberLT}"
+								style="width:120px;" styleClass="stability-gradient stability-gradient#{entry.stabilityQuantile}">
+								<h:outputText value="#{entry.stability.score}">
+									<f:convertNumber type="number" />
+								</h:outputText>
+							</p:column>
 
 						</p:dataTable>
 						<p:contextMenu for="tableEnrichment">
@@ -692,13 +571,17 @@
 							
 							<h:outputText value="Stability Score" />
 							<h:outputText
-								value="#{enrichmentView.viewEnrichmentRow.score.score}"
-								styleClass="sqlDialogText" />
+								value="#{enrichmentView.viewEnrichmentRow.stability.score}"
+								styleClass="sqlDialogText" >
+								<f:convertNumber type="number" />
+								</h:outputText>
 								
 							<h:outputText value="Stability Score Avg" />
 							<h:outputText
-								value="#{enrichmentView.viewEnrichmentRow.score.averageScore}"
-								styleClass="sqlDialogText" />
+								value="#{enrichmentView.viewEnrichmentRow.stability.averageScore}"
+								styleClass="sqlDialogText" >
+								<f:convertNumber type="number" />
+								</h:outputText>
 
 						</p:panelGrid>
 					</p:tab>
@@ -1052,7 +935,7 @@
 				<p><i>Clicking</i> on the plot will display the sets corresponding to: Top 5 Terms, Parents of Top Terms, and Genes Backing Top Terms.</p>
 			</p:overlayPanel>
 			
-			<p:overlayPanel for=":formEnrich:tabEnrich:stabilityTabHelpBtn" widgetVar="stabilityTabHelpWdg" hideEffect="fade">
+<!-- 			<p:overlayPanel for=":formEnrich:tabEnrich:stabilityTabHelpBtn" widgetVar="stabilityTabHelpWdg" hideEffect="fade">
 				<p>The <b>Stability</b> tab shows p-value stability metrics for those terms that still currently exist and were significantly enriched at some point in their history.</p>
 				<p>The table shows <b>stability score</b> and <b>stability score avg</b> for the current edition for each of these terms.</p>
 				<ul>
@@ -1072,7 +955,7 @@
 				<p>Given the results of these regressions we use the 95% confidence interval of these numbers to calculate a 95% confidence interval around the p-value for every edition. From this interval we calculate something akin to the coefficient of variation (and take its logarithm for easier digestion).</p>
 				<p><b>Note:</b> A score of -&#x221e; means we saw no significant variation in Sample or Population numbers over a given timeline (keep in mind this does <b>not</b> mean the p-value stays constant as other numbers go into its calculation). A score with &#65533; or NaN means there was not enough data.</p>
 			
-			</p:overlayPanel>
+			</p:overlayPanel> -->
 			
 			<p:overlayPanel for=":formEnrich:tabEnrich:enrichmentTabHelpBtn" widgetVar="enrichmentTabHelpWdg" hideEffect="fade">
 				<p>The <b>Enrichment</b> tab shows enrichment data for those terms that were significantly enriched at some point in their history. You may change the currently selected edition using the dropdown selector.</p>

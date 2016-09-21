@@ -76,7 +76,6 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
 import ubc.pavlab.gotrack.model.table.GeneMatches;
 import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
-import ubc.pavlab.gotrack.model.table.StabilityTableValues;
 
 /**
  * View bean based around the enrichment functionality of GOTrack.
@@ -203,11 +202,7 @@ public class EnrichmentView implements Serializable {
 
     // Stability Data
     private StabilityAnalysis stabilityAnalysis;
-
-    // Stability Table Data
-    private List<StabilityTableValues> stabilityTableValues = new ArrayList<>();
-    private List<StabilityTableValues> filteredStabilityTableValues;
-    private StabilityTableValues selectedStabilityTableValue;
+    private Map<Edition, double[]> stabilityRangeCache = Maps.newConcurrentMap();
 
     // Enrichment Chart
     private EnrichmentChartType enrichmentChartType = EnrichmentChartType.TOP;
@@ -351,7 +346,6 @@ public class EnrichmentView implements Serializable {
         }
 
         loadEnrichmentTableData();
-        loadStabilityTableData();
 
     }
 
@@ -791,88 +785,36 @@ public class EnrichmentView implements Serializable {
         selectedValueName = null;
     }
 
-    // Stability Table ---------------------------------------------------------------------------------------
+    // Stability ---------------------------------------------------------------------------------------
 
-    /**
-     * Entry point to ajax request for a graph of a single term with p-value error bands based on stability confidence
-     */
-    public void createStabilityChartFromSelected() {
-
-        if ( selectedStabilityTableValue == null ) {
-            return;
-            // return failed
+    private double[] stabilityRange( Edition ed ) {
+        if ( ed == null ) {
+            return null;
         }
 
-        Set<GeneOntologyTerm> selectedTerms = new HashSet<>();
-        selectedTerms.add( selectedStabilityTableValue.getTerm() );
+        double[] range = stabilityRangeCache.get( ed );
+        if ( range == null ) {
+            // Figure out range of values for Stability scores
 
-        createChart( selectedTerms, null, true );
-    }
+            Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
 
-    /**
-     * Prepares stability table data
-     */
-    public void loadStabilityTableData() {
-        filteredStabilityTableValues = null;
-        stabilityTableValues = new ArrayList<>();
-        Edition ed = currentEdition;
-
-        Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
-
-        // Figure out range of values for Stability scores
-        double minStabilityAvg = Double.POSITIVE_INFINITY;
-        double maxStabilityAvg = Double.NEGATIVE_INFINITY;
-        double minStability = Double.POSITIVE_INFINITY;
-        double maxStability = Double.NEGATIVE_INFINITY;
-        for ( GeneOntologyTerm term : editionData.keySet() ) {
-            StabilityScore sc = stabilityAnalysis.getStabilityScores( term, ed );
-            Double v = sc.getAverageScore();
-            if ( !v.isInfinite() && !v.isNaN() ) {
-                if ( v > maxStabilityAvg ) maxStabilityAvg = v;
-                if ( v < minStabilityAvg ) minStabilityAvg = v;
+            double minStability = Double.POSITIVE_INFINITY;
+            double maxStability = Double.NEGATIVE_INFINITY;
+            for ( GeneOntologyTerm term : editionData.keySet() ) {
+                StabilityScore sc = stabilityAnalysis.getStabilityScores( term, ed );
+                Double v = sc.getScore();
+                if ( !v.isInfinite() && !v.isNaN() ) {
+                    if ( v > maxStability ) maxStability = v;
+                    if ( v < minStability ) minStability = v;
+                }
             }
-            v = sc.getScore();
-            if ( !v.isInfinite() && !v.isNaN() ) {
-                if ( v > maxStability ) maxStability = v;
-                if ( v < minStability ) minStability = v;
-            }
+            range = new double[2];
+            range[0] = minStability;
+            range[1] = maxStability;
+            stabilityRangeCache.put( ed, range );
         }
 
-        // Assign each score a quantile which will determine its color shading in a  gradient
-        for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
-            GeneOntologyTerm term = termEntry.getKey();
-            EnrichmentResult er = termEntry.getValue();
-            StabilityScore sc = stabilityAnalysis.getStabilityScores( term, ed );
-            Double val = sc.getAverageScore();
-            int quantileAvg = 0;
-            if ( !val.isNaN() && !val.isInfinite() ) {
-                quantileAvg = ( int ) Math
-                        .round( 19 * ( val - minStabilityAvg ) / ( maxStabilityAvg - minStabilityAvg ) ) + 1;
-            }
-            val = sc.getScore();
-            int quantile = 0;
-            if ( !val.isNaN() && !val.isInfinite() ) {
-                quantile = ( int ) Math.round( 19 * ( val - minStability ) / ( maxStability - minStability ) ) + 1;
-            }
-            stabilityTableValues.add( new StabilityTableValues( term, er, sc, quantile, quantileAvg ) );
-        }
-        Collections.sort( stabilityTableValues );
-
-    }
-
-    /**
-     * Right click -> view functionality for stability table
-     */
-    public void viewStabilityTableValue() {
-        if ( selectedStabilityTableValue == null ) {
-            return;
-        }
-        GeneOntologyTerm t = selectedStabilityTableValue.getTerm();
-        Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant( currentEdition );
-        EnrichmentResult er = enrichmentResults.get( currentEdition ).get( t );
-        viewEnrichmentRow = new EnrichmentTableValues( currentEdition, t, er,
-                selectedStabilityTableValue.getStability(), sigTerms.contains( t ) );
-        viewEnrichmentRowGeneSet = analysis.getGeneSet( viewEnrichmentRow.getEdition(), viewEnrichmentRow.getTerm() );
+        return range;
     }
 
     // Enrichment Table ---------------------------------------------------------------------------------------
@@ -885,14 +827,22 @@ public class EnrichmentView implements Serializable {
         enrichmentTableValues = new ArrayList<>();
         Edition ed = enrichmentTableAllEditions.get( enrichmentTableEdition );
         if ( ed != null ) {
-
+            double[] stabilityRange = stabilityRange( ed );
             Set<GeneOntologyTerm> sigTerms = analysis.getTermsSignificant( ed );
             Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
             for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
                 EnrichmentResult er = termEntry.getValue();
                 StabilityScore sc = stabilityAnalysis.getStabilityScores( term, ed );
-                enrichmentTableValues.add( new EnrichmentTableValues( ed, term, er, sc, sigTerms.contains( term ) ) );
+                Double val = sc.getScore();
+                int quantile = 0;
+                if ( !val.isNaN() && !val.isInfinite() ) {
+                    quantile = ( int ) Math
+                            .round( 19 * ( val - stabilityRange[0] ) / ( stabilityRange[1] - stabilityRange[0] ) ) + 1;
+                }
+
+                enrichmentTableValues
+                        .add( new EnrichmentTableValues( ed, term, er, sc, quantile, sigTerms.contains( term ) ) );
             }
             Collections.sort( enrichmentTableValues );
 
@@ -1323,26 +1273,6 @@ public class EnrichmentView implements Serializable {
 
     public List<GeneMatches> getGeneMatches() {
         return geneMatches;
-    }
-
-    public List<StabilityTableValues> getFilteredStabilityTableValues() {
-        return filteredStabilityTableValues;
-    }
-
-    public void setFilteredStabilityTableValues( List<StabilityTableValues> filteredStabilityTableValues ) {
-        this.filteredStabilityTableValues = filteredStabilityTableValues;
-    }
-
-    public StabilityTableValues getSelectedStabilityTableValue() {
-        return selectedStabilityTableValue;
-    }
-
-    public void setSelectedStabilityTableValue( StabilityTableValues selectedStabilityTableValue ) {
-        this.selectedStabilityTableValue = selectedStabilityTableValue;
-    }
-
-    public List<StabilityTableValues> getStabilityTableValues() {
-        return stabilityTableValues;
     }
 
     public EnrichmentChartType getEnrichmentChartType() {
