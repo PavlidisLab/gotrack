@@ -67,7 +67,9 @@
 					filteredValue="#{geneView.filteredAllTerms}" selection="#{geneView.selectedTerms}" selectionMode="multiple"
 					rowKey="#{termTableValue.term.goId}" scrollHeight="100%"
 					rowStyleClass="#{ termTableValue.alwaysExist == 'true' ? 'gene-table-term-always' : null} #{ termTableValue.currentlyExist == 'true' ? 'gene-table-term-current' : null} #{ termTableValue.previouslyExist == 'true' ? 'gene-table-term-previous' : null}">
-					<p:ajax event="rowDblselect" oncomplete="fetchTimeline();"/>
+					<p:ajax event="rowDblselect" oncomplete="afterRowSelection();fetchTimeline();"/>
+					<p:ajax event="rowSelect" onstart="afterRowSelection();return false;"/>
+					<p:ajax event="rowUnselect" onstart="afterRowSelection();return false;"/>
 					<p:column style="width:26px;text-align:center;padding: 0 5px 0 5px;">
 						<div class="gene-term-existence">
 						  <div class="always"></div>
@@ -98,8 +100,8 @@
 						<h:outputText value="#{termTableValue.term.name}" />
 					</p:column>
 					<f:facet name="footer">
-						<p:commandButton icon="ui-icon-search"
-							value="View Terms" oncomplete="fetchTimeline()" />
+						<p:commandButton icon="ui-icon-search" widgetVar="viewTermsWdg"
+							value="View Terms" oncomplete="fetchTimeline()"/>
 						<p:commandButton icon="fa fa-filter" 
 							value="Filter Charts" oncomplete="filterCharts()"/>
 						<p:commandButton id="resetFilterBtn" icon="fa fa-trash" 

@@ -36,6 +36,23 @@ function timelineDlgResize() {
    plotting.charts.timeline.resize();
 }
 
+function afterRowSelection() {
+   var cnt = PF('funcTable').getSelectedRowsCount();
+   var wdg = PF('viewTermsWdg');
+   try {
+      if (cnt > 1) {
+         // enable View Terms button
+         wdg.enable();
+      } else {
+         // disable View Terms button
+         wdg.disable();
+      }
+   } catch (e) {
+      console.log(e);
+   }
+   
+}
+
 
 function handleDatatableDialog(wdgDlgId, wdgTabId, noLoop) {
    var dlg = PF(wdgDlgId);
@@ -70,11 +87,21 @@ function handleFetchData(xhr, status, args) {
 }
 
 function fetchCharts() {
-   plotting.destroyAllCharts();
-   fetchAnnotationChart();
-   fetchSimilarityChart();
-   fetchMultiChart();
-   fetchLossGainChart();
+   try {
+      PF('viewTermsWdg').disable();
+   } catch (e) {
+      console.log(e);
+   }
+   
+   try {
+      plotting.destroyAllCharts();
+      fetchAnnotationChart();
+      fetchSimilarityChart();
+      fetchMultiChart();
+      fetchLossGainChart();
+   } catch (e) {
+      console.log(e);
+   }
 }
 
 function handleFilterCharts(xhr, status, args) {
