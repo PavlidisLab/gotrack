@@ -103,6 +103,7 @@ public class GeneView implements Serializable {
 
     // Data
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData;
+    private boolean filtered = false;
 
     // Meta
     private Edition currentEdition;
@@ -694,6 +695,7 @@ public class GeneView implements Serializable {
         HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
 
         rawData = retrieveData( filterTerms );
+        filtered = true;
 
         RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
 
@@ -704,6 +706,7 @@ public class GeneView implements Serializable {
      */
     public void resetCharts() {
         rawData = retrieveData();
+        filtered = false;
         RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
     }
 
@@ -1071,6 +1074,10 @@ public class GeneView implements Serializable {
 
     public void setFilteredAllTerms( Collection<GeneTableValues> filteredAllTerms ) {
         this.filteredAllTerms = filteredAllTerms;
+    }
+
+    public boolean isFiltered() {
+        return filtered;
     }
 
 }

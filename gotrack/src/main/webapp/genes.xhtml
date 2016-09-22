@@ -102,9 +102,9 @@
 							value="View Terms" oncomplete="fetchTimeline()" />
 						<p:commandButton icon="fa fa-filter" 
 							value="Filter Charts" oncomplete="filterCharts()"/>
-						<p:commandButton icon="fa fa-trash" 
+						<p:commandButton id="resetFilterBtn" icon="fa fa-trash" 
 							value="Reset Charts" oncomplete="handleFilterCharts(xhr, status, args);"
-							actionListener="#{geneView.resetCharts()}"/>
+							actionListener="#{geneView.resetCharts()}" disabled="#{not geneView.filtered}" update="@this"/>
 					</f:facet>
 				</p:dataTable>
 			</h:form>
@@ -240,7 +240,8 @@
 				actionListener="#{geneView.fetchLossGainChart()}" />
 			<p:remoteCommand name="filterCharts"
 				oncomplete="handleFilterCharts(xhr, status, args);"
-				actionListener="#{geneView.filterCharts()}" />
+				actionListener="#{geneView.filterCharts()}" 
+				update=":rightForm:funcTable:resetFilterBtn"/>
 			<p:remoteCommand name="fetchTimeline"
 				oncomplete="PF('timelineDlgWdg').show();handleFetchTimeline(xhr, status, args);"
 				actionListener="#{geneView.fetchTimeline()}" />
