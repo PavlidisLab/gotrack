@@ -298,6 +298,8 @@
 							scrollRows="25">
 							<p:ajax event="filter"
 								oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))" />
+							<p:ajax event="rowDblselect" listener="#{enrichmentView.createStabilityChartFromSelected()}" 
+								oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
 							<f:facet name="header">
 								<p:panelGrid cellpadding="5" style="width: 650px" styleClass="no-border">
 									<p:row>

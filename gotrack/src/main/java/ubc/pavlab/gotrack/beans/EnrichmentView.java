@@ -438,6 +438,22 @@ public class EnrichmentView implements Serializable {
 
     }
 
+    /**
+     * Entry point to ajax request for a graph of a single term with p-value error bands based on stability confidence
+     */
+    public void createStabilityChartFromSelected() {
+
+        if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.size() != 1 ) {
+            return;
+            // return failed
+        }
+        EnrichmentTableValues sel = selectedEnrichmentTableValues.iterator().next();
+        Set<GeneOntologyTerm> selectedTerms = new HashSet<>();
+        selectedTerms.add( sel.getTerm() );
+
+        createChart( selectedTerms, null, true );
+    }
+
     // Enrichment Charts ---------------------------------------------------------------------------------------
 
     /**
