@@ -254,7 +254,7 @@
 		
 		<p:dialog id="timelineDlg" widgetVar="timelineDlgWdg" modal="true" showEffect="fade"
 			hideEffect="fade" height="800" width="1200"
-			fitViewport="true" closeOnEscape="true"
+			fitViewport="true" closeOnEscape="true" maximizable="true"
 			onHide="timelineDlgHide();" onShow="">
 			<f:facet name="header">
 				<p:commandButton id="timelineHelpBtn" value=""
@@ -264,7 +264,7 @@
 			<!-- return false so that the ajax request is not executed. -->
 			<p:ajax event="maximize"
 				onstart="timelineDlgResize();return false;" />
-			<p:ajax event="minimize"
+			<p:ajax event="restoreMaximize"
 				onstart="timelineDlgResize();return false;" />
 			<div id="hc_timeline_container" style="width: 100%; height: 100%;"/>
 
