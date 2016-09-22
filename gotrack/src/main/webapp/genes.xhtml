@@ -60,21 +60,27 @@
 								type="button" />
 			</f:facet>
 			<h:form id="rightForm" style="height:100%;">
-				<p:dataTable id="funcTable" widgetVar="funcTable" var="term"
+				<p:dataTable id="funcTable" widgetVar="funcTable" var="termTableValue"
 					value="#{geneView.allTerms}" scrollable="true" sortMode="multiple"
 					style="margin-bottom:0"
 					emptyMessage="No annotations found with given criteria"
-					filteredValue="#{geneView.filteredAllTerms}" selection="#{geneView.selectedTerms}"
-					rowKey="#{term.goId}" scrollHeight="100%"
-					rowStyleClass="#{ term.obsolete == 'true' ? 'datatable-red' : null}">
-					<p:column selectionMode="multiple" style="width:16px;text-align:center"/>
-					<p:column filterBy="#{term.goId}" filterMatchMode="contains"
-						headerText="Id" width="25%">
-						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
-							target="_blank"><i class="fa fa-external-link fa-sm"
-							style="font-size: 0.7em;" /> </a>#{term.goId}
+					filteredValue="#{geneView.filteredAllTerms}" selection="#{geneView.selectedTerms}" selectionMode="multiple"
+					rowKey="#{termTableValue.term.goId}" scrollHeight="100%"
+					rowStyleClass="#{ termTableValue.alwaysExist == 'true' ? 'gene-table-term-always' : null} #{ termTableValue.currentlyExist == 'true' ? 'gene-table-term-current' : null} #{ termTableValue.previouslyExist == 'true' ? 'gene-table-term-previous' : null}">
+					<p:column style="width:26px;text-align:center;padding: 0 5px 0 5px;">
+						<div class="gene-term-existence">
+						  <div class="always"></div>
+						  <div class="current"></div>
+						  <div class="previous"></div>
+						</div>
 					</p:column>
-					<p:column filterBy="#{term.aspect}" filterMatchMode="in"
+					<p:column filterBy="#{termTableValue.term.goId}" filterMatchMode="contains"
+						headerText="Id" width="25%">
+						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{termTableValue.term.goId}"
+							target="_blank"><i class="fa fa-external-link fa-sm"
+							style="font-size: 0.7em;" /> </a>#{termTableValue.term.goId}
+					</p:column>
+					<p:column filterBy="#{termTableValue.term.aspect}" filterMatchMode="in"
 						headerText="Aspect" style="width:150px;">
 						<f:facet name="filter">
 							<p:selectManyButton
@@ -84,11 +90,11 @@
 									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 							</p:selectManyButton>
 						</f:facet>
-						<h:outputText value="#{term.aspect.label}"/>
+						<h:outputText value="#{termTableValue.term.aspect.label}"/>
 					</p:column>
-					<p:column filterBy="#{term.name}" filterMatchMode="contains"
+					<p:column filterBy="#{termTableValue.term.name}" filterMatchMode="contains"
 						headerText="Name" width="55%">
-						<h:outputText value="#{term.name}" />
+						<h:outputText value="#{termTableValue.term.name}" />
 					</p:column>
 					<f:facet name="footer">
 						<p:commandButton icon="ui-icon-search"

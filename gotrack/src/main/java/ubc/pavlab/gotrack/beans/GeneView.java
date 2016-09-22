@@ -27,6 +27,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -66,6 +67,7 @@ import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.AnnotationValues;
+import ubc.pavlab.gotrack.model.table.GeneTableValues;
 import ubc.pavlab.gotrack.model.table.LossGainTableValues;
 import ubc.pavlab.gotrack.model.table.LossGainTableValues.LossGain;
 import ubc.pavlab.gotrack.utilities.Jaccard;
@@ -102,10 +104,14 @@ public class GeneView implements Serializable {
     // Data
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData;
 
+    // Meta
+    private Edition currentEdition;
+    private Edition previousEdition;
+
     // Right Panel
-    private Collection<GeneOntologyTerm> allTerms = new HashSet<>();
-    private List<GeneOntologyTerm> selectedTerms;
-    private Collection<GeneOntologyTerm> filteredAllTerms;
+    private Collection<GeneTableValues> allTerms = new HashSet<>();
+    private List<GeneTableValues> selectedTerms;
+    private Collection<GeneTableValues> filteredAllTerms;
 
     // View Annotations List
     private Collection<AnnotationValues> viewAnnotations = new ArrayList<>();
@@ -176,11 +182,26 @@ public class GeneView implements Serializable {
         } else {
             // Count gene hit
             statsService.countGeneHit( gene );
-
             log.info( "Gene: " + gene );
-            return null;
 
         }
+
+        List<Edition> allEditions = Lists.newArrayList( cache.getAllEditions( species.getId() ) );
+        Collections.sort( allEditions, Collections.reverseOrder() );
+        Iterator<Edition> it = allEditions.iterator();
+
+        currentEdition = it.next();
+        previousEdition = it.next();
+
+        if ( currentEdition != cache.getCurrentEditions( species.getId() ) ) {
+            // Sanity check since we are using an obscure method or getting these editions
+            FacesContext facesContext = FacesContext.getCurrentInstance();
+            facesContext.getExternalContext().responseSendError( 500, "Something Went Wrong!" );
+            facesContext.responseComplete();
+            return null;
+        }
+
+        return null;
 
     }
 
@@ -188,7 +209,19 @@ public class GeneView implements Serializable {
      * Attempt to get data from cache, if not in cache get from DB.
      */
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> retrieveData() {
-        return retrieveData( null );
+        return retrieveData( Sets.<GeneOntologyTerm> newHashSet() );
+    }
+
+    /**
+     * Attempt to get data from cache, if not in cache get from DB. Afterwards apply filter.
+     */
+    private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> retrieveData(
+            Collection<GeneTableValues> filterTableValues ) {
+        Set<GeneOntologyTerm> filterTerms = Sets.newHashSet();
+        for ( GeneTableValues tv : filterTableValues ) {
+            filterTerms.add( tv.getTerm() );
+        }
+        return retrieveData( filterTerms );
     }
 
     /**
@@ -291,19 +324,42 @@ public class GeneView implements Serializable {
 
         // Now create a list of terms that will be displayed in a front-end right panel
         // Cannot simply use columnKeySet as there are no guarantees as to which terms will be chosen
-        // We want the most recent of each term
+        // We want the most recent of each term.
 
         //allTerms = rawData.get( AnnotationType.DIRECT ).columnKeySet();
         allTerms = new HashSet<>();
-        ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> reversedData = new ArrayList<>(
+        ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> data = new ArrayList<>(
                 rawData.get( AnnotationType.I ).rowMap().entrySet() );
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( reversedData ) ) {
+        Set<GeneOntologyTerm> intersectTerms = Sets.newHashSet( data.iterator().next().getValue().keySet() );
+        Set<GeneOntologyTerm> currentTerms = Sets.newHashSet();
+        Set<GeneOntologyTerm> previousTerms = Sets.newHashSet();
+        // pre-loop to collect those terms that have always existed
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : data ) {
+            Set<GeneOntologyTerm> terms = entry.getValue().keySet();
+            Edition ed = entry.getKey();
+            intersectTerms.retainAll( terms );
 
-            allTerms.addAll( entry.getValue().keySet() );
+            if ( ed.equals( currentEdition ) ) {
+                currentTerms = terms;
+            } else if ( ed.equals( previousEdition ) ) {
+                previousTerms = terms;
+            }
+        }
+
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : data ) {
+            Set<GeneOntologyTerm> terms = entry.getValue().keySet();
+            Edition ed = entry.getKey();
+            for ( GeneOntologyTerm t : terms ) {
+                if ( !allTerms.contains( t ) ) {
+                    // Only keep the most recent
+                    allTerms.add( new GeneTableValues( ed, t, intersectTerms.contains( t ), currentTerms.contains( t ),
+                            previousTerms.contains( t ) ) );
+                }
+            }
         }
 
         allTerms = new ArrayList<>( allTerms );
-        Collections.sort( ( List<GeneOntologyTerm> ) allTerms );
+        Collections.sort( ( List<GeneTableValues> ) allTerms );
 
     }
 
@@ -635,7 +691,7 @@ public class GeneView implements Serializable {
             return;
         }
 
-        HashSet<GeneOntologyTerm> filterTerms = new HashSet<>( selectedTerms );
+        HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
 
         rawData = retrieveData( filterTerms );
 
@@ -670,7 +726,7 @@ public class GeneView implements Serializable {
             return;
         }
 
-        HashSet<GeneOntologyTerm> filterTerms = new HashSet<>( selectedTerms );
+        HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
 
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> data = retrieveData( filterTerms )
                 .get( AnnotationType.I );
@@ -689,7 +745,8 @@ public class GeneView implements Serializable {
 
         Map<String, String> termNames = new HashMap<>();
 
-        for ( GeneOntologyTerm t : filterTerms ) {
+        for ( GeneTableValues tv : filterTerms ) {
+            GeneOntologyTerm t = tv.getTerm();
             termNames.put( t.getGoId(), t.getName() );
             Series s = new Series( t.getGoId() );
             ImmutableMap<Edition, Set<Annotation>> termData = data.column( t );
@@ -996,23 +1053,23 @@ public class GeneView implements Serializable {
         this.filteredClickLGTerms = filteredClickLGTerms;
     }
 
-    public Collection<GeneOntologyTerm> getAllTerms() {
+    public Collection<GeneTableValues> getAllTerms() {
         return allTerms;
     }
 
-    public List<GeneOntologyTerm> getSelectedTerms() {
+    public List<GeneTableValues> getSelectedTerms() {
         return selectedTerms;
     }
 
-    public void setSelectedTerms( List<GeneOntologyTerm> selectedTerms ) {
+    public void setSelectedTerms( List<GeneTableValues> selectedTerms ) {
         this.selectedTerms = selectedTerms;
     }
 
-    public Collection<GeneOntologyTerm> getFilteredAllTerms() {
+    public Collection<GeneTableValues> getFilteredAllTerms() {
         return filteredAllTerms;
     }
 
-    public void setFilteredAllTerms( Collection<GeneOntologyTerm> filteredAllTerms ) {
+    public void setFilteredAllTerms( Collection<GeneTableValues> filteredAllTerms ) {
         this.filteredAllTerms = filteredAllTerms;
     }
 
