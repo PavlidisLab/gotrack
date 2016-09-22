@@ -286,8 +286,14 @@ function handleGraphSelected(xhr, status, args) {
       options.tooltip = {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
+                         useHTML: true,
                          formatter:function(){
-                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + GLOBALS.dateToEdition[this.x] + "<br/> p-value: " + utility.sigFigs(this.y, 3);
+                            return '<span style="color:' + this.series.color + '">\u25CF</span><b>' + this.series.name +
+                            '</b><br/><p>Name: ' + this.series.options.title + 
+                            '</p><p>Date: ' + new Date(this.x).toLocaleDateString() + 
+                            "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] + 
+                            "</p><p>P-value: " + utility.sigFigs(this.y, 3) + 
+                            "</p>";
                          }
       };
       
@@ -354,8 +360,14 @@ function handleGraphSelected(xhr, status, args) {
       options.tooltip = {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
+                         useHTML: true,
                          formatter:function(){
-                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + GLOBALS.dateToEdition[this.x] + "<br/> Relative Rank: " + ( this.y >= dateToMaxSigRank[this.x] ? "Insignificant": utility.roundHalf(this.y) );
+                            return '<span style="color:' + this.series.color + '">\u25CF</span><b>' + this.series.name +
+                            '</b><br/><p>Name: ' + this.series.options.title + 
+                            '</p><p>Date: ' + new Date(this.x).toLocaleDateString() + 
+                            "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] + 
+                            "</p><p>Relative Rank: " + ( this.y >= dateToMaxSigRank[this.x] ? "Insignificant": utility.roundHalf(this.y) ) + 
+                            "</p>";
                          }
       };
       
@@ -502,8 +514,15 @@ function handleGraphSelected(xhr, status, args) {
       options.tooltip = {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
+                         useHTML: true,
                          formatter:function(){
-                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + GLOBALS.dateToEdition[this.x] + "<br/> p-value: " + utility.sigFigs(this.y, 3) + "<br/> Stability Score: " + utility.sigFigs(dateToStabilityScore[this.x], 3);
+                            return '<span style="color:' + this.series.color + '">\u25CF</span><b>' + this.series.name +
+                               '</b><br/><p>Name: ' + this.series.options.title + 
+                               '</p><p>Date: ' + new Date(this.x).toLocaleDateString() + 
+                               "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] + 
+                               "</p><p>P-value: " + utility.sigFigs(this.y, 3) + 
+                               "</p><p>Stability Score: " + utility.sigFigs(dateToStabilityScore[this.x], 3) + 
+                               "</p>";
                          }
       }
       

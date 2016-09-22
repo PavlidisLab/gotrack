@@ -214,3 +214,18 @@ div.ui-datatable thead th.ui-filter-column.ui-column-filter-small > input.ui-col
 div.ui-datatable thead th.ui-filter-column.ui-column-filter-big > input.ui-column-filter {
 	width: 150px;
 }
+
+/* For HTML tooltips on Highcharts plot where GOTerm names make svg tooltips overly wide */
+.highcharts-tooltip > span {
+	height:auto;
+	width:250px;
+	overflow:auto;
+	white-space:normal !important;
+}
+    
+.highcharts-tooltip > span > p {
+	margin:0 15px;
+    text-indent: -15px;
+    line-height:1.2;
+    margin-top:3px;
+}
