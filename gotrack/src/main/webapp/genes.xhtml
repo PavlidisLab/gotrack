@@ -67,6 +67,7 @@
 					filteredValue="#{geneView.filteredAllTerms}" selection="#{geneView.selectedTerms}" selectionMode="multiple"
 					rowKey="#{termTableValue.term.goId}" scrollHeight="100%"
 					rowStyleClass="#{ termTableValue.alwaysExist == 'true' ? 'gene-table-term-always' : null} #{ termTableValue.currentlyExist == 'true' ? 'gene-table-term-current' : null} #{ termTableValue.previouslyExist == 'true' ? 'gene-table-term-previous' : null}">
+					<p:ajax event="rowDblselect" oncomplete="fetchTimeline();"/>
 					<p:column style="width:26px;text-align:center;padding: 0 5px 0 5px;">
 						<div class="gene-term-existence">
 						  <div class="always"></div>
