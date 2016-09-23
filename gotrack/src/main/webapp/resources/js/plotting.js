@@ -356,10 +356,10 @@
                                             // The toggling of the text is not using an official API, can break with version update!
                                             if (this.yAxis[0].isLog) {
                                                this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
-                                               this.yAxis[0].update({ type: 'linear', min:baseMin, max:baseMax});
+                                               this.yAxis[0].update({ type: 'linear', min:config.min, max:config.max});
                                             } else {
                                                this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
-                                               this.yAxis[0].update({ type: 'logarithmic', min: null, max:baseMax});
+                                               this.yAxis[0].update({ type: 'logarithmic', min: null, max:config.max});
                                             }
 
                                          },
