@@ -249,14 +249,14 @@
 				actionListener="#{geneView.fetchTimeline()}" />
 			<p:remoteCommand name="fetchAnnotationPointData"
 				oncomplete="handleDatatableDialog('clickTermsDlgWdg', 'clickTermsTableWdg', false);"
-				update=":clickTermsForm:clickTermsTable"
+				update=":clickTermsDlg"
 				actionListener="#{geneView.fetchAnnotationPointData()}" />
 			<p:remoteCommand name="fetchLossGainPointData"
 				oncomplete="handleDatatableDialog('clickLGTermsDlgWdg', 'clickLGTermsTableWdg', false);"
-				update=":clickLGTermsForm:clickLGTermsTable"
+				update=":clickLGTermsDlg"
 				actionListener="#{geneView.fetchLossGainPointData()}" />
 			<p:remoteCommand name="fetchTimelinePointData"
-				update=":viewAnnotationsForm:viewAnnotationsTable" 
+				update=":viewAnnotationsDlg" 
 				oncomplete="showViewAnnotationsDlg();"
 				action="#{geneView.fetchTimelinePointData()}" />
 				
@@ -280,7 +280,7 @@
 
 		</p:dialog>
 		
-		<p:dialog id="clickTermsDlg" header="Terms"
+		<p:dialog id="clickTermsDlg"
 			widgetVar="clickTermsDlgWdg" modal="false" showEffect="fade"
 			hideEffect="fade" width="900"
 			fitViewport="true" closeOnEscape="true" onShow="handleDatatableDialog('clickTermsDlgWdg', 'clickTermsTableWdg', true);">
@@ -313,18 +313,22 @@
 						<h:outputText value="#{term.name}" />
 					</p:column>
 			        <p:column style="width:32px;text-align: center">
-			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="showViewAnnotationsDlg();" icon="ui-icon-search" title="View">
+			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsDlg" oncomplete="showViewAnnotationsDlg();" icon="ui-icon-search" title="View">
 			                <f:setPropertyActionListener value="#{term}" target="#{geneView.viewTerm}" />
 			            </p:commandButton>
 			        </p:column>
-			        <f:facet name="footer">
-			        	<h:outputText value="Date: #{geneView.clickEdition.date}, Edition: #{geneView.clickEdition.edition} "/>
-			        </f:facet>
+			         <f:facet name="footer">
+			         	<!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
+						&#8203;
+			         </f:facet>
 				</p:dataTable>
 			</h:form>
+			<f:facet name="header">
+            	<h:outputText value="Terms present for #{geneView.gene.symbol} in edition #{geneView.clickEdition.edition} [#{geneView.clickEdition.date}]"/>
+            </f:facet>
 		</p:dialog>
 		
-		<p:dialog id="clickLGTermsDlg" header="Terms"
+		<p:dialog id="clickLGTermsDlg"
 			widgetVar="clickLGTermsDlgWdg" modal="false" showEffect="fade"
 			hideEffect="fade" width="900"
 			fitViewport="true" closeOnEscape="true" onShow="handleDatatableDialog('clickLGTermsDlgWdg', 'clickLGTermsTableWdg', true);">
@@ -375,13 +379,18 @@
 			            </p:commandButton>
 			        </p:column>
 			        <f:facet name="footer">
-			        	<h:outputText value="Date: #{geneView.clickEdition.date}, Edition: #{geneView.clickEdition.edition} "/>
-			        </f:facet>
+			         	<!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
+						&#8203;
+			         </f:facet>
+			        
 				</p:dataTable>
 			</h:form>
+			<f:facet name="header">
+                <h:outputText value="Terms lost/gained for #{geneView.gene.symbol} in edition #{geneView.clickEdition.edition} [#{geneView.clickEdition.date}]"/>
+            </f:facet>
 		</p:dialog>
 		
-		<p:dialog id="viewAnnotationsDlg" header="Annotations"
+		<p:dialog id="viewAnnotationsDlg"
 			widgetVar="viewAnnotationsDlgWdg" modal="false" showEffect="fade"
 			hideEffect="fade" width="900"
 			fitViewport="true" closeOnEscape="true" >
@@ -430,12 +439,15 @@
 					<p:column headerText="Type">
 						<h:outputText value="#{annot.type}" />
 					</p:column>
-			        <f:facet name="footer">
-			        	<h:outputText value="Date: #{geneView.clickEdition.date}, Edition: #{geneView.clickEdition.edition}, GO Term:  #{geneView.viewTerm.goId}"/>
-			        </f:facet>
-					
+					<f:facet name="footer">
+			         	<!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
+						&#8203;
+			         </f:facet>					
 				</p:dataTable>
 			</h:form>
+			<f:facet name="header">
+                <h:outputText value="Annotations associated to #{geneView.viewTerm.goId} for #{geneView.gene.symbol} in edition #{geneView.clickEdition.edition} [#{geneView.clickEdition.date}]"/>
+            </f:facet>
 		</p:dialog>
 		
 				<p:overlayPanel for=":centerTabViewForm:centerTabView:annotationTabHelpBtn" hideEffect="fade"
