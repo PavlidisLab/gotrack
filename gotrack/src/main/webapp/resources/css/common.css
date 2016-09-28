@@ -68,7 +68,7 @@ div.ui-terminal {
 	background: black;
 	color: white;
 }
-
+/* 
 button.ui-button.icon-only {
 	background:none;
 	border:none;
@@ -82,6 +82,44 @@ button.ui-button.icon-only:focus {
 button.ui-button.icon-only span {
 	left:0;
 	margin-top: -10px !important;
+} */
+
+button.ui-button.no-value {
+	height: 12px;
+	width: 2.2em;
+	outline:none;
+}
+
+button.ui-button.no-background {
+	background: none;
+    border: none;
+    box-shadow: none;
+}
+
+button.ui-button.no-background:hover {
+    -moz-box-shadow: 0 0 5px #85b2cb;
+    -webkit-box-shadow: 0 0 8px #85b2cb;
+    box-shadow: 0 0 8px #85b2cb;
+}
+
+button.ui-button.no-value > span.ui-icon {
+	margin-left: -8px;
+	margin-top: -8px;
+}
+
+button.ui-button.no-value > span.ui-button-text {
+	display:none;
+}
+
+button.ui-button.fa-fix {
+	top:2px;
+	width: 1.4em;
+	height:14px;
+}
+
+button.ui-button.fa-fix > span.ui-icon {
+	margin-left: -6px;
+	margin-top: -6px;
 }
 
 #body tr.ui-state-highlight td {
