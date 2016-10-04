@@ -954,6 +954,7 @@ function createGeneCountChart(args) {
             },
             symbol: 'circle',
             symbolFill: '#33cc33',
+            symbolStrokeWidth: 1,
             _titleKey: "toggleSubsetsTitle",
             text: 'Subset: Direct'
          }                   
