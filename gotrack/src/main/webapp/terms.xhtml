@@ -146,18 +146,18 @@
 						<p:outputPanel>
 							<p:dataTable var="child" value="#{termView.currentTerm.children}"
 								styleClass="child-table">
-								<p:column headerText="Relationship" width="25%">
+								<p:column headerText="Relationship" width="100px">
 									<h:outputText value="#{child.type}" />
 								</p:column>
 
-								<p:column headerText="Term" width="25%">
+								<p:column headerText="Term" width="100px">
 									<p:link value="#{child.relation.goId}" outcome="terms"
 										target="_blank">
 										<f:param name="query" value="#{child.relation.goId}" />
 									</p:link>
 								</p:column>
 
-								<p:column headerText="Name" width="50%">
+								<p:column headerText="Name">
 									<h:outputText value="#{child.relation.name}" />
 								</p:column>
 							</p:dataTable>
