@@ -205,3 +205,8 @@ div.ui-datatable thead th.ui-filter-column > div.ui-column-customfilter input {
 	max-width: 150px;
 	width:75%;
 }
+
+/* Button icons are slightly off center because of font size changes */
+body .ui-button-icon-only .ui-icon.fa, body .ui-button-text-icon-left .ui-icon.fa, body .ui-button-text-icon-right .ui-icon.fa {
+	margin-top: -6px;
+}

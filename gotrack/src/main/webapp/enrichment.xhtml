@@ -99,13 +99,12 @@
 
 					<f:facet name="footer">
 						<p:commandButton icon="fa fa-plus" value="Add"
-							oncomplete="PF('addGenesDlg').show()" styleClass="smallBtn" />
+							oncomplete="PF('addGenesDlg').show()" />
 						<p:commandButton icon="fa fa-plus" value="Add Multiple"
-							oncomplete="PF('addMultipleGenesDlg').show()"
-							styleClass="smallBtn" />
+							oncomplete="PF('addMultipleGenesDlg').show()" />
 						<p:commandButton icon="fa fa-trash" value="Clear"
 							actionListener="#{enrichmentView.removeAllGenes}"
-							update=":formSelect:geneList :formSelect:runEnrichmentBtn" styleClass="smallBtn" />
+							update=":formSelect:geneList :formSelect:runEnrichmentBtn" />
 					</f:facet>
 				</p:dataList>
 
@@ -797,7 +796,7 @@
 				<f:facet name="footer">
 					<p:commandButton value="&#160; Add"
 						actionListener="#{enrichmentView.addGene}" icon="fa fa-plus"
-						update=":formSelect:geneList, :globalGrowl, :formSelect:runEnrichmentBtn" styleClass="smallBtn"
+						update=":formSelect:geneList, :globalGrowl, :formSelect:runEnrichmentBtn"
 						oncomplete="PF('addGenesDlg').hide();" />
 				</f:facet>
 
@@ -823,7 +822,6 @@
 						actionListener="#{enrichmentView.searchMultipleGenes}"
 						icon="fa fa-plus-circle"
 						update=":globalGrowl, :formAddGenes:tableConfirmGenes"
-						styleClass="smallBtn"
 						oncomplete="PF('addMultipleGenesDlg').hide();PF('confirmGenesDlg').show()" />
 				</f:facet>
 
@@ -881,7 +879,7 @@
 					<p:commandButton value="&#160; Confirm"
 						actionListener="#{enrichmentView.confirmMatches}"
 						icon="fa fa-plus-circle" update=":globalGrowl, :formSelect:geneList, :formSelect:runEnrichmentBtn"
-						styleClass="smallBtn" oncomplete="PF('confirmGenesDlg').hide();" />
+						oncomplete="PF('confirmGenesDlg').hide();" />
 				</f:facet>
 
 			</p:dialog>

@@ -103,13 +103,13 @@ div.data-grid-height-restricted > div.ui-datagrid-content {
   overflow-y: auto;
 }
 
-button.smallBtn {
+/* button.smallBtn {
 	font-size:0.8em !important;
 }
 
 button.smallBtn > span.fa {
 	margin-top:-6px;
-}
+} */
 
 tr.ui-widget-content.significant td:nth-last-child(2) {
 	background:#DCF9D4;
