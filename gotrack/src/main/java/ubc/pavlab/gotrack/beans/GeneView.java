@@ -413,17 +413,7 @@ public class GeneView implements Serializable {
             int count = entry.getValue().size();
             directCountSeries.addDataPoint( ed.getDate(), count );
 
-            // Averages
-            Aggregate agg = cache.getAggregates( species.getId(), ed );
-            if ( agg != null ) {
-                aggregateSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
-                aggregateInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
-            }
-
         }
-        chart.addSeries( aggregateSeries );
-        chart.addSeries( aggregateInferredSeries );
-        chart.addSeries( directCountSeries );
 
         // Create series for inferred annotations count
         Series inferredCountSeries = new Series( "Inferred Annotation Count" );
@@ -433,7 +423,18 @@ public class GeneView implements Serializable {
             Edition ed = entry.getKey();
             int count = entry.getValue().size();
             inferredCountSeries.addDataPoint( ed.getDate(), count );
+
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                aggregateSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
+                aggregateInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
+            }
         }
+
+        chart.addSeries( aggregateSeries );
+        chart.addSeries( aggregateInferredSeries );
+        chart.addSeries( directCountSeries );
         chart.addSeries( inferredCountSeries );
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Terms Annotated to " + gene.getSymbol() + " vs Time",
@@ -479,12 +480,6 @@ public class GeneView implements Serializable {
             Edition ed = entry.getKey();
             Double jaccard = Jaccard.similarity( entry.getValue().keySet(), currentGOSet );
             directSeries.addDataPoint( ed.getDate(), jaccard );
-
-            // Averages
-            Aggregate agg = cache.getAggregates( species.getId(), ed );
-            if ( agg != null ) {
-                averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
-            }
         }
 
         // For Inferred annotations
@@ -501,6 +496,7 @@ public class GeneView implements Serializable {
             // Averages
             Aggregate agg = cache.getAggregates( species.getId(), ed );
             if ( agg != null ) {
+                averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
                 averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
             }
         }

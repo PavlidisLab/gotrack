@@ -197,6 +197,8 @@
        * config.min
        * config.max
        * config.data
+       * config.xMin
+       * config.xMax
        * 
        * */
       var scaleToggle = isUndefined(scaleToggle) ? false : scaleToggle;
@@ -270,7 +272,9 @@
                          title: {
                             text: config.xLabel
                          },
-                         minRange: 60 * 24 * 3600000 // fourteen days
+                         minRange: 60 * 24 * 3600000, // fourteen days
+                         min: isUndefined(config.xMin) ? null : config.xMin,
+                         max: isUndefined(config.xMax) ? null : config.xMax,
                       },
 
                       yAxis: {

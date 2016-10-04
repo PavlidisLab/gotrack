@@ -82,6 +82,10 @@ function showViewAnnotationsDlg() {
 function handleFetchData(xhr, status, args) {
    if (!utility.isUndefined(args.dateToEdition)) {
       GLOBALS.dateToEdition = JSON.parse(args.dateToEdition);
+      var dates = Object.keys(GLOBALS.dateToEdition).map(Number);
+      dates.sort();
+      GLOBALS.xMin = Number(dates[0])
+      GLOBALS.xMax = Number(dates[dates.length - 1])
    }
 
 }
@@ -128,6 +132,8 @@ function handleFetchAnnotationChart(xhr, status, args) {
    console.log('handleFetchAnnotationChart', args);
 
    args.HC.renderTo = 'hc_annotation_container';
+   args.HC.xMin = GLOBALS.xMin;
+   args.HC.xMax = GLOBALS.xMax;
    var options = plotting.defaultHCOptions(args.HC, true);
    
    options.legend = {};
@@ -172,6 +178,8 @@ function handleFetchSimilarityChart(xhr, status, args) {
    console.log('handleFetchSimilarityChart', args);
 
    args.HC.renderTo = 'hc_similarity_container';
+   args.HC.xMin = GLOBALS.xMin;
+   args.HC.xMax = GLOBALS.xMax;
    var options = plotting.defaultHCOptions(args.HC, true);
    
    options.legend = {};
@@ -203,6 +211,8 @@ function handleFetchMultiChart(xhr, status, args) {
    console.log('handleFetchMultiChart', args);
 
    args.HC.renderTo = 'hc_multi_container';
+   args.HC.xMin = GLOBALS.xMin;
+   args.HC.xMax = GLOBALS.xMax;
    var options = plotting.defaultHCOptions(args.HC, true);
    
    options.legend = {};
@@ -252,6 +262,8 @@ function handleFetchTimeline(xhr, status, args) {
    var termNames = args.HC.term_names;
       
    args.HC.renderTo = 'hc_timeline_container';
+   args.HC.xMin = GLOBALS.xMin;
+   args.HC.xMax = GLOBALS.xMax;
    var options = plotting.defaultHCOptions(args.HC, false);
    
    options.legend = {};
