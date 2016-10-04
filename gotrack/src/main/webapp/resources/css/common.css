@@ -196,3 +196,12 @@ tbody > tr.ui-widget-content.ui-state-highlight > td {
 	color:#4F4F4F;
 }
 /***************************/
+
+
+/* Dynamic sizes for datatable header filter inputs */
+
+div.ui-datatable thead th.ui-filter-column > input.ui-column-filter,
+div.ui-datatable thead th.ui-filter-column > div.ui-column-customfilter input {
+	max-width: 150px;
+	width:75%;
+}

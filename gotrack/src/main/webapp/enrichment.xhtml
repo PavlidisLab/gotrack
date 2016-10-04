@@ -403,7 +403,7 @@
 							</p:column>
 							<p:column filterBy="#{entry.term.name}"
 								filterMatchMode="contains" sortBy="#{entry.term.name}"
-								headerText="Name" style="width:500px;" styleClass="ui-column-filter-big">
+								headerText="Name" style="width:500px;">
 								<h:outputText value="#{entry.term.name}" />
 							</p:column>
 
@@ -411,7 +411,7 @@
 								headerText="Set Size"
 								sortBy="#{entry.result.populationAnnotated}"
 								filterFunction="#{enrichmentView.filterByNumberLT}"
-								style="width:70px;" styleClass="ui-column-filter-small">
+								style="width:70px;">
 								<h:outputText value="#{entry.result.populationAnnotated}">
 									<f:convertNumber type="number" />
 								</h:outputText>
@@ -420,7 +420,7 @@
 							<p:column filterBy="#{entry.result.sampleAnnotated}"
 								headerText="Hits" sortBy="#{entry.result.sampleAnnotated}"
 								filterFunction="#{enrichmentView.filterByNumberLT}"
-								style="width:60px;" styleClass="ui-column-filter-small">
+								style="width:60px;">
 								<h:outputText value="#{entry.result.sampleAnnotated}">
 									<f:convertNumber type="number" />
 								</h:outputText>

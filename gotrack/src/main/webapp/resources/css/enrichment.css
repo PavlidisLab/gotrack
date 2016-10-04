@@ -206,15 +206,6 @@ div.ui-datatable-header table > tbody > tr.ui-widget-content {
 	background: inherit;
 }
 
-/* Different sizes for datatable header filter inputs */
-div.ui-datatable thead th.ui-filter-column.ui-column-filter-small > input.ui-column-filter {
-	width:50px;
-}
-
-div.ui-datatable thead th.ui-filter-column.ui-column-filter-big > input.ui-column-filter {
-	width: 150px;
-}
-
 /* For HTML tooltips on Highcharts plot where GOTerm names make svg tooltips overly wide */
 .highcharts-tooltip > span {
 	height:auto;
