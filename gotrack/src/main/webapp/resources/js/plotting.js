@@ -255,11 +255,12 @@
                          renderTo: config.renderTo,
                          zoomType: 'x',
                          resetZoomButton: {
+                            relativeTo: 'chart',
                             position: {
                                align: 'left',
                                // verticalAlign: 'top', // by default
-                               x: scaleToggle ? 35 : 0,
-                               y: -35,
+                               x: scaleToggle ? 105 : 30,
+                               y: 10,
                             }
                          }
                       },
