@@ -19,7 +19,6 @@
 
 package ubc.pavlab.gotrack.model.table;
 
-import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
@@ -28,35 +27,38 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
  * @author mjacobson
  * @version $Id$
  */
-public class GeneTableValues implements Comparable<GeneTableValues> {
+public class CompareTermsTableValues implements Comparable<CompareTermsTableValues> {
 
-    // private final String rowKey;
-    private final Edition recentEdition;
-    private final GeneOntologyTerm term;
-    private final int age;
+    public enum TermComparison {
 
-    public GeneTableValues( Edition recentEdition, GeneOntologyTerm term, int age ) {
-        super();
-        this.recentEdition = recentEdition;
-        this.term = term;
-        this.age = age;
+        GAIN("Gain"), LOSS("Loss"), CONSTANT("Constant");
+
+        private String label;
+
+        private TermComparison( String label ) {
+            this.label = label;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
     }
 
-    public Edition getRecentEdition() {
-        return recentEdition;
+    public CompareTermsTableValues( GeneOntologyTerm t, TermComparison comparison ) {
+        this.term = t;
+        this.comparison = comparison;
+    }
+
+    private final TermComparison comparison;
+    private final GeneOntologyTerm term;
+
+    public TermComparison getComparison() {
+        return comparison;
     }
 
     public GeneOntologyTerm getTerm() {
         return term;
-    }
-
-    public int getAge() {
-        return age;
-    }
-
-    @Override
-    public String toString() {
-        return "GeneTableValues [recentEdition=" + recentEdition + ", term=" + term.getGoId() + "]";
     }
 
     @Override
@@ -72,7 +74,7 @@ public class GeneTableValues implements Comparable<GeneTableValues> {
         if ( this == obj ) return true;
         if ( obj == null ) return false;
         if ( getClass() != obj.getClass() ) return false;
-        GeneTableValues other = ( GeneTableValues ) obj;
+        CompareTermsTableValues other = ( CompareTermsTableValues ) obj;
         if ( term == null ) {
             if ( other.term != null ) return false;
         } else if ( !term.equals( other.term ) ) return false;
@@ -80,12 +82,14 @@ public class GeneTableValues implements Comparable<GeneTableValues> {
     }
 
     @Override
-    public int compareTo( GeneTableValues o ) {
-        // sort according to existence, followed by goId
-        int comparison = o.getRecentEdition().compareTo( recentEdition );
+    public String toString() {
+        return "CompareTermsTableValues [comparison=" + comparison + ", term=" + term + "]";
+    }
 
-        return comparison == 0 ? this.term.compareTo( o.getTerm() ) : comparison;
-
+    @Override
+    public int compareTo( CompareTermsTableValues o ) {
+        int comparison = this.getComparison().compareTo( o.getComparison() );
+        return comparison == 0 ? this.getTerm().compareTo( o.getTerm() ) : comparison;
     }
 
 }

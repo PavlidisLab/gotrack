@@ -65,18 +65,11 @@
 					style="margin-bottom:0"
 					emptyMessage="No annotations found with given criteria"
 					filteredValue="#{geneView.filteredAllTerms}" selection="#{geneView.selectedTerms}" selectionMode="multiple"
-					rowKey="#{termTableValue.term.goId}" scrollHeight="100%"
-					rowStyleClass="#{ termTableValue.alwaysExist == 'true' ? 'gene-table-term-always' : null} #{ termTableValue.currentlyExist == 'true' ? 'gene-table-term-current' : null} #{ termTableValue.previouslyExist == 'true' ? 'gene-table-term-previous' : null}">
+					rowKey="#{termTableValue.term.goId}" scrollHeight="100%" >
 					<p:ajax event="rowDblselect" oncomplete="afterRowSelection();fetchTimeline();"/>
 					<p:ajax event="rowSelect" onstart="afterRowSelection();return false;"/>
 					<p:ajax event="rowUnselect" onstart="afterRowSelection();return false;"/>
-					<p:column style="width:26px;text-align:center;padding: 0 5px 0 5px;">
-						<div class="gene-term-existence">
-						  <div class="always"></div>
-						  <div class="current"></div>
-						  <div class="previous"></div>
-						</div>
-					</p:column>
+                    
 					<p:column filterBy="#{termTableValue.term.goId}" filterMatchMode="contains"
 						headerText="Id" width="25%">
 						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{termTableValue.term.goId}"
@@ -99,6 +92,14 @@
 						headerText="Name" width="55%">
 						<h:outputText value="#{termTableValue.term.name}" />
 					</p:column>
+					<p:column headerText="Age" style="width:64px;" filterMatchMode="lte" filterBy="#{termTableValue.age}">
+                    	<f:facet name="filter">
+			                <p:inputText onkeyup="PF('funcTable').filter()" >
+			                    <f:converter converterId="javax.faces.Integer" />
+			                </p:inputText>
+			            </f:facet>
+                       <h:outputText value="#{termTableValue.age}" />
+                    </p:column>
 					<f:facet name="footer">
 						<p:commandButton icon="ui-icon-search" widgetVar="viewTermsWdg"
 							value="View Terms" oncomplete="fetchTimeline()"/>
@@ -157,21 +158,11 @@
 						<f:facet name='title'>
 							<h:outputText value="Multifunctionality " />
 							<p:commandButton id="multifunctionalityTabHelpBtn" value=""
-								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								styleClass="no-value no-background fa-fix" icon="fa fa-question-circle" title="Help"
 								type="button" />
 						</f:facet>
 						<div id="loading-spinner-multifunctionality" class="loading" style="display: none;" />					
 						<div id="hc_multi_container" style="width: 100%; height: 600px;"/>
-					</p:tab>
-					<p:tab>
-						<f:facet name='title'>
-							<h:outputText value="Loss/Gain " />
-							<p:commandButton id="lossgainTabHelpBtn" value=""
-								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
-								type="button" />
-						</f:facet>
-						<div id="loading-spinner-lossgain" class="loading" style="display: none;" />					
-						<div id="hc_lossgain_container" style="width: 100%; height: 600px;"/>
 					</p:tab>
 					
 				</p:tabView>
@@ -237,9 +228,7 @@
 			<p:remoteCommand name="fetchMultiChart"  async="true"
 				oncomplete="handleFetchMultiChart(xhr, status, args);"
 				actionListener="#{geneView.fetchMultifunctionalityChart()}" />
-			<p:remoteCommand name="fetchLossGainChart"  async="true"
-				oncomplete="handleFetchLossGainChart(xhr, status, args);"
-				actionListener="#{geneView.fetchLossGainChart()}" />
+				
 			<p:remoteCommand name="filterCharts"
 				oncomplete="handleFilterCharts(xhr, status, args);"
 				actionListener="#{geneView.filterCharts()}" 
@@ -247,14 +236,12 @@
 			<p:remoteCommand name="fetchTimeline"
 				oncomplete="PF('timelineDlgWdg').show();handleFetchTimeline(xhr, status, args);"
 				actionListener="#{geneView.fetchTimeline()}" />
+				
 			<p:remoteCommand name="fetchAnnotationPointData"
-				oncomplete="handleDatatableDialog('clickTermsDlgWdg', 'clickTermsTableWdg', false);"
-				update=":clickTermsDlg"
+				oncomplete="PF('clickTermsOverviewDlgWdg').show();"
+				update=":clickTermsOverviewDlg"
 				actionListener="#{geneView.fetchAnnotationPointData()}" />
-			<p:remoteCommand name="fetchLossGainPointData"
-				oncomplete="handleDatatableDialog('clickLGTermsDlgWdg', 'clickLGTermsTableWdg', false);"
-				update=":clickLGTermsDlg"
-				actionListener="#{geneView.fetchLossGainPointData()}" />
+				
 			<p:remoteCommand name="fetchTimelinePointData"
 				update=":viewAnnotationsDlg" 
 				oncomplete="showViewAnnotationsDlg();"
@@ -279,24 +266,84 @@
 			<div id="hc_timeline_container" style="width: 100%; height: 100%;"/>
 
 		</p:dialog>
-		
+
+		<p:dialog id="clickTermsOverviewDlg"
+			widgetVar="clickTermsOverviewDlgWdg" modal="false" showEffect="fade"
+			hideEffect="fade" width="325px" fitViewport="true" closeOnEscape="true" resizable="false">
+			<f:facet name="header">
+					<h:outputText value="Terms for #{geneView.gene.symbol} in edition #{geneView.clickEdition.edition} [#{geneView.clickEdition.date}]"/>
+			</f:facet>
+			<h:form id="clickTermsOverviewForm">
+			<p:panelGrid styleClass="no-border" cellpadding="0" style="width:100%;">
+				<p:row>
+				<p:column style="width:150px;">
+				<h:outputText value="All Terms:"/>
+				</p:column>
+				<p:column>
+				<h:outputText value="#{geneView.totalTerms}"/>
+				</p:column>
+				<p:column style="width:32px;text-align: center">
+				<p:commandButton update=":clickTermsDlg" action="#{geneView.fetchFilteredAnnotationClickTerms()}"
+					oncomplete="PF('clickTermsDlgWdg').show();" 
+					icon="ui-icon-search" title="View" styleClass="no-value">
+			                <f:setPropertyActionListener value="#{null}" target="#{geneView.termComparisonFilter}" />
+	            </p:commandButton>
+	            </p:column>
+				</p:row>
+				
+				<p:row>
+				<p:column style="width:150px;">
+				<h:outputText value="New Terms:"/>
+				</p:column>
+				<p:column>
+				<h:outputText value="#{geneView.gainTerms}"/>
+				</p:column>
+				<p:column style="width:32px;text-align: center">
+				<p:commandButton update=":clickTermsDlg"  action="#{geneView.fetchFilteredAnnotationClickTerms()}"
+					oncomplete="PF('clickTermsDlgWdg').show();" 
+					icon="ui-icon-search" title="View" styleClass="no-value" >
+			                <f:setPropertyActionListener value="GAIN" target="#{geneView.termComparisonFilter}" />
+	            </p:commandButton>
+	            </p:column>
+				</p:row>
+				
+				<p:row>
+				<p:column style="width:150px;">
+				<h:outputText value="Removed Terms:"/>
+				</p:column>
+				<p:column>
+				<h:outputText value="#{geneView.lossTerms}"/>
+				</p:column>
+				<p:column style="width:32px;text-align: center">
+				<p:commandButton update=":clickTermsDlg"  action="#{geneView.fetchFilteredAnnotationClickTerms()}"
+					oncomplete="PF('clickTermsDlgWdg').show();" 
+					icon="ui-icon-search" title="View" styleClass="no-value">
+			                <f:setPropertyActionListener value="LOSS" target="#{geneView.termComparisonFilter}" />
+	            </p:commandButton>
+	            </p:column>
+	            </p:row>
+			</p:panelGrid>
+			</h:form>
+		</p:dialog>
+
 		<p:dialog id="clickTermsDlg"
 			widgetVar="clickTermsDlgWdg" modal="false" showEffect="fade"
 			hideEffect="fade" width="900"
-			fitViewport="true" closeOnEscape="true" onShow="handleDatatableDialog('clickTermsDlgWdg', 'clickTermsTableWdg', true);">
+			fitViewport="true" closeOnEscape="true">
 			<h:form id="clickTermsForm">
-				<p:dataTable id="clickTermsTable" widgetVar="clickTermsTableWdg" var="term"
+				<p:dataTable id="clickTermsTable" widgetVar="clickTermsTableWdg" var="tableValue"
 					value="#{geneView.clickTerms}" scrollable="true" sortMode="multiple"
 					style="margin-bottom:0"
 					emptyMessage="No annotations found with given criteria"
-					filteredValue="#{geneView.filteredClickTerms}" scrollHeight="600">
-					<p:column filterBy="#{term.goId}" filterMatchMode="contains"
+					filteredValue="#{geneView.filteredClickTerms}" scrollHeight="600"
+					rowStyleClass="#{tableValue.comparison}-color">
+					<p:column filterBy="#{tableValue.term.goId}" filterMatchMode="contains"
 						headerText="Id" style="width:120px;">
-						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
+						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{tableValue.term.goId}"
 							target="_blank"><i class="fa fa-external-link fa-sm"
-							style="font-size: 0.7em;" /> </a>#{term.goId}
+							style="font-size: 0.7em;" /> </a>#{tableValue.term.goId}
 					</p:column>
-					<p:column filterBy="#{term.aspect}" filterMatchMode="in"
+					<p:column filterBy="#{tableValue.term.aspect}" filterMatchMode="in"
 						headerText="Aspect" style="width:150px;">
 						<f:facet name="filter">
 							<p:selectManyButton
@@ -306,15 +353,15 @@
 									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
 							</p:selectManyButton>
 						</f:facet>
-						<h:outputText value="#{term.aspect.label}"/>
+						<h:outputText value="#{tableValue.term.aspect.label}"/>
 					</p:column>
-					<p:column filterBy="#{term.name}" filterMatchMode="contains"
+					<p:column filterBy="#{tableValue.term.name}" filterMatchMode="contains"
 						headerText="Name">
-						<h:outputText value="#{term.name}" />
+						<h:outputText value="#{tableValue.term.name}" />
 					</p:column>
 			        <p:column style="width:32px;text-align: center">
-			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsDlg" oncomplete="showViewAnnotationsDlg();" icon="ui-icon-search" title="View">
-			                <f:setPropertyActionListener value="#{term}" target="#{geneView.viewTerm}" />
+			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsDlg" oncomplete="showViewAnnotationsDlg();" icon="ui-icon-search" title="View" styleClass="no-value">
+			                <f:setPropertyActionListener value="#{tableValue.term}" target="#{geneView.viewTerm}" />
 			            </p:commandButton>
 			        </p:column>
 			         <f:facet name="footer">
@@ -325,68 +372,6 @@
 			</h:form>
 			<f:facet name="header">
             	<h:outputText value="Terms present for #{geneView.gene.symbol} in edition #{geneView.clickEdition.edition} [#{geneView.clickEdition.date}]"/>
-            </f:facet>
-		</p:dialog>
-		
-		<p:dialog id="clickLGTermsDlg"
-			widgetVar="clickLGTermsDlgWdg" modal="false" showEffect="fade"
-			hideEffect="fade" width="900"
-			fitViewport="true" closeOnEscape="true" onShow="handleDatatableDialog('clickLGTermsDlgWdg', 'clickLGTermsTableWdg', true);">
-			<h:form id="clickLGTermsForm">
-				<p:dataTable id="clickLGTermsTable" widgetVar="clickLGTermsTableWdg" var="lg"
-					value="#{geneView.clickLGTerms}" scrollable="true" sortMode="multiple"
-					style="margin-bottom:0"
-					emptyMessage="No annotations found with given criteria"
-					filteredValue="#{geneView.filteredClickLGTerms}" scrollHeight="600"
-					rowStyleClass="#{lg.type}-color">
-					<p:column filterBy="#{lg.annotationType}" filterMatchMode="in"
-						headerText="Type" style="width:80px;">
-						<f:facet name="filter">
-							<p:selectManyButton
-								onchange="PF('clickLGTermsTableWdg').filter()"
-								style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
-								<f:selectItems value="#{cache.annotationTypes}"
-									var="annotationType" itemValue="#{annotationType}" itemLabel="#{annotationType}" />
-							</p:selectManyButton>
-						</f:facet>
-						<h:outputText value="#{lg.annotationType}"/>
-					</p:column>
-					<p:column filterBy="#{lg.term.goId}" filterMatchMode="contains"
-						headerText="Id" style="width:120px;">
-						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{lg.term.goId}"
-							target="_blank"><i class="fa fa-external-link fa-sm"
-							style="font-size: 0.7em;" /> </a>#{lg.term.goId}
-					</p:column>
-					<p:column filterBy="#{lg.term.aspect}" filterMatchMode="in"
-						headerText="Aspect" style="width:150px;">
-						<f:facet name="filter">
-							<p:selectManyButton
-								onchange="PF('clickLGTermsTableWdg').filter()"
-								style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
-								<f:selectItems value="#{cache.aspects}"
-									var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}" />
-							</p:selectManyButton>
-						</f:facet>
-						<h:outputText value="#{lg.term.aspect.label}"/>
-					</p:column>
-					<p:column filterBy="#{lg.term.name}" filterMatchMode="contains"
-						headerText="Name">
-						<h:outputText value="#{lg.term.name}" />
-					</p:column>
-			        <p:column style="width:32px;text-align: center">
-			             <p:commandButton action="#{geneView.fetchAnnotations()}" update=":viewAnnotationsForm:viewAnnotationsTable" oncomplete="showViewAnnotationsDlg();" icon="ui-icon-search" title="View">
-			                <f:setPropertyActionListener value="#{lg.term}" target="#{geneView.viewTerm}" />
-			            </p:commandButton>
-			        </p:column>
-			        <f:facet name="footer">
-			         	<!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
-						&#8203;
-			         </f:facet>
-			        
-				</p:dataTable>
-			</h:form>
-			<f:facet name="header">
-                <h:outputText value="Terms lost/gained for #{geneView.gene.symbol} in edition #{geneView.clickEdition.edition} [#{geneView.clickEdition.date}]"/>
             </f:facet>
 		</p:dialog>
 		
@@ -470,13 +455,13 @@
 					<p>The <b>multifunctionality plot</b> shows the multifunctionality of the selected gene. 
 					   Gene multifunctionality is measured as per <a href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258" class="underline" target="_blank">Gillis and Pavlidis, 2011</a>.</p>
 				</p:overlayPanel>
-				<p:overlayPanel for=":centerTabViewForm:centerTabView:lossgainTabHelpBtn" hideEffect="fade"
+<!-- 				<p:overlayPanel for=":centerTabViewForm:centerTabView:lossgainTabHelpBtn" hideEffect="fade"
 					style="width:600px;text-align:left;">
 					<p>The <b>loss/gain plot</b> shows the total loss and gain of distinct GO terms between consecutive editions of GO Annotations.</p>
 					<p><b>Loss:</b> Number of GO terms that are <i>no longer annotated</i> to the gene since the previous edition.</p>
 					<p><b>Gain:</b> Number of GO terms that are <i>newly annotated</i> to the gene since the previous edition.</p>
 					<p><b>Direct vs Inferred:</b> Direct measures look only at those terms which are directly annotated to this gene. Inferred also includes the ancestors of said terms.</p>
-				</p:overlayPanel>
+				</p:overlayPanel> -->
 				<p:overlayPanel for="timelineHelpBtn" hideEffect="fade"
 					style="width:600px;text-align:left;">
 					<p>The Following is the <b>Evidence Timeline</b> of the selected GO terms.</p> 

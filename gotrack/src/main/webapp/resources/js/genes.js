@@ -98,7 +98,6 @@ function fetchCharts() {
       fetchAnnotationChart();
       fetchSimilarityChart();
       fetchMultiChart();
-      fetchLossGainChart();
    } catch (e) {
       console.log(e);
    }
@@ -214,62 +213,6 @@ function handleFetchMultiChart(xhr, status, args) {
    
    plotting.charts.multi.options = options;
    plotting.charts.multi.recreate(options);
-}
-
-function handleFetchLossGainChart(xhr, status, args) {
-   
-   try {
-      $('#loading-spinner-lossgain').hide();
-   } catch(e) {
-      console.log(e);
-   } 
-   
-   try {
-      args.HC = JSON.parse(args.HC);
-   } catch(e) {
-      console.log(e);
-      return;
-   }
-   
-   console.log('handleFetchLossGainChart', args);
-      
-   args.HC.renderTo = 'hc_lossgain_container';
-   var options = plotting.defaultHCOptions(args.HC, false);
-   
-   options.legend = {};
-   
-   options.chart.type = 'column';
-   options.plotOptions.series.stacking = 'normal';
-
-   options.plotOptions.column = {
-                                 states: {
-                                    hover: {
-                                        borderColor: 'yellow'
-                                    }
-                                }
-   };
-   
-   for (var i = 0; i < args.HC.data.series.length; i++) {
-      options.series[i].stack = args.HC.data.series[i].extra.stack;
-   }
-   
-   // Click event functionality
-   options.plotOptions.series.point = {
-                                       events: {
-                                          click: function () {
-                                             fetchLossGainPointData([{name:'edition', value:GLOBALS.dateToEdition[this.x]} ]);
-                                          }
-                                       }
-   }
-   
-   options.chart.events = {
-         click: function(event) {
-            fetchLossGainPointData([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
-         }
-   }
-   
-   plotting.charts.lossgain.options = options;
-   plotting.charts.lossgain.recreate(options);
 }
 
 function handleFetchTimeline(xhr, status, args) {
@@ -525,7 +468,6 @@ $(document).ready(function() {
    plotting.createNewChart( 'annotation' );
    plotting.createNewChart( 'similarity' );
    plotting.createNewChart( 'multi' );
-   plotting.createNewChart( 'lossgain' );
    plotting.createNewChart( 'timeline' );
    
 })

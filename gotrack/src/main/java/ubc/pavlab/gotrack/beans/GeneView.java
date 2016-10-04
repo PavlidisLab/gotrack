@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -43,8 +42,11 @@ import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.primefaces.component.datatable.DataTable;
 import org.primefaces.context.RequestContext;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
@@ -67,9 +69,9 @@ import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.AnnotationValues;
+import ubc.pavlab.gotrack.model.table.CompareTermsTableValues;
+import ubc.pavlab.gotrack.model.table.CompareTermsTableValues.TermComparison;
 import ubc.pavlab.gotrack.model.table.GeneTableValues;
-import ubc.pavlab.gotrack.model.table.LossGainTableValues;
-import ubc.pavlab.gotrack.model.table.LossGainTableValues.LossGain;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
@@ -107,7 +109,6 @@ public class GeneView implements Serializable {
 
     // Meta
     private Edition currentEdition;
-    private Edition previousEdition;
 
     // Right Panel
     private Collection<GeneTableValues> allTerms = new HashSet<>();
@@ -122,15 +123,23 @@ public class GeneView implements Serializable {
     // Click event lists
     private Edition clickEdition;
 
-    // Annotation clicks
-    private Collection<GeneOntologyTerm> clickTerms = new HashSet<>();
-    private List<GeneOntologyTerm> selectedClickTerms;
-    private Collection<GeneOntologyTerm> filteredClickTerms;
+    // Range select event lists
+    private Edition selectEditionStart;
+    private Edition selectEditionStop;
 
-    // Loss Gain Clicks
-    private List<LossGainTableValues> clickLGTerms = new ArrayList<>();
-    private List<LossGainTableValues> selectedClickLGTerms;
-    private Collection<LossGainTableValues> filteredClickLGTerms;
+    // Annotation clicks
+    private Collection<CompareTermsTableValues> allClickTerms = new HashSet<>();
+    private Collection<CompareTermsTableValues> clickTerms = new HashSet<>();
+    private List<CompareTermsTableValues> selectedClickTerms;
+    private Collection<CompareTermsTableValues> filteredClickTerms;
+
+    // Annotation Click Meta
+    private int totalTerms;
+    private int gainTerms;
+    private int lossTerms;
+
+    // Annotation Clicks TermComparison Selector
+    private TermComparison termComparisonFilter = null;
 
     public GeneView() {
         log.info( "GeneView created" );
@@ -187,20 +196,7 @@ public class GeneView implements Serializable {
 
         }
 
-        List<Edition> allEditions = Lists.newArrayList( cache.getAllEditions( species.getId() ) );
-        Collections.sort( allEditions, Collections.reverseOrder() );
-        Iterator<Edition> it = allEditions.iterator();
-
-        currentEdition = it.next();
-        previousEdition = it.next();
-
-        if ( currentEdition != cache.getCurrentEditions( species.getId() ) ) {
-            // Sanity check since we are using an obscure method or getting these editions
-            FacesContext facesContext = FacesContext.getCurrentInstance();
-            facesContext.getExternalContext().responseSendError( 500, "Something Went Wrong!" );
-            facesContext.responseComplete();
-            return null;
-        }
+        currentEdition = cache.getCurrentEditions( species.getId() );
 
         return null;
 
@@ -331,30 +327,15 @@ public class GeneView implements Serializable {
         allTerms = new HashSet<>();
         ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> data = new ArrayList<>(
                 rawData.get( AnnotationType.I ).rowMap().entrySet() );
-        Set<GeneOntologyTerm> intersectTerms = Sets.newHashSet( data.iterator().next().getValue().keySet() );
-        Set<GeneOntologyTerm> currentTerms = Sets.newHashSet();
-        Set<GeneOntologyTerm> previousTerms = Sets.newHashSet();
-        // pre-loop to collect those terms that have always existed
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : data ) {
+
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( data ) ) {
             Set<GeneOntologyTerm> terms = entry.getValue().keySet();
             Edition ed = entry.getKey();
-            intersectTerms.retainAll( terms );
-
-            if ( ed.equals( currentEdition ) ) {
-                currentTerms = terms;
-            } else if ( ed.equals( previousEdition ) ) {
-                previousTerms = terms;
-            }
-        }
-
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : data ) {
-            Set<GeneOntologyTerm> terms = entry.getValue().keySet();
-            Edition ed = entry.getKey();
+            int age = currentEdition.getEdition() - ed.getEdition();
             for ( GeneOntologyTerm t : terms ) {
                 if ( !allTerms.contains( t ) ) {
                     // Only keep the most recent
-                    allTerms.add( new GeneTableValues( ed, t, intersectTerms.contains( t ), currentTerms.contains( t ),
-                            previousTerms.contains( t ) ) );
+                    allTerms.add( new GeneTableValues( ed, t, age ) );
                 }
             }
         }
@@ -601,89 +582,6 @@ public class GeneView implements Serializable {
     }
 
     /**
-     * Create chart showing total number of terms lost and gained between editions (both directly and through
-     * propagation)
-     * 
-     * @param rawData data
-     */
-    private void fetchLossGainChart(
-            Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
-        log.debug( "fetchLossGainChart" );
-
-        ChartValues chart = new ChartValues();
-
-        // Calculate both the losses of GO terms and gains of GO terms between editions
-
-        // For direct annotations
-        SeriesExtra directLossSeries = new SeriesExtra( "Direct Loss" );
-        SeriesExtra directGainSeries = new SeriesExtra( "Direct Gain" );
-        directLossSeries.putExtra( "stack", 0 ); //Stack 0
-        directGainSeries.putExtra( "stack:", 0 ); //Stack 0
-
-        Set<GeneOntologyTerm> previousGOSet = null;
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
-                .rowMap().entrySet() ) {
-            Edition ed = entry.getKey();
-            Set<GeneOntologyTerm> currentGOSet = entry.getValue().keySet();
-
-            if ( previousGOSet != null ) {
-                Integer loss = -1 * Sets.difference( previousGOSet, currentGOSet ).size();
-                Integer gain = Sets.difference( currentGOSet, previousGOSet ).size();
-                if ( !( loss == 0 && gain == 0 ) ) {
-                    directLossSeries.addDataPoint( ed.getDate(), loss );
-                    directGainSeries.addDataPoint( ed.getDate(), gain );
-                }
-            }
-
-            previousGOSet = currentGOSet;
-        }
-
-        chart.addSeries( directGainSeries );
-        chart.addSeries( directLossSeries );
-
-        // For inferred annotations
-
-        SeriesExtra inferredLossSeries = new SeriesExtra( "Inferred Loss" );
-        SeriesExtra inferredGainSeries = new SeriesExtra( "Inferred Gain" );
-        inferredLossSeries.putExtra( "stack", 1 ); //Stack 1
-        inferredGainSeries.putExtra( "stack", 1 ); //Stack 1
-
-        previousGOSet = null;
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
-                .rowMap().entrySet() ) {
-            Edition ed = entry.getKey();
-            Set<GeneOntologyTerm> currentGOSet = entry.getValue().keySet();
-
-            if ( previousGOSet != null ) {
-                Integer loss = -1 * Sets.difference( previousGOSet, currentGOSet ).size();
-                Integer gain = Sets.difference( currentGOSet, previousGOSet ).size();
-                if ( !( loss == 0 && gain == 0 ) ) {
-                    inferredLossSeries.addDataPoint( ed.getDate(), loss );
-                    inferredGainSeries.addDataPoint( ed.getDate(), gain );
-                }
-            }
-
-            previousGOSet = currentGOSet;
-        }
-
-        chart.addSeries( inferredGainSeries );
-        chart.addSeries( inferredLossSeries );
-
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Loss/Gain of " + gene.getSymbol() + " vs Time",
-                "Change", "Date", null, null, chart );
-        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
-
-    }
-
-    /**
-     * Entry point for fetching the loss/gain chart
-     */
-    public void fetchLossGainChart() {
-        fetchLossGainChart( rawData );
-
-    }
-
-    /**
      * Filter charts to include only those terms selected from right panel
      */
     public void filterCharts() {
@@ -816,6 +714,46 @@ public class GeneView implements Serializable {
     }
 
     /**
+     * Range select event functionality for annotation chart
+     */
+    public void fetchAnnotationRangeData() {
+        log.debug( "fetchAnnotationRangeData" );
+        Integer editionId1;
+        Integer editionId2;
+        try {
+
+            editionId1 = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition1" ) );
+            editionId2 = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition2" ) );
+
+        } catch ( NumberFormatException e ) {
+            log.error( e );
+            return;
+        }
+
+        selectEditionStart = cache.getEdition( species.getId(), editionId1 );
+        if ( selectEditionStart == null ) {
+            log.warn( "selectEditionStart edition id has no corresponding edition object" );
+            return;
+        }
+
+        selectEditionStop = cache.getEdition( species.getId(), editionId2 );
+        if ( selectEditionStop == null ) {
+            log.warn( "selectEditionStop edition id has no corresponding edition object" );
+            return;
+        }
+
+        try {
+            allClickTerms = compareEditions( selectEditionStop, selectEditionStart );
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return;
+        }
+
+    }
+
+    /**
      * Click event functionality for annotation chart
      */
     public void fetchAnnotationPointData() {
@@ -832,99 +770,44 @@ public class GeneView implements Serializable {
 
         clickEdition = cache.getEdition( species.getId(), editionId );
 
+        if ( clickEdition == null ) {
+            log.warn( "Selected edition id has no corresponding edition object" );
+            return;
+        }
+
         try {
-            clickTerms = rawData.get( AnnotationType.I ).row( clickEdition ).keySet();
+            allClickTerms = compareEditions( clickEdition );
         } catch ( NullPointerException e ) {
             log.error( e );
             return;
         }
-
-        selectedClickTerms = null;
-        filteredClickTerms = null;
 
     }
 
     /**
-     * Click event functionality for loss/gain chart
+     * Click event functionality for annotation chart
      */
-    public void fetchLossGainPointData() {
-        log.debug( "fetchLossGainPointData" );
-        Integer editionId;
-        try {
-
-            editionId = Integer.valueOf(
-                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
-        } catch ( NumberFormatException e ) {
-            log.error( e );
-            return;
+    public void fetchFilteredAnnotationClickTerms() {
+        if ( termComparisonFilter != null ) {
+            Predicate<CompareTermsTableValues> predicate = new Predicate<CompareTermsTableValues>() {
+                @Override
+                public boolean apply( CompareTermsTableValues input ) {
+                    return input.getComparison().equals( termComparisonFilter );
+                }
+            };
+            clickTerms = Collections2.filter( allClickTerms, predicate );
+        } else {
+            clickTerms = allClickTerms;
         }
+        selectedClickTerms = null;
+        filteredClickTerms = null;
 
-        clickEdition = cache.getEdition( species.getId(), editionId );
-
-        // get previous edition, yes this is ugly. I don't wanna talk about it.
-
-        Edition previousEdition = null;
-        for ( Edition e : rawData.get( AnnotationType.I ).rowMap().keySet() ) {
-            if ( e.equals( clickEdition ) ) {
-                break;
-            }
-            previousEdition = e;
-        }
-
-        if ( previousEdition == null ) {
-            clickLGTerms = Lists.newArrayList();
-            log.warn( "Selected Edition on Loss/Gain Chart which has no previous edition to compare to." );
-            return;
-        }
-
-        try {
-            // Direct 
-            clickLGTerms = Lists.newArrayList();
-
-            ImmutableSet<GeneOntologyTerm> currentGOSet = rawData.get( AnnotationType.D ).row( clickEdition )
-                    .keySet();
-
-            ImmutableSet<GeneOntologyTerm> previousGOSet = rawData.get( AnnotationType.D ).row( previousEdition )
-                    .keySet();
-
-            for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.D );
-                clickLGTerms.add( lg );
-            }
-
-            for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.D );
-                clickLGTerms.add( lg );
-            }
-
-            // Inferred 
-
-            currentGOSet = rawData.get( AnnotationType.I ).row( clickEdition )
-                    .keySet();
-
-            previousGOSet = rawData.get( AnnotationType.I ).row( previousEdition )
-                    .keySet();
-
-            for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.I );
-                clickLGTerms.add( lg );
-            }
-
-            for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.I );
-                clickLGTerms.add( lg );
-            }
-
-            Collections.sort( clickLGTerms );
-
-        } catch ( NullPointerException e ) {
-            log.error( e );
-            return;
-        }
-
-        selectedClickLGTerms = null;
-        filteredClickLGTerms = null;
-
+        // This prevents datatable filter issues
+        DataTable dataTable = ( DataTable ) FacesContext.getCurrentInstance().getViewRoot()
+                .findComponent( ":clickTermsForm:clickTermsTable" );
+        dataTable.reset();
+        // Resets custom filter inputs
+        RequestContext.getCurrentInstance().reset( "clickTermsForm:clickTermsTable" );
     }
 
     /**
@@ -970,6 +853,65 @@ public class GeneView implements Serializable {
 
     }
 
+    /**
+     * Compare the loss and gain of GO Terms and edition and the edition before it.
+     */
+    private Collection<CompareTermsTableValues> compareEditions( Edition ed ) {
+        // get previous edition, yes this is ugly. I don't wanna talk about it.
+        Edition previousEdition = null;
+        for ( Edition e : rawData.get( AnnotationType.I ).rowMap().keySet() ) {
+            if ( e.equals( ed ) ) {
+                break;
+            }
+            previousEdition = e;
+        }
+
+        if ( previousEdition == null ) {
+            log.warn( "Selected Edition on has no previous edition to compare to." );
+            return compareEditions( ed, ed );
+        }
+        return compareEditions( ed, previousEdition );
+    }
+
+    /**
+     * Compare the loss and gain of GO Terms between two editions.
+     * Gains : GO Terms present in ed1 but not ed2.
+     * Loss: GO Terms present in ed2 but not ed1.
+     */
+    private Collection<CompareTermsTableValues> compareEditions( Edition ed1, Edition ed2 ) {
+        List<CompareTermsTableValues> results = Lists.newArrayList();
+        totalTerms = 0;
+        gainTerms = 0;
+        lossTerms = 0;
+        try {
+            ImmutableSet<GeneOntologyTerm> set1 = rawData.get( AnnotationType.I ).row( ed1 ).keySet();
+
+            ImmutableSet<GeneOntologyTerm> set2 = rawData.get( AnnotationType.I ).row( ed2 ).keySet();
+            for ( GeneOntologyTerm t : set1 ) {
+                if ( set2.contains( t ) ) {
+                    results.add( new CompareTermsTableValues( t, TermComparison.CONSTANT ) );
+                    totalTerms++;
+                } else {
+                    results.add( new CompareTermsTableValues( t, TermComparison.GAIN ) );
+                    totalTerms++;
+                    gainTerms++;
+                }
+            }
+
+            for ( GeneOntologyTerm t : Sets.difference( set2, set1 ) ) {
+                results.add( new CompareTermsTableValues( t, TermComparison.LOSS ) );
+                lossTerms++;
+            }
+
+            Collections.sort( results );
+
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return Lists.newArrayList();
+        }
+        return results;
+    }
+
     // Getters & Setters
 
     public Species getSpecies() {
@@ -1012,48 +954,40 @@ public class GeneView implements Serializable {
         this.viewTerm = viewTerm;
     }
 
-    public Collection<GeneOntologyTerm> getClickTerms() {
-        return clickTerms;
-    }
-
     public Edition getClickEdition() {
         return clickEdition;
     }
 
-    public List<GeneOntologyTerm> getSelectedClickTerms() {
+    public Edition getSelectEditionStart() {
+        return selectEditionStart;
+    }
+
+    public Edition getSelectEditionStop() {
+        return selectEditionStop;
+    }
+
+    public Collection<CompareTermsTableValues> getClickTerms() {
+        return clickTerms;
+    }
+
+    public Collection<CompareTermsTableValues> getAllClickTerms() {
+        return allClickTerms;
+    }
+
+    public List<CompareTermsTableValues> getSelectedClickTerms() {
         return selectedClickTerms;
     }
 
-    public void setSelectedClickTerms( List<GeneOntologyTerm> selectedClickTerms ) {
+    public void setSelectedClickTerms( List<CompareTermsTableValues> selectedClickTerms ) {
         this.selectedClickTerms = selectedClickTerms;
     }
 
-    public Collection<GeneOntologyTerm> getFilteredClickTerms() {
+    public Collection<CompareTermsTableValues> getFilteredClickTerms() {
         return filteredClickTerms;
     }
 
-    public void setFilteredClickTerms( Collection<GeneOntologyTerm> filteredClickTerms ) {
+    public void setFilteredClickTerms( Collection<CompareTermsTableValues> filteredClickTerms ) {
         this.filteredClickTerms = filteredClickTerms;
-    }
-
-    public Collection<LossGainTableValues> getClickLGTerms() {
-        return clickLGTerms;
-    }
-
-    public List<LossGainTableValues> getSelectedClickLGTerms() {
-        return selectedClickLGTerms;
-    }
-
-    public void setSelectedClickLGTerms( List<LossGainTableValues> selectedClickLGTerms ) {
-        this.selectedClickLGTerms = selectedClickLGTerms;
-    }
-
-    public Collection<LossGainTableValues> getFilteredClickLGTerms() {
-        return filteredClickLGTerms;
-    }
-
-    public void setFilteredClickLGTerms( Collection<LossGainTableValues> filteredClickLGTerms ) {
-        this.filteredClickLGTerms = filteredClickLGTerms;
     }
 
     public Collection<GeneTableValues> getAllTerms() {
@@ -1078,6 +1012,26 @@ public class GeneView implements Serializable {
 
     public boolean isFiltered() {
         return filtered;
+    }
+
+    public TermComparison getTermComparisonFilter() {
+        return termComparisonFilter;
+    }
+
+    public void setTermComparisonFilter( TermComparison termComparisonFilter ) {
+        this.termComparisonFilter = termComparisonFilter;
+    }
+
+    public int getTotalTerms() {
+        return totalTerms;
+    }
+
+    public int getGainTerms() {
+        return gainTerms;
+    }
+
+    public int getLossTerms() {
+        return lossTerms;
     }
 
 }

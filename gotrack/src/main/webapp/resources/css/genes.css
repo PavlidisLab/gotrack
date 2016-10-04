@@ -48,6 +48,9 @@ tr.GAIN-color {
 	color: #000000;
 }
 
+tr.CONSTANT-color {
+}
+
 div.ui-lightbox-content-wrapper > div.ui-lightbox-content {
 	background: #FCFFFF;
 }
