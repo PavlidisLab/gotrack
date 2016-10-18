@@ -48,6 +48,7 @@ import javax.inject.Named;
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
 
+import com.google.common.collect.Maps;
 import com.google.gson.Gson;
 
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
@@ -190,6 +191,19 @@ public class TermView implements Serializable {
         RequestContext.getCurrentInstance().addCallbackParam( "current_id", currentTerm.getId() );
     }
 
+    private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
+            Integer max, ChartValues chart ) {
+        Map<String, Object> hcGsonMap = Maps.newHashMap();
+        hcGsonMap.put( "success", true );
+        hcGsonMap.put( "title", title );
+        hcGsonMap.put( "yLabel", yLabel );
+        hcGsonMap.put( "xLabel", xLabel );
+        hcGsonMap.put( "min", min );
+        hcGsonMap.put( "max", max );
+        hcGsonMap.put( "data", chart );
+        return hcGsonMap;
+    }
+
     /**
      * Entry point to fetch data for the overview gantt chart.
      */
@@ -241,21 +255,19 @@ public class TermView implements Serializable {
             }
         }
 
-        existChart.addSeries( existSeries );
-        existChart.addSeries( structureSeries );
+        // Order here is order in the chart, so it matters.
         existChart.addSeries( nameChange );
+        existChart.addSeries( structureSeries );
+        existChart.addSeries( existSeries );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_title",
-                "Overview of " + query + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_ylabel", "Exists" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_overview_data", existChart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Overview of " + query + " vs Time",
+                "", "Date", 0, 2, existChart );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "dateToGOEditionId",
-                new Gson().toJson( dateToGOEditionId ) );
-        RequestContext.getCurrentInstance().addCallbackParam( "dateToNameChange",
-                new Gson().toJson( dateToNameChange ) );
+        hcGsonMap.put( "dateToGOEditionId", dateToGOEditionId );
+        hcGsonMap.put( "dateToNameChange", dateToNameChange );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_overview", new Gson().toJson( hcGsonMap ) );
+
     }
 
     /**
@@ -340,12 +352,10 @@ public class TermView implements Serializable {
             geneChart.addSeries( directSeries.get( sp ) );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_title",
-                "Genes Annotated to " + query + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_ylabel", "Gene Count" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_gene_data", geneChart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Genes Annotated to " + query + " vs Time",
+                "Gene Count", "Date", null, null, geneChart );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_gene", new Gson().toJson( hcGsonMap ) );
     }
 
     /**
@@ -372,11 +382,10 @@ public class TermView implements Serializable {
             evidenceChart.addSeries( s );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_title",
-                "Annotation Count of " + query + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_ylabel", "Annotation Count" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_evidence_data", evidenceChart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Annotation Count of " + query + " vs Time",
+                "Annotation Count", "Date", null, null, evidenceChart );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_evidence", new Gson().toJson( hcGsonMap ) );
     }
 
     /**

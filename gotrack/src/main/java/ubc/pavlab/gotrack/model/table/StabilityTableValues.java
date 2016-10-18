@@ -29,6 +29,7 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
  * @author mjacobson
  * @version $Id$
  */
+@Deprecated
 public class StabilityTableValues implements Comparable<StabilityTableValues> {
 
     private final GeneOntologyTerm term;

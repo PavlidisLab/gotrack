@@ -116,24 +116,6 @@ svg .edgePaths.hover .edgePath.family {
 	opacity: 1 !important;
 }
 
-.tipsy p {
-	padding: 0;
-	margin: 0;
-}
-
-/* This styles the title of the tooltip */
-.tipsy .name {
-	font-size: 1.5em;
-	font-weight: bold;
-	color: #60b1fc;
-	margin: 0;
-}
-
-/* This styles the body of the tooltip */
-.tipsy .description {
-	font-size: 1.2em;
-}
-
 /* Legend */
 
 .legend text {
@@ -173,6 +155,7 @@ div.child-table {
 
 div.child-table table {
 	 table-layout: auto !important;
+	 width: 700px;
 }
 
 div.ui-lightbox-content-wrapper > div.ui-lightbox-content {

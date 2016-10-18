@@ -36,17 +36,20 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
     private final Edition edition;
     private final GeneOntologyTerm term;
     private final EnrichmentResult result;
-    private final StabilityScore score;
+    private final StabilityScore stability;
+    private final int stabilityQuantile;
     private final boolean significant;
 
-    public EnrichmentTableValues( Edition edition, GeneOntologyTerm term, EnrichmentResult result, StabilityScore score,
+    public EnrichmentTableValues( Edition edition, GeneOntologyTerm term, EnrichmentResult result,
+            StabilityScore stability, int stabilityQuantile,
             boolean significant ) {
         super();
         this.edition = edition;
         this.term = term;
         this.result = result;
         this.significant = significant;
-        this.score = score;
+        this.stability = stability;
+        this.stabilityQuantile = stabilityQuantile;
         // this.rowKey = edition.getEdition().toString() + term.getGoId();
     }
 
@@ -62,8 +65,12 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
         return result;
     }
 
-    public StabilityScore getScore() {
-        return score;
+    public StabilityScore getStability() {
+        return stability;
+    }
+
+    public int getStabilityQuantile() {
+        return stabilityQuantile;
     }
 
     public boolean isSignificant() {

@@ -42,12 +42,16 @@ import javax.inject.Named;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
+import org.primefaces.component.datatable.DataTable;
 import org.primefaces.context.RequestContext;
 
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 
@@ -62,10 +66,12 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
+import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.AnnotationValues;
-import ubc.pavlab.gotrack.model.table.LossGainTableValues;
-import ubc.pavlab.gotrack.model.table.LossGainTableValues.LossGain;
+import ubc.pavlab.gotrack.model.table.CompareTermsTableValues;
+import ubc.pavlab.gotrack.model.table.CompareTermsTableValues.TermComparison;
+import ubc.pavlab.gotrack.model.table.GeneTableValues;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 /**
@@ -99,11 +105,15 @@ public class GeneView implements Serializable {
 
     // Data
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData;
+    private boolean filtered = false;
+
+    // Meta
+    private Edition currentEdition;
 
     // Right Panel
-    private Collection<GeneOntologyTerm> allTerms = new HashSet<>();
-    private List<GeneOntologyTerm> selectedTerms;
-    private Collection<GeneOntologyTerm> filteredAllTerms;
+    private Collection<GeneTableValues> allTerms = new HashSet<>();
+    private List<GeneTableValues> selectedTerms;
+    private Collection<GeneTableValues> filteredAllTerms;
 
     // View Annotations List
     private Collection<AnnotationValues> viewAnnotations = new ArrayList<>();
@@ -113,15 +123,23 @@ public class GeneView implements Serializable {
     // Click event lists
     private Edition clickEdition;
 
-    // Annotation clicks
-    private Collection<GeneOntologyTerm> clickTerms = new HashSet<>();
-    private List<GeneOntologyTerm> selectedClickTerms;
-    private Collection<GeneOntologyTerm> filteredClickTerms;
+    // Range select event lists
+    private Edition selectEditionStart;
+    private Edition selectEditionStop;
 
-    // Loss Gain Clicks
-    private List<LossGainTableValues> clickLGTerms = new ArrayList<>();
-    private List<LossGainTableValues> selectedClickLGTerms;
-    private Collection<LossGainTableValues> filteredClickLGTerms;
+    // Annotation clicks
+    private Collection<CompareTermsTableValues> allClickTerms = new HashSet<>();
+    private Collection<CompareTermsTableValues> clickTerms = new HashSet<>();
+    private List<CompareTermsTableValues> selectedClickTerms;
+    private Collection<CompareTermsTableValues> filteredClickTerms;
+
+    // Annotation Click Meta
+    private int totalTerms;
+    private int gainTerms;
+    private int lossTerms;
+
+    // Annotation Clicks TermComparison Selector
+    private TermComparison termComparisonFilter = null;
 
     public GeneView() {
         log.info( "GeneView created" );
@@ -174,11 +192,13 @@ public class GeneView implements Serializable {
         } else {
             // Count gene hit
             statsService.countGeneHit( gene );
-
             log.info( "Gene: " + gene );
-            return null;
 
         }
+
+        currentEdition = cache.getCurrentEditions( species.getId() );
+
+        return null;
 
     }
 
@@ -186,7 +206,19 @@ public class GeneView implements Serializable {
      * Attempt to get data from cache, if not in cache get from DB.
      */
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> retrieveData() {
-        return retrieveData( null );
+        return retrieveData( Sets.<GeneOntologyTerm> newHashSet() );
+    }
+
+    /**
+     * Attempt to get data from cache, if not in cache get from DB. Afterwards apply filter.
+     */
+    private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> retrieveData(
+            Collection<GeneTableValues> filterTableValues ) {
+        Set<GeneOntologyTerm> filterTerms = Sets.newHashSet();
+        for ( GeneTableValues tv : filterTableValues ) {
+            filterTerms.add( tv.getTerm() );
+        }
+        return retrieveData( filterTerms );
     }
 
     /**
@@ -289,19 +321,27 @@ public class GeneView implements Serializable {
 
         // Now create a list of terms that will be displayed in a front-end right panel
         // Cannot simply use columnKeySet as there are no guarantees as to which terms will be chosen
-        // We want the most recent of each term
+        // We want the most recent of each term.
 
         //allTerms = rawData.get( AnnotationType.DIRECT ).columnKeySet();
         allTerms = new HashSet<>();
-        ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> reversedData = new ArrayList<>(
+        ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> data = new ArrayList<>(
                 rawData.get( AnnotationType.I ).rowMap().entrySet() );
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( reversedData ) ) {
 
-            allTerms.addAll( entry.getValue().keySet() );
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( data ) ) {
+            Set<GeneOntologyTerm> terms = entry.getValue().keySet();
+            Edition ed = entry.getKey();
+            int age = currentEdition.getEdition() - ed.getEdition();
+            for ( GeneOntologyTerm t : terms ) {
+                if ( !allTerms.contains( t ) ) {
+                    // Only keep the most recent
+                    allTerms.add( new GeneTableValues( ed, t, age ) );
+                }
+            }
         }
 
         allTerms = new ArrayList<>( allTerms );
-        Collections.sort( ( List<GeneOntologyTerm> ) allTerms );
+        Collections.sort( ( List<GeneTableValues> ) allTerms );
 
     }
 
@@ -317,6 +357,26 @@ public class GeneView implements Serializable {
             propagatedData.put( ed, cache.propagateAnnotations( entry.getValue(), ed ) );
         }
         return propagatedData;
+    }
+
+    private Map<String, Object> createHCCallbackParamFail( String info ) {
+        Map<String, Object> hcGsonMap = Maps.newHashMap();
+        hcGsonMap.put( "success", false );
+        hcGsonMap.put( "info", info );
+        return hcGsonMap;
+    }
+
+    private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
+            Integer max, ChartValues chart ) {
+        Map<String, Object> hcGsonMap = Maps.newHashMap();
+        hcGsonMap.put( "success", true );
+        hcGsonMap.put( "title", title );
+        hcGsonMap.put( "yLabel", yLabel );
+        hcGsonMap.put( "xLabel", xLabel );
+        hcGsonMap.put( "min", min );
+        hcGsonMap.put( "max", max );
+        hcGsonMap.put( "data", chart );
+        return hcGsonMap;
     }
 
     /**
@@ -343,25 +403,17 @@ public class GeneView implements Serializable {
 
         //Create series for direct annotations count
         Series directCountSeries = new Series( "Direct Annotation Count" );
-        Series aggregateSeries = new Series( "Species Direct Avg" );
-        Series aggregateInferredSeries = new Series( "Species Inferred Avg" );
+        SeriesExtra aggregateSeries = new SeriesExtra( "Species Direct Mean" );
+        aggregateSeries.putExtra( "color", "#939393" );
+        SeriesExtra aggregateInferredSeries = new SeriesExtra( "Species Inferred Mean" );
+        aggregateInferredSeries.putExtra( "color", "#939393" );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             int count = entry.getValue().size();
             directCountSeries.addDataPoint( ed.getDate(), count );
 
-            // Averages
-            Aggregate agg = cache.getAggregates( species.getId(), ed );
-            if ( agg != null ) {
-                aggregateSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
-                aggregateInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
-            }
-
         }
-        chart.addSeries( aggregateSeries );
-        chart.addSeries( aggregateInferredSeries );
-        chart.addSeries( directCountSeries );
 
         // Create series for inferred annotations count
         Series inferredCountSeries = new Series( "Inferred Annotation Count" );
@@ -371,15 +423,24 @@ public class GeneView implements Serializable {
             Edition ed = entry.getKey();
             int count = entry.getValue().size();
             inferredCountSeries.addDataPoint( ed.getDate(), count );
+
+            // Averages
+            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            if ( agg != null ) {
+                aggregateSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
+                aggregateInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
+            }
         }
+
+        chart.addSeries( aggregateSeries );
+        chart.addSeries( aggregateInferredSeries );
+        chart.addSeries( directCountSeries );
         chart.addSeries( inferredCountSeries );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Terms Annotated to " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Annotations Count" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Terms Annotated to " + gene.getSymbol() + " vs Time",
+                "Annotations Count", "Date", 0, null, chart );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
 
     /**
@@ -411,24 +472,20 @@ public class GeneView implements Serializable {
 
         // For direct annotations
         Series directSeries = new Series( "Direct Similarity" );
-        Series averageDirectSeries = new Series( "Direct Species Average" );
+        SeriesExtra averageDirectSeries = new SeriesExtra( "Direct Species Mean" );
+        averageDirectSeries.putExtra( "color", "#939393" );
 
         Set<GeneOntologyTerm> currentGOSet = directData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : directData.rowMap().entrySet() ) {
             Edition ed = entry.getKey();
             Double jaccard = Jaccard.similarity( entry.getValue().keySet(), currentGOSet );
             directSeries.addDataPoint( ed.getDate(), jaccard );
-
-            // Averages
-            Aggregate agg = cache.getAggregates( species.getId(), ed );
-            if ( agg != null ) {
-                averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
-            }
         }
 
         // For Inferred annotations
         Series inferredSeries = new Series( "Inferred Similarity" );
-        Series averageInferredSeries = new Series( "Inferred Species Average" );
+        SeriesExtra averageInferredSeries = new SeriesExtra( "Inferred Species Average" );
+        averageInferredSeries.putExtra( "color", "#939393" );
 
         currentGOSet = inferredData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : inferredData.rowMap().entrySet() ) {
@@ -439,6 +496,7 @@ public class GeneView implements Serializable {
             // Averages
             Aggregate agg = cache.getAggregates( species.getId(), ed );
             if ( agg != null ) {
+                averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
                 averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
             }
         }
@@ -448,13 +506,10 @@ public class GeneView implements Serializable {
         chart.addSeries( directSeries );
         chart.addSeries( inferredSeries );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Similarity of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Jaccard Similarity Index" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Similarity of " + gene.getSymbol() + " vs Time",
+                "Jaccard Similarity Index", "Date", 0, 1, chart );
 
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
 
     /**
@@ -480,7 +535,8 @@ public class GeneView implements Serializable {
 
         // Calculate multifunctionality of the gene in each edition
         Series multiSeries = new Series( "Multifunctionality" );
-        Series averageSeries = new Series( "Species Average" );
+        SeriesExtra averageSeries = new SeriesExtra( "Multifunctionality Species Mean" );
+        averageSeries.putExtra( "color", "#939393" );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
@@ -507,12 +563,11 @@ public class GeneView implements Serializable {
         chart.addSeries( averageSeries );
         chart.addSeries( multiSeries );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Multifunctionality of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Multifunctionality [10^-5]" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap(
+                "Multifunctionality of " + gene.getSymbol() + " vs Time", "Multifunctionality [10^-5]",
+                "Date", 0, null, chart );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
 
     /**
@@ -523,105 +578,20 @@ public class GeneView implements Serializable {
     }
 
     /**
-     * Create chart showing total number of terms lost and gained between editions (both directly and through
-     * propagation)
-     * 
-     * @param rawData data
-     */
-    private void fetchLossGainChart(
-            Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
-        log.debug( "fetchLossGainChart" );
-
-        ChartValues chart = new ChartValues();
-
-        // Calculate both the losses of GO terms and gains of GO terms between editions
-
-        // For direct annotations
-        Series directLossSeries = new Series( "Direct Loss" );
-        Series directGainSeries = new Series( "Direct Gain" );
-        directLossSeries.setExtra( 0 ); //Stack 0
-        directGainSeries.setExtra( 0 ); //Stack 0
-
-        Set<GeneOntologyTerm> previousGOSet = null;
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
-                .rowMap().entrySet() ) {
-            Edition ed = entry.getKey();
-            Set<GeneOntologyTerm> currentGOSet = entry.getValue().keySet();
-
-            if ( previousGOSet != null ) {
-                Integer loss = -1 * Sets.difference( previousGOSet, currentGOSet ).size();
-                Integer gain = Sets.difference( currentGOSet, previousGOSet ).size();
-                if ( !( loss == 0 && gain == 0 ) ) {
-                    directLossSeries.addDataPoint( ed.getDate(), loss );
-                    directGainSeries.addDataPoint( ed.getDate(), gain );
-                }
-            }
-
-            previousGOSet = currentGOSet;
-        }
-
-        chart.addSeries( directGainSeries );
-        chart.addSeries( directLossSeries );
-
-        // For inferred annotations
-
-        Series inferredLossSeries = new Series( "Inferred Loss" );
-        Series inferredGainSeries = new Series( "Inferred Gain" );
-        inferredLossSeries.setExtra( 1 ); //Stack 1
-        inferredGainSeries.setExtra( 1 ); //Stack 1
-
-        previousGOSet = null;
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
-                .rowMap().entrySet() ) {
-            Edition ed = entry.getKey();
-            Set<GeneOntologyTerm> currentGOSet = entry.getValue().keySet();
-
-            if ( previousGOSet != null ) {
-                Integer loss = -1 * Sets.difference( previousGOSet, currentGOSet ).size();
-                Integer gain = Sets.difference( currentGOSet, previousGOSet ).size();
-                if ( !( loss == 0 && gain == 0 ) ) {
-                    inferredLossSeries.addDataPoint( ed.getDate(), loss );
-                    inferredGainSeries.addDataPoint( ed.getDate(), gain );
-                }
-            }
-
-            previousGOSet = currentGOSet;
-        }
-
-        chart.addSeries( inferredGainSeries );
-        chart.addSeries( inferredLossSeries );
-
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Loss/Gain of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "Change" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
-
-    }
-
-    /**
-     * Entry point for fetching the loss/gain chart
-     */
-    public void fetchLossGainChart() {
-        fetchLossGainChart( rawData );
-
-    }
-
-    /**
      * Filter charts to include only those terms selected from right panel
      */
     public void filterCharts() {
         if ( selectedTerms == null || selectedTerms.size() == 0 ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", false );
+            RequestContext.getCurrentInstance().addCallbackParam( "filtered", false );
             return;
         }
 
-        HashSet<GeneOntologyTerm> filterTerms = new HashSet<>( selectedTerms );
+        HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
 
         rawData = retrieveData( filterTerms );
+        filtered = true;
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", true );
+        RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
 
     }
 
@@ -630,7 +600,8 @@ public class GeneView implements Serializable {
      */
     public void resetCharts() {
         rawData = retrieveData();
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_filtered", true );
+        filtered = false;
+        RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
     }
 
     /**
@@ -640,19 +611,19 @@ public class GeneView implements Serializable {
         log.debug( "fetchTimeline" );
         if ( selectedTerms == null || selectedTerms.size() == 0 ) {
             // No Terms
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_info", "No Terms Selected." );
+            RequestContext.getCurrentInstance().addCallbackParam( "HC",
+                    new Gson().toJson( createHCCallbackParamFail( "No Terms Selected." ) ) );
             return;
         }
 
         if ( selectedTerms.size() > 20 ) {
             // Too many terms
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_info", "Too Many Terms Selected. Maximum 20." );
+            RequestContext.getCurrentInstance().addCallbackParam( "HC",
+                    new Gson().toJson( createHCCallbackParamFail( "Too Many Terms Selected. Maximum 20." ) ) );
             return;
         }
 
-        HashSet<GeneOntologyTerm> filterTerms = new HashSet<>( selectedTerms );
+        HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
 
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> data = retrieveData( filterTerms )
                 .get( AnnotationType.I );
@@ -671,10 +642,10 @@ public class GeneView implements Serializable {
 
         Map<String, String> termNames = new HashMap<>();
 
-        for ( GeneOntologyTerm t : filterTerms ) {
+        for ( GeneTableValues tv : filterTerms ) {
+            GeneOntologyTerm t = tv.getTerm();
             termNames.put( t.getGoId(), t.getName() );
             Series s = new Series( t.getGoId() );
-            s.setExtra( t.getName() );
             ImmutableMap<Edition, Set<Annotation>> termData = data.column( t );
             // We iterate over this collection to insure that every term has all of the editions in its data
             // otherwise we get wonky date ranges
@@ -694,16 +665,12 @@ public class GeneView implements Serializable {
             chart.addSeries( s );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_title",
-                "Annotation Categories of " + gene.getSymbol() + " vs Time" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_ylabel", "" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_xlabel", "Date" );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_data", chart );
-
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_category_positions",
-                new Gson().toJson( categoryPositions ) );
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_term_names", new Gson().toJson( termNames ) );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap(
+                "Annotation Categories of " + gene.getSymbol() + " vs Time",
+                "", "Date", null, null, chart );
+        hcGsonMap.put( "category_positions", categoryPositions );
+        hcGsonMap.put( "term_names", termNames );
+        RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
 
     }
 
@@ -743,6 +710,46 @@ public class GeneView implements Serializable {
     }
 
     /**
+     * Range select event functionality for annotation chart
+     */
+    public void fetchAnnotationRangeData() {
+        log.debug( "fetchAnnotationRangeData" );
+        Integer editionId1;
+        Integer editionId2;
+        try {
+
+            editionId1 = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition1" ) );
+            editionId2 = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition2" ) );
+
+        } catch ( NumberFormatException e ) {
+            log.error( e );
+            return;
+        }
+
+        selectEditionStart = cache.getEdition( species.getId(), editionId1 );
+        if ( selectEditionStart == null ) {
+            log.warn( "selectEditionStart edition id has no corresponding edition object" );
+            return;
+        }
+
+        selectEditionStop = cache.getEdition( species.getId(), editionId2 );
+        if ( selectEditionStop == null ) {
+            log.warn( "selectEditionStop edition id has no corresponding edition object" );
+            return;
+        }
+
+        try {
+            allClickTerms = compareEditions( selectEditionStop, selectEditionStart );
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return;
+        }
+
+    }
+
+    /**
      * Click event functionality for annotation chart
      */
     public void fetchAnnotationPointData() {
@@ -753,109 +760,50 @@ public class GeneView implements Serializable {
             editionId = Integer.valueOf(
                     FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         } catch ( NumberFormatException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            log.error( e );
             return;
         }
 
         clickEdition = cache.getEdition( species.getId(), editionId );
 
-        try {
-            clickTerms = rawData.get( AnnotationType.I ).row( clickEdition ).keySet();
-        } catch ( NullPointerException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+        if ( clickEdition == null ) {
+            log.warn( "Selected edition id has no corresponding edition object" );
             return;
         }
 
-        selectedClickTerms = null;
-        filteredClickTerms = null;
-
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
+        try {
+            allClickTerms = compareEditions( clickEdition );
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return;
+        }
 
     }
 
     /**
-     * Click event functionality for loss/gain chart
+     * Click event functionality for annotation chart
      */
-    public void fetchLossGainPointData() {
-        log.debug( "fetchLossGainPointData" );
-        Integer editionId;
-        try {
-
-            editionId = Integer.valueOf(
-                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
-        } catch ( NumberFormatException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
-            return;
+    public void fetchFilteredAnnotationClickTerms() {
+        if ( termComparisonFilter != null ) {
+            Predicate<CompareTermsTableValues> predicate = new Predicate<CompareTermsTableValues>() {
+                @Override
+                public boolean apply( CompareTermsTableValues input ) {
+                    return input.getComparison().equals( termComparisonFilter );
+                }
+            };
+            clickTerms = Collections2.filter( allClickTerms, predicate );
+        } else {
+            clickTerms = allClickTerms;
         }
+        selectedClickTerms = null;
+        filteredClickTerms = null;
 
-        clickEdition = cache.getEdition( species.getId(), editionId );
-
-        // get previous edition, yes this is ugly. I don't wanna talk about it.
-
-        Edition previousEdition = null;
-        for ( Edition e : rawData.get( AnnotationType.I ).rowMap().keySet() ) {
-            if ( e.equals( clickEdition ) ) {
-                break;
-            }
-            previousEdition = e;
-        }
-
-        if ( previousEdition == null ) {
-            clickLGTerms = Lists.newArrayList();
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
-            return;
-        }
-
-        try {
-            // Direct 
-            clickLGTerms = Lists.newArrayList();
-
-            ImmutableSet<GeneOntologyTerm> currentGOSet = rawData.get( AnnotationType.D ).row( clickEdition )
-                    .keySet();
-
-            ImmutableSet<GeneOntologyTerm> previousGOSet = rawData.get( AnnotationType.D ).row( previousEdition )
-                    .keySet();
-
-            for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.D );
-                clickLGTerms.add( lg );
-            }
-
-            for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.D );
-                clickLGTerms.add( lg );
-            }
-
-            // Inferred 
-
-            currentGOSet = rawData.get( AnnotationType.I ).row( clickEdition )
-                    .keySet();
-
-            previousGOSet = rawData.get( AnnotationType.I ).row( previousEdition )
-                    .keySet();
-
-            for ( GeneOntologyTerm t : Sets.difference( previousGOSet, currentGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.LOSS, AnnotationType.I );
-                clickLGTerms.add( lg );
-            }
-
-            for ( GeneOntologyTerm t : Sets.difference( currentGOSet, previousGOSet ) ) {
-                LossGainTableValues lg = new LossGainTableValues( t, LossGain.GAIN, AnnotationType.I );
-                clickLGTerms.add( lg );
-            }
-
-            Collections.sort( clickLGTerms );
-
-        } catch ( NullPointerException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
-            return;
-        }
-
-        selectedClickLGTerms = null;
-        filteredClickLGTerms = null;
-
-        RequestContext.getCurrentInstance().addCallbackParam( "hc_success", true );
-
+        // This prevents datatable filter issues
+        DataTable dataTable = ( DataTable ) FacesContext.getCurrentInstance().getViewRoot()
+                .findComponent( ":clickTermsForm:clickTermsTable" );
+        dataTable.reset();
+        // Resets custom filter inputs
+        RequestContext.getCurrentInstance().reset( "clickTermsForm:clickTermsTable" );
     }
 
     /**
@@ -868,7 +816,7 @@ public class GeneView implements Serializable {
             editionId = Integer.valueOf(
                     FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         } catch ( NumberFormatException e ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "hc_success", false );
+            log.error( e );
             return;
         }
         clickEdition = cache.getEdition( species.getId(), editionId );
@@ -899,6 +847,65 @@ public class GeneView implements Serializable {
 
         filteredViewAnnotations = null;
 
+    }
+
+    /**
+     * Compare the loss and gain of GO Terms and edition and the edition before it.
+     */
+    private Collection<CompareTermsTableValues> compareEditions( Edition ed ) {
+        // get previous edition, yes this is ugly. I don't wanna talk about it.
+        Edition previousEdition = null;
+        for ( Edition e : rawData.get( AnnotationType.I ).rowMap().keySet() ) {
+            if ( e.equals( ed ) ) {
+                break;
+            }
+            previousEdition = e;
+        }
+
+        if ( previousEdition == null ) {
+            log.warn( "Selected Edition on has no previous edition to compare to." );
+            return compareEditions( ed, ed );
+        }
+        return compareEditions( ed, previousEdition );
+    }
+
+    /**
+     * Compare the loss and gain of GO Terms between two editions.
+     * Gains : GO Terms present in ed1 but not ed2.
+     * Loss: GO Terms present in ed2 but not ed1.
+     */
+    private Collection<CompareTermsTableValues> compareEditions( Edition ed1, Edition ed2 ) {
+        List<CompareTermsTableValues> results = Lists.newArrayList();
+        totalTerms = 0;
+        gainTerms = 0;
+        lossTerms = 0;
+        try {
+            ImmutableSet<GeneOntologyTerm> set1 = rawData.get( AnnotationType.I ).row( ed1 ).keySet();
+
+            ImmutableSet<GeneOntologyTerm> set2 = rawData.get( AnnotationType.I ).row( ed2 ).keySet();
+            for ( GeneOntologyTerm t : set1 ) {
+                if ( set2.contains( t ) ) {
+                    results.add( new CompareTermsTableValues( t, TermComparison.CONSTANT ) );
+                    totalTerms++;
+                } else {
+                    results.add( new CompareTermsTableValues( t, TermComparison.GAIN ) );
+                    totalTerms++;
+                    gainTerms++;
+                }
+            }
+
+            for ( GeneOntologyTerm t : Sets.difference( set2, set1 ) ) {
+                results.add( new CompareTermsTableValues( t, TermComparison.LOSS ) );
+                lossTerms++;
+            }
+
+            Collections.sort( results );
+
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return Lists.newArrayList();
+        }
+        return results;
     }
 
     // Getters & Setters
@@ -943,68 +950,84 @@ public class GeneView implements Serializable {
         this.viewTerm = viewTerm;
     }
 
-    public Collection<GeneOntologyTerm> getClickTerms() {
-        return clickTerms;
-    }
-
     public Edition getClickEdition() {
         return clickEdition;
     }
 
-    public List<GeneOntologyTerm> getSelectedClickTerms() {
+    public Edition getSelectEditionStart() {
+        return selectEditionStart;
+    }
+
+    public Edition getSelectEditionStop() {
+        return selectEditionStop;
+    }
+
+    public Collection<CompareTermsTableValues> getClickTerms() {
+        return clickTerms;
+    }
+
+    public Collection<CompareTermsTableValues> getAllClickTerms() {
+        return allClickTerms;
+    }
+
+    public List<CompareTermsTableValues> getSelectedClickTerms() {
         return selectedClickTerms;
     }
 
-    public void setSelectedClickTerms( List<GeneOntologyTerm> selectedClickTerms ) {
+    public void setSelectedClickTerms( List<CompareTermsTableValues> selectedClickTerms ) {
         this.selectedClickTerms = selectedClickTerms;
     }
 
-    public Collection<GeneOntologyTerm> getFilteredClickTerms() {
+    public Collection<CompareTermsTableValues> getFilteredClickTerms() {
         return filteredClickTerms;
     }
 
-    public void setFilteredClickTerms( Collection<GeneOntologyTerm> filteredClickTerms ) {
+    public void setFilteredClickTerms( Collection<CompareTermsTableValues> filteredClickTerms ) {
         this.filteredClickTerms = filteredClickTerms;
     }
 
-    public Collection<LossGainTableValues> getClickLGTerms() {
-        return clickLGTerms;
-    }
-
-    public List<LossGainTableValues> getSelectedClickLGTerms() {
-        return selectedClickLGTerms;
-    }
-
-    public void setSelectedClickLGTerms( List<LossGainTableValues> selectedClickLGTerms ) {
-        this.selectedClickLGTerms = selectedClickLGTerms;
-    }
-
-    public Collection<LossGainTableValues> getFilteredClickLGTerms() {
-        return filteredClickLGTerms;
-    }
-
-    public void setFilteredClickLGTerms( Collection<LossGainTableValues> filteredClickLGTerms ) {
-        this.filteredClickLGTerms = filteredClickLGTerms;
-    }
-
-    public Collection<GeneOntologyTerm> getAllTerms() {
+    public Collection<GeneTableValues> getAllTerms() {
         return allTerms;
     }
 
-    public List<GeneOntologyTerm> getSelectedTerms() {
+    public List<GeneTableValues> getSelectedTerms() {
         return selectedTerms;
     }
 
-    public void setSelectedTerms( List<GeneOntologyTerm> selectedTerms ) {
+    public void setSelectedTerms( List<GeneTableValues> selectedTerms ) {
         this.selectedTerms = selectedTerms;
     }
 
-    public Collection<GeneOntologyTerm> getFilteredAllTerms() {
+    public Collection<GeneTableValues> getFilteredAllTerms() {
         return filteredAllTerms;
     }
 
-    public void setFilteredAllTerms( Collection<GeneOntologyTerm> filteredAllTerms ) {
+    public void setFilteredAllTerms( Collection<GeneTableValues> filteredAllTerms ) {
         this.filteredAllTerms = filteredAllTerms;
+    }
+
+    public boolean isFiltered() {
+        return filtered;
+    }
+
+    public TermComparison getTermComparisonFilter() {
+        return termComparisonFilter;
+    }
+
+    public void setTermComparisonFilter( TermComparison termComparisonFilter ) {
+        this.termComparisonFilter = termComparisonFilter;
+    }
+
+    public int getTotalTerms() {
+        return totalTerms;
+    }
+
+    public int getGainTerms() {
+        return gainTerms;
+    }
+
+    public int getLossTerms() {
+        return lossTerms;
     }
 
 }

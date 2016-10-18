@@ -1,5 +1,3 @@
-var MAXIMALLY_DISTINCT_COLORS = ["#2bce48", "#0075dc", "#993f00", "#4c005c", "#191919", "#005c31", "#f0a3ff", "#ffcc99", "#808080", "#94ffb5", "#8f7c00", "#9dcc00", "#c20088", "#003380", "#ffa405", "#ffa8bb", "#426600", "#ff0010", "#5ef1f2", "#00998f", "#e0ff66", "#740aff", "#990000", "#ffff80", "#ffff00", "#ff5005"]
-
 function onLoad() {
    $("#left-toggler").append('<span class="vertical toggled-header">Options</span>');
 }
@@ -20,6 +18,7 @@ var showLoadingSpinner = function() {
 //});
 
 function runEnrichmentOnClick() {
+   $('#progressBarContainer').removeClass('disabled');
    try {
       PF('runEnrichmentBtnWdg').disable();
       PF('enrichmentProgressBarWdg').start();
@@ -29,15 +28,61 @@ function runEnrichmentOnClick() {
    }
 }
 
-function runEnrichmentComplete(xhr, status, args) {
-   try {
-   reInitializeCharts();
-   handleEnrichmentComplete(xhr, status, args);
+function loadPreviousEnrichmentComplete(xhr, status, args) {
+   if (args.success) {
+      console.log('Processing Previous Enrichment Analysis.');
+      runEnrichmentComplete(xhr, status, args);
+   } else {
+      console.log('Load Previous Encrichment Analysis Failed.');
+   }
    
-   var wdg = PF('tabEnrichWdg');
-   for (var j = 0; j < wdg.getLength(); j++) {
-      wdg.enable(j);
-    }
+}
+
+function runEnrichmentComplete(xhr, status, args) {
+   // Slight hack here to make sure that the polling functionality of the progress bar stops
+   // Ran into a problem with viewexpiredexception not stopping the polling while also
+   // clearing the PrimeFaces widgets...
+   try {
+      PF('enrichmentProgressBarWdg').stop()
+   } catch (e) {
+      window.clearInterval(window.progressBarId);
+      window.clearTimeout(window.progressBarId);      
+   }
+   try {
+      PF('runEnrichmentBtnWdg').enable();
+   } catch (e) {
+      
+   }
+   
+   try {
+      reInitializeCharts();
+      
+      if (!utility.isUndefined(args.dateToEdition)) {
+         GLOBALS.dateToEdition = JSON.parse(args.dateToEdition);
+      }
+      
+      try {
+         args.HC_terms = JSON.parse(args.HC_terms);
+      } catch(e) {
+         console.log(e);
+         return;
+      }
+      
+      createTermsChart(xhr, status, args);
+      
+      try {
+         args.HC_similarity = JSON.parse(args.HC_similarity);
+      } catch(e) {
+         console.log(e);
+         return;
+      }
+      
+      createSimilarityChart(xhr, status, args);
+      
+      var wdg = PF('tabEnrichWdg');
+      for (var j = 0; j < wdg.getLength(); j++) {
+         wdg.enable(j);
+       }
    
    } catch (e) {
       console.log(e);
@@ -45,12 +90,8 @@ function runEnrichmentComplete(xhr, status, args) {
 }
 
 function centerResize() {
-   //updateCenterPanel();
-   try {
-      PrimeFaces.widgets.similarityChartWdg.plot.replot( {resetAxes:true} );
-   } catch (e) {
-
-   }
+   var activeTabIndex = PF('tabEnrichWdg').getActiveIndex();
+   tabShowed(activeTabIndex);
 }
 
 function escDialog() {
@@ -98,393 +139,122 @@ function tabChanged(index)
 }
 function tabShowed(index)
 {
-   if (index==1) {
-      HC.charts.similarity.create();
-      HC.charts.similarity.resize();
+   if (index==0) {
+      plotting.charts.terms.resize();
+   } else if (index==1) {
+      // plotting.charts.similarity.create();
+      plotting.charts.similarity.resize();
    }
 
 }
 function enrichmentChartHide() {
-   HC.charts.enrichment.destroy();
-   HC.charts.enrichmentMaster.destroy();
+   plotting.charts.enrichment.destroy();
+   plotting.charts.enrichmentMaster.destroy();
 }
 
-function HChart(id) {
-   this.id = id;
-   this.chart = null;
-   this.options = {};
-   this._exists = false;
-   this.exists = function() {
-      return (this.chart!=null && this._exists);
-   }
-   this.destroy = function() {
-      if ( this.exists() ) {
-         try {
-            this.chart.destroy(); 
-         } catch (e) {
-            console.log(e);
-         }
-      } else {
-         console.log('Chart not yet created');
-      }
-      this._exists=false;
-      
-   }
-   this.create = function() {
-      if ( !this.exists() ) {
-         this.chart = new Highcharts.Chart(this.options);
-         this._exists=true;
-         console.log("Chart created");
-      }
-   }
-   this.reset = function() {
-      this.recreate(this.options);
-   }
-   this.recreate = function(options) {
-      try {
-         if(typeof options === 'undefined'){
-            // options not supplied
-            options = this.options; //fallback incase chart is not made yet
-            options = this.chart.options;
-          }
-         this.destroy();
-      } catch (e) {
-         console.log(e);
-      } finally {
-         try{
-            this.chart = new Highcharts.Chart(options);
-            this._exists=true;
-         } catch (e) {
-            console.log("Failed to create chart");
-         }
-         
-      }
+function createTermsChart(xhr, status, args) {
+   console.log(xhr, status, args);
 
-   }
-   this.resize = function() {
-      try {
-         this.chart.reflow();
-      } catch (e) {
-         console.log(e);
-      }
-   }
-     
+   args.HC_terms.renderTo = 'hc_terms_container';
+   var options = plotting.defaultHCOptions(args.HC_terms, false);
+   
+   plotting.charts.terms.options = options;
+   plotting.charts.terms.recreate(options);
 }
 
-function handleEnrichmentComplete(xhr, status, args) {
-   console.log(xhr, status, args)
-   // Slight hack here to make sure that the polling functionality of the progress bar stops
-   // Ran into a problem with viewexpiredexception not stopping the polling while also
-   // clearing the PrimeFaces widgets...
-   try {
-      PF('enrichmentProgressBarWdg').stop()
-   } catch (e) {
-      window.clearInterval(window.progressBarId);
-      window.clearTimeout(window.progressBarId);      
-   }
-   try {
-      PF('runEnrichmentBtnWdg').enable();
-   } catch (e) {
-      
-   }
-   console.log(args);
+function createSimilarityChart(xhr, status, args) {
+   console.log(xhr, status, args);
    
-   var dateToEdition = JSON.parse(args.hc_dateToEdition);
-
-   var options = {
-                  chart: {
-                     renderTo: 'hc_similarity_container',
-                     zoomType: 'x',
-                     resetZoomButton: {
-                        position: {
-                           align: 'left',
-                           // verticalAlign: 'top', // by default
-                           x: 0,
-                           y: -35,
+   args.HC_similarity.renderTo = 'hc_similarity_container';
+   var options = plotting.defaultHCOptions(args.HC_similarity, false);
+  
+   options.yAxis.minorTickInterval = 0.05;
+   
+   options.chart.events = {
+                           click: function(event) {
+                              fetchSimilarityInformation([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
                         }
-                     },
-                     events: {
-                        click: function(event) {
-                           fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.hoverPoint.x]} ]);
-                     }
-                     }
-                  },
-                  title: {
-                     text: args.hc_title
-                  },
-
-                  xAxis: {
-                     type: 'datetime',
-                     title: {
-                        text: args.hc_xlabel
-                     },
-                     minRange: 60 * 24 * 3600000 // fourteen days
-                  },
-
-                  yAxis: {
-                     type: 'linear',
-                     title: {
-                        text: args.hc_ylabel
-                     },
-                     max:1,
-                     min:0,
-                     minorTickInterval: 0.05,
-                     labels: {
-                        formatter: function () {
-                           return this.value;
-                        }
-                     }
-                  },
-
-                  plotOptions : {
-                     series : {
-                        point: {
-                           events: {
-                              click: function () {
-                                 fetchSimilarityInformation([{name:'edition', value:dateToEdition[this.x]} ]);
-                              }
-                           }
-                        },
-                        events: {
-                           legendItemClick: function(event) {
-
-                              var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
-
-                              if (!defaultBehaviour) {
-
-                                 var seriesIndex = this.index;
-                                 var series = this.chart.series;
-
-                                 var reset = this.isolated;
-
-
-                                 for (var i = 0; i < series.length; i++)
-                                 {
-                                    if (series[i].index != seriesIndex)
-                                    {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(false, false)
-                                          series[i].isolated=false; 
+                        };
+   
+   options.plotOptions.series.point = {
+                                       events: {
+                                          click: function () {
+                                             fetchSimilarityInformation([{name:'edition', value:GLOBALS.dateToEdition[this.x]} ]);
+                                          }
                                        }
-
-                                    } else {
-                                       if (reset) {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=false;
-                                       } else {
-                                          series[i].setVisible(true, false)
-                                          series[i].isolated=true;
-                                       }
-                                    }
-                                 }
-                                 this.chart.redraw();
-
-                                 return false;
-                              }
-                           }
-                        }
-                     }
-                  },
-
-                  tooltip: {
-                     shared:true,
-                     dateTimeLabelFormats:{
-                        hour:"%B %Y", 
-                        minute:"%B %Y"
-                     }
-                  },
-                  legend : {
-                     align : 'right',
-                     verticalAlign: 'top',
-                     layout: 'vertical',
-                     y:20
-                  },
-
-                  series: [],
-
-                  colors : MAXIMALLY_DISTINCT_COLORS,
-
-                  exporting: {
-                     enabled: true,
-                     sourceWidth  : 1600,
-                     sourceHeight : 900,
-                     csv: {
-                        dateFormat: '%Y-%m-%d'
-                     }
-                  }
+                                    };
+   
+   options.tooltip.pointFormatter = function(){
+      return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 2)+'</b><br/>';
    }
    
-   if (!utility.isUndefined( args.hc_data ) ){
-      for (var i = 0; i < args.hc_data.series.length; i++) {
-         var series = args.hc_data.series[i];
-         var name = series.name;
-         var data = []
-   
-         for (var j = 0; j < series.data.length; j++) {
-            var point = series.data[j];
-            data.push([point.x,point.y]);
-         }
-   
-         options.series.push({
-            name : name,
-            data : data
-         })
-   
-      }
    
 
-   HC.charts.similarity.options = options;
-   
-   
-   //This will fail the first time around since the tabs in tab view are dynamic. This means
-   // that the container for the chart does not yet exist. We will create the chart on tab switch.
-   if ($('#hc_similarity_container').length != 0) {
-      HC.charts.similarity.recreate(options);
-   }
-   //PF('tableEnrichmentWdg').filter()
-   }
+   plotting.charts.similarity.options = options;
+   plotting.charts.similarity.recreate(options);
 
 }
 
 function handleGraphSelected(xhr, status, args) {
+   try {
+      args.HC_enrichment = JSON.parse(args.HC_enrichment);
+   } catch(e) {
+      console.log(e);
+      return;
+   }
+   
    console.log(args);
    
-   var dateToEdition = JSON.parse(args.hc_dateToEdition);
-   
-   var options = {};
-   options.chart = {
-                    renderTo: 'hc_enrichment_container',
-                    zoomType: 'xy',
-                    resetZoomButton: {
-                       position: {
-                          align: 'left',
-                          // verticalAlign: 'top', // by default
-                          x: 0,
-                          y: -35,
-                       }
-                    },
-                 };
-   options.title = { text: args.hc_title };
+   args.HC_enrichment.renderTo = 'hc_enrichment_container';
+   var options = plotting.defaultHCOptions(args.HC_enrichment, false, true);
+   options.chart.zoomType = 'xy';
+  
    options.subtitle = {
       text: 'Select an area by dragging across the lower chart'
   };
-   options.xAxis = {
-                    type: 'datetime',
-                    title: {
-                       text: args.hc_xlabel
-                    },
-                    minRange: 60 * 24 * 3600000 // fourteen days
-                 };
-   options.yAxis = {};
-   options.plotOptions = {
-                          series : {
-                             states : {
-                                        hover: {
-                                           lineWidth: 2
-                                        }
-                             },
-                             events: {
-                                legendItemClick: function(event) {
-
-                                   var defaultBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
-
-                                   if (!defaultBehaviour) {
-
-                                      var seriesIndex = this.index;
-                                      var series = this.chart.series;
-
-                                      var reset = this.isolated;
-
-
-                                      for (var i = 0; i < series.length; i++)
-                                      {
-                                         if (series[i].index != seriesIndex)
-                                         {
-                                            if (reset) {
-                                               series[i].setVisible(true, false)
-                                               series[i].isolated=false;
-                                            } else {
-                                               series[i].setVisible(false, false)
-                                               series[i].isolated=false; 
-                                            }
-
-                                         } else {
-                                            if (reset) {
-                                               series[i].setVisible(true, false)
-                                               series[i].isolated=false;
-                                            } else {
-                                               series[i].setVisible(true, false)
-                                               series[i].isolated=true;
-                                            }
-                                         }
-                                      }
-                                      this.chart.redraw();
-
-                                      return false;
-                                   }
-                                },
-                                mouseOver: function() {
-                                   var item = this.legendItem;
-                                   Highcharts.each(this.chart.series, function(series, i) {
-                                       if(series.legendItem !== item && series.legendItem != null && series.visible) {
-                                           series.legendItem.css({
-                                               color: 'grey' 
-                                           });
-//                                           series.legendLine.attr({
-//                                               stroke: 'grey' 
-//                                           });
-//                                           series.legendSymbol.attr({
-//                                               fill: 'grey' 
-//                                           });
-                                       }
-                                   });
-                                   
-                               },
-                               mouseOut: function() {
-                                   Highcharts.each(this.chart.series, function(series, i) {
-                                       if(series.legendItem != null && series.visible) {
-                                           series.legendItem.css({
-                                               color: 'black' 
-                                           });
-//                                           series.legendLine.attr({
-//                                               stroke: series.color 
-//                                           });
-//                                           series.legendSymbol.attr({
-//                                               fill: series.color
-//                                           });
-                                       }
-                                   });
-                               }
-                             }
-                          }
-                       };
-   options.tooltip = {};
-   options.legend = {
-                     enabled:true,
-                     align : 'right',
-                     verticalAlign: 'top',
-                     layout: 'vertical',
-                     y:20
-                  };
-   options.series = [];
-   options.colors = MAXIMALLY_DISTINCT_COLORS;
-   options.exporting = {
-      enabled: true,
-      sourceWidth  : 1600,
-      sourceHeight : 900,
-      csv: {
-         dateFormat: '%Y-%m-%d'
+   options.plotOptions.series.states = {
+      hover: {
+         lineWidth: 2
       }
-   }
+};
+   options.plotOptions.series.events.mouseOver = function() {
+      var item = this.legendItem;
+      Highcharts.each(this.chart.series, function(series, i) {
+          if(series.legendItem !== item && series.legendItem != null && series.visible) {
+              series.legendItem.css({
+                  color: 'grey' 
+              });
+//              series.legendLine.attr({
+//                  stroke: 'grey' 
+//              });
+//              series.legendSymbol.attr({
+//                  fill: 'grey' 
+//              });
+          }
+      });
+      
+  };
+   options.plotOptions.series.events.mouseOut = function() {
+      Highcharts.each(this.chart.series, function(series, i) {
+         if(series.legendItem != null && series.visible) {
+             series.legendItem.css({
+                 color: 'black' 
+             });
+//             series.legendLine.attr({
+//                 stroke: series.color 
+//             });
+//             series.legendSymbol.attr({
+//                 fill: series.color
+//             });
+         }
+     });
+ };
    
-   if ( args.hc_type == "pvalue") {
+   if ( args.HC_enrichment.type == "pvalue") {
       options.plotOptions.series.point = {
                                              events: {
                                                 click: function () {
-                                                   fetchTermInformation([{name:'termId', value:this.series.name},{name:'edition', value:dateToEdition[this.x]} ]);
+                                                   fetchTermInformation([{name:'termId', value:this.series.name},{name:'edition', value:GLOBALS.dateToEdition[this.x]} ]);
                                                 },
                                              }
                                           };
@@ -492,7 +262,7 @@ function handleGraphSelected(xhr, status, args) {
                        type: 'logarithmic',
                        reversed: true,
                        title: {
-                          text: args.hc_ylabel
+                          text: args.HC_enrichment.yLabel
                        },
                        max:1,
                        minorTickInterval: 0.1,
@@ -516,20 +286,25 @@ function handleGraphSelected(xhr, status, args) {
       options.tooltip = {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
+                         useHTML: true,
                          formatter:function(){
-                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> p-value: " + this.y;
+                            return '<span style="color:' + this.series.color + '">\u25CF</span><b>' + this.series.name +
+                            '</b><br/><p>Name: ' + this.series.options.title + 
+                            '</p><p>Date: ' + new Date(this.x).toLocaleDateString() + 
+                            "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] + 
+                            "</p><p>P-value: " + utility.sigFigs(this.y, 3) + 
+                            "</p>";
                          }
       };
       
       // add threshold line
-      var cutoffs = JSON.parse(args.hc_cutoffs);
       var cutoffsData = []
 
-      for (var key in cutoffs) {
-         cutoffsData.push([parseInt(key,10), cutoffs[key]]);
+      for (var key in args.HC_enrichment.cutoffs) {
+         cutoffsData.push([parseInt(key,10), args.HC_enrichment.cutoffs[key]]);
       }
       
-      options.series.push({
+      options.series.unshift({
          name: "Threshold",
          data: cutoffsData,
          type: 'line',
@@ -543,20 +318,20 @@ function handleGraphSelected(xhr, status, args) {
       
    } else {
       //rank
-      var maxRank = args.hc_maxRank;
+      var maxRank = args.HC_enrichment.maxRank;
 
-      var opacity = Math.min(10/args.hc_data.series.length+1/100,0.1);
+      var opacity = Math.min(10/args.HC_enrichment.data.series.length+1/100,0.1);
       //var opacity = Math.min(10/maxRank+1/100,0.1);
 
-      var dateToMaxSigRank = JSON.parse(args.hc_dateToMaxSigRank);
-      var topN = args.hc_topN;
-      var outsideTopNCheck = args.hc_outsideTopNCheck;
-      var insignificantCheck = args.hc_insignificantCheck;
+      var dateToMaxSigRank = args.HC_enrichment.dateToMaxSigRank;
+      var topN = args.HC_enrichment.topN;
+      var outsideTopNCheck = args.HC_enrichment.outsideTopNCheck;
+      var insignificantCheck = args.HC_enrichment.insignificantCheck;
 
       options.plotOptions.series.point = {
                                           events: {
                                              click: function () {
-                                                fetchTermInformation([{name:'termId', value:this.series.name},{name:'edition', value:dateToEdition[this.x]}, {name:'value', value:utility.roundHalf(this.y)}, {name:'valueLabel', value:"Relative Rank"} ]);
+                                                fetchTermInformation([{name:'termId', value:this.series.name},{name:'edition', value:GLOBALS.dateToEdition[this.x]}, {name:'value', value:utility.roundHalf(this.y)}, {name:'valueLabel', value:"Relative Rank"} ]);
                                              }
                                           }
                                        };
@@ -571,7 +346,7 @@ function handleGraphSelected(xhr, status, args) {
                        min:0,
                        allowDecimals: false,
                        title: {
-                          text: args.hc_ylabel
+                          text: args.HC_enrichment.yLabel
                        },
                        labels: {
                           formatter: function () {
@@ -580,13 +355,19 @@ function handleGraphSelected(xhr, status, args) {
                        }
       };
       options.plotOptions.series.shadow = {opacity:opacity};
-      options.plotOptions.series.lineWidth = 0;
+      options.plotOptions.series.lineWidth = 0.01;
 
       options.tooltip = {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
+                         useHTML: true,
                          formatter:function(){
-                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> Relative Rank: " + ( this.y >= dateToMaxSigRank[this.x] ? "Insignificant": utility.roundHalf(this.y) );
+                            return '<span style="color:' + this.series.color + '">\u25CF</span><b>' + this.series.name +
+                            '</b><br/><p>Name: ' + this.series.options.title + 
+                            '</p><p>Date: ' + new Date(this.x).toLocaleDateString() + 
+                            "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] + 
+                            "</p><p>Relative Rank: " + ( this.y >= dateToMaxSigRank[this.x] ? "Insignificant": utility.roundHalf(this.y) ) + 
+                            "</p>";
                          }
       };
       
@@ -625,7 +406,7 @@ function handleGraphSelected(xhr, status, args) {
             var s = {name:"Insignificant Region", 
                      type: 'polygon', 
                      data: polygonPoints.slice(), 
-                     color: Highcharts.Color(MAXIMALLY_DISTINCT_COLORS[2]).setOpacity(0.2).get(),
+                     color: Highcharts.Color(plotting.MAXIMALLY_DISTINCT_COLORS[2]).setOpacity(0.2).get(),
                      enableMouseTracking: false,
                      includeInCSVExport: false};
 //            for (var i = polygonPoints.length-1; i >= 0; i--) {
@@ -637,7 +418,7 @@ function handleGraphSelected(xhr, status, args) {
             var p = polygonPoints[0];
             s.data.push([ p[0], maxRank +0.5 ])
 
-            options.series.push(s);
+            options.series.unshift(s);
             //console.log(s);
          }
          if (outsideTopNCheck ) {
@@ -647,7 +428,6 @@ function handleGraphSelected(xhr, status, args) {
             for (var i = 0; i < polygonPoints.length; i++) {
                var barrierPoint = polygonPoints[i];
                if ( barrierPoint[1] < topN - 0.5 ) {
-                     console.log(i)
                   polygonPoints[i][1] = topN - 0.5;
                }
                
@@ -656,7 +436,7 @@ function handleGraphSelected(xhr, status, args) {
             s = {name:"Outside Top " + topN, 
                  type: 'polygon', 
                  data: polygonPoints.slice(), 
-                 color: Highcharts.Color(MAXIMALLY_DISTINCT_COLORS[0]).setOpacity(0.2).get(),
+                 color: Highcharts.Color(plotting.MAXIMALLY_DISTINCT_COLORS[0]).setOpacity(0.2).get(),
                  enableMouseTracking: false,
                  includeInCSVExport: false};
 //            for (var i = polygonPoints.length-1; i >= 0; i--) {
@@ -667,7 +447,7 @@ function handleGraphSelected(xhr, status, args) {
             s.data.push([ p[0], topN - 0.5 ])
             var p = polygonPoints[0];
             s.data.push([ p[0], topN - 0.5 ])
-            options.series.push(s);
+            options.series.unshift(s);
             //console.log(s);
          }
       }
@@ -680,29 +460,16 @@ function handleGraphSelected(xhr, status, args) {
 
 
    }
-
-   for (var i = 0; i < args.hc_data.series.length; i++) {
-      var series = args.hc_data.series[i];
-      var name = series.name;
-      var data = []
-
-      for (var j = 0; j < series.data.length; j++) {
-         var point = series.data[j];
-         // We disabled markers on the point level because disabling it at the series level removes series symbols from the legend.
-         // This is the least intrusive way of getting around this.
-         data.push({x:point.x,y:utility.isUndefined( point.y ) ? null : point.y, marker:{enabled:false}});
-      }
-      options.series.push({
-         name : name,
-         data : data
-      });
-
+   
+   for (var i = 0; i <  options.series.length; i++) {
+      var series = options.series[i];
+      series.marker =  {enabled: false};
    }
    
-   if (!utility.isUndefined( args.hc_errors ) && args.hc_type == "pvalue" ){
+   if (!utility.isUndefined( args.HC_enrichment.errors ) && args.HC_enrichment.type == "pvalue" ){
       // Essentially if stability graph
-      console.log("Errors",args.hc_errors);
-      var series = args.hc_errors.series[0];
+      console.log("Errors", args.HC_enrichment.errors);
+      var series = args.HC_enrichment.errors.series[0];
       var name = series.name;
       var data = []
 
@@ -734,13 +501,28 @@ function handleGraphSelected(xhr, status, args) {
 
       });
       
-      var dateToStabilityScore = JSON.parse(args.hc_dateToStabilityScore);
+      var dateToStabilityScore = args.HC_enrichment.dateToStabilityScore;
       
+      // This is necessary as special double types are not allowed in the JSON spec
+      // We bypass this via a string type adaptor for Infinity and NaN
+      for(var key in dateToStabilityScore) {
+         if(dateToStabilityScore.hasOwnProperty(key)) {
+            dateToStabilityScore[key] = Number(dateToStabilityScore[key]);
+         }
+     }
+           
       options.tooltip = {
                          headerFormat: '<b>{series.name}</b><br />',
                          pointFormat: 'x = {point.x}, y = {point.y}',
+                         useHTML: true,
                          formatter:function(){
-                            return '<span style="color:'+this.series.color+'">\u25CF</span><b>'+this.series.name+'</b><br/> Date: ' + new Date(this.x).toLocaleDateString() + "<br/> Edition: " + dateToEdition[this.x] + "<br/> p-value: " + this.y + "<br/> Stability Score: " + dateToStabilityScore[this.x];
+                            return '<span style="color:' + this.series.color + '">\u25CF</span><b>' + this.series.name +
+                               '</b><br/><p>Name: ' + this.series.options.title + 
+                               '</p><p>Date: ' + new Date(this.x).toLocaleDateString() + 
+                               "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] + 
+                               "</p><p>P-value: " + utility.sigFigs(this.y, 3) + 
+                               "</p><p>Stability Score: " + utility.sigFigs(dateToStabilityScore[this.x], 3) + 
+                               "</p>";
                          }
       }
       
@@ -760,8 +542,8 @@ function handleGraphSelected(xhr, status, args) {
    
    
    // create the detail chart
-   HC.charts.enrichment.options = options;
-   HC.charts.enrichment.recreate(options);  
+   plotting.charts.enrichment.options = options;
+   plotting.charts.enrichment.recreate(options);  
    
    // create the master chart
    var optionsCopy = $.extend(true, {}, options);
@@ -783,10 +565,10 @@ function handleGraphSelected(xhr, status, args) {
                                   xAxis = this.xAxis[0];
 
                                   // Smooth hacks
-                                  HC.charts.enrichment.chart.xAxis[0].setExtremes(min, max);
-                                  HC.charts.enrichment.chart.showResetZoom();
-                                  var oldOnClick = HC.charts.enrichment.chart.resetZoomButton.element.onclick;
-                                  HC.charts.enrichment.chart.resetZoomButton.element.onclick = function(event) {
+                                  plotting.charts.enrichment.chart.xAxis[0].setExtremes(min, max);
+                                  plotting.charts.enrichment.chart.showResetZoom();
+                                  var oldOnClick = plotting.charts.enrichment.chart.resetZoomButton.element.onclick;
+                                  plotting.charts.enrichment.chart.resetZoomButton.element.onclick = function(event) {
                                      oldOnClick();
                                      xAxis.removePlotBand('mask-selection');
                                   }
@@ -841,23 +623,25 @@ function handleGraphSelected(xhr, status, args) {
       optionsCopy.series.shift();
    }
 
-   HC.charts.enrichmentMaster.options = optionsCopy;
-   HC.charts.enrichmentMaster.recreate(optionsCopy); 
+   plotting.charts.enrichmentMaster.options = optionsCopy;
+   plotting.charts.enrichmentMaster.recreate(optionsCopy); 
    
 }
 
 
 function enrichmentChartDlgResize() {
-   HC.charts.enrichment.resize();
-   HC.charts.enrichmentMaster.resize();
+   plotting.charts.enrichment.resize();
+   plotting.charts.enrichmentMaster.resize();
 }
 
 function reInitializeCharts() {
    try {
-      HC.removeAllCharts();
-      HC.createNewChart( 'similarity' );
-      HC.createNewChart( 'enrichment' );
-      HC.createNewChart( 'enrichmentMaster' );
+      GLOBALS = {};
+      plotting.removeAllCharts();
+      plotting.createNewChart( 'terms' );
+      plotting.createNewChart( 'similarity' );
+      plotting.createNewChart( 'enrichment' );
+      plotting.createNewChart( 'enrichmentMaster' );
    } catch (e) {
       console.log('Error initializing charts');
    }
@@ -893,31 +677,6 @@ function pointBreakColumn(e) {
 $(document).ready(function() {
    //escDialog();
 
-   HC = {
-         charts: {},
-         chart : function(id) {
-            return this.charts[id];
-         },
-         createNewChart :  function(id) {
-            if ( this.charts[id] ) {
-               throw "Id already exists"
-            } else {
-               this.charts[id]= new HChart(id) ;
-            }
-         },
-         removeAllCharts: function() {
-            
-            for (name in this.charts) {
-               
-               this.charts[name].destroy();
-               
-            }
-            
-            this.charts = {};
-            
-         }
-   };
-
    // This self-executing anon func creates a resize event on the enrichment chart dialog
    // that will only run once the resize event has stopped
    ;(function(){
@@ -927,6 +686,12 @@ $(document).ready(function() {
          id = setTimeout(enrichmentChartDlgResize, 200);
       });
    })();
+   
+   // Resize plots on window resize
+   window.onresize = function(event) {
+      var activeTabIndex = PF('tabEnrichWdg').getActiveIndex();
+      tabShowed(activeTabIndex);
+  }
       
    /**
     * Extend the Axis.getLinePath method in order to visualize breaks with two parallel

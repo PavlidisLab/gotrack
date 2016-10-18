@@ -38,6 +38,7 @@
 		<h:outputScript library="js" name="dagre-d3.min.js" />
 
 
+		<h:outputScript library="js" name="plotting.js" />
 		<h:outputScript library="js" name="term.js" />
 
 		<h:outputScript rendered="#{termView.trackedTerms != null}">
@@ -87,7 +88,7 @@
 						<f:facet name='title'>
 							<h:outputText value="Term Information " />
 							<p:commandButton id="termInfoTabHelpBtn" value=""
-								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								styleClass="no-value no-background fa-fix" icon="fa fa-question-circle" title="Help"
 								type="button" />
 						</f:facet>
 					<p:outputPanel>
@@ -139,24 +140,24 @@
 						<f:facet name='title'>
 							<h:outputText value="Child Terms " />
 							<p:commandButton id="childTabHelpBtn" value=""
-								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								styleClass="no-value no-background fa-fix" icon="fa fa-question-circle" title="Help"
 								type="button" />
 						</f:facet>
 						<p:outputPanel>
 							<p:dataTable var="child" value="#{termView.currentTerm.children}"
 								styleClass="child-table">
-								<p:column headerText="Relationship" width="25%">
+								<p:column headerText="Relationship" width="100px">
 									<h:outputText value="#{child.type}" />
 								</p:column>
 
-								<p:column headerText="Term" width="25%">
+								<p:column headerText="Term" width="100px">
 									<p:link value="#{child.relation.goId}" outcome="terms"
 										target="_blank">
 										<f:param name="query" value="#{child.relation.goId}" />
 									</p:link>
 								</p:column>
 
-								<p:column headerText="Name" width="50%">
+								<p:column headerText="Name">
 									<h:outputText value="#{child.relation.name}" />
 								</p:column>
 							</p:dataTable>
@@ -166,7 +167,7 @@
 						<f:facet name='title'>
 							<h:outputText value="History " />
 							<p:commandButton id="historyTabHelpBtn" value=""
-								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								styleClass="no-value no-background fa-fix" icon="fa fa-question-circle" title="Help"
 								type="button" />
 						</f:facet>
 						<p:outputPanel>
@@ -181,7 +182,7 @@
 						<f:facet name='title'>
 							<h:outputText value="Gene Breakdown " />
 							<p:commandButton id="geneTabHelpBtn" value=""
-								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								styleClass="no-value no-background fa-fix" icon="fa fa-question-circle" title="Help"
 								type="button" />
 						</f:facet>
 						<div id="loading-spinner-gene" class="loading"
@@ -193,7 +194,7 @@
 						<f:facet name='title'>
 							<h:outputText value="Evidence Breakdown " />
 							<p:commandButton id="evidenceTabHelpBtn" value=""
-								styleClass="icon-only" icon="fa fa-question-circle" title="Help"
+								styleClass="no-value no-background fa-fix" icon="fa fa-question-circle" title="Help"
 								type="button" />
 						</f:facet>
 						<div id="loading-spinner-evidence" class="loading"

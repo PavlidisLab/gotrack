@@ -34,7 +34,6 @@ import java.util.List;
 public class Series {
 
     private String name;
-    private Object extra;
     private List<Point> data = new ArrayList<>();
     private boolean sorted = true;
 
@@ -72,24 +71,20 @@ public class Series {
     }
 
     public Collection<Point> getData() {
+        this.sort();
+        return data;
+    }
+
+    public void sort() {
         if ( !this.sorted ) {
             Collections.sort( data );
             this.sorted = true;
         }
-        return data;
     }
 
     public void setData( Collection<Point> data ) {
         this.sorted = false;
         this.data = new ArrayList<>( data );
-    }
-
-    public Object getExtra() {
-        return extra;
-    }
-
-    public void setExtra( Object extra ) {
-        this.extra = extra;
     }
 
     @Override

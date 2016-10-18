@@ -86,18 +86,9 @@ div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph > sp
 
 /* ************************ */
 
-tbody > tr.ui-widget-content.ui-state-highlight {
-/* 	background:#f7e9b0; */
-	border:inherit;
-	
-}
 /* tbody > tr.ui-widget-content.ui-state-highlight td:not(:first-child) {
     background:#FFFFFF;
 } */
-
-tbody > tr.ui-widget-content.ui-state-highlight > td {
-	color:#4F4F4F;
-}
 
 i.fa.fa-external-link.fa-sm:hover {
 	color:blue;
@@ -112,21 +103,21 @@ div.data-grid-height-restricted > div.ui-datagrid-content {
   overflow-y: auto;
 }
 
-button.smallBtn {
+/* button.smallBtn {
 	font-size:0.8em !important;
 }
 
 button.smallBtn > span.fa {
 	margin-top:-6px;
-}
+} */
 
-tr.ui-widget-content.significant td:last-child, tr.ui-widget-content.significant td:nth-last-child(2) {
+tr.ui-widget-content.significant td:nth-last-child(2) {
 	background:#DCF9D4;
 }
 
-tr.ui-widget-content.not-significant td:last-child, tr.ui-widget-content.not-significant td:nth-last-child(2) {
+/* tr.ui-widget-content.not-significant td:last-child, tr.ui-widget-content.not-significant td:nth-last-child(2) {
 	background:#EDCCCC;
-}
+} */
 
 /** Color Gradient **/
 .stability-gradient.stability-gradient0 {
@@ -204,4 +195,28 @@ div.options-overlay > div.ui-overlaypanel-content {
 
 div.options-overlay > div.ui-overlaypanel-content > p {
 	margin:0.5em;
+}
+
+div#hc_enrichment_container g.highcharts-legend g.highcharts-legend-item > path {
+	stroke-width: 2 !important;
+}
+
+/* Fixes white background display issue for tables embedded within other table headers */
+div.ui-datatable-header table > tbody > tr.ui-widget-content {
+	background: inherit;
+}
+
+/* For HTML tooltips on Highcharts plot where GOTerm names make svg tooltips overly wide */
+.highcharts-tooltip > span {
+	height:auto;
+	width:250px;
+	overflow:auto;
+	white-space:normal !important;
+}
+    
+.highcharts-tooltip > span > p {
+	margin:0 15px;
+    text-indent: -15px;
+    line-height:1.2;
+    margin-top:3px;
 }

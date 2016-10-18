@@ -38,18 +38,26 @@ public class ChartValues {
     }
 
     public boolean addSeries( Series s ) {
+        s.sort();
         return series.add( s );
     }
 
     public Series addSeries( String name, List<Point> ps ) {
         Series s = new Series( name );
         s.addDataPoint( ps );
+        s.sort();
         series.add( s );
         return s;
     }
 
     public Set<Series> getSeries() {
         return series;
+    }
+
+    public void sortSeries() {
+        for ( Series s : series ) {
+            s.sort();
+        }
     }
 
 }

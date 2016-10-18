@@ -6,6 +6,15 @@
    utility.isUndefined = function( variable ) {
       return ( typeof variable === 'undefined' );
    }
+   
+   utility.sigFigs = function(num, figs) {
+      try {
+         return num % 1 === 0 ? num : Number(num.toPrecision(figs));
+      } catch (e) {
+         console.log(e);
+         return num;
+      }
+   }
 
    utility.roundHalf = function(num) {
       num = Math.round(num*2)/2;

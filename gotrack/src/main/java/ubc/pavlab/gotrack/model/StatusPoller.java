@@ -35,6 +35,7 @@ public class StatusPoller {
     private List<String> statuses = new ArrayList<>();
     private final String completionAppend;
     private boolean previousHasCompleted = false;
+    private String currentStatus = "";
 
     public StatusPoller( String completionAppend ) {
         this.completionAppend = completionAppend;
@@ -56,12 +57,17 @@ public class StatusPoller {
         return statuses;
     }
 
+    public synchronized String getCurrentStatus() {
+        return currentStatus;
+    }
+
     public synchronized void newStatus( String status, int progress ) {
         if ( progress > 100 ) throw new RuntimeException( "Progress cannot be > 100%" );
         if ( progress < this.progress ) throw new RuntimeException( "Progress cannot go backwards" );
         previousHasCompleted = false;
         this.progress = progress;
         statuses.add( status );
+        currentStatus = status;
     }
 
     public synchronized void completeStatus() {
