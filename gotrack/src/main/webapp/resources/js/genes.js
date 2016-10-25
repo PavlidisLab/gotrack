@@ -1,5 +1,5 @@
 function onLoad() {
-   $("#right-toggler").append('<span class="vertical toggled-header">Functionality</span>');
+   $("#right-toggler").append('<span class="vertical toggled-header">Terms Ever Annotated</span>');
 }
 
 function centerResize() {

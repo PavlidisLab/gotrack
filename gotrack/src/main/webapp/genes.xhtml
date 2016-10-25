@@ -51,10 +51,10 @@
 	<ui:define name="left_right_layout">
 
 		<p:layoutUnit id="right" position="east" size="40%" minSize="300"
-			header="Functionality" resizable="true" collapsible="true"
+			header="Terms Ever Annotated" resizable="true" collapsible="true"
 			style="text-align:center" collapsed="#{geneView.gene == null}">
 			<f:facet name="header">
-				<h:outputText value="Functionality" />
+				<h:outputText value="Terms Ever Annotated" />
 				<p:commandButton id="rightLayoutHelpBtn" value=""
 								styleClass="no-value no-background fa-fix" icon="fa fa-question-circle" title="Help"
 								type="button" />
@@ -72,9 +72,10 @@
                     
 					<p:column filterBy="#{termTableValue.term.goId}" filterMatchMode="contains"
 						headerText="Id" width="25%">
-						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{termTableValue.term.goId}"
-							target="_blank"><i class="fa fa-external-link fa-sm"
-							style="font-size: 0.7em;" /> </a>#{termTableValue.term.goId}
+						<i class="fa fa-external-link fa-sm" style="font-size: 0.7em;" /> 
+						<p:link value="  #{termTableValue.term.goId}" outcome="terms" target="_blank">
+							<f:param name="query" value="#{termTableValue.term.goId}" />
+						</p:link>
 					</p:column>
 					<p:column filterBy="#{termTableValue.term.aspect}" filterMatchMode="in"
 						headerText="Aspect" style="width:150px;">
@@ -339,9 +340,10 @@
 					rowStyleClass="#{tableValue.comparison}-color">
 					<p:column filterBy="#{tableValue.term.goId}" filterMatchMode="contains"
 						headerText="Id" style="width:120px;">
-						<a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{tableValue.term.goId}"
-							target="_blank"><i class="fa fa-external-link fa-sm"
-							style="font-size: 0.7em;" /> </a>#{tableValue.term.goId}
+						<i class="fa fa-external-link fa-sm" style="font-size: 0.7em;" /> 
+						<p:link value="  #{tableValue.term.goId}" outcome="terms" target="_blank">
+							<f:param name="query" value="#{tableValue.term.goId}" />
+						</p:link>
 					</p:column>
 					<p:column filterBy="#{tableValue.term.aspect}" filterMatchMode="in"
 						headerText="Aspect" style="width:150px;">
@@ -442,6 +444,7 @@
 					<p><b>Direct Annotation Count:</b> Distinct count of directly applied annotations.</p>
 					<p><b>Inferred Annotation Count:</b> Distinct count of directly applied annotations as well as their GO ancestors. 
 					   <i>Example: A gene directly annotated with <a target="_blank" class="underline" href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0033058">directional locomotion</a> is also implicitly annotated with its parents (<a target="_blank" class="underline" href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0040011">locomotion</a>).</i></p>
+					<p><i>Click</i> on the graph to bring up options to view <b>existing</b>, <b>newly added</b>, or <b>newly removed</b> terms at that timepoint. </p>
 				</p:overlayPanel>
 				<p:overlayPanel for=":centerTabViewForm:centerTabView:similarityTabHelpBtn" hideEffect="fade"
 							style="width:600px;text-align:left;">

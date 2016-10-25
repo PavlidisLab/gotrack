@@ -80,3 +80,7 @@ tr.gene-table-term-current > td > div.gene-term-existence > div.current {
 tr.gene-table-term-previous > td > div.gene-term-existence > div.previous {
     background-color: #ffcccc;
 }
+
+i.fa.fa-external-link:hover {
+	color: inherit;
+}
