@@ -20,8 +20,8 @@
 		var _gaq = _gaq || [];
 		var pluginUrl = '//www.google-analytics.com/plugins/ga/inpage_linkid.js';
 		_gaq.push([ '_require', 'inpage_linkid', pluginUrl ]);
-		_gaq.push([ '_setAccount', "settingsCache.getProperty('gotrack.ga_tracker')" ]);
-		_gaq.push([ '_setDomainName', "settingsCache.getProperty('gotrack.ga_domain')" ]);
+		_gaq.push([ '_setAccount', "#{settingsCache.getProperty('gotrack.ga_tracker')}" ]);
+		_gaq.push([ '_setDomainName', "#{settingsCache.getProperty('gotrack.ga_domain')}" ]);
 		_gaq.push([ '_trackPageview' ]);
 		(function() {
 		   var ga = document.createElement('script');
@@ -35,7 +35,7 @@
 		if ( typeof googleAnalyticsTrackPageviewIfConfigured === 'undefined' ) {
 		   var googleAnalyticsTrackPageviewIfConfigured = googleAnalyticsTrackPageviewIfConfigured || function(pageURL) {
 		      if ( typeof _gaq !== 'undefined' ) {
-		         _gaq.push([ '_setAccount', "settingsCache.getProperty('gotrack.ga_tracker')" ]);
+		         _gaq.push([ '_setAccount', "#{settingsCache.getProperty('gotrack.ga_tracker')}" ]);
 		         _gaq.push([ '_trackPageview', pageURL ]);
 		      }
 		   };
