@@ -56,6 +56,7 @@ import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.beans.service.MultifunctionalityService;
 import ubc.pavlab.gotrack.beans.service.StatsService;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
 import ubc.pavlab.gotrack.model.Aggregate;
@@ -98,6 +99,9 @@ public class GeneView implements Serializable {
 
     @Inject
     private AnnotationService annotationService;
+
+    @Inject
+    private MultifunctionalityService multifunctionalityService;
 
     private Species species;
     private String query;
@@ -540,15 +544,9 @@ public class GeneView implements Serializable {
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
-            Integer total = cache.getGeneCount( species.getId(), ed );
-            if ( total != null ) {
-                Double multi = 0.0;
-                for ( GeneOntologyTerm t : entry.getValue().keySet() ) {
-                    Integer inGroup = cache.getInferredAnnotationCount( species.getId(), ed, t );
-                    if ( inGroup != null && inGroup < total ) {
-                        multi += 1.0 / ( inGroup * ( total - inGroup ) );
-                    }
-                }
+
+            Double multi = multifunctionalityService.multifunctionality( entry.getValue().keySet(), species, ed );
+            if ( multi != null ) {
                 // Scaled by 10^4
                 multiSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * multi );
             }
