@@ -30,7 +30,7 @@ import time
 log = logging.getLogger(__name__)
 # log.addHandler(logging.NullHandler())
 
-BASE_URL = "http://apu:8080/gotrack/rest/analysis/"
+BASE_URL = "http://apu:8080/gotrack/rest/"
 
 class Edition:
 	"""Represents an edition of GeneOntology Annotations"""
@@ -48,23 +48,33 @@ class Enrichment:
 
 def enrichment_historical(month, year, genes, species_id):
 	content = {'month':month, 'year':year, 'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'enrichment/historical/'
+	location = BASE_URL + 'analysis/enrichment/historical/'
 	return __send_request(location, content)
 
 def enrichment_current(genes, species_id):
 	content = {'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'enrichment/'
+	location = BASE_URL + 'analysis/enrichment/'
 	return __send_request(location, content)
 
-def enrichment_ccomplete(genes, species_id):
+def enrichment_complete(genes, species_id):
 	content = {'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'enrichment/complete/'
+	location = BASE_URL + 'analysis/enrichment/complete/'
 	return __send_request(location, content)
 
 def similarity(month, year, genes, species_id):
 	content = {'month':month, 'year':year, 'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'similarity/'
+	location = BASE_URL + 'analysis/similarity/'
 	return __send_request(location, content)
+
+def gene_complete(month, year, genes, species_id):
+    content = {'month':month, 'year':year, 'symbols':",".join(genes), 'speciesId':species_id}
+    location = BASE_URL + 'gene/complete/species/{speciesId}/symbol/{symbols}?month={month}&year={year}&minimal=true'.format(**content)
+    return __send_request(location)
+
+def gene_mf(month, year, genes, species_id):
+    content = {'month':month, 'year':year, 'symbols':",".join(genes), 'speciesId':species_id}
+    location = BASE_URL + 'gene/mf/species/{speciesId}/symbol/{symbols}?month={month}&year={year}&minimal=true'.format(**content)
+    return __send_request(location)
 
 
 def __send_request(location, content_dict=None):
