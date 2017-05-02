@@ -65,7 +65,7 @@ def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
             files = [f for f in glob.iglob(os.path.join(resource_directory, 'gene_association.goa*gz'))]
             folder_goa = {sp_map[sp]: {x[0]: x[1] for x in v} for sp, v in search_files_for_goa(files).iteritems()}
             log.info('GOA Editions found in resource directory: \n%s', "\n".join([sp + ": " + str(folder_goa.setdefault(sp_id, {}).keys())
-                       for sp, sp_id in sp_map.iteritems()]))
+                                                                                  for sp, sp_id in sp_map.iteritems()]))
         else:
             resource_directory = tempfile.mkdtemp()
             tmp_directory = resource_directory
@@ -112,7 +112,7 @@ def main(resource_directory=None, cron=False, no_dl=False, force_pp=False):
                 log.info("Checking {0}".format(sp))
                 dl_fge = download.fetch_goa_editions(sp)
                 ftp_goa_editions[sp_id] = dl_fge
-                missing = [(x, f) for x, f in dl_fge.iteritems()  if x not in folder_goa.setdefault(sp_id, {}) and
+                missing = [(x, f) for x, f in dl_fge.iteritems() if x not in folder_goa.setdefault(sp_id, {}) and
                            x not in db_goa[sp_id]]
                 missing_goa_editions_from_ftp[sp_id] = missing
                 if len(missing) > 0:
@@ -307,7 +307,7 @@ def preprocess_aggregates(gotrack=None):
         try:
             if ed > current_editions[sp_id][0]:
                 current_editions[sp_id] = [ed, go_ed]
-        except IndexError, e:
+        except IndexError:
             current_editions[sp_id] = [ed, go_ed]
 
     # in order to calculate jaccard similarity of terms over time
@@ -358,6 +358,7 @@ def push_to_production():
     log.info("Staging area has been pushed to production, a restart of GOTrack is now necessary")
     log.info("Remember to delete temporary old data tables if everything works")
 
+
 def aggregate_annotations(gotrack, ont, sp_id, ed):
     all_annotations_stream = gotrack.fetch_all_annotations(sp_id, ed)
 
@@ -370,7 +371,6 @@ def aggregate_annotations(gotrack, ont, sp_id, ed):
     direct_term_set_per_gene_id = defaultdict(set)
 
     # Propagation Cache for performance purposes
-    ancestor_cache = defaultdict(set)
     annotation_count = 0
 
     for go_id, gene_id in all_annotations_stream:
@@ -385,16 +385,13 @@ def aggregate_annotations(gotrack, ont, sp_id, ed):
             # Deal with inferred counts
             ancestors = ont.get_ancestors(term, True)
 
-
             for anc in ancestors:  # gene counts
                 gene_id_set_per_term[anc].add(gene_id)
 
             term_set_per_gene_id[gene_id].update(ancestors)
             direct_term_set_per_gene_id[gene_id].add(term)
 
-
     return annotation_count, direct_term_set_per_gene_id, term_set_per_gene_id, direct_counts_per_term, gene_id_set_per_term
-
 
 
 def process_aggregate(gotrack, ont, sp_id, ed, caches):
@@ -415,10 +412,10 @@ def process_aggregate(gotrack, ont, sp_id, ed, caches):
         # Calculate average multifunctionality
         avg_mf = 0
         for t, c in inferred_counts_per_term.iteritems():
-            if ( c < gene_count ):
-                avg_mf += 1.0/(gene_count - c)
+            if c < gene_count:
+                avg_mf += 1.0 / (gene_count - c)
 
-        avg_mf = avg_mf / gene_count
+        avg_mf /= gene_count
 
         # Calculate average Jaccard similarity to current edition
         sum_direct_jaccard = 0
@@ -457,8 +454,9 @@ def process_aggregate(gotrack, ont, sp_id, ed, caches):
     # print "Ancestor %: {0}".format(100 * ancestor_total_time / total_time)
     # print "Write %: {0}".format(100 * write_total_time / total_time)
 
+
 def jaccard_similarity(s1, s2):
-    if s1==None or s2 == None:
+    if s1 is None or s2 is None:
         return None
     if len(s1) == 0 and len(s2) == 0:
         return 1.0
@@ -466,6 +464,7 @@ def jaccard_similarity(s1, s2):
         return 0.0
 
     return len(s1.intersection(s2)) / len(s1.union(s2))
+
 
 def check_database_consistency(gotrack, verbose=True):
     results = gotrack.fetch_consistency()
@@ -534,19 +533,19 @@ if __name__ == '__main__':
     group = parser.add_mutually_exclusive_group(required=True)
 
     group.add_argument('--push', dest='push', action='store_true',
-                        help='Push Staging to Production, does not insert data')
+                       help='Push Staging to Production, does not insert data')
 
     group.add_argument('--meta', dest='meta', action='store_true',
-                        help='Display Connection and Table Information')
+                       help='Display Connection and Table Information')
 
     group.add_argument('--update', dest='update', action='store_true',
-                        help='Runs Update with options')
+                       help='Runs Update with options')
 
     group.add_argument('--update-push', dest='update_push', action='store_true',
-                        help='Runs Update with options followed by update with --push')
+                       help='Runs Update with options followed by update with --push')
 
     group.add_argument('--aggregate', dest='aggregate', action='store_true',
-                        help='Updates the aggregate tables only.')
+                       help='Updates the aggregate tables only.')
 
     parser.add_argument('--cron', dest='cron', action='store_true',
                         help='No interactivity mode')
@@ -555,13 +554,11 @@ if __name__ == '__main__':
     parser.add_argument('--force-pp', dest='force_pp', action='store_true',
                         help='Force preprocessing of database (regardless of need)')
 
-
-
     args = parser.parse_args()
     if args.meta:
         # Push Staging to Production
         log.info("Host: {host}, db: {db}, user: {user}".format(**CREDS))
-        log.info('Tables: \n%s', "\n".join(sorted([str(x) for x in gtdb.GOTrack.TABLES.iteritems()])))
+        log.info('Tables: \n%s', "\n".join(sorted([str(table) for table in gtdb.GOTrack.TABLES.iteritems()])))
     elif args.update_push:
         # Update followed by push to production
         main(args.resource_directory, args.cron, args.dl, args.force_pp)
@@ -578,6 +575,3 @@ if __name__ == '__main__':
         main(args.resource_directory, args.cron, args.dl, args.force_pp)
     else:
         log.error("No goal supplied.")
-
-
-

@@ -93,7 +93,7 @@ def fetch_goa_editions(sp):
         ftp.cwd(ftp_directory)
         ftp_files = ftp.nlst()
 
-        pattern = r"^gene_association.goa_"+sp+".*\.(.*)\..*$"
+        pattern = r"^gene_association.goa_" + sp + ".*\.(.*)\..*$"
         for f in ftp_files:
             fname = os.path.split(f)[1]  # Get filename
             match = re.match(pattern, fname)  # Get number between two periods

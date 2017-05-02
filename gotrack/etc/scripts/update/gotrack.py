@@ -237,7 +237,7 @@ class GOTrack:
                 try:
                     # Insert new edition into go_edition table and retrieve insertion primary key
                     log.info("Inserting New GO Edition")
-                    self.insert_multiple(GOTrack.TABLES['go_edition'], ["date"],  [[ont.date.strftime('%Y-%m-%d')]],
+                    self.insert_multiple(GOTrack.TABLES['go_edition'], ["date"], [[ont.date.strftime('%Y-%m-%d')]],
                                          1, cur, False)
                     go_edition_id = self.con.insert_id()
 
@@ -681,7 +681,7 @@ class GOTrack:
             with self.con as cur:
 
                 try:
-                    data_gen = ((sp_id, ed, term.id, d_map[term] if term in d_map else None , i_map[term] if term in i_map else None) for term in (d_map.viewkeys() | i_map.keys()))
+                    data_gen = ((sp_id, ed, term.id, d_map[term] if term in d_map else None, i_map[term] if term in i_map else None) for term in (d_map.viewkeys() | i_map.keys()))
 
                     self.insert_multiple(GOTrack.TABLES['pp_go_annotation_counts_staging'],
                                          ["species_id", "edition", "go_id", "direct_annotation_count", "inferred_annotation_count"],
