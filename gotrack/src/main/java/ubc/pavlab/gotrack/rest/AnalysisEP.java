@@ -57,6 +57,7 @@ import ubc.pavlab.gotrack.analysis.SimilarityMethod;
 import ubc.pavlab.gotrack.analysis.SimilarityScore;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.beans.service.EnrichmentService;
+import ubc.pavlab.gotrack.beans.service.MultifunctionalityService;
 import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
@@ -85,6 +86,9 @@ public class AnalysisEP {
 
     @Inject
     EnrichmentService enrichmentService;
+
+    @Inject
+    private MultifunctionalityService multifunctionalityService;
 
     @Context
     UriInfo uri;
@@ -481,6 +485,8 @@ public class AnalysisEP {
 
             Edition currentEdition = cache.getCurrentEditions( species.getId() );
 
+            response.put( "current_edition", new JSONObject( currentEdition ) );
+
             EnrichmentAnalysis analysis = enrichmentService.enrichment(
                     Sets.newHashSet( closestEdition, currentEdition ), hitList,
                     species.getId(), mulTestCor, threshold, min, max, aspectsFilter );
@@ -510,6 +516,9 @@ public class AnalysisEP {
                 entryJSON.put( "top_terms", goSetToJSON( score.getTopTerms() ) );
                 entryJSON.put( "top_parents", goSetToJSON( score.getTopParents() ) );
                 entryJSON.put( "top_genes", score.getTopGenes() );
+
+                entryJSON.put( "top_parents_mf",
+                        multifunctionalityService.multifunctionality( score.getTopParents(), species, ed ) );
 
                 entryJSON.put( "values", valuesJSON );
 
