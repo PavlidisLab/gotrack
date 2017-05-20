@@ -196,6 +196,7 @@ def process_goa_gaf(f):
 
     with gzip.open(f, "r") as infile:
         for line in infile:
+            line=line.strip()
             if line.startswith('!'):
                 continue  # comment/metadata
             if line.strip():  # not empty
@@ -233,6 +234,7 @@ def process_goa_gpa(f):
 
     with gzip.open(f, "r") as infile:
         for line in infile:
+            line=line.strip()
             if line.startswith('!'):
                 continue  # comment/metadata
             if line.strip():  # not empty
@@ -268,6 +270,7 @@ def process_goa_gpi(f):
 
     with gzip.open(f, "r") as infile:
         for line in infile:
+            line=line.strip()
             if line.startswith('!'):
                 continue  # comment/metadata
             if line.strip():  # not empty
