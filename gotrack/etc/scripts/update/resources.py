@@ -248,7 +248,7 @@ class Resources:
         to_string = ['Current state of resources:',
                      'GO Editions found in resource directory: {0}'.format(len(self.go)),
                      'GOA Editions found in resource directory: {0}'.format(sum([len(goa_sp) for goa_sp in self.goa.values()])),
-                     'Accession history file (sec_ac.txt): ' + (self.sec_ac if self.sec_ac else 'NOT FOUND')]
+                     'Secondary accession file (sec_ac.txt): ' + (self.sec_ac if self.sec_ac else 'NOT FOUND')]
 
         if self.ftp_checked:
             if self.missing_go:

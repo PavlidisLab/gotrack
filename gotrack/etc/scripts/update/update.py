@@ -21,7 +21,7 @@ LOG = logging.getLogger()
 
 CREDS = {'host': 'abe',
          'user': 'gotrack',
-         'passwd': 'gotrack321#',
+         'passwd': 'XXXXXX',
          'db': 'gotrack'
          }
 
@@ -34,7 +34,6 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
         Ask - Insert new GO editions
         Ask - Insert new GOA editions
         Ask - Update sec_ac
-        ?Check consistency
         Ask - preprocess
     """
 
@@ -68,8 +67,8 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
                 res.download_missing_goa_data()
 
         if not res.sec_ac:
-            LOG.warn("Missing accession history file (sec_ac.txt)")
-            if query_yes_no("Download missing accession history file?"):
+            LOG.warn("Missing secondary accession file (sec_ac.txt)")
+            if query_yes_no("Download missing secondary accession file?"):
                 res.download_accession_history()
 
         LOG.info("Re-checking state of resource directory")
@@ -90,7 +89,14 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
                 LOG.info("Begin: %s", go_date.strftime('%Y-%m-%d'))
                 ont = Ontology.from_file_data(go_date, go_file)
                 gotrack.update_go_tables(ont)
-                #write_definitions
+
+        newest_go_date = max(new_go)
+        LOG.info("Newest ontology available for GO definitions: %s", newest_go_date.strftime('%Y-%m-%d'))
+        if cron or query_yes_no("Update GO definitions with this ontology? (Affected tables: '{go_definition}'"
+                                .format(**gotrack.tables)):
+            ont = Ontology.from_file_data(newest_go_date, new_go[newest_go_date])
+            gotrack.update_current_go_definitions(ont)
+
     else:
         LOG.info("There are no new GO Versions available to update")
 
@@ -143,31 +149,18 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
     else:
         LOG.info("There are no new GOA Editions available to update")
 
-    if res.sec_ac is not None and (cron or query_yes_no("Update accession history table? (Affected tables: '{sec_ac}')"
+    if res.sec_ac is not None and (cron or query_yes_no("Update secondary accession table? (Affected tables: '{sec_ac}')"
                                                         .format(**gotrack.tables))):
-        LOG.info("Updating accession history table")
+        LOG.info("Updating secondary accession table")
         data = parsers.process_sec_ac(res.sec_ac)
-        gotrack.stage_accession_history_table(data)
+        gotrack.update_secondary_accession_table(data)
 
-    if cron or query_yes_no("Pre-process database?"):
-        LOG.info("Checking database for consistency")
-
-        if cron or query_yes_no("Database requires preprocessing, run now? (Make sure new GO, GOA, and accession"
-                                "history data has been imported (Affects tables: "
-                                "'{pp_genes_staging}', '{pp_goa_staging}', '{pp_accession_staging}', "
-                                "'{pp_synonym_staging}', '{pp_edition_aggregates_staging}',"
-                                "'{pp_go_annotation_counts_staging}')"
-                                .format(**gotrack.tables)):
-            LOG.info("Preprocessing database...")
-
-            LOG.info("Creating current genes tables...")
-            #gotrack.pre_process_current_genes_tables()
-            LOG.info("Creating GOA table...")
-            #gotrack.pre_process_goa_table()
-
-            LOG.info("Creating aggregate tables...")
-            #preprocess_aggregates(gotrack)
-
+    if cron or query_yes_no("Pre-process database? (Make sure new GO, GOA, and secondary"
+                            "accession data has been imported (Affects tables: '{staging_pre}{pp_current_edition}', "
+                            "'{staging_pre}{pp_accession_history}', '{staging_pre}{pp_edition_aggregates}', "
+                            "'{staging_pre}{pp_go_annotation_counts}')"
+                            .format(**gotrack.tables)):
+        pre_process(gotrack)
     else:
         LOG.info("Pre-processing skipped")
 
@@ -178,53 +171,66 @@ def cleanup(d, cron=False):
     elif d is not None:
         LOG.info("Temporary Folder: {0}".format(d))
 
+def pre_process(gotrack=None):
+    # This part is too large to do simply in a single transaction
+    # thus we process to staging tables and swap them with production
+    # tables once everything is done
 
-def preprocess_aggregates(gotrack=None):
-    """Manually: update pp_edition_aggregates inner join (select species_id, edition, sum(cast( 1/mf as decimal(10,8) ))/gene_count avg_mf from 
-        (select species_id, edition, (gene_count - inferred_annotation_count) mf from pp_go_annotation_counts inner join pp_edition_aggregates using(species_id, edition)) as t1 
-        inner join pp_edition_aggregates using(species_id, edition) group by species_id, edition) as mftable using (species_id, edition) set avg_multifunctionality=avg_mf;"""
+    LOG.info("Preprocessing database...")
+
+    gotrack.create_staging_tables()
+
+    LOG.info("Creating staged current editions table...")
+    gotrack.stage_current_editions()
+
+    LOG.info("Creating staged accession history table...")
+    gotrack.stage_accession_history_table()
+
+    LOG.info("Creating aggregate tables...")
+    stage_aggregates(gotrack)
+
+def stage_aggregates(gotrack=None):
+    """Manually: update pp_edition_aggregates inner join (select species_id, edition,
+        sum(cast( 1/mf as decimal(10,8) ))/gene_count avg_mf from (select species_id, edition,
+        (gene_count - inferred_annotation_count) mf from pp_go_annotation_counts
+        inner join pp_edition_aggregates using(species_id, edition)) as t1
+        inner join pp_edition_aggregates using(species_id, edition)
+        group by species_id, edition) as mftable using (species_id, edition)
+        set avg_multifunctionality=avg_mf;"""
     if gotrack is None:
         gotrack = gtdb.GOTrack(cursorclass=MySQLdb.cursors.SSCursor, **CREDS)
         LOG.info("Connected to host: {host}, db: {db}, user: {user}".format(**CREDS))
 
-    LOG.info("Creating aggregate tables...")
+    # Organize editions by GO Edition
     go_ed_to_sp_ed = defaultdict(list)
-    current_editions = defaultdict(list)
-    for sp_id, ed, goa_date, go_ed, go_date in gotrack.fetch_editions():
+    for sp_id, ed, _, go_ed, _ in gotrack.fetch_editions():
         go_ed_to_sp_ed[go_ed].append((sp_id, ed))
-        try:
-            if ed > current_editions[sp_id][0]:
-                current_editions[sp_id] = [ed, go_ed]
-        except IndexError:
-            current_editions[sp_id] = [ed, go_ed]
 
-    # in order to calculate jaccard similarity of terms over time
-    # we need a reference edition. I have chosen the msot current edition.
-    # Load this data into memory.
+    # In order to calculate jaccard similarity of terms over time
+    # we need a reference edition. I have chosen the most current edition.
+    # Collect and invert current editions for more memory efficient use of ontologies
+    current_editions = defaultdict(list)
+    for sp_id, ed, _, go_ed, _ in gotrack.fetch_staged_current_editions():
+        current_editions[go_ed] += [[sp_id, ed]]
 
-    # invert current editions for more memory efficient use of ontologies
-    inverted = defaultdict(list)
-    for sp_id, ce in current_editions.iteritems():
-        inverted[ce[1]] += [[sp_id, ce[0]]]
-
+    # Cache terms sets per gene for most recent editions
     LOG.info("Caching term sets for genes in current editions")
     current_term_set_cache = {}
-    for go_ed, eds in inverted.iteritems():
-        adjacency_list = gotrack.fetch_adjacency_list(go_ed)
+    for go_ed, eds in current_editions.iteritems():
+        adjacency_list = gotrack.stream_adjacency_list(go_ed)
         ont = Ontology.from_adjacency("1900-01-01", adjacency_list)  
         for sp_id, ed in eds:
             LOG.info("Starting Species (%s), Edition (%s)", sp_id, ed)
-            annotation_count, direct_term_set_per_gene_id, term_set_per_gene_id, direct_counts_per_term, gene_id_set_per_term = aggregate_annotations(gotrack, ont, sp_id, ed)
+            annotations = gotrack.stream_staged_annotations(sp_id, ed)
+            _, direct_term_set_per_gene_id, term_set_per_gene_id, _, _ = aggregate_annotations(annotations, ont, sp_id, ed)
             current_term_set_cache[sp_id] = [direct_term_set_per_gene_id, term_set_per_gene_id]
 
-    gotrack.create_aggregate_staging()
-
+    # Loops through all editions and calculate aggregate stats for each
     i = 0
     for go_ed, eds in sorted(go_ed_to_sp_ed.iteritems()):
         i += 1
-        LOG.info("Starting Ontology: %s / %s", i, len(go_ed_to_sp_ed))
-        # node_list = gotrack.fetch_term_list(go_ed)
-        adjacency_list = gotrack.fetch_adjacency_list(go_ed)
+        LOG.info("Starting Ontology %s: %s / %s", go_ed, i, len(go_ed_to_sp_ed))
+        adjacency_list = gotrack.stream_adjacency_list(go_ed)
         ont = Ontology.from_adjacency("1900-01-01", adjacency_list)
         j = 0
         for sp_id, ed in eds:
@@ -232,23 +238,31 @@ def preprocess_aggregates(gotrack=None):
             if j % 25 == 0:
                 LOG.info("Editions: %s / %s", j, len(eds))
             caches = current_term_set_cache[sp_id]
-            process_aggregate(gotrack, ont, sp_id, ed, caches) 
+            annotations = gotrack.stream_staged_annotations(sp_id, ed)
+            ed_agg_data, term_counts = process_aggregates_for_edition(annotations, ont, sp_id, ed, caches)
+
+            if ed_agg_data is not None:
+                gotrack.stage_edition_aggregates([ed_agg_data])
+
+            if term_counts is not None:
+                gotrack.stage_term_counts(sp_id, ed, term_counts[0], term_counts[1])
+
         LOG.info("Editions: %s / %s", j, len(eds))
 
 
-def push_to_production():
-    # Connect to database
-    gotrack = gtdb.GOTrack(**CREDS)
-    LOG.info("Connected to host: {host}, db: {db}, user: {user}".format(**CREDS))
+def push_to_production(gotrack=None):
+    if gotrack is None:
+        # Connect to database
+        gotrack = gtdb.GOTrack(**CREDS)
+        LOG.info("Connected to host: {host}, db: {db}, user: {user}".format(**CREDS))
 
-    gotrack.push_staging_to_production()
+    gotrack.push_staging_tables()
 
     LOG.info("Staging area has been pushed to production, a restart of GOTrack is now necessary")
     LOG.info("Remember to delete temporary old data tables if everything works")
 
 
-def aggregate_annotations(gotrack, ont, sp_id, ed):
-    all_annotations_stream = gotrack.fetch_all_annotations(sp_id, ed)
+def aggregate_annotations(all_annotations_stream, ont, sp_id, ed):
 
     # These are for computing the number of genes associated with each go term
     direct_counts_per_term = defaultdict(int)
@@ -282,9 +296,9 @@ def aggregate_annotations(gotrack, ont, sp_id, ed):
     return annotation_count, direct_term_set_per_gene_id, term_set_per_gene_id, direct_counts_per_term, gene_id_set_per_term
 
 
-def process_aggregate(gotrack, ont, sp_id, ed, caches):
+def process_aggregates_for_edition(all_annotations_stream, ont, sp_id, ed, caches):
     direct_term_set_per_gene_id_cache, term_set_per_gene_id_cache = caches
-    annotation_count, direct_term_set_per_gene_id, term_set_per_gene_id, direct_counts_per_term, gene_id_set_per_term = aggregate_annotations(gotrack, ont, sp_id, ed)
+    annotation_count, direct_term_set_per_gene_id, term_set_per_gene_id, direct_counts_per_term, gene_id_set_per_term = aggregate_annotations(all_annotations_stream, ont, sp_id, ed)
 
     # Convert sets into counts
     inferred_counts_per_term = {t: len(s) for t, s in gene_id_set_per_term.iteritems()}
@@ -294,7 +308,10 @@ def process_aggregate(gotrack, ont, sp_id, ed, caches):
     gene_count = len(term_set_per_gene_id)
 
     # write_total_time = time.time()
-    
+
+    # default return values
+    retvals = [None, None]
+
     # Write aggregates
     if gene_count > 0:
         # Calculate average multifunctionality
@@ -321,16 +338,21 @@ def process_aggregate(gotrack, ont, sp_id, ed, caches):
         avg_direct_jaccard = sum_direct_jaccard / gene_count
         avg_jaccard = sum_jaccard / gene_count
 
-        gotrack.write_aggregate(sp_id, ed, gene_count, annotation_count / gene_count,
-                                total_term_set_size / gene_count, total_gene_set_size / len(gene_id_set_per_term), avg_mf, avg_direct_jaccard, avg_jaccard)
+        # edition aggregate data
+        retvals[0] = [sp_id, ed, gene_count, annotation_count / gene_count, total_term_set_size / gene_count,
+                       total_gene_set_size / len(gene_id_set_per_term), avg_mf, avg_direct_jaccard, avg_jaccard]
+
+
     else:
         LOG.warn("No Genes in Species ({0}), Edition ({1})".format(sp_id, ed))
     
     # Write Term Counts
     if total_gene_set_size > 0 or total_term_set_size > 0:
-        gotrack.write_term_counts(sp_id, ed, direct_counts_per_term, inferred_counts_per_term)
+        retvals[1] = [direct_counts_per_term, inferred_counts_per_term]
     else:
         LOG.warn("No Annotations in Species ({0}), Edition ({1})".format(sp_id, ed))
+
+    return retvals
 
     # write_total_time = time.time() - write_total_time
 
@@ -353,19 +375,6 @@ def jaccard_similarity(s1, s2):
 
     return len(s1.intersection(s2)) / len(s1.union(s2))
 
-
-def check_database_consistency(gotrack, verbose=True):
-    results = gotrack.fetch_consistency()
-    if verbose:
-        if results['preprocess_ood']:
-            LOG.warn('Pre-processed tables are inconsistent with current data, requires updating.')
-        if results['aggregate_ood']:
-            LOG.warn('Aggregate tables are inconsistent with current data, requires updating.')
-        if results['unlinked_editions']:
-            LOG.warn('The following GOA editions are unlinked with GO ontologies')
-            LOG.warn(results['unlinked_editions'])
-    return results['preprocess_ood'] or results['aggregate_ood'], results
-
 if __name__ == '__main__':
     import argparse
 
@@ -387,8 +396,8 @@ if __name__ == '__main__':
     group.add_argument('--update-push', dest='update_push', action='store_true',
                        help='Runs Update with options followed by update with --push')
 
-    group.add_argument('--aggregate', dest='aggregate', action='store_true',
-                       help='Updates the aggregate tables only.')
+    group.add_argument('--process', dest='process', action='store_true',
+                       help='Pre-processes the database.')
 
     parser.add_argument('--cron', dest='cron', action='store_true',
                         help='No interactivity mode')
@@ -399,7 +408,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if args.meta:
-        # Push Staging to Production
         LOG.info("Host: {host}, db: {db}, user: {user}".format(**CREDS))
         gotrack_db = gtdb.GOTrack(**CREDS)
         LOG.info('Tables: \n%s', "\n".join(sorted([str(table) for table in gotrack_db.tables.iteritems()])))
@@ -411,9 +419,9 @@ if __name__ == '__main__':
     elif args.push:
         # Push Staging to Production
         push_to_production()
-    elif args.aggregate:
+    elif args.process:
         # Update aggregate tables
-        preprocess_aggregates()
+        pre_process()
     elif args.update:
         # Update database
         main(args.resources, args.cron, args.dl, args.force_pp)
