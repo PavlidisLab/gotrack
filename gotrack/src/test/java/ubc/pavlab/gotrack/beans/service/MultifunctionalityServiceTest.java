@@ -19,12 +19,9 @@
 
 package ubc.pavlab.gotrack.beans.service;
 
-import java.sql.Date;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
@@ -37,13 +34,7 @@ import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-
 import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.Gene;
@@ -51,6 +42,11 @@ import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+
+import java.sql.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * TODO Document Me
@@ -97,8 +93,8 @@ public class MultifunctionalityServiceTest {
         List<Gene> genes = Lists.newArrayList();
 
         for ( int i = 1; i < n + 1; i++ ) {
-            genes.add( new Gene.GeneBuilder( i, "Gene" + String.format( "%02d", i ),
-                    new Species( 7, "Human", "", 9606, null ), Collections.<Accession> emptySet() ).build() );
+            genes.add( new Gene.GeneBuilder( i, "Gene" + String.format( "%02d", i ), "",
+                    new Species( 7, "Human", "", 9606, null ), null ).build() );
         }
         return genes;
     }
@@ -165,7 +161,7 @@ public class MultifunctionalityServiceTest {
         populationMap.put( ed2, geneGOMap );
         inversePopulationMap.put( ed2, GOGeneMap );
 
-        Mockito.when( cache.getInferredAnnotationCount( Mockito.anyInt(), Mockito.any( Edition.class ),
+        Mockito.when( cache.getInferredAnnotationCount( Mockito.any( Species.class ), Mockito.any( Edition.class ),
                 Mockito.any( GeneOntologyTerm.class ) ) ).thenAnswer( new Answer<Integer>() {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {
@@ -178,7 +174,7 @@ public class MultifunctionalityServiceTest {
                     }
                 } );
 
-        Mockito.when( cache.getGeneCount( Mockito.anyInt(), Mockito.any( Edition.class ) ) )
+        Mockito.when( cache.getGeneCount( Mockito.any( Species.class ), Mockito.any( Edition.class ) ) )
                 .thenAnswer( new Answer<Integer>() {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {

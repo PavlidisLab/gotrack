@@ -19,19 +19,14 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.*;
 import ubc.pavlab.gotrack.BaseTest;
 import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
 import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
+
+import java.util.List;
 
 /**
  * TODO Document Me
@@ -69,7 +64,7 @@ public class StatsDAOTest extends BaseTest {
                 previousGenesCount = dto.getCount();
             }
         }
-        statsDAO.incrementGeneHit( 7, "LONP1" );
+        statsDAO.incrementGeneHit( 7, "someaccession", "LONP1" );
 
         res = statsDAO.listGenes();
 

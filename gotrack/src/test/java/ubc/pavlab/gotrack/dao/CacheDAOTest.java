@@ -19,36 +19,20 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.sql.Date;
-import java.util.List;
-
-import org.apache.log4j.Logger;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
-
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
-
+import org.apache.log4j.Logger;
+import org.hamcrest.Matchers;
+import org.junit.*;
 import ubc.pavlab.gotrack.BaseTest;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.dto.AccessionDTO;
-import ubc.pavlab.gotrack.model.dto.AdjacencyDTO;
-import ubc.pavlab.gotrack.model.dto.AggregateDTO;
-import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
-import ubc.pavlab.gotrack.model.dto.EditionDTO;
-import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
-import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
-import ubc.pavlab.gotrack.model.dto.GOTermDTO;
-import ubc.pavlab.gotrack.model.dto.GeneDTO;
-import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
+import ubc.pavlab.gotrack.model.Dataset;
+import ubc.pavlab.gotrack.model.dto.*;
 import ubc.pavlab.gotrack.utilities.Tuples;
 import ubc.pavlab.gotrack.utilities.Tuples.Tuple2;
+
+import java.sql.Date;
+import java.util.List;
 
 /**
  * TODO Document Me
@@ -415,12 +399,12 @@ public class CacheDAOTest extends BaseTest {
 
     @Test
     public void testGetCurrentGenes() {
-        List<GeneDTO> res = cacheDAO.getCurrentGenes( null );
+        List<AccessionDTO> res = cacheDAO.getAccessions( null );
         Assert.assertThat( res.size(), Matchers.is( 103 ) );
 
         Multiset<String> symbols = HashMultiset.create();
 
-        for ( GeneDTO dto : res ) {
+        for ( AccessionDTO dto : res ) {
             symbols.add( dto.getSymbol() );
         }
 
@@ -451,12 +435,12 @@ public class CacheDAOTest extends BaseTest {
 
     @Test
     public void testGetCurrentGenesSpeciesRestricted() {
-        List<GeneDTO> res = cacheDAO.getCurrentGenes( new int[] { 7 } );
+        List<AccessionDTO> res = cacheDAO.getAccessions( new int[]{7} );
         Assert.assertThat( res.size(), Matchers.is( 61 ) );
 
         Multiset<String> symbols = HashMultiset.create();
 
-        for ( GeneDTO dto : res ) {
+        for ( AccessionDTO dto : res ) {
             symbols.add( dto.getSymbol() );
         }
 
@@ -481,14 +465,12 @@ public class CacheDAOTest extends BaseTest {
 
         Multiset<Integer> genes = HashMultiset.create();
         Multiset<String> accessions = HashMultiset.create();
-        Multiset<String> secs = HashMultiset.create();
         Multiset<Boolean> swissprot = HashMultiset.create();
 
         for ( AccessionDTO dto : res ) {
-            genes.add( dto.getGeneId() );
+            genes.add( dto.getId() );
             accessions.add( dto.getAccession() );
-            secs.add( dto.getSec() );
-            swissprot.add( dto.getSp() );
+            swissprot.add( dto.getSubset().equals( Dataset.SwissProt.getLabel() ) );
         }
 
         // distinct genes
@@ -517,9 +499,6 @@ public class CacheDAOTest extends BaseTest {
         // Count distinct accessions
         Assert.assertThat( accessions.elementSet().size(), Matchers.is( 70 ) );
 
-        // Count distinct secs
-        Assert.assertThat( secs.elementSet().size(), Matchers.is( 77 ) );
-
         // distinct sp
         Assert.assertThat( swissprot.elementSet().size(), Matchers.is( 2 ) );
         Assert.assertThat( swissprot.count( false ), Matchers.is( 50 ) );
@@ -533,14 +512,12 @@ public class CacheDAOTest extends BaseTest {
 
         Multiset<Integer> genes = HashMultiset.create();
         Multiset<String> accessions = HashMultiset.create();
-        Multiset<String> secs = HashMultiset.create();
         Multiset<Boolean> swissprot = HashMultiset.create();
 
         for ( AccessionDTO dto : res ) {
-            genes.add( dto.getGeneId() );
+            genes.add( dto.getId() );
             accessions.add( dto.getAccession() );
-            secs.add( dto.getSec() );
-            swissprot.add( dto.getSp() );
+            swissprot.add( dto.getSubset().equals( Dataset.SwissProt.getLabel() ) );
         }
 
         // distinct genes
@@ -558,9 +535,6 @@ public class CacheDAOTest extends BaseTest {
 
         // Count distinct accessions
         Assert.assertThat( accessions.elementSet().size(), Matchers.is( 41 ) );
-
-        // Count distinct secs
-        Assert.assertThat( secs.elementSet().size(), Matchers.is( 45 ) );
 
         // distinct sp
         Assert.assertThat( swissprot.elementSet().size(), Matchers.is( 2 ) );
@@ -673,38 +647,6 @@ public class CacheDAOTest extends BaseTest {
         Assert.assertThat( categories.count( "Author" ), Matchers.is( 2 ) );
         Assert.assertThat( categories.count( "Curatorial" ), Matchers.is( 3 ) );
         Assert.assertThat( categories.count( "Automatic" ), Matchers.is( 1 ) );
-
-    }
-
-    @Test
-    public void testGetSimpleAnnotations() {
-        Edition mockEdition = Mockito.mock( Edition.class );
-        Mockito.when( mockEdition.getEdition() ).thenReturn( 144 );
-        List<SimpleAnnotationDTO> res = cacheDAO.getSimpleAnnotations( 7, mockEdition );
-        Assert.assertThat( res.size(), Matchers.is( 214 ) );
-
-        Mockito.when( mockEdition.getEdition() ).thenReturn( 146 );
-        res = cacheDAO.getSimpleAnnotations( 7, mockEdition );
-        Assert.assertThat( res.size(), Matchers.is( 218 ) );
-
-        Multiset<Integer> genes = HashMultiset.create();
-
-        for ( SimpleAnnotationDTO dto : res ) {
-            genes.add( dto.getGeneId() );
-        }
-
-        // distinct categories
-        Assert.assertThat( genes.elementSet().size(), Matchers.is( 10 ) );
-        Assert.assertThat( genes.count( 1 ), Matchers.is( 11 ) );
-        Assert.assertThat( genes.count( 2 ), Matchers.is( 31 ) );
-        Assert.assertThat( genes.count( 3 ), Matchers.is( 20 ) );
-        Assert.assertThat( genes.count( 4 ), Matchers.is( 19 ) );
-        Assert.assertThat( genes.count( 5 ), Matchers.is( 33 ) );
-        Assert.assertThat( genes.count( 6 ), Matchers.is( 11 ) );
-        Assert.assertThat( genes.count( 7 ), Matchers.is( 57 ) );
-        Assert.assertThat( genes.count( 8 ), Matchers.is( 10 ) );
-        Assert.assertThat( genes.count( 9 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 10 ), Matchers.is( 20 ) );
 
     }
 

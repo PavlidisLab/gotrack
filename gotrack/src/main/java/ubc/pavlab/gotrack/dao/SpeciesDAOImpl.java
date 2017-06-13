@@ -19,8 +19,7 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import static ubc.pavlab.gotrack.dao.DAOUtil.close;
-import static ubc.pavlab.gotrack.dao.DAOUtil.prepareStatement;
+import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -29,7 +28,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
+import static ubc.pavlab.gotrack.dao.DAOUtil.close;
+import static ubc.pavlab.gotrack.dao.DAOUtil.prepareStatement;
 
 /**
  * TODO Document Me
@@ -40,10 +40,12 @@ import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
 public class SpeciesDAOImpl implements SpeciesDAO {
 
     // Constants ----------------------------------------------------------------------------------
+    private static final String SQL_SPECIES = "species";
 
-    private static final String SQL_FIND_BY_ID = "SELECT * FROM species WHERE id = ?";
-    private static final String SQL_LIST_ORDER_BY_NAME = "SELECT * FROM species ORDER BY common_name";
-    private static final String SQL_LIST_ORDER_BY_ID = "SELECT * FROM species ORDER BY id";
+    private static final String SQL_SELECT = "id, taxon, common_name, scientific_name";
+    private static final String SQL_FIND_BY_ID = "SELECT " + SQL_SELECT + " FROM " + SQL_SPECIES + " WHERE id = ?";
+    private static final String SQL_LIST_ORDER_BY_NAME = "SELECT " + SQL_SELECT + " FROM " + SQL_SPECIES + " ORDER BY common_name";
+    private static final String SQL_LIST_ORDER_BY_ID = "SELECT " + SQL_SELECT + " FROM " + SQL_SPECIES + " ORDER BY id";
 
     // Vars ---------------------------------------------------------------------------------------
 

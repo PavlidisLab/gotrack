@@ -160,17 +160,27 @@ CREATE TABLE `pp_go_annotation_counts` (
   UNIQUE KEY `sp_ed_go` (`species_id`,`edition`,`go_id`)
 )
 
+CREATE TABLE `track_popular_genes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `species_id` int(11) NOT NULL,
+  `accession` varchar(255) NOT NULL,
+  `symbol` varchar(255) NOT NULL,
+  `count` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `acc` (`accession`)
+)
+
 ##################################################################
 """
 
-import logging
-import _mysql
 import MySQLdb
+import _mysql
+import logging
 import time
-
+import warnings
 
 from utility import grouper
-import warnings
+
 warnings.filterwarnings("ignore", "Unknown table.*")
 
 log = logging.getLogger(__name__)

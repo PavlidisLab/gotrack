@@ -19,17 +19,20 @@
 
 package ubc.pavlab.gotrack.rest;
 
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Sets;
+import jersey.repackaged.com.google.common.collect.Maps;
+import org.apache.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.beans.service.MultifunctionalityService;
+import ubc.pavlab.gotrack.model.*;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.search.GeneMatch;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -40,29 +43,9 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
-import org.apache.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableTable;
-import com.google.common.collect.Sets;
-
-import jersey.repackaged.com.google.common.collect.Lists;
-import jersey.repackaged.com.google.common.collect.Maps;
-import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.beans.service.AnnotationService;
-import ubc.pavlab.gotrack.beans.service.MultifunctionalityService;
-import ubc.pavlab.gotrack.model.Annotation;
-import ubc.pavlab.gotrack.model.AnnotationType;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.table.GeneMatches;
-import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 /**
  * TODO Document Me
@@ -93,7 +76,6 @@ public class GeneEP {
     }
 
     /**
-     * @param request
      * @return Gene data for given gene(s)
      */
     @GET
@@ -142,14 +124,14 @@ public class GeneEP {
             }
 
             // Convert list of strings to best possible matches in genes
-            List<GeneMatches> gms = deserializeGenesSingleMatch( symbols, species );
+            Map<String, GeneMatch> gms = deserializeGenes( symbols, species );
 
             // Retrieve info for each matched gene
             JSONArray genesArray = new JSONArray();
-            for ( GeneMatches gm : gms ) {
+            for ( GeneMatch gm : gms.values() ) {
                 JSONObject geneJSON = new JSONObject();
                 geneJSON.put( "gene_match", minimal ? geneMatchToMinimalJSON( gm ) : new JSONObject( gm ) );
-                if ( !gm.getType().equals( MatchType.NO_MATCH ) ) {
+                if ( gm.getType().equals( GeneMatch.Type.SINGLE ) ) {
                     Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> data = retrieveData(
                             gm.getSelectedGene() );
 
@@ -210,7 +192,6 @@ public class GeneEP {
     }
 
     /**
-     * @param request
      * @return Gene data for given gene(s)
      */
     @GET
@@ -259,14 +240,14 @@ public class GeneEP {
             }
 
             // Convert list of strings to best possible matches in genes
-            List<GeneMatches> gms = deserializeGenesSingleMatch( symbols, species );
+            Map<String, GeneMatch> gms = deserializeGenes( symbols, species );
 
             // Retrieve info for each matched gene
             JSONArray genesArray = new JSONArray();
-            for ( GeneMatches gm : gms ) {
+            for ( GeneMatch gm : gms.values() ) {
                 JSONObject geneJSON = new JSONObject();
                 geneJSON.put( "gene_match", minimal ? geneMatchToMinimalJSON( gm ) : new JSONObject( gm ) );
-                if ( !gm.getType().equals( MatchType.NO_MATCH ) ) {
+                if ( gm.getType().equals( GeneMatch.Type.SINGLE ) ) {
 
                     JSONArray editionArray = new JSONArray();
 
@@ -329,7 +310,7 @@ public class GeneEP {
      */
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> retrieveData( Gene gene ) {
 
-        Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData = new HashMap<>();
+        Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData = Maps.newHashMap();
 
         Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> cachedData = cache
                 .getGeneData( gene );
@@ -339,8 +320,7 @@ public class GeneEP {
             return cachedData;
         }
 
-        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> directRawData = annotationService.fetchTrackData(
-                gene.getSpecies(), gene );
+        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> directRawData = annotationService.fetchTrackData( gene );
         Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> inferredRawData = propagate( directRawData );
 
         // Convert to ImmutableTable
@@ -414,11 +394,11 @@ public class GeneEP {
     }
 
     private Edition closestEdition( Date inputDate, Species species ) {
-        Edition closestEdition = cache.getCurrentEditions( species.getId() );
+        Edition closestEdition = cache.getCurrentEditions( species );
         long minDayDiff = Math.abs( getDateDiff( closestEdition.getDate(), inputDate, TimeUnit.DAYS ) );
 
-        for ( Edition edition : cache.getAllEditions( species.getId() ) ) {
-            if ( cache.getAggregates( species.getId(), edition ) != null ) {
+        for ( Edition edition : cache.getAllEditions( species ) ) {
+            if ( cache.getAggregates( species, edition ) != null ) {
                 // Make sure there is data for this edition
                 long dayDiff = Math.abs( getDateDiff( edition.getDate(), inputDate, TimeUnit.DAYS ) );
                 if ( dayDiff < minDayDiff ) {
@@ -435,27 +415,19 @@ public class GeneEP {
     /**
      * Convert list of strings to its best possible match in available genes.
      * Checks for Exact Symbol matches and Exact Synonym matches.
-     * 
+     *
      * @param geneInputs
-     * @return List of GeneMatches, one for every input query. Unsuccessful matches will have a MatchType.NO_MATCH type.
+     * @return List of GeneMatch, one for every input query. Unsuccessful matches will have a MatchType.NO_MATCH type.
      */
-    private List<GeneMatches> deserializeGenesSingleMatch( Collection<String> geneInputs, Species species ) {
-        List<GeneMatches> results = Lists.newArrayList();
-        for ( String geneInput : geneInputs ) {
-            List<GeneMatches> g = cache.complete( geneInput, species.getId(), Integer.MAX_VALUE,
-                    MatchType.EXACT_SYNONYM );
-            if ( g.isEmpty() ) {
-                // No Match
-                results.add( new GeneMatches( geneInput, null, MatchType.NO_MATCH ) );
-            } else if ( g.size() <= 2 ) {
-                results.add( g.get( 0 ) );
-            } else {
-                log.error(
-                        "Gene deserialization failed somehow, it should be returning at most 2 results. Instead it returned "
-                                + String.valueOf( g.size() ) );
-            }
+    private Map<String, GeneMatch> deserializeGenes( Collection<String> geneInputs, Species species ) {
 
+        Map<String, GeneMatch> results = Maps.newHashMap();
+
+        for ( String geneInput : geneInputs ) {
+            GeneMatch match = cache.guessGeneBySymbol( geneInput, species );
+            results.put( geneInput, match );
         }
+
         return results;
     }
 
@@ -546,12 +518,13 @@ public class GeneEP {
         return results;
     }
 
-    private static JSONObject geneMatchToMinimalJSON( GeneMatches gm ) {
+    private static JSONObject geneMatchToMinimalJSON( GeneMatch gm ) {
         JSONObject results = new JSONObject();
         results.put( "symbol", gm.getSymbol() );
         results.put( "querySymbol", gm.getQuerySymbol() );
         results.put( "geneID", gm.getSelectedGene().getId() );
         results.put( "type", gm.getType() );
+        results.put( "level", gm.getLevel() );
 
         return results;
     }

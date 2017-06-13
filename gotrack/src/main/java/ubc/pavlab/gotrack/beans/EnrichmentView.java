@@ -19,22 +19,23 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.io.Serializable;
-import java.sql.Date;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.TreeMap;
+import com.google.common.collect.Maps;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import jersey.repackaged.com.google.common.collect.Lists;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.time.StopWatch;
+import org.apache.log4j.Logger;
+import org.primefaces.context.RequestContext;
+import ubc.pavlab.gotrack.analysis.*;
+import ubc.pavlab.gotrack.beans.service.EnrichmentService;
+import ubc.pavlab.gotrack.model.*;
+import ubc.pavlab.gotrack.model.chart.ChartValues;
+import ubc.pavlab.gotrack.model.chart.Series;
+import ubc.pavlab.gotrack.model.chart.SeriesExtra;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.search.GeneMatch;
+import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
 
 import javax.enterprise.context.SessionScoped;
 import javax.faces.application.FacesMessage;
@@ -43,39 +44,10 @@ import javax.faces.context.FacesContext;
 import javax.faces.event.ActionEvent;
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.time.StopWatch;
-import org.apache.log4j.Logger;
-import org.primefaces.context.RequestContext;
-
-import com.google.common.collect.Maps;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-
-import jersey.repackaged.com.google.common.collect.Lists;
-import ubc.pavlab.gotrack.analysis.CombinedAnalysis;
-import ubc.pavlab.gotrack.analysis.Enrichment;
-import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
-import ubc.pavlab.gotrack.analysis.EnrichmentResult;
-import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
-import ubc.pavlab.gotrack.analysis.SimilarityAnalysis;
-import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
-import ubc.pavlab.gotrack.analysis.SimilarityScore;
-import ubc.pavlab.gotrack.analysis.StabilityAnalysis;
-import ubc.pavlab.gotrack.analysis.StabilityScore;
-import ubc.pavlab.gotrack.beans.service.EnrichmentService;
-import ubc.pavlab.gotrack.model.Aspect;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.StatusPoller;
-import ubc.pavlab.gotrack.model.chart.ChartValues;
-import ubc.pavlab.gotrack.model.chart.Series;
-import ubc.pavlab.gotrack.model.chart.SeriesExtra;
-import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
-import ubc.pavlab.gotrack.model.table.GeneMatches;
-import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
+import java.io.Serializable;
+import java.sql.Date;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * View bean based around the enrichment functionality of GOTrack.
@@ -152,7 +124,7 @@ public class EnrichmentView implements Serializable {
     private String bulkQuery = "";
 
     // Holds matches for bulk adding genes
-    private List<GeneMatches> geneMatches;
+    private List<GeneMatch> geneMatches;
 
     // Map of species id -> hit list
     private Map<Integer, List<Gene>> speciesToSelectedGenes = new HashMap<>();
@@ -165,6 +137,7 @@ public class EnrichmentView implements Serializable {
 
     // Enrichment Settings
     private Integer currentSpeciesId = 7; // species id
+    private Species currentSpecies = null;
     private int minAnnotatedPopulation = 5; // minimum size of gene set for a term to not be rejected
     private int maxAnnotatedPopulation = 200; // maximum size of gene set for a term to not be rejected
     private MultipleTestCorrection multipleTestCorrection = MultipleTestCorrection.BH; // method of multiple test correction
@@ -258,10 +231,13 @@ public class EnrichmentView implements Serializable {
             // When loading a previous analysis, we want to show the gene hit list that is associated with it, 
             // not the most recently viewed one.
             currentSpeciesId = analysisSpeciesId;
+            currentSpecies = cache.getSpecies( currentSpeciesId );
         } else {
-            enrichmentTableEdition = cache.getCurrentEditions( currentSpeciesId ).getEdition();
-            currentEdition = cache.getCurrentEditions( currentSpeciesId );
+            currentSpecies = cache.getSpecies( currentSpeciesId );
+            enrichmentTableEdition = cache.getCurrentEditions( currentSpecies ).getEdition();
+            currentEdition = cache.getCurrentEditions( currentSpecies );
         }
+
         return null;
     }
 
@@ -272,13 +248,13 @@ public class EnrichmentView implements Serializable {
     public void enrich() {
         StopWatch timer = new StopWatch();
         timer.start();
-        currentEdition = cache.getCurrentEditions( currentSpeciesId );
+        currentEdition = cache.getCurrentEditions( currentSpecies );
         enrichmentSuccess = false;
         statusPoller = new StatusPoller( " completed" );
         double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
         CombinedAnalysis ca = enrichmentService.combinedAnalysis(
                 new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ),
-                currentSpeciesId,
+                currentSpecies,
                 multipleTestCorrection, thresh, minAnnotatedPopulation, maxAnnotatedPopulation,
                 new HashSet<>( aspects ), similarityCompareMethod, TOP_N_JACCARD, statusPoller );
         enrichmentSuccess = ca.isSuccess();
@@ -299,7 +275,7 @@ public class EnrichmentView implements Serializable {
 
         // Container for a mapping that will be used on the front-end for ajax queries
         Map<Long, Integer> dateToEdition = new HashMap<>();
-        for ( Edition ed : cache.getAllEditions( currentSpeciesId ) ) {
+        for ( Edition ed : cache.getAllEditions( currentSpecies ) ) {
             dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
         }
 
@@ -322,7 +298,7 @@ public class EnrichmentView implements Serializable {
 
             // Container for a mapping that will be used on the front-end for ajax queries
             Map<Long, Integer> dateToEdition = new HashMap<>();
-            for ( Edition ed : cache.getAllEditions( currentSpeciesId ) ) {
+            for ( Edition ed : cache.getAllEditions( currentSpecies ) ) {
                 dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
             }
 
@@ -752,7 +728,7 @@ public class EnrichmentView implements Serializable {
     public void fetchSimilarityInformation() {
         Integer edition = Integer.valueOf(
                 FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
-        Edition ed = cache.getEdition( currentSpeciesId, edition );
+        Edition ed = cache.getEdition( currentSpecies, edition );
         selectedSimilarityScore = similarityAnalysis.getSimilarityScores( ed );
     }
 
@@ -764,7 +740,7 @@ public class EnrichmentView implements Serializable {
         Integer edition = Integer.valueOf(
                 FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
 
-        Edition ed = cache.getEdition( currentSpeciesId, edition );
+        Edition ed = cache.getEdition( currentSpecies, edition );
         selectedEdition = ed;
 
         Map<GeneOntologyTerm, EnrichmentResult> a = enrichmentResults.get( ed );
@@ -933,59 +909,36 @@ public class EnrichmentView implements Serializable {
 
     /**
      * Add multiple genes based on input to the 'Add Multiple' modal field, this string is then split
-     * and turned into GeneMatches to then be confirmed or altered by the user
+     * and turned into GeneMatch to then be confirmed or altered by the user
      */
     public void searchMultipleGenes( ActionEvent actionEvent ) {
         Set<String> inputSet = new HashSet<>( Arrays.asList( bulkQuery.split( "\\s*(,|\\s)\\s*" ) ) );
         geneMatches = new ArrayList<>();
-        Map<GeneMatches.MatchType, Integer> cntMap = new HashMap<>();
+        Map<GeneMatch.Level, Integer> cntMap = new HashMap<>();
+
         for ( String geneInput : inputSet ) {
-            Gene gene = cache.getCurrentGene( currentSpeciesId, geneInput );
-            GeneMatches.MatchType type = null;
-            if ( gene != null ) {
-                type = GeneMatches.MatchType.EXACT;
-
-            } else {
-                Set<Gene> synonyms = cache.getCurrentGeneBySynonym( currentSpeciesId, geneInput );
-
-                if ( synonyms.size() == 1 ) {
-                    gene = synonyms.iterator().next();
-                    type = GeneMatches.MatchType.EXACT_SYNONYM;
-                } else if ( synonyms.size() > 1 ) {
-                    type = GeneMatches.MatchType.MULTIPLE_EXACT_SYNONYMS;
-                } else {
-                    type = GeneMatches.MatchType.NO_MATCH;
-                }
-
-            }
-
-            geneMatches.add( new GeneMatches( geneInput, gene, type ) );
-            Integer cnt = cntMap.get( type );
-            cntMap.put( type, ( cnt == null ? 0 : cnt ) + 1 );
-
+            GeneMatch geneMatch = cache.guessGeneBySymbol( geneInput, currentSpecies );
+            geneMatches.add( geneMatch );
+            Integer cnt = cntMap.get( geneMatch.getLevel() );
+            cntMap.put( geneMatch.getLevel(), (cnt == null ? 0 : cnt) + 1 );
         }
 
         if ( !geneMatches.isEmpty() ) {
 
-            Collections.sort( geneMatches, new Comparator<GeneMatches>() {
-                @Override
-                public int compare( GeneMatches e1, GeneMatches e2 ) {
-                    return -e1.getType().compareTo( e2.getType() );
-                }
-            } );
+            Collections.sort( geneMatches, Collections.reverseOrder() );
 
-            String message = "";
+            StringBuilder message = new StringBuilder();
 
-            for ( Entry<MatchType, Integer> typeEntry : cntMap.entrySet() ) {
-                message += typeEntry.getKey().toString() + " : " + typeEntry.getValue().toString() + "<br/>";
+            for ( Entry<GeneMatch.Level, Integer> typeEntry : cntMap.entrySet() ) {
+                message.append( typeEntry.getKey().toString() ).append( " : " ).append( typeEntry.getValue().toString() ).append( "<br/>" );
             }
-            addMessage( message, FacesMessage.SEVERITY_INFO );
+            addMessage( message.toString(), FacesMessage.SEVERITY_INFO );
         }
 
     }
 
     /**
-     * Confirm GeneMatches after alterations (or not) and add these genes to hit list
+     * Confirm GeneMatch after alterations (or not) and add these genes to hit list
      */
     public void confirmMatches() {
         int genesAdded = 0;
@@ -995,7 +948,7 @@ public class EnrichmentView implements Serializable {
             speciesToSelectedGenes.put( currentSpeciesId, selectGenes );
         }
 
-        for ( GeneMatches gm : geneMatches ) {
+        for ( GeneMatch gm : geneMatches ) {
             Gene g = gm.getSelectedGene();
             if ( g != null && !selectGenes.contains( g ) ) {
                 genesAdded++;
@@ -1035,9 +988,9 @@ public class EnrichmentView implements Serializable {
     /**
      * autocomplete gene by symbol
      */
-    public List<GeneMatches> complete( String query ) {
-        if ( StringUtils.isEmpty( query.trim() ) || currentSpeciesId == null ) return new ArrayList<>();
-        return this.cache.complete( query, currentSpeciesId, MAX_RESULTS );
+    public List<GeneMatch> complete( String query ) {
+        if ( StringUtils.isEmpty( query.trim() ) || currentSpecies == null ) return Lists.newArrayList();
+        return Lists.newArrayList( this.cache.searchGeneBySymbol( query.trim(), currentSpecies, MAX_RESULTS ) );
     }
 
     /**
@@ -1159,7 +1112,7 @@ public class EnrichmentView implements Serializable {
     }
 
     public Edition getCurrentEdition() {
-        return cache.getCurrentEditions( currentSpeciesId );
+        return cache.getCurrentEditions( currentSpecies );
     }
 
     public Gene getViewGene() {
@@ -1294,7 +1247,7 @@ public class EnrichmentView implements Serializable {
         return viewEnrichmentRowGeneSet;
     }
 
-    public List<GeneMatches> getGeneMatches() {
+    public List<GeneMatch> getGeneMatches() {
         return geneMatches;
     }
 

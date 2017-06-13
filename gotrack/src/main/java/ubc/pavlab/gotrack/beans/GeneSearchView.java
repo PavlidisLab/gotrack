@@ -19,21 +19,16 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.io.Serializable;
-import java.util.List;
+import jersey.repackaged.com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
+import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.search.GeneMatch;
 
-import javax.faces.application.FacesMessage;
-import javax.faces.component.UIComponent;
-import javax.faces.component.UIInput;
-import javax.faces.context.FacesContext;
-import javax.faces.event.ComponentSystemEvent;
 import javax.faces.view.ViewScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import org.apache.log4j.Logger;
-
-import ubc.pavlab.gotrack.model.table.GeneMatches;
+import java.io.Serializable;
+import java.util.List;
 
 /**
  * Backing bean for a gene search input that leads to the GeneView page
@@ -54,58 +49,13 @@ public class GeneSearchView implements Serializable {
     private static final Integer MAX_RESULTS = 15;
 
     private Integer speciesId = 7;
-    private String query;
+    private Gene queryGene;
 
     @Inject
     private Cache cache;
 
     public GeneSearchView() {
         log.info( "GeneSearchView created" );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
-                + " MB" );
-    }
-
-    @Deprecated
-    public void validateQuery( ComponentSystemEvent event ) {
-
-        FacesContext fc = FacesContext.getCurrentInstance();
-
-        UIComponent components = event.getComponent();
-
-        // get password
-        UIInput uiInputSpecies = ( UIInput ) components.findComponent( "selectspecies" );
-        Integer selectspecies = ( Integer ) uiInputSpecies.getLocalValue();
-        String speciesId = uiInputSpecies.getClientId();
-
-        // get confirm password
-        UIInput uiInputQuery = ( UIInput ) components.findComponent( "geneInput" );
-        String currentQuery = uiInputQuery.getLocalValue() == null ? "" : uiInputQuery.getLocalValue().toString();
-        String queryId = uiInputQuery.getClientId();
-
-        // Let required="true" do its job.
-        if ( selectspecies == null ) {
-            FacesMessage msg = new FacesMessage( "Please select a species." );
-            msg.setSeverity( FacesMessage.SEVERITY_ERROR );
-            fc.addMessage( speciesId, msg );
-            fc.renderResponse();
-            return;
-        } else if ( currentQuery.isEmpty() ) {
-            FacesMessage msg = new FacesMessage( "please select a gene symbol." );
-            msg.setSeverity( FacesMessage.SEVERITY_ERROR );
-            fc.addMessage( queryId, msg );
-            fc.renderResponse();
-            return;
-        }
-
-        if ( !cache.currentSymbolExists( selectspecies, currentQuery ) ) {
-
-            FacesMessage msg = new FacesMessage( "The selected gene symbol could not be found." );
-            msg.setSeverity( FacesMessage.SEVERITY_ERROR );
-            fc.addMessage( queryId, msg );
-            fc.renderResponse();
-
-        }
-
     }
 
     public Integer getSpeciesId() {
@@ -117,25 +67,21 @@ public class GeneSearchView implements Serializable {
     }
 
     public String go() {
-        if ( !cache.currentSymbolExists( speciesId, query ) ) {
+        if ( queryGene == null ) {
             return null;
         }
-        // return "track?faces-redirect=true&includeViewParams=true";
-        return "/genes?faces-redirect=true&query=" + query + "&speciesId=" + speciesId;
+        return "/genes?faces-redirect=true&accession=" + queryGene.getAccession().getAccession();
     }
 
-    public String getQuery() {
-        return query;
+    public List<GeneMatch> complete( String query ) {
+        return Lists.newArrayList( this.cache.searchGeneBySymbol( query, cache.getSpecies( speciesId ), MAX_RESULTS ) );
     }
 
-    public void setQuery( String query ) {
-        this.query = query;
+    public void setQueryGene( Gene queryGene ) {
+        this.queryGene = queryGene;
     }
 
-    public List<GeneMatches> complete( String query ) {
-
-        return this.cache.complete( query, speciesId, MAX_RESULTS );
-
+    public Gene getQueryGene() {
+        return queryGene;
     }
-
 }

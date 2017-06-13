@@ -1,18 +1,14 @@
 <ui:composition template="/WEB-INF/templates/mainLayout.xhtml"
-	xmlns="http://www.w3.org/1999/xhtml"
-	xmlns:h="http://java.sun.com/jsf/html"
-	xmlns:f="http://java.sun.com/jsf/core"
-	xmlns:ui="http://java.sun.com/jsf/facelets"
-	xmlns:p="http://primefaces.org/ui"
-	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
-	xmlns:pe="http://primefaces.org/ui/extensions"
-	xmlns:of="http://omnifaces.org/functions"
-	xmlns:o="http://omnifaces.org/ui">
+				xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:h="http://java.sun.com/jsf/html"
+				xmlns:f="http://java.sun.com/jsf/core"
+				xmlns:ui="http://java.sun.com/jsf/facelets"
+				xmlns:p="http://primefaces.org/ui"
+				xmlns:o="http://omnifaces.org/ui">
 
 	<ui:define name="metadata">
 		<f:metadata>
-			<o:viewParam name="speciesId" value="#{geneView.species}" converter="speciesConverter"/>
-			<o:viewParam id="query" name="query" value="#{geneView.query}" />
+			<o:viewParam name="accession" value="#{geneView.queryAccession}"/>
 			<f:event type="preRenderView" listener="#{geneView.init}" />
 		</f:metadata>
 	</ui:define>
@@ -119,15 +115,11 @@
 		<p:outputPanel rendered="#{geneView.gene != null}">
 			<div id="page-title">
 				<h1>#{geneView.gene.symbol} -
-					#{geneView.species.scientificName}</h1>
+					#{geneView.gene.species.scientificName}</h1>
 				<h:form>
 					<p>
-						<ui:repeat
-							value="#{geneView.gene.accessions.toArray()}"
-							var="acc" varStatus="loop">
-							<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
-								target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
-				</ui:repeat>
+						<a href="http://www.uniprot.org/uniprot/#{geneView.gene.accession.accession}"
+						   target="_blank">#{geneView.gene.accession.accession}</a>
 					</p>
 				</h:form>
 				
@@ -194,13 +186,21 @@
 							<h:outputText value="Write the gene symbol to visualize: " />
 						</p:column>
 						<p:column>
-							<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
-								completeMethod="#{geneSearchView.complete}" queryDelay="600"
-								minQueryLength="2" forceSelection="true" label="ID"
-								emptyMessage="No gene suggestions available, please try again."
-								var="gene" itemLabel="#{gene.selectedGene.symbol}"
-								itemValue="#{gene.selectedGene.symbol}"
-								groupBy="#{gene.type.label}" style="margin-right:8px;" />
+							<p:autoComplete id="geneInput" value="#{geneSearchView.queryGene}"
+											style="margin-right:8px;"
+											completeMethod="#{geneSearchView.complete}" queryDelay="600"
+											minQueryLength="2" forceSelection="true" maxResults="10"
+											label="ID"
+											emptyMessage="No gene suggestions available, please try again."
+											converter="geneConverter"
+											var="gene"
+											itemLabel="#{gene.selectedGene.symbol}"
+											itemValue="#{gene.selectedGene}"
+											groupBy="#{gene.level.label}">
+								<p:column>
+									<h:outputText value="#{gene.selectedGene.symbol} - #{gene.selectedGene.name}"/>
+								</p:column>
+							</p:autoComplete>
 						</p:column>
 					</p:row>
 					<p:row>

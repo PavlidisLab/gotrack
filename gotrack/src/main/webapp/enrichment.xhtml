@@ -1,12 +1,12 @@
 <ui:composition template="/WEB-INF/templates/mainLayout.xhtml"
-	xmlns="http://www.w3.org/1999/xhtml"
-	xmlns:h="http://java.sun.com/jsf/html"
-	xmlns:f="http://java.sun.com/jsf/core"
-	xmlns:ui="http://java.sun.com/jsf/facelets"
-	xmlns:p="http://primefaces.org/ui"
-	xmlns:fn="http://java.sun.com/jsp/jstl/functions"
-	xmlns:pe="http://primefaces.org/ui/extensions"
-	xmlns:of="http://omnifaces.org/functions">
+				xmlns="http://www.w3.org/1999/xhtml"
+				xmlns:h="http://java.sun.com/jsf/html"
+				xmlns:f="http://java.sun.com/jsf/core"
+				xmlns:ui="http://java.sun.com/jsf/facelets"
+				xmlns:p="http://primefaces.org/ui"
+				xmlns:fn="http://java.sun.com/jsp/jstl/functions"
+				xmlns:pe="http://primefaces.org/ui/extensions"
+>
 >
 
 	<ui:define name="metadata">
@@ -492,12 +492,9 @@
 						<h:outputText value="Accessions" />
 						</p:column>
 						<p:column>
-						<span class="sqlDialogText"> <ui:repeat
-								value="#{enrichmentView.viewGene.accessions.toArray()}"
-								var="acc" varStatus="loop">
-								<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
-									target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
-							</ui:repeat>
+						<span class="sqlDialogText">
+							<a href="http://www.uniprot.org/uniprot/#{enrichmentView.viewGene.accession.accession}"
+							   target="_blank">#{enrichmentView.viewGene.accession.accession}</a>
 						</span>
 						</p:column>
 					</p:row>
@@ -593,15 +590,11 @@
 						    <p:column headerText="Symbol">
 						        <h:outputText value="#{gene.symbol}" />
 						    </p:column>
-						 
-						    <p:column headerText="Accession(s)">
-						    	<span>
-						        <ui:repeat
-									value="#{gene.accessions.toArray()}"
-									var="acc" varStatus="loop">
-									<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
-										target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
-								</ui:repeat>
+
+							<p:column headerText="Accession">
+								<span>
+									<a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
+									   target="_blank">#{gene.accession.accession}</a>
 								</span>
 						    </p:column>
 						</p:dataTable>
@@ -659,15 +652,11 @@
 					    <p:column headerText="Symbol">
 					        <h:outputText value="#{gene.symbol}" />
 					    </p:column>
-					 
-					    <p:column headerText="Accession(s)">
-					    	<span>
-					        <ui:repeat
-								value="#{gene.accessions.toArray()}"
-								var="acc" varStatus="loop">
-								<a href="http://www.uniprot.org/uniprot/#{acc.accession}"
-									target="_blank">#{acc.accession}</a>#{!loop.last ? ', ' : ''}
-							</ui:repeat>
+
+						<p:column headerText="Accession">
+							<span>
+								<a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
+								   target="_blank">#{gene.accession.accession}</a>
 							</span>
 					    </p:column>
 					</p:dataTable>
@@ -776,16 +765,18 @@
 							<h:outputText value="Single Gene: " />
 						</p:column>
 						<p:column>
-							<p:autoComplete id="geneInput" value="#{enrichmentView.queryGene}"
-									completeMethod="#{enrichmentView.complete}" minQueryLength="2"
-									forceSelection="true" label="ID"
-									emptyMessage="No gene suggestions available,  please try again."
-									var="genematch" itemLabel="#{genematch.symbol}" itemValue="#{genematch}" 
-									groupBy="#{genematch.type.label}"
-									placeholder="BRCA1" converter="geneMatchConverter">
-									<f:attribute name="species"
-										value="#{enrichmentView.currentSpeciesId}" />
+							<p:autoComplete value="#{enrichmentView.queryGene}"
+											completeMethod="#{enrichmentView.complete}" minQueryLength="2"
+											forceSelection="true" label="ID" maxResults="10"
+											emptyMessage="No gene suggestions available,  please try again."
+											var="genematch" itemLabel="#{genematch.symbol}" itemValue="#{genematch}"
+											groupBy="#{genematch.level.label}"
+											placeholder="BRCA1" converter="geneMatchConverter">
 									<p:ajax event="itemSelect" process="@this" />
+								<p:column>
+									<h:outputText
+											value="#{genematch.selectedGene.symbol} - #{genematch.selectedGene.name}"/>
+								</p:column>
 								</p:autoComplete>
 						</p:column>
 					</p:row>
@@ -832,41 +823,49 @@
 				style="height:600px;width:900px;">
 
 				<p:dataTable id="tableConfirmGenes" var="gm"
-					value="#{enrichmentView.geneMatches}" editable="true"
-					style="margin-bottom:20px;width:800px" scrollable="true"
-					scrollHeight="400"
-					rowStyleClass="#{gm.type == 'EXACT' ? 'green-row' : ( gm.type != 'EXACT_SYNONYM' ? 'red-row': '') }">
+							 value="#{enrichmentView.geneMatches}" editable="true"
+							 style="margin-bottom:20px;width:800px" scrollable="true"
+							 scrollHeight="400"
+							 rowStyleClass="#{gm.type == 'SINGLE' ? 'green-row' : 'red-row'}">
 
-					<p:column headerText="Input">
+					<p:column headerText="Input" style="width:100px;">
 						<h:outputText value="#{gm.querySymbol}" />
 					</p:column>
 
-					<p:column headerText="Selected Gene">
+					<p:column headerText="Selected Gene" style="width:120px;">
 						<p:cellEditor>
 							<f:facet name="output">
-								<h:outputText value="#{gm.selectedGene.symbol}" />
+								<h:outputText
+										value="#{gm.selectedGene.symbol} #{empty gm.selectedGene ? '' : '-'} #{gm.selectedGene.accession.accession}"/>
 							</f:facet>
 							<f:facet name="input">
-								<p:autoComplete id="geneInput" value="#{gm.selectedGene}"
-									completeMethod="#{enrichmentView.complete}" minQueryLength="2"
-									forceSelection="true" label="ID"
-									emptyMessage="No gene suggestions available,  please try again."
-									var="gm2" itemLabel="#{gm2.symbol}" itemValue="#{gm2}" groupBy="#{gm2.type.label}"
-									placeholder="BRCA1" converter="geneMatchConverter">
-									<f:attribute name="species"
-										value="#{enrichmentView.currentSpeciesId}" />
+								<p:autoComplete value="#{gm.selectedGene}"
+												completeMethod="#{enrichmentView.complete}" minQueryLength="2"
+												forceSelection="true" label="ID" maxResults="10"
+												emptyMessage="No gene suggestions available, please try again."
+												var="gm2" itemLabel="#{gm2.symbol}" itemValue="#{gm2}"
+												groupBy="#{gm2.level.label}"
+												placeholder="BRCA1" converter="geneMatchConverter">
+									<p:column>
+										<h:outputText value="#{gm2.selectedGene.symbol} - #{gm2.selectedGene.name}"/>
+									</p:column>
 								</p:autoComplete>
 							</f:facet>
 						</p:cellEditor>
 					</p:column>
 
-					<p:column headerText="Match Type">
-						<h:outputText value="#{gm.type}" />
+					<p:column headerText="Description">
+						<h:outputText id="geneNameId"
+									  value="${gm.selectedGene.name.length() > 45 ? ''.concat(fn:substring(gm.selectedGene.name, 0, 45)).concat('...') : gm.selectedGene.name}"
+									  title="#{gm.selectedGene.name.length() > 45 ? gm.selectedGene.name : ''}"/>
+					</p:column>
+
+					<p:column headerText="Match Type" style="width:150px;">
+						<h:outputText value="#{gm.type.label} - #{gm.level.label}"/>
 					</p:column>
 
 
-
-					<p:column style="width:48px">
+					<p:column style="width:36px">
 						<p:rowEditor />
 					</p:column>
 

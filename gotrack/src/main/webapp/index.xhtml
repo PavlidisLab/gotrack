@@ -170,7 +170,7 @@
 										</p:selectOneMenu>
 									</p:column>
 									<p:column rowspan="2">
-										<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
+										<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go2}"/>
 									</p:column>
 								</p:row>
 								
@@ -179,13 +179,21 @@
 										<h:outputText value="Enter a gene symbol: &nbsp;" />
 									</p:column>
 									<p:column>
-										<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
-											completeMethod="#{geneSearchView.complete}" queryDelay="600"
-											minQueryLength="2" forceSelection="true" maxResults="10"
-											label="ID"
-											emptyMessage="No gene suggestions available, please try again."
-											var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
-											groupBy="#{gene.type.label}"/>
+										<p:autoComplete id="geneInput" value="#{geneSearchView.queryGene}"
+														completeMethod="#{geneSearchView.complete}" queryDelay="600"
+														minQueryLength="2" forceSelection="true" maxResults="10"
+														label="ID"
+														emptyMessage="No gene suggestions available, please try again."
+														converter="geneConverter"
+														var="gene"
+														itemLabel="#{gene.selectedGene.symbol}"
+														itemValue="#{gene.selectedGene}"
+														groupBy="#{gene.level.label}">
+											<p:column>
+												<h:outputText
+														value="#{gene.selectedGene.symbol} - #{gene.selectedGene.name}"/>
+											</p:column>
+										</p:autoComplete>
 									</p:column>
 								</p:row>
 								

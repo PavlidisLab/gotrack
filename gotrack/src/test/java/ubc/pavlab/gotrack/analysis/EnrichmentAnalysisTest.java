@@ -19,31 +19,17 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.sql.Date;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
+import org.apache.log4j.Logger;
+import org.hamcrest.Matchers;
+import org.junit.*;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import ubc.pavlab.gotrack.BaseTest;
 import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.Gene;
@@ -51,6 +37,12 @@ import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+
+import java.sql.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * Tests EnrichmentAnalysis Class, does not test accuracy of individual over-representation analyses as that
@@ -73,6 +65,8 @@ public class EnrichmentAnalysisTest extends BaseTest {
 
     private Cache cache;
 
+    private static final Species human = new Species( 7, "Human", "", 9606, null );
+
     @BeforeClass
     public static void classSetup() {
     }
@@ -91,8 +85,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
         List<Gene> genes = Lists.newArrayList();
 
         for ( int i = 1; i < n + 1; i++ ) {
-            genes.add( new Gene.GeneBuilder( i, "Gene" + String.format( "%02d", i ),
-                    new Species( 7, "Human", "", 9606, null ), Collections.<Accession> emptySet() ).build() );
+            genes.add( new Gene.GeneBuilder( i, "Gene" + String.format( "%02d", i ), "", human, null ).build() );
         }
         return genes;
     }
@@ -148,7 +141,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
 
         Cache cacheSpy = Mockito.spy( new Cache() );
 
-        Mockito.when( cacheSpy.getInferredAnnotationCount( Mockito.anyInt(), Mockito.any( Edition.class ),
+        Mockito.when( cacheSpy.getInferredAnnotationCount( Mockito.any( Species.class ), Mockito.any( Edition.class ),
                 Mockito.any( GeneOntologyTerm.class ) ) ).thenAnswer( new Answer<Integer>() {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {
@@ -161,7 +154,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
                     }
                 } );
 
-        Mockito.when( cacheSpy.getGeneCount( Mockito.anyInt(), Mockito.any( Edition.class ) ) )
+        Mockito.when( cacheSpy.getGeneCount( Mockito.any( Species.class ), Mockito.any( Edition.class ) ) )
                 .thenAnswer( new Answer<Integer>() {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {
@@ -202,7 +195,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetThreshold() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getThreshold(), Matchers.is( 0.05 ) );
 
@@ -211,7 +204,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetCutoff() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getCutoff( null ), Matchers.nullValue() );
         Assert.assertThat( e.getCutoff( ed1 ), Matchers.is( 0.05 ) );
@@ -222,7 +215,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetEditions() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getEditions(), Matchers.containsInAnyOrder( ed1, ed2 ) );
 
@@ -231,7 +224,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testSignificantResults() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getSignificantResults( null ), Matchers.nullValue() );
 
@@ -254,7 +247,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetResults() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> actualMap = e.getResults();
         Assert.assertThat( actualMap, Matchers.notNullValue() );
@@ -280,7 +273,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetResults2() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         // Ed1 
         Map<GeneOntologyTerm, EnrichmentResult> actual = e.getResults( ed1 );
@@ -303,7 +296,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetResult() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         EnrichmentResult actual = e.getResult( ed1, new GeneOntologyTerm( "GO:0000003" ) );
         Assert.assertThat( actual, Matchers.notNullValue() );
@@ -322,9 +315,9 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetCurrentSpeciesId() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
-        Assert.assertThat( e.getCurrentSpeciesId(), Matchers.is( 7 ) );
+        Assert.assertThat( e.getCurrentSpecies(), Matchers.is( human ) );
 
     }
 
@@ -332,7 +325,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     public void testGetMinAnnotatedPopulation() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 10, 100, MultipleTestCorrection.BONFERRONI, 0.05,
                 cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getMinAnnotatedPopulation(), Matchers.is( 10 ) );
 
@@ -342,7 +335,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     public void testGetMaxAnnotatedPopulation() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 10, 100, MultipleTestCorrection.BONFERRONI, 0.05,
                 cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getMaxAnnotatedPopulation(), Matchers.is( 100 ) );
 
@@ -351,7 +344,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetRawResults() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 0, 0, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Map<Edition, Enrichment<GeneOntologyTerm, Gene>> actualMap = e.getRawResults();
         Assert.assertThat( actualMap, Matchers.notNullValue() );
@@ -371,7 +364,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetRejectedTerms() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Set<GeneOntologyTerm> actual = e.getRejectedTerms( ed1 );
         Assert.assertThat( actual, Matchers.notNullValue() );
@@ -383,7 +376,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetTermsSignificantInAnyEdition() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Set<GeneOntologyTerm> actual = e.getTermsSignificantInAnyEdition();
         Assert.assertThat( actual, Matchers.notNullValue() );
@@ -395,7 +388,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetTermsSignificant() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Set<GeneOntologyTerm> actual = e.getTermsSignificant( ed1 );
         Assert.assertThat( actual, Matchers.notNullValue() );
@@ -412,7 +405,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetGeneSet() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Set<Gene> actual = e.getGeneSet( ed1, new GeneOntologyTerm( "GO:0000002" ) );
         Assert.assertThat( actual, Matchers.notNullValue() );
@@ -424,7 +417,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetTopNTerms() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Set<GeneOntologyTerm> actual = e.getTopNTerms( 5 );
         Assert.assertThat( actual, Matchers.notNullValue() );
@@ -437,7 +430,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetTopNTerms2() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Set<GeneOntologyTerm> actual = e.getTopNTerms( 5, ed1 );
         Assert.assertThat( actual, Matchers.notNullValue() );
@@ -456,7 +449,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetResults3() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Map<Edition, EnrichmentResult> actual = e.getResults( new GeneOntologyTerm( "GO:0000003" ) );
         Assert.assertThat( actual, Matchers.notNullValue() );
@@ -474,7 +467,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetTotalEditions() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getTotalEditions(), Matchers.is( 2 ) );
     }
@@ -482,7 +475,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetTotalGenes() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getTotalGenes(), Matchers.is( 5 ) ); // Gene 0 has no terms
     }
@@ -490,7 +483,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetTotalTerms() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getTotalTerms(), Matchers.is( 100 ) );
     }
@@ -498,7 +491,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
     @Test
     public void testGetTotalResults() {
         EnrichmentAnalysis e = new EnrichmentAnalysis( sampleMap, 3, 98, MultipleTestCorrection.BONFERRONI, 0.05, cache,
-                7 );
+                human );
 
         Assert.assertThat( e.getTotalResults(), Matchers.is( 192 ) );
     }

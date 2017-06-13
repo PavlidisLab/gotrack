@@ -19,25 +19,14 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.sql.Date;
-import java.util.Collections;
-import java.util.List;
-
-import org.apache.log4j.Logger;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Sets;
-
+import org.apache.log4j.Logger;
+import org.hamcrest.Matchers;
+import org.junit.*;
 import ubc.pavlab.gotrack.BaseTest;
-import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Gene.GeneBuilder;
 import ubc.pavlab.gotrack.model.Species;
@@ -47,6 +36,10 @@ import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
 import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
 import ubc.pavlab.gotrack.utilities.Tuples;
 import ubc.pavlab.gotrack.utilities.Tuples.Tuple3;
+
+import java.sql.Date;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * TODO Document Me
@@ -79,29 +72,29 @@ public class AnnotationDAOTest extends BaseTest {
         Species s = new Species( 7, "Human", "", 9606, null );
 
         // Human Gene 1
-        GeneBuilder gb = new Gene.GeneBuilder( 5, "LONP1", s, Collections.<Accession> emptySet() );
+        GeneBuilder gb = new Gene.GeneBuilder( 5, "LONP1", "", s, null );
         gh1 = gb.build();
 
         // Human Gene 2
-        gb = new Gene.GeneBuilder( 10, "SLC25A33", s, Collections.<Accession> emptySet() );
+        gb = new Gene.GeneBuilder( 10, "SLC25A33", "", s, null );
         gh2 = gb.build();
 
         // Mouse
         s = new Species( 8, "Mouse", "", 10090, null );
 
         // Mouse Gene 1
-        gb = new Gene.GeneBuilder( 12, "Mpv17", s, Collections.<Accession> emptySet() );
+        gb = new Gene.GeneBuilder( 12, "Mpv17", "", s, null );
         gm1 = gb.build();
 
         // Mouse Gene 2
-        gb = new Gene.GeneBuilder( 18, "Pif1", s, Collections.<Accession> emptySet() );
+        gb = new Gene.GeneBuilder( 18, "Pif1", "", s, null );
         gm2 = gb.build();
 
         // Alien
         s = new Species( 123456789, "E.T.", "", 123456789, null );
 
         // Alien Gene 1
-        gb = new Gene.GeneBuilder( 123456789, "ufo", s, Collections.<Accession> emptySet() );
+        gb = new Gene.GeneBuilder( 123456789, "ufo", "", s, null );
         gfake = gb.build();
 
     }
@@ -117,7 +110,7 @@ public class AnnotationDAOTest extends BaseTest {
 
     @Test
     public void testTrackDeep() {
-        List<AnnotationDTO> res = annotationDAO.track( gh1 );
+        List<AnnotationDTO> res = annotationDAO.fullAnnotationAllEditions( gh1 );
         Assert.assertThat( res.size(), Matchers.is( 188 ) );
 
         Multiset<String> goIds = HashMultiset.create();
@@ -217,29 +210,29 @@ public class AnnotationDAOTest extends BaseTest {
 
     @Test
     public void testTrackShallow() {
-        List<AnnotationDTO> res = annotationDAO.track( gh1 );
+        List<AnnotationDTO> res = annotationDAO.fullAnnotationAllEditions( gh1 );
         Assert.assertThat( res.size(), Matchers.is( 188 ) );
 
-        res = annotationDAO.track( gh2 );
+        res = annotationDAO.fullAnnotationAllEditions( gh2 );
         Assert.assertThat( res.size(), Matchers.is( 96 ) );
 
-        res = annotationDAO.track( gm1 );
+        res = annotationDAO.fullAnnotationAllEditions( gm1 );
         Assert.assertThat( res.size(), Matchers.is( 56 ) );
 
-        res = annotationDAO.track( gm2 );
+        res = annotationDAO.fullAnnotationAllEditions( gm2 );
         Assert.assertThat( res.size(), Matchers.is( 80 ) );
 
-        res = annotationDAO.track( gm2 );
+        res = annotationDAO.fullAnnotationAllEditions( gm2 );
         Assert.assertThat( res.size(), Matchers.is( 80 ) );
 
-        res = annotationDAO.track( gfake );
+        res = annotationDAO.fullAnnotationAllEditions( gfake );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
     }
 
     @Test
     public void testEnrichDeep() {
-        List<EnrichmentDTO> res = annotationDAO.enrich( Sets.newHashSet( gh1, gh2 ) );
+        List<EnrichmentDTO> res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1, gh2 ) );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         Multiset<String> goIds = HashMultiset.create();
@@ -321,33 +314,33 @@ public class AnnotationDAOTest extends BaseTest {
 
     @Test
     public void testEnrichShallow() {
-        List<EnrichmentDTO> res = annotationDAO.enrich( Sets.newHashSet( gh1, gh2 ) );
+        List<EnrichmentDTO> res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1, gh2 ) );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         // Redundancy
-        res = annotationDAO.enrich( Sets.newHashSet( gh1, gh2, gh1, gh1, gh2 ) );
+        res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1, gh2, gh1, gh1, gh2 ) );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         // bad gene
-        res = annotationDAO.enrich( Sets.newHashSet( gh1, gh2, gfake ) );
+        res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1, gh2, gfake ) );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         // empty gene
-        res = annotationDAO.enrich( Collections.<Gene> emptySet() );
+        res = annotationDAO.simpleAnnotationAllEditions( Collections.<Gene>emptySet() );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
         // null gene
-        res = annotationDAO.enrich( null );
+        res = annotationDAO.simpleAnnotationAllEditions( null );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.enrich( Sets.newHashSet( gh1 ) );
+        res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1 ) );
         Assert.assertThat( res.size(), Matchers.is( 132 ) );
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testCategoryCounts() {
-        List<CategoryCountDTO> res = annotationDAO.categoryCounts( "GO:0007005" );
+        List<CategoryCountDTO> res = annotationDAO.categoryCountsAllEditions( "GO:0007005" );
 
         List<Tuple3<Date, String, Integer>> records = Lists.newArrayList();
 
@@ -371,10 +364,10 @@ public class AnnotationDAOTest extends BaseTest {
                         Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Computational", 5 ),
                         Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Experimental", 6 ) ) );
 
-        res = annotationDAO.categoryCounts( "GO:0008150" ); // BP
+        res = annotationDAO.categoryCountsAllEditions( "GO:0008150" ); // BP
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.categoryCounts( "GO:0003674" ); //MF
+        res = annotationDAO.categoryCountsAllEditions( "GO:0003674" ); //MF
 
         records = Lists.newArrayList();
 
@@ -388,11 +381,11 @@ public class AnnotationDAOTest extends BaseTest {
                         Tuples.tuple3( Date.valueOf( "2015-06-22" ), "Curatorial", 1 ),
                         Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Curatorial", 1 ) ) );
 
-        res = annotationDAO.categoryCounts( "" );
+        res = annotationDAO.categoryCountsAllEditions( "" );
 
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.categoryCounts( null );
+        res = annotationDAO.categoryCountsAllEditions( null );
 
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
@@ -401,7 +394,7 @@ public class AnnotationDAOTest extends BaseTest {
     @SuppressWarnings("unchecked")
     @Test
     public void testDirectGeneCounts() {
-        List<DirectAnnotationCountDTO> res = annotationDAO.directGeneCounts( "GO:0007005" );
+        List<DirectAnnotationCountDTO> res = annotationDAO.directGeneCountsAllEditions( "GO:0007005" );
 
         List<Tuple3<Integer, Integer, Integer>> records = Lists.newArrayList();
 
@@ -419,7 +412,7 @@ public class AnnotationDAOTest extends BaseTest {
                         Tuples.tuple3( 8, 132, 3 ),
                         Tuples.tuple3( 8, 133, 3 ) ) );
 
-        res = annotationDAO.directGeneCounts( "GO:0007568" );
+        res = annotationDAO.directGeneCountsAllEditions( "GO:0007568" );
 
         records = Lists.newArrayList();
 
@@ -433,11 +426,11 @@ public class AnnotationDAOTest extends BaseTest {
                         Tuples.tuple3( 7, 146, 1 ),
                         Tuples.tuple3( 7, 147, 1 ) ) );
 
-        res = annotationDAO.directGeneCounts( "" );
+        res = annotationDAO.directGeneCountsAllEditions( "" );
 
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.directGeneCounts( null );
+        res = annotationDAO.directGeneCountsAllEditions( null );
 
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
     }

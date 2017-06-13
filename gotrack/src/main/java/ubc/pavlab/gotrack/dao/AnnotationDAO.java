@@ -19,16 +19,12 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.util.List;
-import java.util.Set;
-
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
-import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
-import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
-import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
-import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
+import ubc.pavlab.gotrack.model.dto.*;
+
+import java.util.List;
+import java.util.Set;
 
 /**
  * This interface represents a contract for {@link AnnotationDAOImpl}. Note that all methods are
@@ -39,26 +35,26 @@ public interface AnnotationDAO {
     /**
      * Retrieve data necessary for enrichment of given set of genes
      */
-    public List<EnrichmentDTO> enrich( Set<Gene> genes ) throws DAOException;
+    public List<EnrichmentDTO> simpleAnnotationAllEditions( Set<Gene> genes ) throws DAOException;
 
     /**
      * Retrieves counts of unique annotations grouped by evidence category over time for a specific GO Id
      */
-    public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException;
+    public List<CategoryCountDTO> categoryCountsAllEditions( String goId ) throws DAOException;
 
     /**
      * Retrieves counts of unique genes which have this GO Id annotated to it over time
      */
-    public List<DirectAnnotationCountDTO> directGeneCounts( String goId ) throws DAOException;
+    public List<DirectAnnotationCountDTO> directGeneCountsAllEditions( String goId ) throws DAOException;
 
     /**
      * Retrieve data necessary for tracking a specific gene over time
      */
-    public List<AnnotationDTO> track( Gene g ) throws DAOException;
+    public List<AnnotationDTO> fullAnnotationAllEditions( Gene g ) throws DAOException;
 
     /**
      * Retrieve data necessary for enrichment of given set of genes in a given edition
      */
-    public List<SimpleAnnotationDTO> enrichSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException;
+    public List<SimpleAnnotationDTO> simpleAnnotationSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException;
 
 }
