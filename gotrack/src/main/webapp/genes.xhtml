@@ -173,11 +173,11 @@
 							<h:outputText value="Select the species of interest: " />
 						</p:column>
 						<p:column>
-							<p:selectOneMenu id="selectspecies"
-								value="#{geneSearchView.speciesId}" style="margin-right:5px;">
+							<p:selectOneMenu id="selectspecies" converter="speciesConverter"
+								value="#{geneSearchView.species}" style="margin-right:5px;">
 								<p:ajax event="change" process="@this" />
 								<f:selectItems value="#{cache.speciesList}" var="spec"
-									itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
+									itemValue="#{spec}" itemLabel="#{spec.commonName}" />
 							</p:selectOneMenu>
 						</p:column>
 					</p:row>
