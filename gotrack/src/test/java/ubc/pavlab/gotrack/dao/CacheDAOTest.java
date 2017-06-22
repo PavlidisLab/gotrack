@@ -62,13 +62,13 @@ public class CacheDAOTest extends BaseTest {
 
     @Test
     public void testGetGOAnnotationCountsDeep() {
-        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( null );
+        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( 7,0 ); // FIXME: new signature
         Assert.assertThat( res.size(), Matchers.is( 5415 ) );
 
         for ( AnnotationCountDTO dto : res ) {
 
             // Individual spot checks
-            if ( dto.getSpecies() == 7 ) {
+//            if ( dto.getSpecies() == 7 ) {
 
                 if ( dto.getEdition() == 144 && dto.getGoId().equals( "GO:0004252" ) ) {
                     Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
@@ -83,7 +83,7 @@ public class CacheDAOTest extends BaseTest {
                     Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
                     Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
                 }
-            } else if ( dto.getSpecies() == 8 ) {
+//            } else if ( dto.getSpecies() == 8 ) {
                 if ( dto.getEdition() == 130 && dto.getGoId().equals( "GO:0098772" ) ) {
                     Assert.assertThat( dto.getDirectCount(), Matchers.is( 0 ) );
                     Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
@@ -97,13 +97,13 @@ public class CacheDAOTest extends BaseTest {
                     Assert.assertThat( dto.getDirectCount(), Matchers.is( 0 ) );
                     Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
                 }
-            }
+//            }
         }
     }
 
     @Test
     public void testGetGOAnnotationCounts() {
-        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( null );
+        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( 7,0 ); // FIXME: new signature
         Assert.assertThat( res.size(), Matchers.is( 5415 ) );
 
         Multiset<Integer> editions = HashMultiset.create();
@@ -166,36 +166,34 @@ public class CacheDAOTest extends BaseTest {
 
     @Test
     public void testGetGOAnnotationCountsSpeciesRestrictedDeep() {
-        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( new int[] { 7 } );
+        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( 7, 0 );
         Assert.assertThat( res.size(), Matchers.is( 3020 ) );
 
         for ( AnnotationCountDTO dto : res ) {
 
             // Individual spot checks
-            if ( dto.getSpecies() == 7 ) {
 
-                if ( dto.getEdition() == 144 && dto.getGoId().equals( "GO:0004252" ) ) {
-                    Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
-                    Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
-                } else if ( dto.getEdition() == 145 && dto.getGoId().equals( "GO:0004252" ) ) {
-                    Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
-                    Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
-                } else if ( dto.getEdition() == 146 && dto.getGoId().equals( "GO:0004252" ) ) {
-                    Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
-                    Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
-                } else if ( dto.getEdition() == 147 && dto.getGoId().equals( "GO:0004252" ) ) {
-                    Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
-                    Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
-                }
-            } else {
-                Assert.fail( "Incorrect species" );
+
+            if ( dto.getEdition() == 144 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            } else if ( dto.getEdition() == 145 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            } else if ( dto.getEdition() == 146 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            } else if ( dto.getEdition() == 147 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
             }
+
         }
     }
 
     @Test
     public void testGetGOAnnotationCountsSpeciesRestricted() {
-        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( new int[] { 7 } );
+        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( 7,0 );
         Assert.assertThat( res.size(), Matchers.is( 3020 ) );
 
         Multiset<Integer> editions = HashMultiset.create();
@@ -212,7 +210,7 @@ public class CacheDAOTest extends BaseTest {
         Assert.assertThat( editions.count( 146 ), Matchers.is( 771 ) );
         Assert.assertThat( editions.count( 147 ), Matchers.is( 771 ) );
 
-        res = cacheDAO.getGOAnnotationCounts( new int[] { 8 } );
+        res = cacheDAO.getGOAnnotationCounts( 8,0 );
         Assert.assertThat( res.size(), Matchers.is( 2395 ) );
 
         editions = HashMultiset.create();
@@ -545,7 +543,7 @@ public class CacheDAOTest extends BaseTest {
 
     @Test
     public void testGetGoTerms() {
-        List<GOTermDTO> res = cacheDAO.getGoTerms();
+        List<GOTermDTO> res = cacheDAO.getGoTerms(0); // FIXME: recreate for individual go editions
         Assert.assertThat( res.size(), Matchers.is( 3195 ) );
 
         Multiset<String> goIds = HashMultiset.create();
@@ -576,7 +574,7 @@ public class CacheDAOTest extends BaseTest {
 
     @Test
     public void testGetAdjacencies() {
-        List<AdjacencyDTO> res = cacheDAO.getAdjacencies();
+        List<AdjacencyDTO> res = cacheDAO.getAdjacencies(0); // FIXME: recreate for individual go editions
         Assert.assertThat( res.size(), Matchers.is( 5728 ) );
 
         Multiset<Integer> editions = HashMultiset.create();

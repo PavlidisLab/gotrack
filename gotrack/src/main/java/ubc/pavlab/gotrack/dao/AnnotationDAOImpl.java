@@ -30,6 +30,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.sql.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -47,9 +48,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     /* CURRENT QUERIES */
 
-    private static final String SQL_STAR = "*";
     private static final String SQL_ANNOTATION = "annotation";
-    private static final String SQL_ACCESSION_HISTORY = "staging_pp_accession_history";
+    private static final String SQL_ACCESSION_HISTORY = "staging_pp_accession_history"; // TODO: data-format - replace
     private static final String SQL_ACCESSION = "accession";
     private static final String SQL_EDITION = "edition_tmp"; // TODO: data-format - replace with edition
     private static final String SQL_EVIDENCE = "evidence_categories";
@@ -57,17 +57,17 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     // Get information from single gene, should be fast < 0.2s
     // species, symbol,species
 
-    private static final String SQL_FULL_ANNOTATION_ALL_EDITIONS_SINGLE_GENE = "select distinct edition, go_id, qualifier, evidence, reference from " + SQL_ANNOTATION + " ann " +
+    private static final String SQL_FULL_ANNOTATION_RANGE_EDITIONS_SINGLE_GENE = "select distinct edition, go_id, qualifier, evidence, reference from " + SQL_ANNOTATION + " ann " +
             "inner join " + SQL_ACCESSION_HISTORY + " ppah on ppah.secondary_accession_id = ann.accession_id " +
             "inner join " + SQL_ACCESSION + " acc on acc.id = ppah.secondary_accession_id " +
-            "where ppah.accession_id = ? " +
+            "where ppah.accession_id = ? AND edition between ? and ? " +
             "order by edition";
 
     // Get information from multiple genes for running enrichment, should be quite fast and scale sublinearly
-    private static final String SQL_SIMPLE_ANNOTATION_ALL_EDITIONS_MULTIPLE_GENES = "select distinct acc.edition, go_id, ppah.accession_id gene_id from " + SQL_ANNOTATION + " ann " +
+    private static final String SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES = "select distinct acc.edition, go_id, ppah.accession_id gene_id from " + SQL_ANNOTATION + " ann " +
             "inner join " + SQL_ACCESSION_HISTORY + " ppah on ppah.secondary_accession_id = ann.accession_id " +
             "inner join " + SQL_ACCESSION + " acc on acc.id=ppah.secondary_accession_id " +
-            "where ppah.accession_id in (%s) " +
+            "where ppah.accession_id in (%s) AND edition between ? and ? " +
             "ORDER BY NULL";
 
     // Get information from multiple genes for running enrichment in a single edition, should be extremely fast
@@ -78,11 +78,11 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             "ORDER BY NULL";
 
     // Collect evidence breakdown for a specific term, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
-    private static final String SQL_CATEGORY_BREAKDOWN_ALL_EDITIONS_SINGLE_TERM = "select date, evcat.category , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
+    private static final String SQL_CATEGORY_BREAKDOWN_RANGE_DATES_SINGLE_TERM = "select date, evcat.category , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
             "inner join " + SQL_EVIDENCE + " evcat on evcat.evidence = ann.evidence " +
             "inner join " + SQL_ACCESSION + " acc on acc.id=ann.accession_id  " +
             "inner join " + SQL_EDITION + " ed using(species_id, edition) " +
-            "where go_id=? group by date, evcat.category " +
+            "where go_id=? AND DATE BETWEEN ? AND ? group by date, evcat.category " +
             "order by date";
 
     // Collect unique, directly annotated gene counts for a term, not used at the moment (pretty slow)
@@ -110,18 +110,20 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public List<AnnotationDTO> fullAnnotationAllEditions( Gene g ) throws DAOException {
+    public List<AnnotationDTO> fullAnnotationRangeEditions( Gene g, Integer minimum, Integer maximum ) throws DAOException {
 
-        List<Object> params = new ArrayList<Object>();
+        List<Object> params = new ArrayList<>();
 
         params.add( g.getId() );
+        params.add( minimum );
+        params.add( maximum );
 
         Connection connection = null;
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
         List<AnnotationDTO> results = new ArrayList<>();
-        String sql = SQL_FULL_ANNOTATION_ALL_EDITIONS_SINGLE_GENE;
+        String sql = SQL_FULL_ANNOTATION_RANGE_EDITIONS_SINGLE_GENE;
 
         log.debug( sql );
 
@@ -158,7 +160,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<EnrichmentDTO> simpleAnnotationAllEditions( Set<Gene> genes ) throws DAOException {
+    public List<EnrichmentDTO> simpleAnnotationRangeEditions( Set<Gene> genes, Integer minEdition, Integer maxEdition ) throws DAOException {
 
         if ( genes == null || genes.size() == 0 ) {
             return Lists.newArrayList();
@@ -166,11 +168,14 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
         List<Object> params = Lists.newArrayList();
 
-        String sql = String.format( SQL_SIMPLE_ANNOTATION_ALL_EDITIONS_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
+        String sql = String.format( SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
 
         for ( Gene g : genes ) {
             params.add( g.getId() );
         }
+
+        params.add( minEdition );
+        params.add( maxEdition );
 
         Connection connection = null;
         PreparedStatement statement = null;
@@ -272,7 +277,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<CategoryCountDTO> categoryCountsAllEditions( String goId ) throws DAOException {
+    public List<CategoryCountDTO> categoryCountsRangeDates( String goId, Date min, Date max  ) throws DAOException {
         // TODO This method of collecting the data is not robust, 
         // If editions across species in the same 'release' are have slightly differing dates, 
         // they will not be grouped appropriately
@@ -285,13 +290,15 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
         // species, symbol,species
         params.add( goId );
+        params.add( min );
+        params.add( max );
 
         Connection connection = null;
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
         List<CategoryCountDTO> results = new ArrayList<>();
-        String sql = SQL_CATEGORY_BREAKDOWN_ALL_EDITIONS_SINGLE_TERM;
+        String sql = SQL_CATEGORY_BREAKDOWN_RANGE_DATES_SINGLE_TERM;
 
         log.debug( sql );
 

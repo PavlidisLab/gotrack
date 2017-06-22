@@ -82,6 +82,17 @@ public class Cache implements Serializable {
     @Inject
     private SpeciesService speciesService;
 
+    // Globally restrict displayed and computed species
+    private int[] speciesRestrictions = new int[]{};
+
+    // Globally limit the oldest displayed and computed editions.
+    private int minRelease = 0;
+    private GOEdition globalMinGOEdition = null;
+    private GOEdition globalMaxGOEdition = null;
+
+    // // Maps species id -> global minimum edition to query
+    private Map<Species, Edition> globalMinEditions = new ConcurrentHashMap<>();
+
     // Maps species id -> species;
     private Map<Integer, Species> speciesCache = new ConcurrentHashMap<>();
 
@@ -204,53 +215,94 @@ public class Cache implements Serializable {
         return AnnotationType.values();
     }
 
-    /**
-     * Create lots of static data caches to be used by Views.
-     */
-    @PostConstruct
-    public void init() {
-        log.info( "Cache init" );
 
-        applicationLevelEnrichmentCache = Collections.synchronizedMap( applicationLevelEnrichmentCache );
-        applicationLevelGeneCache = Collections.synchronizedMap( applicationLevelGeneCache );
-
-        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
-                + " MB" );
-
-        // Cache creation is restricted to these species (not necessarily database retrieval calls in Views though)
-        int[] speciesRestrictions = settingsCache.getSpeciesRestrictions();
-
-        if ( speciesRestrictions == null || speciesRestrictions.length == 0 ) {
-            log.info( "restriction species to: " + Arrays.toString( speciesRestrictions ) );
+    private void createSpecies() {
+        Set<Integer> sr = Sets.newHashSet();
+        if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
+            log.info( "Restricting species to: " + Arrays.toString( speciesRestrictions ) );
+            for ( int sid : speciesRestrictions ) {
+                sr.add( sid );
+            }
         }
 
         List<Species> speciesList = speciesService.list();
 
         for ( Species species : speciesList ) {
-            // TODO: restrict this list as well?
-            speciesCache.put( species.getId(), species );
+            if ( sr.isEmpty() || sr.contains( species.getId() ) ) {
+                speciesCache.put( species.getId(), species );
+            }
         }
 
         log.info( "Species Cache successfully created: " + speciesCache );
+    }
 
-        // Obtain CacheDAO
-        CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
-        log.info( "CacheDAO successfully obtained: " + cacheDAO );
+    private void createEditions( CacheDAO cacheDAO ) {
 
         // GOEdition Cache creation
         // ****************************
-        for ( GOEditionDTO dto : cacheDAO.getAllGOEditions() ) {
-            allGOEditions.put( dto.getId(), new GOEdition( dto ) );
+        // Need two pass throughs
+        List<GOEditionDTO> allGOEDitionDTO = cacheDAO.getAllGOEditions();
+
+        // Find global minimum GO Edition Date
+
+        Set<Integer> minGOEds = Sets.newHashSet();
+        for ( EditionDTO dto : cacheDAO.getReleaseEditions( minRelease ) ) {
+            minGOEds.add( dto.getGoEditionId() );
         }
 
-        currentGOEdition = Collections.max( allGOEditions.values() );
+        Date globalMinGOEditionDate = null;
+        for ( GOEditionDTO dto : allGOEDitionDTO ) {
+            // Contained in a release edition
+            if ( minGOEds.contains( dto.getId() ) ) {
+                // Oldest yet
+                if ( globalMinGOEditionDate == null || globalMinGOEditionDate.after( dto.getDate() ) ) {
+                    globalMinGOEditionDate = dto.getDate();
+                }
+            }
+        }
+
+        for ( GOEditionDTO dto : allGOEDitionDTO ) {
+            if ( !globalMinGOEditionDate.after( dto.getDate() ) ) {
+                GOEdition goEdition = new GOEdition( dto );
+                allGOEditions.put( dto.getId(), goEdition );
+                if ( globalMinGOEditionDate.equals( dto.getDate() ) ) {
+                    if ( globalMinGOEdition != null ) {
+                        log.warn( "Found multiple GO Editions with same date!" );
+                    }
+                    globalMinGOEdition = goEdition;
+                }
+            }
+        }
 
         // ****************************
 
         // Edition Cache creation
         // ****************************
 
+        // Current editions
+        Map<Integer, Integer> currentEditionsTemp = Maps.newHashMap();
+        for ( EditionDTO dto : cacheDAO.getCurrentEditions( speciesRestrictions ) ) {
+            currentEditionsTemp.put( dto.getSpecies(), dto.getEdition() );
+        }
+
+        // Create Edition objects
         for ( EditionDTO dto : cacheDAO.getAllEditions( speciesRestrictions ) ) {
+
+            // Skip if Edition table contains editions newer than stored in current_editions
+            // table. This can happen if data was imported into the database but pre-process
+            // steps were not yet run.
+            Integer currentEdition = currentEditionsTemp.get( dto.getSpecies() );
+            if ( currentEdition < dto.getEdition() ) {
+                continue;
+            }
+
+            // Skip if edition is older than the minimum requested release.
+            // This is specified in the properties file and can be used to
+            // globally limit the oldest displayed and computed editions.
+            if ( minRelease > dto.getRelease() ) {
+                continue;
+            }
+
             Species species = speciesCache.get( dto.getSpecies() );
             Map<Integer, Edition> m = allEditions.get( species );
 
@@ -261,17 +313,36 @@ public class Cache implements Serializable {
 
             GOEdition goEdition = allGOEditions.get( dto.getGoEditionId() );
 
+            if ( goEdition == null ) {
+                log.warn( "Species (" + species + ") Edition (" + dto.getEdition() + ") missing GOEdition ("
+                        + dto.getGoEditionId() + ")" );
+            }
+
             Edition ed = new Edition( dto, goEdition );
             m.put( dto.getEdition(), ed );
-            // Since getAllEditions is ordered by edition the final put will always be the most current
-            currentEditions.put( species, ed );
+
+            // This iterates in order, therefore we want the first (oldest) edition for each species as a default
+            if ( globalMinEditions.get( species ) == null ) {
+                globalMinEditions.put( species, ed );
+            }
+
+            if ( currentEdition.equals( dto.getEdition() ) ) {
+                currentEditions.put( species, ed );
+                if ( globalMaxGOEdition == null || globalMaxGOEdition.getDate().before( goEdition.getDate() ) ) {
+                    globalMaxGOEdition = goEdition;
+                }
+            }
         }
 
-        // TODO: data-format - load current editions via pp_current_edition
+        currentGOEdition = Collections.max( allGOEditions.values() );
 
-        log.debug( "All Editions Size: " + allEditions.size() );
+        for ( Entry<Species, Edition> entry : currentEditions.entrySet() ) {
+            log.info( "Editions (" + entry.getKey().getCommonName() + "): Current=" + entry.getValue() + ", Total=" + allEditions.get( entry.getKey() ).size() );
+        }
+    }
+
+    private void createEvidence( CacheDAO cacheDAO ) {
         // ****************************
-
         // Evidence cache creation
         // ****************************
 
@@ -288,73 +359,53 @@ public class Cache implements Serializable {
         }
 
         evidenceCategoryCache = ImmutableSet.copyOf( tmpCategories );
+    }
 
-        // ****************************
-
-        // System.gc();
-        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
-                + " MB" );
-
+    private void createGOTerms( CacheDAO cacheDAO ) {
         // GOTerm creation
         // ****************************
-        if ( !settingsCache.isDryRun() ) {
-            for ( GOTermDTO dto : cacheDAO.getGoTerms() ) {
 
-                GOEdition goEdition = allGOEditions.get( dto.getGoEdition() );
+        log.info( "Caching ontologies..." );
+        int i = 0;
+        for ( GOEdition goEdition : allGOEditions.values() ) {
+            if ( i % 20 == 0 ) {
+                log.info( "Ontologies complete: " + i + " / " + allGOEditions.size() );
+            }
+            GeneOntology go = new GeneOntology( goEdition );
+            ontologies.put( goEdition, go );
 
-                if ( goEdition == null ) {
-                    log.error( "Cannot find GO Edition for: " + dto.getGoEdition() );
-                }
-
-                GeneOntology go = ontologies.get( goEdition );
-
-                if ( go == null ) {
-                    go = new GeneOntology( goEdition );
-                    ontologies.put( goEdition, go );
-                }
+            for ( GOTermDTO dto : cacheDAO.getGoTerms( goEdition.getId() ) ) {
                 go.addTerm( new GeneOntologyTerm( dto ) );
             }
-            log.info( "GO Terms fetched" );
 
-            for ( AdjacencyDTO dto : cacheDAO.getAdjacencies() ) {
-                GOEdition goEdition = allGOEditions.get( dto.getGoEdition() );
-
-                if ( goEdition == null ) {
-                    log.error( "Cannot find GO Edition for: " + dto.getGoEdition() );
-                }
-                GeneOntology go = ontologies.get( goEdition );
+            for ( AdjacencyDTO dto : cacheDAO.getAdjacencies( goEdition.getId() ) ) {
                 go.addRelationship( dto.getChild(), dto.getParent(), RelationshipType.valueOf( dto.getType() ) );
             }
-            log.info( "GO Adjacencies fetched" );
 
-            for ( AdjacencyDTO dto : cacheDAO.getAlternates() ) {
-                GOEdition goEdition = allGOEditions.get( dto.getGoEdition() );
-
-                if ( goEdition == null ) {
-                    log.error( "Cannot find GO Edition for: " + dto.getGoEdition() );
-                }
-                GeneOntology go = ontologies.get( goEdition );
+            for ( AdjacencyDTO dto : cacheDAO.getAlternates( goEdition.getId() ) ) {
                 go.addAlt( dto.getChild(), dto.getParent() );
             }
-            log.info( "GO Alternates fetched" );
 
-            for ( GODefinitionDTO dto : cacheDAO.getGODefinitions() ) {
-                geneOntologyDefinitions.put( dto.getGoId(), dto.getDefinition() );
-            }
-            log.info( "GO Definitions fetched" );
+            go.freeze();
 
-            for ( GeneOntology go : ontologies.values() ) {
-                go.freeze();
-            }
-            log.info( "GO Ontologies frozen" );
+            i++;
 
-            System.gc();
-            log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() );
-            log.info( "Used Memory: "
-                    + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000 + " MB" );
         }
-        // ****************************
 
+        log.info( "Ontologies complete: " + allGOEditions.size() + " / " + allGOEditions.size() );
+
+        for ( GODefinitionDTO dto : cacheDAO.getGODefinitions() ) {
+            geneOntologyDefinitions.put( dto.getGoId(), dto.getDefinition() );
+        }
+        log.info( "GO Definitions fetched" );
+
+        System.gc();
+        log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() );
+        log.info( "Used Memory: "
+                + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000 + " MB" );
+    }
+
+    private void createAggregates( CacheDAO cacheDAO ) {
         // goSetSize cache creation &
         // Aggregate Stats
 
@@ -362,43 +413,53 @@ public class Cache implements Serializable {
         // in a reasonable amount of time has proven troublesome. Increasing startup time by 10 minutes seems better than
         // adding in a 6-10 hour process once a month.
 
+        // *************** Reads from database ******************
+        Map<Species, Integer> mostRecentAggregateEditions = new HashMap<>();
+        Map<Species, Integer> mostRecentCountEditions = new HashMap<>();
+
+        // Aggregate cache creation
         // ****************************
-        if ( !settingsCache.isDryRun() ) {
+        log.info( "Attempting to create Aggregates from database cache" );
+        for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
+            Species species = speciesCache.get( dto.getSpecies() );
+            Edition ed = allEditions.get( species ).get( dto.getEdition() );
 
-            // *************** Reads from database ******************
-            Map<Species, Integer> mostRecentAggregateEditions = new HashMap<>();
-            Map<Species, Integer> mostRecentCountEditions = new HashMap<>();
-
-            // Aggregate cache creation
-            // ****************************
-            log.info( "Attempting to create Aggregates from database cache" );
-            for ( AggregateDTO dto : cacheDAO.getAggregates( speciesRestrictions ) ) {
-                Species species = speciesCache.get( dto.getSpecies() );
-                Map<Edition, Aggregate> m1 = aggregates.get( species );
-
-                if ( m1 == null ) {
-                    m1 = new ConcurrentHashMap<>();
-                    aggregates.put( species, m1 );
-                }
-
-                Edition ed = allEditions.get( species ).get( dto.getEdition() );
-
-                m1.put( ed, new Aggregate( dto ) );
-
-                Integer recentEdition = mostRecentAggregateEditions.get( species );
-
-                if ( recentEdition == null || dto.getEdition() > recentEdition ) {
-                    mostRecentAggregateEditions.put( species, dto.getEdition() );
-                }
-
+            if ( ed == null ) {
+                continue;
             }
-            // ****************************
-            // Annotation Counts cache creation
-            // ****************************
-            log.info( "Attempting to create Annotation Counts from database cache" );
-            for ( AnnotationCountDTO dto : cacheDAO.getGOAnnotationCounts( speciesRestrictions ) ) {
-                Species species = speciesCache.get( dto.getSpecies() );
-                MultiKey k = new MultiKey( dto );
+
+            Map<Edition, Aggregate> m1 = aggregates.get( species );
+            if ( m1 == null ) {
+                m1 = new ConcurrentHashMap<>();
+                aggregates.put( species, m1 );
+            }
+
+            m1.put( ed, new Aggregate( dto ) );
+
+            Integer recentEdition = mostRecentAggregateEditions.get( species );
+
+            if ( recentEdition == null || dto.getEdition() > recentEdition ) {
+                mostRecentAggregateEditions.put( species, dto.getEdition() );
+            }
+
+        }
+        // ****************************
+        // Annotation Counts cache creation
+        // ****************************
+        Map<Integer, Integer> minEditions = Maps.newHashMap();
+        for ( EditionDTO dto : cacheDAO.getReleaseEditions( minRelease ) ) {
+            minEditions.put( dto.getSpecies(), dto.getEdition() );
+        }
+
+
+        log.info( "Attempting to create Annotation Counts from database cache" );
+        for ( Species species : speciesCache.values() ) {
+            log.info( "Begin: " + species );
+            Integer recentEdition = null;
+            Integer minEdition = minEditions.get( species.getId() );
+            minEdition = minEdition == null ? 0 : minEdition;
+            for ( AnnotationCountDTO dto : cacheDAO.getGOAnnotationCounts( species.getId(), minEdition ) ) {
+                MultiKey k = new MultiKey( species, dto );
 
                 if ( dto.getDirectCount() != null ) {
                     Integer prev = directAnnotationCount.put( k, dto.getDirectCount() );
@@ -416,54 +477,54 @@ public class Cache implements Serializable {
                     }
                 }
 
-                Integer recentEdition = mostRecentCountEditions.get( species );
-
                 if ( recentEdition == null || dto.getEdition() > recentEdition ) {
-                    mostRecentCountEditions.put( species, dto.getEdition() );
+                    recentEdition = dto.getEdition();
                 }
 
             }
-            // ****************************
-
-            // ******************************************************
-
-            // Check to see if aggregates are out of date with data
-            boolean outOfDate = false;
-            for ( Species species : allEditions.keySet() ) {
-                Edition mostRecentEdition = currentEditions.get( species );
-
-                // Check against aggregates and counts
-                Integer aggRecentEdition = mostRecentAggregateEditions.get( species );
-                boolean ood = (!aggRecentEdition.equals( mostRecentEdition.getEdition() ));
-                if ( ood ) {
-                    log.warn(
-                            "Most recent edition in Aggregate Data (" + aggRecentEdition
-                                    + ") does not match most recent edition in Edition Table (" + mostRecentEdition
-                                    + ") for species (" + species + ")" );
-                }
-                outOfDate |= ood;
-
-                Integer cntRecentEdition = mostRecentCountEditions.get( species );
-                ood = (!cntRecentEdition.equals( mostRecentEdition.getEdition() ));
-                if ( ood ) {
-                    log.warn(
-                            "Most recent edition in Aggregate Count Data (" + cntRecentEdition
-                                    + ") does not match most recent edition in Edition Table (" + mostRecentEdition
-                                    + ") for species (" + species + ")" );
-                }
-                outOfDate |= ood;
-
-            }
-
-            // If aggregates are out of date
-            if ( outOfDate ) {
-                log.warn(
-                        "Aggregate Data and/or Aggregate Count Data Tables appear to be in need of pre-processing, "
-                                + "this will most likely break functionality somewhere" );
-            }
+            mostRecentCountEditions.put( species, recentEdition );
         }
         // ****************************
 
+        // ******************************************************
+
+        // Check to see if aggregates are out of date with data
+        boolean outOfDate = false;
+        for ( Species species : allEditions.keySet() ) {
+            Edition mostRecentEdition = currentEditions.get( species );
+
+            // Check against aggregates and counts
+            Integer aggRecentEdition = mostRecentAggregateEditions.get( species );
+            boolean ood = (!aggRecentEdition.equals( mostRecentEdition.getEdition() ));
+            if ( ood ) {
+                log.warn(
+                        "Most recent edition in Aggregate Data (" + aggRecentEdition
+                                + ") does not match most recent edition in Edition Table (" + mostRecentEdition
+                                + ") for species (" + species + ")" );
+            }
+            outOfDate |= ood;
+
+            Integer cntRecentEdition = mostRecentCountEditions.get( species );
+            ood = (!cntRecentEdition.equals( mostRecentEdition.getEdition() ));
+            if ( ood ) {
+                log.warn(
+                        "Most recent edition in Aggregate Count Data (" + cntRecentEdition
+                                + ") does not match most recent edition in Edition Table (" + mostRecentEdition
+                                + ") for species (" + species + ")" );
+            }
+            outOfDate |= ood;
+
+        }
+
+        // If aggregates are out of date
+        if ( outOfDate ) {
+            log.warn(
+                    "Aggregate Data and/or Aggregate Count Data Tables appear to be in need of pre-processing, "
+                            + "this will most likely break functionality somewhere" );
+        }
+    }
+
+    private void createGenes( CacheDAO cacheDAO ) {
         // ****************************
         // Accession and Gene creation
 
@@ -487,10 +548,9 @@ public class Cache implements Serializable {
             accessionToGene.put( gene.getAccession().getAccession(), gene );
         }
         log.info( "Done loading current genes..." );
-        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
-                + " MB" );
-        // ****************************
+    }
 
+    private void createAutocompleteTries() {
         // ****************************
         // Creating Gene caches for auto-completion
         Map<Species, Multimap<String, Gene>> speciesToPrimarySymbolGenes = Maps.newHashMap();
@@ -575,9 +635,57 @@ public class Cache implements Serializable {
 
         log.info( "Done loading caches for autocompletion..." );
         // ****************************
+    }
+
+    /**
+     * Create lots of static data caches to be used by Views.
+     */
+    @PostConstruct
+    public void init() {
+        log.info( "Cache init" );
+
+        applicationLevelEnrichmentCache = Collections.synchronizedMap( applicationLevelEnrichmentCache );
+        applicationLevelGeneCache = Collections.synchronizedMap( applicationLevelGeneCache );
+
+        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
+                + " MB" );
+
+        // Globally limit the displayed and computed species.
+        speciesRestrictions = settingsCache.getSpeciesRestrictions();
+
+        // Globally limit the oldest displayed and computed editions.
+        minRelease = settingsCache.minRelease();
+
+        createSpecies();
+
+        // Obtain CacheDAO
+        CacheDAO cacheDAO = daoFactoryBean.getGotrack().getCacheDAO();
+        log.info( "CacheDAO successfully obtained: " + cacheDAO );
+
+        createEditions( cacheDAO );
+
+        createEvidence( cacheDAO );
+
+        // System.gc();
+        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
+                + " MB" );
+
+        if ( !settingsCache.isDryRun() ) {
+            createGOTerms( cacheDAO );
+        }
+
+        if ( !settingsCache.isDryRun() ) {
+            createAggregates( cacheDAO );
+        }
+
+        createGenes( cacheDAO );
+
+        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
+                + " MB" );
+
+        createAutocompleteTries();
 
         log.info( "Cache Completed" );
-
     }
 
     /**
@@ -841,6 +949,18 @@ public class Cache implements Serializable {
         } else {
             return null;
         }
+    }
+
+    public Edition getGlobalMinEdition( Species species ) {
+        return globalMinEditions.get( species );
+    }
+
+    public GOEdition getGlobalMinGOEdition() {
+        return globalMinGOEdition;
+    }
+
+    public GOEdition getGlobalMaxGOEdition() {
+        return globalMaxGOEdition;
     }
 
     /**

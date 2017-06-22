@@ -32,58 +32,68 @@ import java.util.List;
 public interface CacheDAO {
 
     /**
-     * Retrieve ordered list of edition
+     * Retrieve list of editions from certain release
      */
-    public List<EditionDTO> getAllEditions( int[] speciesRestrictions ) throws DAOException;
+    List<EditionDTO> getReleaseEditions( int release ) throws DAOException;
+
+    /**
+     * Retrieve ordered list of editions
+     */
+    List<EditionDTO> getAllEditions( int[] speciesRestrictions ) throws DAOException;
+
+    /**
+     * Retrieve ordered list of current editions
+     */
+    List<EditionDTO> getCurrentEditions( int[] speciesRestrictions ) throws DAOException;
 
     /**
      * Retrieve data for number of genes annotated to each term or their children (GO Gene Set Sizes)
      */
-    public List<AnnotationCountDTO> getGOAnnotationCounts( int[] speciesRestrictions ) throws DAOException;
+    List<AnnotationCountDTO> getGOAnnotationCounts( int speciesId, int minEdition ) throws DAOException;
 
     /**
      * Map of species to ordered linkedlist of editions
      */
-    public List<AggregateDTO> getAggregates( int[] speciesRestrictions ) throws DAOException;
+    List<AggregateDTO> getAggregates( int[] speciesRestrictions ) throws DAOException;
 
     /**
      * Retrieve current synonyms
      */
-    public List<SynonymDTO> getSynonyms( int[] speciesRestrictions ) throws DAOException;
+    List<SynonymDTO> getSynonyms( int[] speciesRestrictions ) throws DAOException;
 
     /**
      * Retrieve all GO Terms
      */
-    public List<GOTermDTO> getGoTerms() throws DAOException;
+    List<GOTermDTO> getGoTerms(int goEdition) throws DAOException;
 
     /**
      * Retrieve all relationships between GO Terms
      */
-    public List<AdjacencyDTO> getAdjacencies() throws DAOException;
+    List<AdjacencyDTO> getAdjacencies(int goEdition) throws DAOException;
 
     /**
      * Retrieve all alternate GO Terms
      */
-    public List<AdjacencyDTO> getAlternates() throws DAOException;
+    List<AdjacencyDTO> getAlternates(int goEdition) throws DAOException;
 
     /**
      * Retrieve all evidence codes
      */
-    public List<EvidenceDTO> getEvidence() throws DAOException;
+    List<EvidenceDTO> getEvidence() throws DAOException;
 
     /**
      * Retrieve all accessions
      */
-    public List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException;
+    List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException;
 
     /**
      * Retrieve all GO editions
      */
-    public List<GOEditionDTO> getAllGOEditions() throws DAOException;
+    List<GOEditionDTO> getAllGOEditions() throws DAOException;
 
     /**
      * Retrieve all definitions for most current ontology
      */
-    public List<GODefinitionDTO> getGODefinitions() throws DAOException;
+    List<GODefinitionDTO> getGODefinitions() throws DAOException;
 
 }

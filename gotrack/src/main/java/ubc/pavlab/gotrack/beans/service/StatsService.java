@@ -86,8 +86,9 @@ public class StatsService implements Serializable {
             Gene gene = cache.getCurrentGene( dto.getAccession() );
             if ( gene == null ) {
                 log.warn( "Tracked gene no longer exists: " + dto.getAccession() + " - " + dto.getSymbol() );
+            } else {
+                trackPopularGenes.setCount( gene, dto.getCount() );
             }
-            trackPopularGenes.setCount( gene, dto.getCount() );
         }
 
         for ( TermStatsDTO dto : statsDAO.listTerms() ) {

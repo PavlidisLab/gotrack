@@ -134,7 +134,7 @@ public class MultifunctionalityServiceTest {
             i++;
         }
 
-        ed1 = new Edition( new EditionDTO( 7, 1, Date.valueOf( "2016-01-01" ), 1 ),
+        ed1 = new Edition( new EditionDTO( 7, 1, Date.valueOf( "2016-01-01" ), 1, 1 ),
                 new GOEdition( new GOEditionDTO( 1, Date.valueOf( "2016-01-01" ) ) ) );
 
         populationMap.put( ed1, geneGOMap );
@@ -155,7 +155,7 @@ public class MultifunctionalityServiceTest {
             i++;
         }
 
-        ed2 = new Edition( new EditionDTO( 7, 2, Date.valueOf( "2016-02-01" ), 2 ),
+        ed2 = new Edition( new EditionDTO( 7, 2, Date.valueOf( "2016-02-01" ), 2, 2 ),
                 new GOEdition( new GOEditionDTO( 2, Date.valueOf( "2016-02-01" ) ) ) );
 
         populationMap.put( ed2, geneGOMap );

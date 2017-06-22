@@ -23,8 +23,8 @@ public final class MultiKey {
         this.goId = t.getGoId();
     }
 
-    public MultiKey( AnnotationCountDTO dto ) {
-        this.species = dto.getSpecies();
+    public MultiKey( Species species,  AnnotationCountDTO dto ) {
+        this.species = species.getId();
         this.edition = dto.getEdition();
         this.goId = dto.getGoId();
     }

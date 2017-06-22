@@ -63,11 +63,11 @@
 					
 					<p:column>
 					<p:selectOneMenu id="selectspecies"
-						value="#{enrichmentView.currentSpeciesId}">
+						value="#{enrichmentView.currentSpecies}" converter="speciesConverter">
 						<p:ajax event="change" process="@this"
 							update=":formSelect:geneList" />
 						<f:selectItems value="#{cache.speciesList}" var="spec"
-							itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
+							itemValue="#{spec}" itemLabel="#{spec.commonName}" />
 					</p:selectOneMenu>
 					</p:column>
 					</p:row>
@@ -261,7 +261,7 @@
 
 					<p:outputPanel id="termsChartPanel">
 							<div id="hc_terms_container"
-								style="width: 100%; height: 600px;"></div>
+								style="width: 100%; height: 600px;"/>
 					</p:outputPanel>
 				</p:tab>
 				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">
@@ -272,7 +272,7 @@
 					</f:facet>
 					<p:outputPanel id="similarityChartPanel">
 						<div id="hc_similarity_container"
-							style="width: 100%; height: 600px;"></div>
+							style="width: 100%; height: 600px;"/>
 					</p:outputPanel>
 				</p:tab>
 				<p:tab disabled="#{not enrichmentView.enrichmentSuccess}">

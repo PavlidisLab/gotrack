@@ -110,7 +110,7 @@ public class AnnotationDAOTest extends BaseTest {
 
     @Test
     public void testTrackDeep() {
-        List<AnnotationDTO> res = annotationDAO.fullAnnotationAllEditions( gh1 );
+        List<AnnotationDTO> res = annotationDAO.fullAnnotationRangeEditions( gh1, 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 188 ) );
 
         Multiset<String> goIds = HashMultiset.create();
@@ -210,29 +210,29 @@ public class AnnotationDAOTest extends BaseTest {
 
     @Test
     public void testTrackShallow() {
-        List<AnnotationDTO> res = annotationDAO.fullAnnotationAllEditions( gh1 );
+        List<AnnotationDTO> res = annotationDAO.fullAnnotationRangeEditions( gh1, 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 188 ) );
 
-        res = annotationDAO.fullAnnotationAllEditions( gh2 );
+        res = annotationDAO.fullAnnotationRangeEditions( gh2, 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 96 ) );
 
-        res = annotationDAO.fullAnnotationAllEditions( gm1 );
+        res = annotationDAO.fullAnnotationRangeEditions( gm1, 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 56 ) );
 
-        res = annotationDAO.fullAnnotationAllEditions( gm2 );
+        res = annotationDAO.fullAnnotationRangeEditions( gm2, 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 80 ) );
 
-        res = annotationDAO.fullAnnotationAllEditions( gm2 );
+        res = annotationDAO.fullAnnotationRangeEditions( gm2, 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 80 ) );
 
-        res = annotationDAO.fullAnnotationAllEditions( gfake );
+        res = annotationDAO.fullAnnotationRangeEditions( gfake, 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
     }
 
     @Test
     public void testEnrichDeep() {
-        List<EnrichmentDTO> res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1, gh2 ) );
+        List<EnrichmentDTO> res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1, gh2 ), 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         Multiset<String> goIds = HashMultiset.create();
@@ -314,33 +314,34 @@ public class AnnotationDAOTest extends BaseTest {
 
     @Test
     public void testEnrichShallow() {
-        List<EnrichmentDTO> res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1, gh2 ) );
+        List<EnrichmentDTO> res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1, gh2 ), 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         // Redundancy
-        res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1, gh2, gh1, gh1, gh2 ) );
+        res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1, gh2, gh1, gh1, gh2 ), 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         // bad gene
-        res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1, gh2, gfake ) );
+        res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1, gh2, gfake ), 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         // empty gene
-        res = annotationDAO.simpleAnnotationAllEditions( Collections.<Gene>emptySet() );
+        res = annotationDAO.simpleAnnotationRangeEditions( Collections.<Gene>emptySet(), 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
         // null gene
-        res = annotationDAO.simpleAnnotationAllEditions( null );
+        res = annotationDAO.simpleAnnotationRangeEditions( null, 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.simpleAnnotationAllEditions( Sets.newHashSet( gh1 ) );
+        res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1 ), 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 132 ) );
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testCategoryCounts() {
-        List<CategoryCountDTO> res = annotationDAO.categoryCountsAllEditions( "GO:0007005" );
+        List<CategoryCountDTO> res = annotationDAO.categoryCountsRangeDates( "GO:0007005",
+                java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) );
 
         List<Tuple3<Date, String, Integer>> records = Lists.newArrayList();
 
@@ -364,10 +365,12 @@ public class AnnotationDAOTest extends BaseTest {
                         Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Computational", 5 ),
                         Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Experimental", 6 ) ) );
 
-        res = annotationDAO.categoryCountsAllEditions( "GO:0008150" ); // BP
+        res = annotationDAO.categoryCountsRangeDates( "GO:0008150",
+                java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) ); // BP
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.categoryCountsAllEditions( "GO:0003674" ); //MF
+        res = annotationDAO.categoryCountsRangeDates( "GO:0003674",
+                java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) ); //MF
 
         records = Lists.newArrayList();
 
@@ -381,11 +384,13 @@ public class AnnotationDAOTest extends BaseTest {
                         Tuples.tuple3( Date.valueOf( "2015-06-22" ), "Curatorial", 1 ),
                         Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Curatorial", 1 ) ) );
 
-        res = annotationDAO.categoryCountsAllEditions( "" );
+        res = annotationDAO.categoryCountsRangeDates( "",
+                java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) );
 
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.categoryCountsAllEditions( null );
+        res = annotationDAO.categoryCountsRangeDates( null,
+                java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) );
 
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 

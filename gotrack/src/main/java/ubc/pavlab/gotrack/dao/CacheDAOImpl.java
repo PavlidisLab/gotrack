@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.dao;
 
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.model.dto.*;
 
@@ -54,7 +55,7 @@ public class CacheDAOImpl implements CacheDAO {
     // Creating caches of models ------------------------------------------------------------------
 
     private static final String SQL_ACCESSION = "accession";
-    private static final String SQL_CURRENT_EDITIONS = "staging_pp_current_edition";
+    private static final String SQL_CURRENT_EDITION = "staging_pp_current_edition";
     private static final String SQL_SYNONYM = "synonyms";
     private static final String SQL_EDITION = "edition_tmp";
     private static final String SQL_GO_EDITION = "go_edition";
@@ -68,34 +69,40 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_EVIDENCE_CATEGORY = "evidence_categories";
 
     // Edition
-    private static final String SQL_ALL_EDITIONS = "SELECT species_id, edition, date, go_edition_id_fk FROM " + SQL_EDITION + " ORDER BY edition";
-    private static final String SQL_ALL_EDITIONS_RESTRICT = "SELECT species_id, edition, date, go_edition_id_fk FROM " + SQL_EDITION + " WHERE species_id IN (%s) ORDER BY edition";
+    private static final String SQL_ALL_EDITIONS = "SELECT species_id, edition, date, goa_release, go_edition_id_fk FROM " + SQL_EDITION + " ORDER BY edition";
+    private static final String SQL_ALL_EDITIONS_RESTRICT = "SELECT species_id, edition, date, goa_release, go_edition_id_fk FROM " + SQL_EDITION + " WHERE species_id IN (%s) ORDER BY edition";
+
+    // Edition
+    private static final String SQL_CURRENT_EDITIONS = "SELECT species_id, edition FROM " + SQL_CURRENT_EDITION + " ORDER BY edition";
+    private static final String SQL_CURRENT_EDITIONS_RESTRICT = "SELECT species_id, edition FROM " + SQL_CURRENT_EDITION + " WHERE species_id IN (%s) ORDER BY edition";
+
+    // Editions by release
+    private static final String SQL_RELEASE_EDITIONS = "SELECT species_id, edition, date, goa_release, go_edition_id_fk FROM " + SQL_EDITION + " WHERE goa_release = ?";
 
     // GOEdition
     private static final String SQL_ALL_GO_EDITIONS = "SELECT id, date from " + SQL_GO_EDITION + " ORDER BY date";
 
     // directAnnotationCount & inferredAnnotationCount
-    private static final String SQL_GO_ANNOTATION_COUNTS = "select species_id, edition, go_id, direct_annotation_count, inferred_annotation_count from " + SQL_ANNOTATION_COUNT;
-    private static final String SQL_GO_ANNOTATION_COUNTS_RESTRICT = "select species_id, edition, go_id, direct_annotation_count, inferred_annotation_count from " + SQL_ANNOTATION_COUNT + " WHERE species_id in (%s)";
+    private static final String SQL_GO_ANNOTATION_COUNTS = "select edition, go_id, direct_annotation_count, inferred_annotation_count from " + SQL_ANNOTATION_COUNT + " WHERE species_id = ? AND edition >= ?";
 
     // Aggregate
     private static final String SQL_AGGREGATE = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term, avg_multifunctionality, avg_direct_jaccard, avg_inferred_jaccard from " + SQL_EDITION_AGGREGATE;
     private static final String SQL_AGGREGATE_RESTRICT = "select species_id, edition, gene_count, avg_direct_terms_for_gene, avg_inferred_terms_for_gene, avg_inferred_genes_for_term, avg_multifunctionality, avg_direct_jaccard, avg_inferred_jaccard from " + SQL_EDITION_AGGREGATE + " WHERE species_id in (%s)";
 
     // Accession
-    private static final String SQL_ACCESSIONS = "SELECT acc.id, species_id, edition, db_object_id as accession, symbol, db_object_name as name, subset FROM " + SQL_ACCESSION + " acc INNER JOIN " + SQL_CURRENT_EDITIONS + " ce USING (species_id, edition)";
-    private static final String SQL_ACCESSIONS_RESTRICT = "SELECT acc.id, species_id, edition, db_object_id as accession, symbol, db_object_name as name, subset FROM " + SQL_ACCESSION + " acc INNER JOIN " + SQL_CURRENT_EDITIONS + " ce USING (species_id, edition) WHERE species_id in (%s)";
+    private static final String SQL_ACCESSIONS = "SELECT acc.id, species_id, edition, db_object_id as accession, symbol, db_object_name as name, subset FROM " + SQL_ACCESSION + " acc INNER JOIN " + SQL_CURRENT_EDITION + " ce USING (species_id, edition)";
+    private static final String SQL_ACCESSIONS_RESTRICT = "SELECT acc.id, species_id, edition, db_object_id as accession, symbol, db_object_name as name, subset FROM " + SQL_ACCESSION + " acc INNER JOIN " + SQL_CURRENT_EDITION + " ce USING (species_id, edition) WHERE species_id in (%s)";
 
     // Synonyms
-    private static final String SQL_SYNONYMS = "SELECT acc.id, syn.synonym FROM " + SQL_ACCESSION + " acc INNER JOIN " + SQL_CURRENT_EDITIONS + " ce USING (species_id, edition) INNER JOIN " + SQL_SYNONYM + " syn on acc.id=syn.accession_id";
-    private static final String SQL_SYNONYMS_RESTRICTED = "SELECT acc.id, syn.synonym FROM " + SQL_ACCESSION + " acc INNER JOIN " + SQL_CURRENT_EDITIONS + " ce USING (species_id, edition) INNER JOIN " + SQL_SYNONYM + " syn on acc.id=syn.accession_id WHERE species_id IN (%s)";
+    private static final String SQL_SYNONYMS = "SELECT acc.id, syn.synonym FROM " + SQL_ACCESSION + " acc INNER JOIN " + SQL_CURRENT_EDITION + " ce USING (species_id, edition) INNER JOIN " + SQL_SYNONYM + " syn on acc.id=syn.accession_id";
+    private static final String SQL_SYNONYMS_RESTRICTED = "SELECT acc.id, syn.synonym FROM " + SQL_ACCESSION + " acc INNER JOIN " + SQL_CURRENT_EDITION + " ce USING (species_id, edition) INNER JOIN " + SQL_SYNONYM + " syn on acc.id=syn.accession_id WHERE species_id IN (%s)";
 
 
 
     // GeneOntology and GeneOntologyTerm
-    private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from " + SQL_TERM;
-    private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from " + SQL_ADJACENCY;
-    private static final String SQL_GO_ALTERNATE = "select go_edition_id_fk, alt, `primary` from " + SQL_ALTERNATE;
+    private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from " + SQL_TERM + " WHERE go_edition_id_fk = ?";
+    private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from " + SQL_ADJACENCY + " WHERE go_edition_id_fk = ?";
+    private static final String SQL_GO_ALTERNATE = "select go_edition_id_fk, alt, `primary` from " + SQL_ALTERNATE + " WHERE go_edition_id_fk = ?";
     private static final String SQL_GO_DEFINITION = "select go_id, definition from " + SQL_DEFINITION;
 
     // Evidence
@@ -120,22 +127,18 @@ public class CacheDAOImpl implements CacheDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public List<AnnotationCountDTO> getGOAnnotationCounts( int[] speciesRestrictions ) throws DAOException {
+    public List<AnnotationCountDTO> getGOAnnotationCounts( int speciesId, int minEdition ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         List<AnnotationCountDTO> results = new ArrayList<>();
 
         List<Object> params = new ArrayList<>();
+        params.add( speciesId );
+        params.add( minEdition );
 
         String sql = SQL_GO_ANNOTATION_COUNTS;
-        if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
-            sql = String.format( SQL_GO_ANNOTATION_COUNTS_RESTRICT,
-                    DAOUtil.preparePlaceHolders( speciesRestrictions.length ) );
-            for ( int i = 0; i < speciesRestrictions.length; i++ ) {
-                params.add( speciesRestrictions[i] );
-            }
-        }
+
 
         log.debug( sql );
         try {
@@ -146,7 +149,7 @@ public class CacheDAOImpl implements CacheDAO {
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
 
-                results.add( new AnnotationCountDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
+                results.add( new AnnotationCountDTO( resultSet.getInt( "edition" ),
                         resultSet.getString( "go_id" ), resultSet.getInt( "direct_annotation_count" ),
                         resultSet.getInt( "inferred_annotation_count" ) ) );
 
@@ -217,7 +220,83 @@ public class CacheDAOImpl implements CacheDAO {
 
             while ( resultSet.next() ) {
                 results.add( new EditionDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
-                        resultSet.getDate( "date" ), resultSet.getInt( "go_edition_id_fk" ) ) );
+                        resultSet.getDate( "date" ), resultSet.getInt( "goa_release" ),
+                        resultSet.getInt( "go_edition_id_fk" ) ) );
+
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
+
+    }
+
+    @Override
+    public List<EditionDTO> getCurrentEditions( int[] speciesRestrictions ) throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        List<EditionDTO> results = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+
+        String sql = SQL_CURRENT_EDITIONS;
+        if ( speciesRestrictions != null && speciesRestrictions.length != 0 ) {
+            sql = String.format( SQL_CURRENT_EDITIONS_RESTRICT, DAOUtil.preparePlaceHolders( speciesRestrictions.length ) );
+            for ( int i = 0; i < speciesRestrictions.length; i++ ) {
+                params.add( speciesRestrictions[i] );
+            }
+        }
+
+        log.debug( sql );
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+
+            while ( resultSet.next() ) {
+                results.add( new EditionDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
+                        null, null, null ) );
+
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return results;
+
+    }
+
+    @Override
+    public List<EditionDTO> getReleaseEditions( int release ) throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        List<EditionDTO> results = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
+        params.add( release );
+
+        String sql = SQL_RELEASE_EDITIONS;
+
+
+        log.debug( sql );
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
+            log.debug( preparedStatement );
+            resultSet = preparedStatement.executeQuery();
+
+            while ( resultSet.next() ) {
+                results.add( new EditionDTO( resultSet.getInt( "species_id" ), resultSet.getInt( "edition" ),
+                        resultSet.getDate( "date" ), resultSet.getInt( "goa_release" ),
+                        resultSet.getInt( "go_edition_id_fk" ) ) );
 
             }
         } catch ( SQLException e ) {
@@ -354,15 +433,19 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public List<GOTermDTO> getGoTerms() throws DAOException {
+    public List<GOTermDTO> getGoTerms( int goEdition ) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         List<GOTermDTO> results = new ArrayList<>();
 
+        List<Object> params = Lists.newArrayList();
+        params.add( goEdition );
+
         try {
             connection = daoFactory.getConnection();
             preparedStatement = connection.prepareStatement( SQL_GO_TERMS );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
@@ -381,15 +464,19 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public List<AdjacencyDTO> getAdjacencies() throws DAOException {
+    public List<AdjacencyDTO> getAdjacencies(int goEdition) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         List<AdjacencyDTO> results = new ArrayList<>();
 
+        List<Object> params = Lists.newArrayList();
+        params.add( goEdition );
+
         try {
             connection = daoFactory.getConnection();
             preparedStatement = connection.prepareStatement( SQL_GO_ADJACENCY );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
@@ -409,15 +496,19 @@ public class CacheDAOImpl implements CacheDAO {
     }
 
     @Override
-    public List<AdjacencyDTO> getAlternates() throws DAOException {
+    public List<AdjacencyDTO> getAlternates(int goEdition) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
         List<AdjacencyDTO> results = new ArrayList<>();
 
+        List<Object> params = Lists.newArrayList();
+        params.add( goEdition );
+
         try {
             connection = daoFactory.getConnection();
             preparedStatement = connection.prepareStatement( SQL_GO_ALTERNATE );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
@@ -487,5 +578,4 @@ public class CacheDAOImpl implements CacheDAO {
 
         return results;
     }
-
 }

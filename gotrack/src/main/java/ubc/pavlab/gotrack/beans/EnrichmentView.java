@@ -37,6 +37,7 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.search.GeneMatch;
 import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
 
+import javax.annotation.PostConstruct;
 import javax.enterprise.context.SessionScoped;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
@@ -127,7 +128,7 @@ public class EnrichmentView implements Serializable {
     private List<GeneMatch> geneMatches;
 
     // Map of species id -> hit list
-    private Map<Integer, List<Gene>> speciesToSelectedGenes = new HashMap<>();
+    private Map<Species, List<Gene>> speciesToSelectedGenes = Maps.newHashMap();
 
     // Holds gene to be removed from hit list
     private Gene geneToRemove;
@@ -136,7 +137,6 @@ public class EnrichmentView implements Serializable {
     private Gene viewGene;
 
     // Enrichment Settings
-    private Integer currentSpeciesId = 7; // species id
     private Species currentSpecies = null;
     private int minAnnotatedPopulation = 5; // minimum size of gene set for a term to not be rejected
     private int maxAnnotatedPopulation = 200; // maximum size of gene set for a term to not be rejected
@@ -153,7 +153,8 @@ public class EnrichmentView implements Serializable {
     private EnrichmentAnalysis analysis; // Enrichment analysis
     private Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> enrichmentResults; // Results of the enrichment analysis
     private boolean enrichmentSuccess = false; // Whether the analysis succeeded
-    private Integer analysisSpeciesId;
+    private Species analysisSpecies;
+    private Map<Long, Integer> currentDateToEdition;
 
     // Similarity Settings
     private static final int TOP_N_JACCARD = 5; // Number of terms to use in the similarity top N
@@ -213,6 +214,16 @@ public class EnrichmentView implements Serializable {
 
     }
 
+    @PostConstruct
+    public void postConstruct() {
+        log.info( "postConstruct" );
+        currentSpecies = cache.getSpecies( 7 );
+
+        for ( Species species : cache.getSpeciesList() ) {
+            speciesToSelectedGenes.put( currentSpecies, Lists.<Gene>newArrayList() );
+        }
+    }
+
     /**
      * pre-render view
      * 
@@ -230,10 +241,8 @@ public class EnrichmentView implements Serializable {
         if ( enrichmentSuccess ) {
             // When loading a previous analysis, we want to show the gene hit list that is associated with it, 
             // not the most recently viewed one.
-            currentSpeciesId = analysisSpeciesId;
-            currentSpecies = cache.getSpecies( currentSpeciesId );
+            currentSpecies = analysisSpecies;
         } else {
-            currentSpecies = cache.getSpecies( currentSpeciesId );
             enrichmentTableEdition = cache.getCurrentEditions( currentSpecies ).getEdition();
             currentEdition = cache.getCurrentEditions( currentSpecies );
         }
@@ -253,12 +262,12 @@ public class EnrichmentView implements Serializable {
         statusPoller = new StatusPoller( " completed" );
         double thresh = multipleTestCorrection.equals( MultipleTestCorrection.BONFERRONI ) ? pThreshold : fdr;
         CombinedAnalysis ca = enrichmentService.combinedAnalysis(
-                new HashSet<>( speciesToSelectedGenes.get( currentSpeciesId ) ),
+                new HashSet<>( speciesToSelectedGenes.get( currentSpecies ) ),
                 currentSpecies,
                 multipleTestCorrection, thresh, minAnnotatedPopulation, maxAnnotatedPopulation,
                 new HashSet<>( aspects ), similarityCompareMethod, TOP_N_JACCARD, statusPoller );
         enrichmentSuccess = ca.isSuccess();
-        analysisSpeciesId = currentSpeciesId;
+        analysisSpecies = currentSpecies;
         analysis = ca.getEnrichmentAnalysis();
         enrichmentResults = analysis.getResults();
 
@@ -274,12 +283,12 @@ public class EnrichmentView implements Serializable {
         createTermCountChart();
 
         // Container for a mapping that will be used on the front-end for ajax queries
-        Map<Long, Integer> dateToEdition = new HashMap<>();
+        currentDateToEdition = Maps.newHashMap();
         for ( Edition ed : cache.getAllEditions( currentSpecies ) ) {
-            dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
+            currentDateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( currentDateToEdition ) );
 
         statusPoller.completeStatus();
         timer.stop();
@@ -296,13 +305,7 @@ public class EnrichmentView implements Serializable {
             createSimilarityChart();
             createTermCountChart();
 
-            // Container for a mapping that will be used on the front-end for ajax queries
-            Map<Long, Integer> dateToEdition = new HashMap<>();
-            for ( Edition ed : cache.getAllEditions( currentSpecies ) ) {
-                dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
-            }
-
-            RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
+            RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( currentDateToEdition ) );
 
             RequestContext.getCurrentInstance().addCallbackParam( "success", true );
         } else {
@@ -877,7 +880,7 @@ public class EnrichmentView implements Serializable {
      * Remove all genes from selected species' hit list
      */
     public void removeAllGenes( ActionEvent actionEvent ) {
-        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
+        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpecies );
         if ( selectGenes != null ) {
             selectGenes.clear();
         }
@@ -887,10 +890,10 @@ public class EnrichmentView implements Serializable {
      * Add gene to to hit list
      */
     public void addGene( ActionEvent actionEvent ) {
-        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
+        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpecies );
         if ( selectGenes == null ) {
             selectGenes = new ArrayList<>();
-            speciesToSelectedGenes.put( currentSpeciesId, selectGenes );
+            speciesToSelectedGenes.put( currentSpecies, selectGenes );
         }
         if ( this.queryGene != null ) {
             if ( !selectGenes.contains( this.queryGene ) ) {
@@ -942,10 +945,10 @@ public class EnrichmentView implements Serializable {
      */
     public void confirmMatches() {
         int genesAdded = 0;
-        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
+        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpecies );
         if ( selectGenes == null ) {
             selectGenes = new ArrayList<>();
-            speciesToSelectedGenes.put( currentSpeciesId, selectGenes );
+            speciesToSelectedGenes.put( currentSpecies, selectGenes );
         }
 
         for ( GeneMatch gm : geneMatches ) {
@@ -966,10 +969,10 @@ public class EnrichmentView implements Serializable {
      * Remove single gene from hit list
      */
     public void removeGene() {
-        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
+        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpecies );
         if ( selectGenes == null ) {
             selectGenes = new ArrayList<>();
-            speciesToSelectedGenes.put( currentSpeciesId, selectGenes );
+            speciesToSelectedGenes.put( currentSpecies, selectGenes );
         }
         selectGenes.remove( geneToRemove );
         addMessage( "Gene (" + geneToRemove.getSymbol() + ") successfully removed.", FacesMessage.SEVERITY_INFO );
@@ -1034,6 +1037,15 @@ public class EnrichmentView implements Serializable {
 
     // Getters / Setters ---------------------------------------------------------------------------------------
 
+
+    public Species getCurrentSpecies() {
+        return currentSpecies;
+    }
+
+    public void setCurrentSpecies( Species currentSpecies ) {
+        this.currentSpecies = currentSpecies;
+    }
+
     public boolean isEnrichmentSuccess() {
         return enrichmentSuccess;
     }
@@ -1070,14 +1082,6 @@ public class EnrichmentView implements Serializable {
         this.fdr = fdr;
     }
 
-    public Integer getCurrentSpeciesId() {
-        return currentSpeciesId;
-    }
-
-    public void setCurrentSpeciesId( Integer currentSpeciesId ) {
-        this.currentSpeciesId = currentSpeciesId;
-    }
-
     public Gene getQueryGene() {
         return this.queryGene;
     }
@@ -1103,12 +1107,7 @@ public class EnrichmentView implements Serializable {
     }
 
     public List<Gene> getSelectedGenes() {
-        List<Gene> selectGenes = speciesToSelectedGenes.get( currentSpeciesId );
-        if ( selectGenes == null ) {
-            selectGenes = new ArrayList<>();
-            speciesToSelectedGenes.put( currentSpeciesId, selectGenes );
-        }
-        return selectGenes;
+        return speciesToSelectedGenes.get( currentSpecies );
     }
 
     public Edition getCurrentEdition() {

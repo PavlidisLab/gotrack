@@ -19,9 +19,9 @@
 
 package ubc.pavlab.gotrack.model.dto;
 
-import java.sql.Date;
-
 import ubc.pavlab.gotrack.model.Edition;
+
+import java.sql.Date;
 
 /**
  * Data Transfer Object for {@link Edition}
@@ -33,13 +33,15 @@ public final class EditionDTO {
     private final Integer species;
     private final Integer edition;
     private final Date date;
+    private final Integer release;
     private final Integer goEditionId;
 
-    public EditionDTO( Integer species, Integer edition, Date date, Integer goEditionId ) {
+    public EditionDTO( Integer species, Integer edition, Date date, Integer release, Integer goEditionId ) {
         super();
         this.species = species;
         this.edition = edition;
         this.date = date;
+        this.release = release;
         this.goEditionId = goEditionId;
     }
 
@@ -57,5 +59,9 @@ public final class EditionDTO {
 
     public Integer getGoEditionId() {
         return goEditionId;
+    }
+
+    public Integer getRelease() {
+        return release;
     }
 }
