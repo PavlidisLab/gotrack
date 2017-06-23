@@ -114,14 +114,15 @@
 	<ui:define name="center_layout">
 		<p:outputPanel rendered="#{geneView.gene != null}">
 			<div id="page-title">
-				<h1>#{geneView.gene.symbol} -
+				<h1><a href="http://www.uniprot.org/uniprot/#{geneView.gene.accession.accession}"
+					   target="_blank">#{geneView.gene.symbol}</a> -
 					#{geneView.gene.species.scientificName}</h1>
-				<h:form>
-					<p>
-						<a href="http://www.uniprot.org/uniprot/#{geneView.gene.accession.accession}"
-						   target="_blank">#{geneView.gene.accession.accession}</a>
-					</p>
-				</h:form>
+				<h2><p>#{geneView.gene.name}</p></h2>
+				<h3><p><ui:repeat
+						value="#{geneView.gene.synonyms.toArray()}"
+						var="syn" varStatus="loop">
+					#{syn}#{!loop.last ? ', ' : ''}
+				</ui:repeat></p></h3>
 				
 			</div>
 			<p:separator style="max-width:400px" />

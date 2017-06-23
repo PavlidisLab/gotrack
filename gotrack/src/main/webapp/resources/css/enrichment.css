@@ -220,3 +220,7 @@ div.ui-datatable-header table > tbody > tr.ui-widget-content {
     line-height:1.2;
     margin-top:3px;
 }
+
+#formSelect > div.ui-datalist ul {
+    padding-left: 5px;
+}

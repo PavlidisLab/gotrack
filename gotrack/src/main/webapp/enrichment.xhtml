@@ -85,7 +85,6 @@
 						style="float:left;margin-right:10px">
 						<f:setPropertyActionListener value="#{gene}"
 							target="#{enrichmentView.viewGene}" />
-						<h:outputText value="#{gene.symbol}" />
 					</p:commandLink>
 					<p:commandLink update=":globalGrowl, :formSelect:geneList"
 						title="Remove" action="#{enrichmentView.removeGene}"
@@ -93,10 +92,11 @@
 						style="float:left;margin-right:10px">
 						<f:setPropertyActionListener value="#{gene}"
 							target="#{enrichmentView.geneToRemove}" />
-						<h:outputText value="#{gene.symbol}" />
 					</p:commandLink>
-					<h:outputText value="#{gene.symbol}" style="display:inline-block" />
-
+					<h:outputText value="#{gene.symbol}" style="display:inline-block;margin-right:10px"/>
+					<h:outputText style="float:right;"
+								  value="${gene.name.length() > 30 ? ''.concat(fn:substring(gene.name, 0, 30)).concat('...') : gene.name}"
+								  title="#{gene.name.length() > 30 ? gene.name : ''}"/>
 					<f:facet name="footer">
 						<p:commandButton icon="fa fa-plus" value="Add"
 							oncomplete="PF('addGenesDlg').show()" />
@@ -461,35 +461,21 @@
 	</ui:define>
 	<ui:define name="dialogs">
 		<p:dialog header="Gene Info" widgetVar="geneDialog" modal="false"
-			showEffect="fade" hideEffect="fade" resizable="false">
+				  showEffect="fade" hideEffect="fade" resizable="false">
 			<p:outputPanel id="geneDetail" style="text-align:center;">
 				<p:panelGrid>
 					<p:row>
 						<p:column>
-						<h:outputText value="Symbol" />
+							<h:outputText value="Symbol"/>
 						</p:column>
 						<p:column>
-						<h:outputText value="#{enrichmentView.viewGene.symbol}"
-							styleClass="sqlDialogText" />
-							</p:column>
-					</p:row>
-					<p:row>
-					<p:column>
-						<h:outputText value="Synonyms" />
+							<h:outputText value="#{enrichmentView.viewGene.symbol}"
+										  styleClass="sqlDialogText"/>
 						</p:column>
-						<p:column>
-						<span class="sqlDialogText"> <ui:repeat
-								value="#{enrichmentView.viewGene.synonyms.toArray()}"
-								var="syn" varStatus="loop"> #{syn}#{!loop.last ? ', ' : ''}
-							</ui:repeat>
-						</span>
-
-							</p:column>
 					</p:row>
-
 					<p:row>
-					<p:column>
-						<h:outputText value="Accessions" />
+						<p:column>
+							<h:outputText value="Accession"/>
 						</p:column>
 						<p:column>
 						<span class="sqlDialogText">
@@ -498,6 +484,30 @@
 						</span>
 						</p:column>
 					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputText value="Description"/>
+						</p:column>
+						<p:column>
+							<h:outputText value="#{enrichmentView.viewGene.name}"
+										  styleClass="sqlDialogText"/>
+						</p:column>
+					</p:row>
+					<p:row>
+						<p:column>
+							<h:outputText value="Synonyms"/>
+						</p:column>
+						<p:column>
+						<span class="sqlDialogText"> <ui:repeat
+								value="#{enrichmentView.viewGene.synonyms.toArray()}"
+								var="syn" varStatus="loop"> #{syn}#{!loop.last ? ', ' : ''}
+							</ui:repeat>
+						</span>
+
+						</p:column>
+					</p:row>
+
+
 				</p:panelGrid>
 			</p:outputPanel>
 		</p:dialog>
@@ -587,16 +597,14 @@
 					</p:tab>
 					<p:tab title="Genes">
 						<p:dataTable var="gene" value="#{enrichmentView.viewEnrichmentRowGeneSet}" style="width:784px;" scrollHeight="300" scrollable="true">
-						    <p:column headerText="Symbol">
-						        <h:outputText value="#{gene.symbol}" />
-						    </p:column>
+							<p:column headerText="Symbol" style="width:120px;">
+								<a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
+								   target="_blank">#{gene.symbol}</a>
+							</p:column>
 
-							<p:column headerText="Accession">
-								<span>
-									<a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
-									   target="_blank">#{gene.accession.accession}</a>
-								</span>
-						    </p:column>
+							<p:column headerText="Description">
+								<h:outputText value="#{gene.name}"/>
+							</p:column>
 						</p:dataTable>
 					</p:tab>
 				</p:tabView>
@@ -649,15 +657,13 @@
 				</p:tab>
 				<p:tab title="Genes Backing Top Terms">
 					<p:dataTable var="gene" value="#{enrichmentView.selectedSimilarityScore.topGenes}" style="width:800px;" scrollHeight="350" scrollable="true">
-					    <p:column headerText="Symbol">
-					        <h:outputText value="#{gene.symbol}" />
-					    </p:column>
+						<p:column headerText="Symbol" style="width:120px;">
+							<a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
+							   target="_blank">#{gene.symbol}</a>
+						</p:column>
 
-						<p:column headerText="Accession">
-							<span>
-								<a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
-								   target="_blank">#{gene.accession.accession}</a>
-							</span>
+						<p:column headerText="Description">
+							<h:outputText value="#{gene.name}"/>
 					    </p:column>
 					</p:dataTable>
 				</p:tab>
