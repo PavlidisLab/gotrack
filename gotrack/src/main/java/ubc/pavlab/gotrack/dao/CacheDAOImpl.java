@@ -55,12 +55,12 @@ public class CacheDAOImpl implements CacheDAO {
     // Creating caches of models ------------------------------------------------------------------
 
     private static final String SQL_ACCESSION = "accession";
-    private static final String SQL_CURRENT_EDITION = "staging_pp_current_edition";
+    private static final String SQL_CURRENT_EDITION = "pp_current_edition";
     private static final String SQL_SYNONYM = "synonyms";
-    private static final String SQL_EDITION = "edition_tmp";
+    private static final String SQL_EDITION = "edition";
     private static final String SQL_GO_EDITION = "go_edition";
-    private static final String SQL_ANNOTATION_COUNT = "staging_pp_go_annotation_counts";
-    private static final String SQL_EDITION_AGGREGATE = "staging_pp_edition_aggregates";
+    private static final String SQL_ANNOTATION_COUNT = "pp_go_annotation_counts";
+    private static final String SQL_EDITION_AGGREGATE = "pp_edition_aggregates";
 
     private static final String SQL_TERM = "go_term";
     private static final String SQL_ADJACENCY = "go_adjacency";

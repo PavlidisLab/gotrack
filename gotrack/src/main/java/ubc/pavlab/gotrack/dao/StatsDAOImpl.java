@@ -42,9 +42,9 @@ import static ubc.pavlab.gotrack.dao.DAOUtil.prepareStatement;
 public class StatsDAOImpl implements StatsDAO {
 
     // Constants ----------------------------------------------------------------------------------
-    private static final String SQL_TRACK_GENE = "track_popular_genes2";
+    private static final String SQL_TRACK_GENE = "track_popular_genes";
     private static final String SQL_TRACK_TERM = "track_popular_terms";
-    private static final String SQL_SEC_AC = "sec_ac_tmp";
+    private static final String SQL_SEC_AC = "sec_ac";
 
     private static final String SQL_LIST_GENE = "SELECT tg.id, species_id, IFNULL(ac, accession) primary_accession, symbol, SUM(count) count FROM " + SQL_TRACK_GENE + " tg left join " + SQL_SEC_AC + " on accession=sec GROUP BY species_id, primary_accession";
     private static final String SQL_LIST_TERM = "SELECT id, go_id, count FROM " + SQL_TRACK_TERM;

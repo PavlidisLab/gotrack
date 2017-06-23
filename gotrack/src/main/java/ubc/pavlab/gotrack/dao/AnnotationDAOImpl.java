@@ -49,9 +49,9 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     /* CURRENT QUERIES */
 
     private static final String SQL_ANNOTATION = "annotation";
-    private static final String SQL_ACCESSION_HISTORY = "staging_pp_accession_history"; // TODO: data-format - replace
+    private static final String SQL_ACCESSION_HISTORY = "pp_accession_history";
     private static final String SQL_ACCESSION = "accession";
-    private static final String SQL_EDITION = "edition_tmp"; // TODO: data-format - replace with edition
+    private static final String SQL_EDITION = "edition";
     private static final String SQL_EVIDENCE = "evidence_categories";
 
     // Get information from single gene, should be fast < 0.2s
