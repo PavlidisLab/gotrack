@@ -26,13 +26,14 @@ import org.apache.log4j.Logger;
 import org.hamcrest.Matchers;
 import org.junit.*;
 import ubc.pavlab.gotrack.BaseTest;
-import ubc.pavlab.gotrack.model.Dataset;
 import ubc.pavlab.gotrack.model.dto.*;
 import ubc.pavlab.gotrack.utilities.Tuples;
 import ubc.pavlab.gotrack.utilities.Tuples.Tuple2;
 
 import java.sql.Date;
 import java.util.List;
+
+import static org.junit.Assert.fail;
 
 /**
  * TODO Document Me
@@ -62,28 +63,30 @@ public class CacheDAOTest extends BaseTest {
 
     @Test
     public void testGetGOAnnotationCountsDeep() {
-        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( 7,0 ); // FIXME: new signature
-        Assert.assertThat( res.size(), Matchers.is( 5415 ) );
+        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( 7,0 );
+        Assert.assertThat( res.size(), Matchers.is( 3020 ) );
 
         for ( AnnotationCountDTO dto : res ) {
-
             // Individual spot checks
-//            if ( dto.getSpecies() == 7 ) {
+            if ( dto.getEdition() == 144 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            } else if ( dto.getEdition() == 145 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            } else if ( dto.getEdition() == 146 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            } else if ( dto.getEdition() == 147 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            }
+        }
 
-                if ( dto.getEdition() == 144 && dto.getGoId().equals( "GO:0004252" ) ) {
-                    Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
-                    Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
-                } else if ( dto.getEdition() == 145 && dto.getGoId().equals( "GO:0004252" ) ) {
-                    Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
-                    Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
-                } else if ( dto.getEdition() == 146 && dto.getGoId().equals( "GO:0004252" ) ) {
-                    Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
-                    Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
-                } else if ( dto.getEdition() == 147 && dto.getGoId().equals( "GO:0004252" ) ) {
-                    Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
-                    Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
-                }
-//            } else if ( dto.getSpecies() == 8 ) {
+        res = cacheDAO.getGOAnnotationCounts( 8,0 );
+        Assert.assertThat( res.size(), Matchers.is( 2395 ) );
+
+        for ( AnnotationCountDTO dto : res ) {
                 if ( dto.getEdition() == 130 && dto.getGoId().equals( "GO:0098772" ) ) {
                     Assert.assertThat( dto.getDirectCount(), Matchers.is( 0 ) );
                     Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
@@ -99,15 +102,41 @@ public class CacheDAOTest extends BaseTest {
                 }
 //            }
         }
+
+        res = cacheDAO.getGOAnnotationCounts( 7,146 );
+        Assert.assertThat( res.size(), Matchers.is( 1542 ) );
+
+        for ( AnnotationCountDTO dto : res ) {
+            // Individual spot checks
+            if ( dto.getEdition() == 144 ) {
+                fail("Edition 144 should not be in this query.");
+            } else if ( dto.getEdition() == 145 ) {
+                fail("Edition 145 should not be in this query.");
+            } else if ( dto.getEdition() == 146 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            } else if ( dto.getEdition() == 147 && dto.getGoId().equals( "GO:0004252" ) ) {
+                Assert.assertThat( dto.getDirectCount(), Matchers.is( 1 ) );
+                Assert.assertThat( dto.getInferredCount(), Matchers.is( 1 ) );
+            }
+        }
     }
 
     @Test
     public void testGetGOAnnotationCounts() {
-        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( 7,0 ); // FIXME: new signature
-        Assert.assertThat( res.size(), Matchers.is( 5415 ) );
+        List<AnnotationCountDTO> res = cacheDAO.getGOAnnotationCounts( 7,0 );
+        Assert.assertThat( res.size(), Matchers.is( 3020 ) );
 
         Multiset<Integer> editions = HashMultiset.create();
         Multiset<String> someGoIds = HashMultiset.create();
+
+        for ( AnnotationCountDTO dto : res ) {
+            someGoIds.add( dto.getGoId() );
+            editions.add( dto.getEdition() );
+
+        }
+        res = cacheDAO.getGOAnnotationCounts( 8,0 );
+        Assert.assertThat( res.size(), Matchers.is( 2395 ) );
 
         for ( AnnotationCountDTO dto : res ) {
             someGoIds.add( dto.getGoId() );
@@ -162,6 +191,7 @@ public class CacheDAOTest extends BaseTest {
         Assert.assertThat( someGoIds.count( "GO:1990542" ), Matchers.is( 8 ) );
         Assert.assertThat( someGoIds.count( "GO:2000026" ), Matchers.is( 4 ) );
         Assert.assertThat( someGoIds.count( "GO:2000112" ), Matchers.is( 8 ) );
+
     }
 
     @Test
@@ -379,7 +409,7 @@ public class CacheDAOTest extends BaseTest {
                     Assert.assertThat( dto.getAvgInferredSimilarity(), Matchers.closeTo( 1.0, 0.001 ) );
                 }
             } else if ( dto.getSpecies() != 8 ) {
-                Assert.fail( "Unknown Species" );
+                fail( "Unknown Species" );
             }
         }
     }
@@ -398,7 +428,7 @@ public class CacheDAOTest extends BaseTest {
     @Test
     public void testGetCurrentGenes() {
         List<AccessionDTO> res = cacheDAO.getAccessions( null );
-        Assert.assertThat( res.size(), Matchers.is( 103 ) );
+        Assert.assertThat( res.size(), Matchers.is( 70 ) );
 
         Multiset<String> symbols = HashMultiset.create();
 
@@ -408,33 +438,33 @@ public class CacheDAOTest extends BaseTest {
 
         // distinct symbols
         Assert.assertThat( symbols.elementSet().size(), Matchers.is( 20 ) );
-        Assert.assertThat( symbols.count( "LONP1" ), Matchers.is( 10 ) );
-        Assert.assertThat( symbols.count( "MEF2A" ), Matchers.is( 6 ) );
-        Assert.assertThat( symbols.count( "Mef2a" ), Matchers.is( 5 ) );
-        Assert.assertThat( symbols.count( "MGME1" ), Matchers.is( 6 ) );
-        Assert.assertThat( symbols.count( "Mgme1" ), Matchers.is( 2 ) );
-        Assert.assertThat( symbols.count( "MPV17" ), Matchers.is( 10 ) );
-        Assert.assertThat( symbols.count( "Mpv17" ), Matchers.is( 8 ) );
-        Assert.assertThat( symbols.count( "MRPL17" ), Matchers.is( 4 ) );
-        Assert.assertThat( symbols.count( "Mrpl15" ), Matchers.is( 5 ) );
-        Assert.assertThat( symbols.count( "Mrpl17" ), Matchers.is( 4 ) );
-        Assert.assertThat( symbols.count( "Mrpl39" ), Matchers.is( 2 ) );
-        Assert.assertThat( symbols.count( "OPA1" ), Matchers.is( 8 ) );
-        Assert.assertThat( symbols.count( "Opa1" ), Matchers.is( 5 ) );
-        Assert.assertThat( symbols.count( "Pif1" ), Matchers.is( 4 ) );
-        Assert.assertThat( symbols.count( "SLC25A33" ), Matchers.is( 2 ) );
-        Assert.assertThat( symbols.count( "SLC25A36" ), Matchers.is( 7 ) );
-        Assert.assertThat( symbols.count( "SLC25A4" ), Matchers.is( 4 ) );
-        Assert.assertThat( symbols.count( "Slc25a33" ), Matchers.is( 2 ) );
-        Assert.assertThat( symbols.count( "Slc25a36" ), Matchers.is( 5 ) );
-        Assert.assertThat( symbols.count( "TYMP" ), Matchers.is( 4 ) );
+        Assert.assertThat( symbols.count( "LONP1" ), Matchers.is( 8 ) );
+        Assert.assertThat( symbols.count( "MEF2A" ), Matchers.is( 4 ) );
+        Assert.assertThat( symbols.count( "MGME1" ), Matchers.is( 3 ) );
+        Assert.assertThat( symbols.count( "MPV17" ), Matchers.is( 8 ) );
+        Assert.assertThat( symbols.count( "MRPL17" ), Matchers.is( 2 ) );
+        Assert.assertThat( symbols.count( "OPA1" ), Matchers.is( 5 ) );
+        Assert.assertThat( symbols.count( "SLC25A33" ), Matchers.is( 1 ) );
+        Assert.assertThat( symbols.count( "SLC25A36" ), Matchers.is( 6 ) );
+        Assert.assertThat( symbols.count( "SLC25A4" ), Matchers.is( 2 ) );
+        Assert.assertThat( symbols.count( "TYMP" ), Matchers.is( 2 ) );
+        Assert.assertThat( symbols.count( "Mef2a" ), Matchers.is( 3 ) );
+        Assert.assertThat( symbols.count( "Mgme1" ), Matchers.is( 1 ) );
+        Assert.assertThat( symbols.count( "Mpv17" ), Matchers.is( 6 ) );
+        Assert.assertThat( symbols.count( "Mrpl15" ), Matchers.is( 3 ) );
+        Assert.assertThat( symbols.count( "Mrpl17" ), Matchers.is( 3 ) );
+        Assert.assertThat( symbols.count( "Mrpl39" ), Matchers.is( 1 ) );
+        Assert.assertThat( symbols.count( "Opa1" ), Matchers.is( 4 ) );
+        Assert.assertThat( symbols.count( "Pif1" ), Matchers.is( 3 ) );
+        Assert.assertThat( symbols.count( "Slc25a33" ), Matchers.is( 1 ) );
+        Assert.assertThat( symbols.count( "Slc25a36" ), Matchers.is( 4 ) );
 
     }
 
     @Test
     public void testGetCurrentGenesSpeciesRestricted() {
         List<AccessionDTO> res = cacheDAO.getAccessions( new int[]{7} );
-        Assert.assertThat( res.size(), Matchers.is( 61 ) );
+        Assert.assertThat( res.size(), Matchers.is( 41 ) );
 
         Multiset<String> symbols = HashMultiset.create();
 
@@ -444,106 +474,85 @@ public class CacheDAOTest extends BaseTest {
 
         // distinct symbols
         Assert.assertThat( symbols.elementSet().size(), Matchers.is( 10 ) );
-        Assert.assertThat( symbols.count( "LONP1" ), Matchers.is( 10 ) );
-        Assert.assertThat( symbols.count( "MEF2A" ), Matchers.is( 6 ) );
-        Assert.assertThat( symbols.count( "MGME1" ), Matchers.is( 6 ) );
-        Assert.assertThat( symbols.count( "MPV17" ), Matchers.is( 10 ) );
-        Assert.assertThat( symbols.count( "MRPL17" ), Matchers.is( 4 ) );
-        Assert.assertThat( symbols.count( "OPA1" ), Matchers.is( 8 ) );
-        Assert.assertThat( symbols.count( "SLC25A33" ), Matchers.is( 2 ) );
-        Assert.assertThat( symbols.count( "SLC25A36" ), Matchers.is( 7 ) );
-        Assert.assertThat( symbols.count( "SLC25A4" ), Matchers.is( 4 ) );
-        Assert.assertThat( symbols.count( "TYMP" ), Matchers.is( 4 ) );
+        Assert.assertThat( symbols.count( "LONP1" ), Matchers.is( 8 ) );
+        Assert.assertThat( symbols.count( "MEF2A" ), Matchers.is( 4 ) );
+        Assert.assertThat( symbols.count( "MGME1" ), Matchers.is( 3 ) );
+        Assert.assertThat( symbols.count( "MPV17" ), Matchers.is( 8 ) );
+        Assert.assertThat( symbols.count( "MRPL17" ), Matchers.is( 2 ) );
+        Assert.assertThat( symbols.count( "OPA1" ), Matchers.is( 5 ) );
+        Assert.assertThat( symbols.count( "SLC25A33" ), Matchers.is( 1 ) );
+        Assert.assertThat( symbols.count( "SLC25A36" ), Matchers.is( 6 ) );
+        Assert.assertThat( symbols.count( "SLC25A4" ), Matchers.is( 2 ) );
+        Assert.assertThat( symbols.count( "TYMP" ), Matchers.is( 2 ) );
     }
 
     @Test
     public void testGetAccessions() {
         List<AccessionDTO> res = cacheDAO.getAccessions( null );
-        Assert.assertThat( res.size(), Matchers.is( 129 ) );
+        Assert.assertThat( res.size(), Matchers.is( 70 ) );
 
         Multiset<Integer> genes = HashMultiset.create();
         Multiset<String> accessions = HashMultiset.create();
-        Multiset<Boolean> swissprot = HashMultiset.create();
+        Multiset<String> swissprot = HashMultiset.create();
 
         for ( AccessionDTO dto : res ) {
             genes.add( dto.getId() );
             accessions.add( dto.getAccession() );
-            swissprot.add( dto.getSubset().equals( Dataset.SwissProt.getLabel() ) );
+            swissprot.add( dto.getSubset() );
         }
 
         // distinct genes
-        Assert.assertThat( genes.elementSet().size(), Matchers.is( 20 ) );
-        Assert.assertThat( genes.count( 1 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 2 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 3 ), Matchers.is( 3 ) );
-        Assert.assertThat( genes.count( 4 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 5 ), Matchers.is( 15 ) );
-        Assert.assertThat( genes.count( 6 ), Matchers.is( 11 ) );
-        Assert.assertThat( genes.count( 7 ), Matchers.is( 12 ) );
-        Assert.assertThat( genes.count( 8 ), Matchers.is( 10 ) );
-        Assert.assertThat( genes.count( 9 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 10 ), Matchers.is( 1 ) );
-        Assert.assertThat( genes.count( 11 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 12 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 13 ), Matchers.is( 4 ) );
-        Assert.assertThat( genes.count( 14 ), Matchers.is( 10 ) );
-        Assert.assertThat( genes.count( 15 ), Matchers.is( 4 ) );
-        Assert.assertThat( genes.count( 16 ), Matchers.is( 3 ) );
-        Assert.assertThat( genes.count( 17 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 18 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 19 ), Matchers.is( 4 ) );
-        Assert.assertThat( genes.count( 20 ), Matchers.is( 4 ) );
+        Assert.assertThat( genes.elementSet().size(), Matchers.is( 70 ) );
 
         // Count distinct accessions
         Assert.assertThat( accessions.elementSet().size(), Matchers.is( 70 ) );
 
         // distinct sp
         Assert.assertThat( swissprot.elementSet().size(), Matchers.is( 2 ) );
-        Assert.assertThat( swissprot.count( false ), Matchers.is( 50 ) );
-        Assert.assertThat( swissprot.count( true ), Matchers.is( 79 ) );
+        Assert.assertThat( swissprot.count( "Swiss-Prot" ), Matchers.is( 51 ) );
+        Assert.assertThat( swissprot.count( "TrEMBL" ), Matchers.is( 19 ) );;
     }
 
     @Test
     public void testGetAccessionsSpeciesRestricted() {
         List<AccessionDTO> res = cacheDAO.getAccessions( new int[] { 7 } );
-        Assert.assertThat( res.size(), Matchers.is( 76 ) );
+        Assert.assertThat( res.size(), Matchers.is( 41 ) );
 
         Multiset<Integer> genes = HashMultiset.create();
         Multiset<String> accessions = HashMultiset.create();
-        Multiset<Boolean> swissprot = HashMultiset.create();
+        Multiset<String> swissprot = HashMultiset.create();
 
         for ( AccessionDTO dto : res ) {
             genes.add( dto.getId() );
             accessions.add( dto.getAccession() );
-            swissprot.add( dto.getSubset().equals( Dataset.SwissProt.getLabel() ) );
+            swissprot.add( dto.getSubset() );
         }
 
         // distinct genes
-        Assert.assertThat( genes.elementSet().size(), Matchers.is( 10 ) );
-        Assert.assertThat( genes.count( 1 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 2 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 3 ), Matchers.is( 3 ) );
-        Assert.assertThat( genes.count( 4 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 5 ), Matchers.is( 15 ) );
-        Assert.assertThat( genes.count( 6 ), Matchers.is( 11 ) );
-        Assert.assertThat( genes.count( 7 ), Matchers.is( 12 ) );
-        Assert.assertThat( genes.count( 8 ), Matchers.is( 10 ) );
-        Assert.assertThat( genes.count( 9 ), Matchers.is( 6 ) );
-        Assert.assertThat( genes.count( 10 ), Matchers.is( 1 ) );
+        Assert.assertThat( genes.elementSet().size(), Matchers.is( 41 ) );
 
         // Count distinct accessions
         Assert.assertThat( accessions.elementSet().size(), Matchers.is( 41 ) );
 
         // distinct sp
         Assert.assertThat( swissprot.elementSet().size(), Matchers.is( 2 ) );
-        Assert.assertThat( swissprot.count( false ), Matchers.is( 31 ) );
-        Assert.assertThat( swissprot.count( true ), Matchers.is( 45 ) );
+        Assert.assertThat( swissprot.count( "Swiss-Prot" ), Matchers.is( 28 ) );
+        Assert.assertThat( swissprot.count( "TrEMBL" ), Matchers.is( 13 ) );
 
     }
 
     @Test
     public void testGetGoTerms() {
-        List<GOTermDTO> res = cacheDAO.getGoTerms(0); // FIXME: recreate for individual go editions
+        List<GOTermDTO> res = cacheDAO.getGoTerms(170); // FIXME: recreate for individual go editions
+        Assert.assertThat( res.size(), Matchers.is( 794 ) );
+
+        res.addAll( cacheDAO.getGoTerms(173) );
+        Assert.assertThat( res.size(), Matchers.is( 1623 ) );
+
+        res.addAll( cacheDAO.getGoTerms(174) );
+        Assert.assertThat( res.size(), Matchers.is( 2454 ) );
+
+        res.addAll( cacheDAO.getGoTerms(175) );
         Assert.assertThat( res.size(), Matchers.is( 3195 ) );
 
         Multiset<String> goIds = HashMultiset.create();
@@ -564,7 +573,7 @@ public class CacheDAOTest extends BaseTest {
         }
 
         if ( !found1 || !found2 ) {
-            Assert.fail( "Failed spot check(s) for GO Term(s)" );
+            fail( "Failed spot check(s) for GO Term(s)" );
         }
 
         // Count distinct secs
@@ -574,7 +583,16 @@ public class CacheDAOTest extends BaseTest {
 
     @Test
     public void testGetAdjacencies() {
-        List<AdjacencyDTO> res = cacheDAO.getAdjacencies(0); // FIXME: recreate for individual go editions
+        List<AdjacencyDTO> res = cacheDAO.getAdjacencies(170);
+        Assert.assertThat( res.size(), Matchers.is( 1414 ) );
+
+        res.addAll( cacheDAO.getAdjacencies(173) );
+        Assert.assertThat( res.size(), Matchers.is( 2917 ) );
+
+        res.addAll( cacheDAO.getAdjacencies(174) );
+        Assert.assertThat( res.size(), Matchers.is( 4396 ) );
+
+        res.addAll( cacheDAO.getAdjacencies(175) );
         Assert.assertThat( res.size(), Matchers.is( 5728 ) );
 
         Multiset<Integer> editions = HashMultiset.create();
@@ -631,11 +649,11 @@ public class CacheDAOTest extends BaseTest {
         }
 
         if ( !found1 ) {
-            Assert.fail( "Failed spot check 1 for Evidence" );
+            fail( "Failed spot check 1 for Evidence" );
         }
 
         if ( !found2 ) {
-            Assert.fail( "Failed spot check 2 for Evidence" );
+            fail( "Failed spot check 2 for Evidence" );
         }
 
         // distinct categories
