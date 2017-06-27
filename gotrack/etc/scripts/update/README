@@ -1,0 +1,4 @@
+File: update.py
+Description: Updates gotrack database.
+Notes: Downloads, Imports, and Preprocesses database. Requires pushing staging to production as last step.
+Example: update.py --update-push path/to/resources

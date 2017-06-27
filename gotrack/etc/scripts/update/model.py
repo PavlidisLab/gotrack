@@ -288,7 +288,7 @@ class Ontology:
         print 'Creating Reflexive Transitive Closure'
 
         for goId, t in self.term_map.iteritems():
-            ancestor_distance = self.get_ancestors_distances(t)
+            ancestor_distance = self.get_ancestors_distances(t, reflexive)
 
             for rel, dist in ancestor_distance.iteritems():
                 # print rel.term.id, rel.type, dist

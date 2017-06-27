@@ -19,9 +19,9 @@
 
 package ubc.pavlab.gotrack.model;
 
-import java.sql.Date;
-
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
+
+import java.sql.Date;
 
 /**
  * Immutable representation of an edition of gene annotations
@@ -34,6 +34,7 @@ public class Edition implements Comparable<Edition> {
     private final Integer edition;
     private final Date date;
     private final GOEdition goEdition;
+    private final Integer release;
 
     /**
      * 
@@ -41,6 +42,7 @@ public class Edition implements Comparable<Edition> {
     public Edition( EditionDTO dto, GOEdition goEdition ) {
         this.edition = dto.getEdition();
         this.date = dto.getDate();
+        this.release = dto.getRelease();
         this.goEdition = goEdition;
     }
 
@@ -64,10 +66,14 @@ public class Edition implements Comparable<Edition> {
         return goEdition;
     }
 
+    public Integer getRelease() {
+        return release;
+    }
+
     @Override
     public String toString() {
-        return "Edition [edition=" + edition + ", date=" + date + ", goDate=" + goEdition.getDate() + ", goEditionId="
-                + goEdition.getId() + "]";
+        return "Edition [edition=" + edition + ", date=" + date + ", release=" + release + ", goDate=" +
+                goEdition.getDate() + ", goEditionId=" + goEdition.getId() + "]";
     }
 
     @Override
@@ -94,5 +100,4 @@ public class Edition implements Comparable<Edition> {
     public int compareTo( Edition o ) {
         return this.getEdition().compareTo( o.getEdition() );
     }
-
 }

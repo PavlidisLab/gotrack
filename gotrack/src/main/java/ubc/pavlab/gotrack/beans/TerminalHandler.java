@@ -19,21 +19,20 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.io.Serializable;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import org.apache.log4j.Logger;
+import ubc.pavlab.gotrack.model.Aggregate;
+import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import org.apache.log4j.Logger;
-
-import ubc.pavlab.gotrack.model.Aggregate;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
 
 /**
  * Handled reqests to the terminal (available only in development mode currently)
@@ -98,9 +97,10 @@ public class TerminalHandler implements Serializable {
             return sessionManager.getAuthenticated() ? AUTH_COMMANDS.toString() : OPEN_COMMANDS.toString();
         } else if ( command.equals( "aggregate" ) ) {
             if ( params.length == 2 ) {
-                Integer speciesId;
+                Species species;
                 try {
-                    speciesId = Integer.valueOf( params[0] );
+                    Integer speciesId = Integer.valueOf( params[0] );
+                    species = cache.getSpecies( speciesId );
                 } catch ( NumberFormatException e ) {
                     return "Malformed Input : speciesId, edition";
                 }
@@ -110,8 +110,8 @@ public class TerminalHandler implements Serializable {
                 } catch ( NumberFormatException e ) {
                     return "Malformed Input : speciesId, edition";
                 }
-                Edition ed = cache.getEdition( speciesId, editionId );
-                Aggregate agg = cache.getAggregates( speciesId, ed );
+                Edition ed = cache.getEdition( species, editionId );
+                Aggregate agg = cache.getAggregates( species, ed );
                 if ( agg == null ) {
                     return "Null";
                 }
@@ -122,12 +122,16 @@ public class TerminalHandler implements Serializable {
         } else if ( command.equals( "term" ) ) {
             Edition ed;
             String goId;
-            Integer speciesId;
+            Species species;
             if ( params.length > 1 ) {
                 try {
-                    speciesId = Integer.valueOf( params[0] );
+                    Integer speciesId = Integer.valueOf( params[0] );
+                    species = cache.getSpecies( speciesId );
                 } catch ( NumberFormatException e ) {
                     return "Malformed Input : speciesId, term [, GO Edition]";
+                }
+                if ( species == null ) {
+                    return "Unknown species";
                 }
                 goId = params[1];
                 if ( params.length > 2 ) {
@@ -137,9 +141,9 @@ public class TerminalHandler implements Serializable {
                     } catch ( NumberFormatException e ) {
                         return "Malformed Input : speciesId, term [, GO Edition]";
                     }
-                    ed = cache.getEdition( speciesId, editionId );
+                    ed = cache.getEdition( species, editionId );
                 } else {
-                    ed = cache.getCurrentEditions( speciesId );
+                    ed = cache.getCurrentEditions( species );
                 }
 
             } else
@@ -151,7 +155,7 @@ public class TerminalHandler implements Serializable {
                 return "Term not found.";
             }
 
-            Integer val = cache.getInferredAnnotationCount( speciesId, ed, t );
+            Integer val = cache.getInferredAnnotationCount( species, ed, t );
 
             return t.toString() + "<br/>" + "GO Set Size: " + ( val == null ? "" : val.toString() );
         } else if ( command.equals( "" ) ) {

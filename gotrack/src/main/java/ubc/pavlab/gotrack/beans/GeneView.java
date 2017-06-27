@@ -19,51 +19,18 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import javax.annotation.PostConstruct;
-import javax.faces.application.FacesMessage;
-import javax.faces.application.ProjectStage;
-import javax.faces.context.FacesContext;
-import javax.faces.view.ViewScoped;
-import javax.inject.Inject;
-import javax.inject.Named;
-
+import com.google.common.base.Predicate;
+import com.google.common.collect.*;
+import com.google.gson.Gson;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.primefaces.component.datatable.DataTable;
 import org.primefaces.context.RequestContext;
-
-import com.google.common.base.Predicate;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableTable;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.gson.Gson;
-
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
+import ubc.pavlab.gotrack.beans.service.MultifunctionalityService;
 import ubc.pavlab.gotrack.beans.service.StatsService;
 import ubc.pavlab.gotrack.exception.GeneNotFoundException;
-import ubc.pavlab.gotrack.model.Aggregate;
-import ubc.pavlab.gotrack.model.Annotation;
-import ubc.pavlab.gotrack.model.AnnotationType;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.*;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.chart.SeriesExtra;
@@ -73,6 +40,18 @@ import ubc.pavlab.gotrack.model.table.CompareTermsTableValues;
 import ubc.pavlab.gotrack.model.table.CompareTermsTableValues.TermComparison;
 import ubc.pavlab.gotrack.model.table.GeneTableValues;
 import ubc.pavlab.gotrack.utilities.Jaccard;
+
+import javax.annotation.PostConstruct;
+import javax.faces.application.FacesMessage;
+import javax.faces.application.ProjectStage;
+import javax.faces.context.FacesContext;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Backing bean for the gene tracking functionality.
@@ -99,8 +78,10 @@ public class GeneView implements Serializable {
     @Inject
     private AnnotationService annotationService;
 
-    private Species species;
-    private String query;
+    @Inject
+    private MultifunctionalityService multifunctionalityService;
+
+    private String queryAccession;
     private Gene gene;
 
     // Data
@@ -160,21 +141,13 @@ public class GeneView implements Serializable {
         if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
             return null; // Skip ajax requests.
         }
-        log.info( "GeneView init: " + species + ": " + query );
+        log.info( "GeneView init: " + queryAccession + " - " + gene );
 
-        boolean isGeneSet = !StringUtils.isEmpty( query );
-        boolean isSpeciesSet = species != null;
+        boolean isGeneSet = !StringUtils.isEmpty( queryAccession );
 
-        if ( !isSpeciesSet && !isGeneSet ) {
+        if ( !isGeneSet ) {
             // no parameters; show search form
             gene = null;
-            return null;
-        } else if ( !( isSpeciesSet && isGeneSet ) ) {
-            // malformed input if only one parameter is specified
-            // Send to error page
-            FacesContext facesContext = FacesContext.getCurrentInstance();
-            facesContext.getExternalContext().responseSendError( 400, "Missing Parameter" );
-            facesContext.responseComplete();
             return null;
         }
 
@@ -184,19 +157,19 @@ public class GeneView implements Serializable {
                     "This is the DEVELOPMENT version of GOTrack!", null ) );
         }
 
-        gene = cache.getCurrentGene( species.getId(), query );
+        gene = cache.getCurrentGene( queryAccession );
+
         if ( gene == null ) {
-            // gene symbol not found
+            // gene accession not found
             // Send to error page
             throw new GeneNotFoundException();
-        } else {
-            // Count gene hit
-            statsService.countGeneHit( gene );
-            log.info( "Gene: " + gene );
-
         }
 
-        currentEdition = cache.getCurrentEditions( species.getId() );
+        // Count gene hit
+        statsService.countGeneHit( gene );
+        log.info( "Gene: " + gene );
+
+        currentEdition = cache.getCurrentEditions( gene.getSpecies() );
 
         return null;
 
@@ -244,7 +217,7 @@ public class GeneView implements Serializable {
 
         // Get unfiltered data
         if ( cachedData == null ) {
-            directRawData = annotationService.fetchTrackData( species, gene );
+            directRawData = annotationService.fetchTrackData( gene );
             inferredRawData = propagate( directRawData );
         } else {
             directRawData = cachedData.get( AnnotationType.D ).rowMap();
@@ -425,7 +398,7 @@ public class GeneView implements Serializable {
             inferredCountSeries.addDataPoint( ed.getDate(), count );
 
             // Averages
-            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
             if ( agg != null ) {
                 aggregateSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
                 aggregateInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
@@ -494,7 +467,7 @@ public class GeneView implements Serializable {
             inferredSeries.addDataPoint( ed.getDate(), jaccard );
 
             // Averages
-            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
             if ( agg != null ) {
                 averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
                 averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
@@ -540,21 +513,15 @@ public class GeneView implements Serializable {
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
-            Integer total = cache.getGeneCount( species.getId(), ed );
-            if ( total != null ) {
-                Double multi = 0.0;
-                for ( GeneOntologyTerm t : entry.getValue().keySet() ) {
-                    Integer inGroup = cache.getInferredAnnotationCount( species.getId(), ed, t );
-                    if ( inGroup != null && inGroup < total ) {
-                        multi += 1.0 / ( inGroup * ( total - inGroup ) );
-                    }
-                }
+
+            Double multi = multifunctionalityService.multifunctionality( entry.getValue().keySet(), this.gene.getSpecies(), ed );
+            if ( multi != null ) {
                 // Scaled by 10^4
                 multiSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * multi );
             }
 
             // Averages
-            Aggregate agg = cache.getAggregates( species.getId(), ed );
+            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
             if ( agg != null ) {
                 // Scaled by 10^4
                 averageSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * agg.getAvgMultifunctionality() );
@@ -637,7 +604,7 @@ public class GeneView implements Serializable {
 
         ChartValues chart = new ChartValues();
 
-        List<Edition> allEditions = new ArrayList<>( cache.getAllEditions( species.getId() ) );
+        List<Edition> allEditions = new ArrayList<>( cache.getAllEditions( this.gene.getSpecies() ) );
         Collections.sort( allEditions );
 
         Map<String, String> termNames = new HashMap<>();
@@ -728,13 +695,13 @@ public class GeneView implements Serializable {
             return;
         }
 
-        selectEditionStart = cache.getEdition( species.getId(), editionId1 );
+        selectEditionStart = cache.getEdition( this.gene.getSpecies(), editionId1 );
         if ( selectEditionStart == null ) {
             log.warn( "selectEditionStart edition id has no corresponding edition object" );
             return;
         }
 
-        selectEditionStop = cache.getEdition( species.getId(), editionId2 );
+        selectEditionStop = cache.getEdition( this.gene.getSpecies(), editionId2 );
         if ( selectEditionStop == null ) {
             log.warn( "selectEditionStop edition id has no corresponding edition object" );
             return;
@@ -764,7 +731,7 @@ public class GeneView implements Serializable {
             return;
         }
 
-        clickEdition = cache.getEdition( species.getId(), editionId );
+        clickEdition = cache.getEdition( this.gene.getSpecies(), editionId );
 
         if ( clickEdition == null ) {
             log.warn( "Selected edition id has no corresponding edition object" );
@@ -819,7 +786,7 @@ public class GeneView implements Serializable {
             log.error( e );
             return;
         }
-        clickEdition = cache.getEdition( species.getId(), editionId );
+        clickEdition = cache.getEdition( this.gene.getSpecies(), editionId );
 
         String goId = FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "termId" );
 
@@ -910,20 +877,12 @@ public class GeneView implements Serializable {
 
     // Getters & Setters
 
-    public Species getSpecies() {
-        return species;
+    public String getQueryAccession() {
+        return queryAccession;
     }
 
-    public void setSpecies( Species species ) {
-        this.species = species;
-    }
-
-    public String getQuery() {
-        return query;
-    }
-
-    public void setQuery( String query ) {
-        this.query = query;
+    public void setQueryAccession( String queryAccession ) {
+        this.queryAccession = queryAccession;
     }
 
     public Gene getGene() {

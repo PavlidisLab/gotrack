@@ -19,24 +19,19 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
-
 import com.google.common.base.Predicates;
 import com.google.common.collect.Maps;
-
 import gnu.trove.map.hash.TObjectDoubleHashMap;
+import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.hashkey.HyperUCFKey;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Runs enrichment analysis over all editions given geneset data and term population data.
@@ -48,7 +43,7 @@ public class EnrichmentAnalysis {
 
     private static final Logger log = Logger.getLogger( EnrichmentAnalysis.class );
 
-    private final int currentSpeciesId;
+    private final Species currentSpecies;
     private final int minAnnotatedPopulation;
     private final int maxAnnotatedPopulation;
 
@@ -79,17 +74,16 @@ public class EnrichmentAnalysis {
      * keep in mind that these instances are very memory intensive).
      * 
      * @param geneGOMap Map containing raw data from db
-     * @param sampleSizes Map containing sample size data from db
      * @param min minimum geneset size a specific term must have to be included in results
      * @param max maximum geneset size a specific term must have to be included in results
      * @param test Which method for multiple test correction
      * @param threshold Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
      * @param cache Cache object containing part of the contingency table
-     * @param currentSpeciesId Used to get correct data from cache
+     * @param currentSpecies Used to get correct data from cache
      */
     public EnrichmentAnalysis( Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap, int min, int max,
-            MultipleTestCorrection test, double threshold,
-            Cache cache, int currentSpeciesId ) {
+                               MultipleTestCorrection test, double threshold,
+                               Cache cache, Species currentSpecies ) {
 
         /*
          * This makes use of memoization to reduce computations of log probabilities. This is necessary from the sheer
@@ -102,7 +96,7 @@ public class EnrichmentAnalysis {
         // Store options
         this.minAnnotatedPopulation = min;
         this.maxAnnotatedPopulation = max == 0 ? Integer.MAX_VALUE : max;
-        this.currentSpeciesId = currentSpeciesId;
+        this.currentSpecies = currentSpecies;
 
         // Store some stats
         this.totalEditions = geneGOMap.keySet().size();
@@ -121,7 +115,7 @@ public class EnrichmentAnalysis {
 
             StandardPopulation<GeneOntologyTerm, Gene> sample = Population.standardPopulation( data );
 
-            Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, currentSpeciesId,
+            Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, this.currentSpecies,
                     ed );
 
             Enrichment<GeneOntologyTerm, Gene> enrichment = new Enrichment<>( test, threshold, minAnnotatedPopulation,
@@ -218,7 +212,7 @@ public class EnrichmentAnalysis {
     }
 
     /**
-     * @param specificEdition
+     * @param ed
      * @return unmodifiable map containing results significant in any edition for a specific edition
      */
     public Map<GeneOntologyTerm, EnrichmentResult> getResults( Edition ed ) {
@@ -255,8 +249,8 @@ public class EnrichmentAnalysis {
     /**
      * @return species this analysis was done on.
      */
-    public int getCurrentSpeciesId() {
-        return currentSpeciesId;
+    public Species getCurrentSpecies() {
+        return currentSpecies;
     }
 
     /**

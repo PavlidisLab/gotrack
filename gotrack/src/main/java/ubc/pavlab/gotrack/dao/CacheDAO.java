@@ -19,23 +19,9 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.util.List;
-import java.util.Map;
+import ubc.pavlab.gotrack.model.dto.*;
 
-import ubc.pavlab.gotrack.model.Aggregate;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.dto.AccessionDTO;
-import ubc.pavlab.gotrack.model.dto.AdjacencyDTO;
-import ubc.pavlab.gotrack.model.dto.AggregateDTO;
-import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
-import ubc.pavlab.gotrack.model.dto.EditionDTO;
-import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
-import ubc.pavlab.gotrack.model.dto.GODefinitionDTO;
-import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
-import ubc.pavlab.gotrack.model.dto.GOTermDTO;
-import ubc.pavlab.gotrack.model.dto.GeneDTO;
-import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
-import ubc.pavlab.gotrack.model.hashkey.MultiKey;
+import java.util.List;
 
 /**
  * Holds methods for retrieving data that is meant to be cached.
@@ -46,76 +32,68 @@ import ubc.pavlab.gotrack.model.hashkey.MultiKey;
 public interface CacheDAO {
 
     /**
-     * Retrieve ordered list of edition
+     * Retrieve list of editions from certain release
      */
-    public List<EditionDTO> getAllEditions( int[] speciesRestrictions ) throws DAOException;
+    List<EditionDTO> getReleaseEditions( int release ) throws DAOException;
+
+    /**
+     * Retrieve ordered list of editions
+     */
+    List<EditionDTO> getAllEditions( int[] speciesRestrictions ) throws DAOException;
+
+    /**
+     * Retrieve ordered list of current editions
+     */
+    List<EditionDTO> getCurrentEditions( int[] speciesRestrictions ) throws DAOException;
 
     /**
      * Retrieve data for number of genes annotated to each term or their children (GO Gene Set Sizes)
      */
-    public List<AnnotationCountDTO> getGOAnnotationCounts( int[] speciesRestrictions ) throws DAOException;
+    List<AnnotationCountDTO> getGOAnnotationCounts( int speciesId, int minEdition ) throws DAOException;
 
     /**
      * Map of species to ordered linkedlist of editions
      */
-    public List<AggregateDTO> getAggregates( int[] speciesRestrictions ) throws DAOException;
+    List<AggregateDTO> getAggregates( int[] speciesRestrictions ) throws DAOException;
 
     /**
-     * Retrieve current genes
+     * Retrieve current synonyms
      */
-    public List<GeneDTO> getCurrentGenes( int[] speciesRestrictions ) throws DAOException;
+    List<SynonymDTO> getSynonyms( int[] speciesRestrictions ) throws DAOException;
 
     /**
      * Retrieve all GO Terms
      */
-    public List<GOTermDTO> getGoTerms() throws DAOException;
+    List<GOTermDTO> getGoTerms(int goEdition) throws DAOException;
 
     /**
      * Retrieve all relationships between GO Terms
      */
-    public List<AdjacencyDTO> getAdjacencies() throws DAOException;
+    List<AdjacencyDTO> getAdjacencies(int goEdition) throws DAOException;
 
     /**
      * Retrieve all alternate GO Terms
      */
-    public List<AdjacencyDTO> getAlternates() throws DAOException;
+    List<AdjacencyDTO> getAlternates(int goEdition) throws DAOException;
 
     /**
      * Retrieve all evidence codes
      */
-    public List<EvidenceDTO> getEvidence() throws DAOException;
+    List<EvidenceDTO> getEvidence() throws DAOException;
 
     /**
      * Retrieve all accessions
      */
-    public List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException;
+    List<AccessionDTO> getAccessions( int[] speciesRestrictions ) throws DAOException;
 
     /**
      * Retrieve all GO editions
      */
-    public List<GOEditionDTO> getAllGOEditions() throws DAOException;
-
-    /**
-     * Retrieve all unique go_id, symbol for a specific species and edition. Useful if there is heavy/complicated
-     * pre-processing to be done.
-     */
-    public List<SimpleAnnotationDTO> getSimpleAnnotations( Integer speciesId, Edition ed ) throws DAOException;
+    List<GOEditionDTO> getAllGOEditions() throws DAOException;
 
     /**
      * Retrieve all definitions for most current ontology
      */
-    public List<GODefinitionDTO> getGODefinitions() throws DAOException;
-
-    /**
-     * Write annotation counts on a per species, edition, GO Term basis to the DB for fast cache creation in later
-     * starts.
-     */
-    public void writeAnnotationCounts( Map<MultiKey, Integer> direct, Map<MultiKey, Integer> inferred );
-
-    /**
-     * Write aggregate calculations on a per species, edition basis to the DB for fast cache creation in later
-     * starts.
-     */
-    public void writeAggregates( Map<Integer, Map<Edition, Aggregate>> aggs );
+    List<GODefinitionDTO> getGODefinitions() throws DAOException;
 
 }

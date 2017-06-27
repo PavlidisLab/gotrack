@@ -19,17 +19,15 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.io.Serializable;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.log4j.Logger;
+import org.omnifaces.cdi.Eager;
+import ubc.pavlab.gotrack.utilities.PropertiesFile;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Named;
-
-import org.apache.commons.lang3.StringUtils;
-import org.apache.log4j.Logger;
-import org.omnifaces.cdi.Eager;
-
-import ubc.pavlab.gotrack.utilities.PropertiesFile;
+import java.io.Serializable;
 
 /**
  * Holds settings from the properties file. Alter the static fields here to meet your requirements if necessary.
@@ -54,6 +52,7 @@ public class SettingsCache implements Serializable {
 
     private static final String SPECIES_RESTRICTIONS_PROPERTY = "gotrack.speciesRestrictions";
     private static final String UPDATE_POP_TABLE = "gotrack.updatePopularTable";
+    private static final String MIN_RELEASE = "gotrack.minRelease";
     private static final String DRY_RUN = "gotrack.dryRun";
 
     private PropertiesFile prop = new PropertiesFile();
@@ -101,6 +100,18 @@ public class SettingsCache implements Serializable {
     public boolean isDryRun() {
         String r = prop.getProperty( DRY_RUN );
         return r != null && r.equals( "true" );
+    }
+
+    public int minRelease() {
+        String r = prop.getProperty( MIN_RELEASE );
+        int release;
+        try {
+            release = Integer.valueOf( r );
+        } catch ( NumberFormatException e) {
+            // Default
+            release = 1;
+        }
+        return release;
     }
 
     public boolean contains( String key ) {

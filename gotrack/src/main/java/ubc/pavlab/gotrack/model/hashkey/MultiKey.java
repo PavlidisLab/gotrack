@@ -1,6 +1,7 @@
 package ubc.pavlab.gotrack.model.hashkey;
 
 import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.AnnotationCountDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
@@ -16,14 +17,14 @@ public final class MultiKey {
     private final Integer edition;
     private final String goId;
 
-    public MultiKey( Integer species, Edition ed, GeneOntologyTerm t ) {
-        this.species = species;
+    public MultiKey( Species species, Edition ed, GeneOntologyTerm t ) {
+        this.species = species.getId();
         this.edition = ed.getEdition();
         this.goId = t.getGoId();
     }
 
-    public MultiKey( AnnotationCountDTO dto ) {
-        this.species = dto.getSpecies();
+    public MultiKey( Species species,  AnnotationCountDTO dto ) {
+        this.species = species.getId();
         this.edition = dto.getEdition();
         this.goId = dto.getGoId();
     }
@@ -41,31 +42,23 @@ public final class MultiKey {
     }
 
     @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( edition == null ) ? 0 : edition.hashCode() );
-        result = prime * result + ( ( goId == null ) ? 0 : goId.hashCode() );
-        result = prime * result + ( ( species == null ) ? 0 : species.hashCode() );
-        return result;
+    public boolean equals( Object o ) {
+        if ( this == o ) return true;
+        if ( o == null || getClass() != o.getClass() ) return false;
+
+        MultiKey multiKey = (MultiKey) o;
+
+        if ( species != null ? !species.equals( multiKey.species ) : multiKey.species != null ) return false;
+        if ( edition != null ? !edition.equals( multiKey.edition ) : multiKey.edition != null ) return false;
+        return goId != null ? goId.equals( multiKey.goId ) : multiKey.goId == null;
     }
 
     @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        MultiKey other = ( MultiKey ) obj;
-        if ( edition == null ) {
-            if ( other.edition != null ) return false;
-        } else if ( !edition.equals( other.edition ) ) return false;
-        if ( goId == null ) {
-            if ( other.goId != null ) return false;
-        } else if ( !goId.equals( other.goId ) ) return false;
-        if ( species == null ) {
-            if ( other.species != null ) return false;
-        } else if ( !species.equals( other.species ) ) return false;
-        return true;
+    public int hashCode() {
+        int result = species != null ? species.hashCode() : 0;
+        result = 31 * result + (edition != null ? edition.hashCode() : 0);
+        result = 31 * result + (goId != null ? goId.hashCode() : 0);
+        return result;
     }
 
     @Override

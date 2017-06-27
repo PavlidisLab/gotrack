@@ -19,17 +19,21 @@
 
 package ubc.pavlab.gotrack.rest;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.EnumMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
+import jersey.repackaged.com.google.common.collect.Maps;
+import jersey.repackaged.com.google.common.collect.Sets;
+import org.apache.log4j.Logger;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import ubc.pavlab.gotrack.analysis.*;
+import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.beans.service.EnrichmentService;
+import ubc.pavlab.gotrack.beans.service.MultifunctionalityService;
+import ubc.pavlab.gotrack.model.*;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.rest.marshal.EnrichmentHistoricalRequest;
+import ubc.pavlab.gotrack.model.rest.marshal.EnrichmentRequest;
+import ubc.pavlab.gotrack.model.search.GeneMatch;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -40,33 +44,9 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
-import org.apache.log4j.Logger;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import jersey.repackaged.com.google.common.collect.Sets;
-import ubc.pavlab.gotrack.analysis.Enrichment;
-import ubc.pavlab.gotrack.analysis.EnrichmentAnalysis;
-import ubc.pavlab.gotrack.analysis.EnrichmentResult;
-import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
-import ubc.pavlab.gotrack.analysis.SimilarityAnalysis;
-import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
-import ubc.pavlab.gotrack.analysis.SimilarityMethod;
-import ubc.pavlab.gotrack.analysis.SimilarityScore;
-import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.beans.service.EnrichmentService;
-import ubc.pavlab.gotrack.model.Aspect;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.StatusPoller;
-import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.rest.marshal.EnrichmentHistoricalRequest;
-import ubc.pavlab.gotrack.model.rest.marshal.EnrichmentRequest;
-import ubc.pavlab.gotrack.model.table.GeneMatches;
-import ubc.pavlab.gotrack.model.table.GeneMatches.MatchType;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 /**
  * TODO Document Me
@@ -86,6 +66,9 @@ public class AnalysisEP {
     @Inject
     EnrichmentService enrichmentService;
 
+    @Inject
+    private MultifunctionalityService multifunctionalityService;
+
     @Context
     UriInfo uri;
 
@@ -94,8 +77,7 @@ public class AnalysisEP {
     }
 
     /**
-     * @param request
-     * @param msg
+     * @param req
      * @return Enrichment results from most recent edition
      */
     @POST
@@ -112,7 +94,7 @@ public class AnalysisEP {
                 return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).build();
             }
 
-            Edition ed = cache.getCurrentEditions( species.getId() );
+            Edition ed = cache.getCurrentEditions( species );
 
             response.put( "edition", new JSONObject( ed ) );
 
@@ -122,30 +104,35 @@ public class AnalysisEP {
             int max = 200;
             Set<Aspect> aspectsFilter = null;
 
-            // Convert list of strings to best possible matches in genes
-            Map<MatchType, List<GeneMatches>> gmMap = deserializeGenes( req.genes, species );
 
-            Set<Gene> hitList = new HashSet<>();
-            Set<GeneMatches> unknown = new HashSet<>();
-            for ( Entry<MatchType, List<GeneMatches>> entry : gmMap.entrySet() ) {
-                if ( entry.getKey().equals( MatchType.EXACT ) || entry.getKey().equals( MatchType.EXACT_SYNONYM ) ) {
-                    // Create histlist from exact and exact_synonym matches
-                    for ( GeneMatches gm : entry.getValue() ) {
-                        hitList.add( gm.getSelectedGene() );
+            Set<Gene> hitList = Sets.newHashSet();
+            Set<GeneMatch> exact = Sets.newHashSet();
+            Set<GeneMatch> synonym = Sets.newHashSet();
+            Set<GeneMatch> unknown = Sets.newHashSet();
+            // Convert list of strings to best possible matches in genes
+            Map<String, GeneMatch> gmMap = deserializeGenes( req.genes, species );
+
+            for ( GeneMatch match : gmMap.values() ) {
+                if ( match.getType().equals( GeneMatch.Type.SINGLE ) ) {
+                    if ( match.getLevel().equals( GeneMatch.Level.PRIMARY ) ) {
+                        exact.add( match );
+                        hitList.add( match.getSelectedGene() );
+                    } else if ( match.getLevel().equals( GeneMatch.Level.SYNONYM ) ) {
+                        synonym.add( match );
+                        hitList.add( match.getSelectedGene() );
+                    } else {
+                        unknown.add( match ); // This shouldn't happen, we restrict result in deserialize
                     }
                 } else {
-                    // Create unknown list from other types
-                    for ( GeneMatches gm : entry.getValue() ) {
-                        unknown.add( gm );
-                    }
+                    unknown.add( match );
                 }
             }
 
             // Attach genes
 
             JSONObject genesJSON = new JSONObject();
-            genesJSON.put( "exact", gmMap.get( MatchType.EXACT ) );
-            genesJSON.put( "exact_synonym", gmMap.get( MatchType.EXACT_SYNONYM ) );
+            genesJSON.put( "exact", exact );
+            genesJSON.put( "exact_synonym", synonym );
             genesJSON.put( "unknown", unknown );
             response.put( "input_genes", genesJSON );
 
@@ -161,12 +148,12 @@ public class AnalysisEP {
             response.put( "max_go_geneset", max );
             response.put( "aspect_filter", aspectsFilter );
 
-            if ( hitList == null || hitList.size() == 0 ) {
+            if ( hitList.isEmpty() ) {
                 return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
             }
 
             Enrichment<GeneOntologyTerm, Gene> enrichment = enrichmentService.singleEnrichment( ed, hitList,
-                    species.getId(), mulTestCor, threshold, min, max, aspectsFilter );
+                    species, mulTestCor, threshold, min, max, aspectsFilter );
 
             JSONObject enrichmentJSON = enrichmentToJSON( ed, enrichment );
 
@@ -186,8 +173,7 @@ public class AnalysisEP {
     }
 
     /**
-     * @param request
-     * @param msg
+     * @param req
      * @return Enrichment results from most recent edition
      */
     @POST
@@ -226,30 +212,34 @@ public class AnalysisEP {
             int max = 200;
             Set<Aspect> aspectsFilter = null;
 
+            Set<Gene> hitList = Sets.newHashSet();
+            Set<GeneMatch> exact = Sets.newHashSet();
+            Set<GeneMatch> synonym = Sets.newHashSet();
+            Set<GeneMatch> unknown = Sets.newHashSet();
             // Convert list of strings to best possible matches in genes
-            Map<MatchType, List<GeneMatches>> gmMap = deserializeGenes( req.genes, species );
+            Map<String, GeneMatch> gmMap = deserializeGenes( req.genes, species );
 
-            Set<Gene> hitList = new HashSet<>();
-            Set<GeneMatches> unknown = new HashSet<>();
-            for ( Entry<MatchType, List<GeneMatches>> entry : gmMap.entrySet() ) {
-                if ( entry.getKey().equals( MatchType.EXACT ) || entry.getKey().equals( MatchType.EXACT_SYNONYM ) ) {
-                    // Create histlist from exact and exact_synonym matches
-                    for ( GeneMatches gm : entry.getValue() ) {
-                        hitList.add( gm.getSelectedGene() );
+            for ( GeneMatch match : gmMap.values() ) {
+                if ( match.getType().equals( GeneMatch.Type.SINGLE ) ) {
+                    if ( match.getLevel().equals( GeneMatch.Level.PRIMARY ) ) {
+                        exact.add( match );
+                        hitList.add( match.getSelectedGene() );
+                    } else if ( match.getLevel().equals( GeneMatch.Level.SYNONYM ) ) {
+                        synonym.add( match );
+                        hitList.add( match.getSelectedGene() );
+                    } else {
+                        unknown.add( match ); // This shouldn't happen, we restrict result in deserialize
                     }
                 } else {
-                    // Create unknown list from other types
-                    for ( GeneMatches gm : entry.getValue() ) {
-                        unknown.add( gm );
-                    }
+                    unknown.add( match );
                 }
             }
 
             // Attach genes
 
             JSONObject genesJSON = new JSONObject();
-            genesJSON.put( "exact", gmMap.get( MatchType.EXACT ) );
-            genesJSON.put( "exact_synonym", gmMap.get( MatchType.EXACT_SYNONYM ) );
+            genesJSON.put( "exact", exact );
+            genesJSON.put( "exact_synonym", synonym );
             genesJSON.put( "unknown", unknown );
             response.put( "input_genes", genesJSON );
 
@@ -265,12 +255,12 @@ public class AnalysisEP {
             response.put( "max_go_geneset", max );
             response.put( "aspect_filter", aspectsFilter );
 
-            if ( hitList == null || hitList.size() == 0 ) {
+            if ( hitList.isEmpty() ) {
                 return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
             }
 
             Enrichment<GeneOntologyTerm, Gene> enrichment = enrichmentService.singleEnrichment( closestEdition, hitList,
-                    species.getId(), mulTestCor, threshold, min, max, aspectsFilter );
+                    species, mulTestCor, threshold, min, max, aspectsFilter );
 
             JSONObject enrichmentJSON = enrichmentToJSON( closestEdition, enrichment );
 
@@ -290,8 +280,7 @@ public class AnalysisEP {
     }
 
     /**
-     * @param request
-     * @param msg
+     * @param req
      * @return Enrichment results from most recent edition
      */
     @POST
@@ -314,30 +303,34 @@ public class AnalysisEP {
             int max = 200;
             Set<Aspect> aspectsFilter = null;
 
+            Set<Gene> hitList = Sets.newHashSet();
+            Set<GeneMatch> exact = Sets.newHashSet();
+            Set<GeneMatch> synonym = Sets.newHashSet();
+            Set<GeneMatch> unknown = Sets.newHashSet();
             // Convert list of strings to best possible matches in genes
-            Map<MatchType, List<GeneMatches>> gmMap = deserializeGenes( req.genes, species );
+            Map<String, GeneMatch> gmMap = deserializeGenes( req.genes, species );
 
-            Set<Gene> hitList = new HashSet<>();
-            Set<GeneMatches> unknown = new HashSet<>();
-            for ( Entry<MatchType, List<GeneMatches>> entry : gmMap.entrySet() ) {
-                if ( entry.getKey().equals( MatchType.EXACT ) || entry.getKey().equals( MatchType.EXACT_SYNONYM ) ) {
-                    // Create histlist from exact and exact_synonym matches
-                    for ( GeneMatches gm : entry.getValue() ) {
-                        hitList.add( gm.getSelectedGene() );
+            for ( GeneMatch match : gmMap.values() ) {
+                if ( match.getType().equals( GeneMatch.Type.SINGLE ) ) {
+                    if ( match.getLevel().equals( GeneMatch.Level.PRIMARY ) ) {
+                        exact.add( match );
+                        hitList.add( match.getSelectedGene() );
+                    } else if ( match.getLevel().equals( GeneMatch.Level.SYNONYM ) ) {
+                        synonym.add( match );
+                        hitList.add( match.getSelectedGene() );
+                    } else {
+                        unknown.add( match ); // This shouldn't happen, we restrict result in deserialize
                     }
                 } else {
-                    // Create unknown list from other types
-                    for ( GeneMatches gm : entry.getValue() ) {
-                        unknown.add( gm );
-                    }
+                    unknown.add( match );
                 }
             }
 
             // Attach genes
 
             JSONObject genesJSON = new JSONObject();
-            genesJSON.put( "exact", gmMap.get( MatchType.EXACT ) );
-            genesJSON.put( "exact_synonym", gmMap.get( MatchType.EXACT_SYNONYM ) );
+            genesJSON.put( "exact", exact );
+            genesJSON.put( "exact_synonym", synonym );
             genesJSON.put( "unknown", unknown );
             response.put( "input_genes", genesJSON );
 
@@ -353,11 +346,11 @@ public class AnalysisEP {
             response.put( "max_go_geneset", max );
             response.put( "aspect_filter", aspectsFilter );
 
-            if ( hitList == null || hitList.size() == 0 ) {
+            if ( hitList.isEmpty() ) {
                 return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
             }
 
-            EnrichmentAnalysis analysis = enrichmentService.enrichment( hitList, species.getId(), mulTestCor,
+            EnrichmentAnalysis analysis = enrichmentService.enrichment( hitList, species, mulTestCor,
                     threshold, min, max, aspectsFilter, new StatusPoller() );
 
             JSONArray dataJSON = new JSONArray();
@@ -390,8 +383,7 @@ public class AnalysisEP {
     }
 
     /**
-     * @param request
-     * @param msg
+     * @param req
      * @return Enrichment results from most recent edition
      */
     @POST
@@ -433,30 +425,34 @@ public class AnalysisEP {
             SimilarityCompareMethod scm = SimilarityCompareMethod.CURRENT;
             SimilarityMethod sm = SimilarityMethod.TVERSKY;
 
+            Set<Gene> hitList = Sets.newHashSet();
+            Set<GeneMatch> exact = Sets.newHashSet();
+            Set<GeneMatch> synonym = Sets.newHashSet();
+            Set<GeneMatch> unknown = Sets.newHashSet();
             // Convert list of strings to best possible matches in genes
-            Map<MatchType, List<GeneMatches>> gmMap = deserializeGenes( req.genes, species );
+            Map<String, GeneMatch> gmMap = deserializeGenes( req.genes, species );
 
-            Set<Gene> hitList = new HashSet<>();
-            Set<GeneMatches> unknown = new HashSet<>();
-            for ( Entry<MatchType, List<GeneMatches>> entry : gmMap.entrySet() ) {
-                if ( entry.getKey().equals( MatchType.EXACT ) || entry.getKey().equals( MatchType.EXACT_SYNONYM ) ) {
-                    // Create histlist from exact and exact_synonym matches
-                    for ( GeneMatches gm : entry.getValue() ) {
-                        hitList.add( gm.getSelectedGene() );
+            for ( GeneMatch match : gmMap.values() ) {
+                if ( match.getType().equals( GeneMatch.Type.SINGLE ) ) {
+                    if ( match.getLevel().equals( GeneMatch.Level.PRIMARY ) ) {
+                        exact.add( match );
+                        hitList.add( match.getSelectedGene() );
+                    } else if ( match.getLevel().equals( GeneMatch.Level.SYNONYM ) ) {
+                        synonym.add( match );
+                        hitList.add( match.getSelectedGene() );
+                    } else {
+                        unknown.add( match ); // This shouldn't happen, we restrict result in deserialize
                     }
                 } else {
-                    // Create unknown list from other types
-                    for ( GeneMatches gm : entry.getValue() ) {
-                        unknown.add( gm );
-                    }
+                    unknown.add( match );
                 }
             }
 
             // Attach genes
 
             JSONObject genesJSON = new JSONObject();
-            genesJSON.put( "exact", gmMap.get( MatchType.EXACT ) );
-            genesJSON.put( "exact_synonym", gmMap.get( MatchType.EXACT_SYNONYM ) );
+            genesJSON.put( "exact", exact );
+            genesJSON.put( "exact_synonym", synonym );
             genesJSON.put( "unknown", unknown );
             response.put( "input_genes", genesJSON );
 
@@ -475,15 +471,17 @@ public class AnalysisEP {
             response.put( "similarity_method", new JSONObject( sm ).put( "key", sm ) );
             response.put( "topN", topN );
 
-            if ( hitList == null || hitList.size() == 0 ) {
+            if ( hitList.isEmpty() ) {
                 return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
             }
 
-            Edition currentEdition = cache.getCurrentEditions( species.getId() );
+            Edition currentEdition = cache.getCurrentEditions( species );
+
+            response.put( "current_edition", new JSONObject( currentEdition ) );
 
             EnrichmentAnalysis analysis = enrichmentService.enrichment(
                     Sets.newHashSet( closestEdition, currentEdition ), hitList,
-                    species.getId(), mulTestCor, threshold, min, max, aspectsFilter );
+                    species, mulTestCor, threshold, min, max, aspectsFilter );
 
             SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, sm, cache );
 
@@ -510,6 +508,9 @@ public class AnalysisEP {
                 entryJSON.put( "top_terms", goSetToJSON( score.getTopTerms() ) );
                 entryJSON.put( "top_parents", goSetToJSON( score.getTopParents() ) );
                 entryJSON.put( "top_genes", score.getTopGenes() );
+
+                entryJSON.put( "top_parents_mf",
+                        multifunctionalityService.multifunctionality( score.getTopParents(), species, ed ) );
 
                 entryJSON.put( "values", valuesJSON );
 
@@ -557,11 +558,11 @@ public class AnalysisEP {
     }
 
     private Edition closestEdition( Date inputDate, Species species ) {
-        Edition closestEdition = cache.getCurrentEditions( species.getId() );
+        Edition closestEdition = cache.getCurrentEditions( species );
         long minDayDiff = Math.abs( getDateDiff( closestEdition.getDate(), inputDate, TimeUnit.DAYS ) );
 
-        for ( Edition edition : cache.getAllEditions( species.getId() ) ) {
-            if ( cache.getAggregates( species.getId(), edition ) != null ) {
+        for ( Edition edition : cache.getAllEditions( species ) ) {
+            if ( cache.getAggregates( species, edition ) != null ) {
                 // Make sure there is data for this edition
                 long dayDiff = Math.abs( getDateDiff( edition.getDate(), inputDate, TimeUnit.DAYS ) );
                 if ( dayDiff < minDayDiff ) {
@@ -581,37 +582,15 @@ public class AnalysisEP {
      * @param geneInputs
      * @return
      */
-    private Map<MatchType, List<GeneMatches>> deserializeGenes( Collection<String> geneInputs, Species species ) {
+    private Map<String, GeneMatch> deserializeGenes( Collection<String> geneInputs, Species species ) {
 
-        Map<MatchType, List<GeneMatches>> results = new EnumMap<>( MatchType.class );
+        Map<String, GeneMatch> results = Maps.newHashMap();
 
         for ( String geneInput : geneInputs ) {
-
-            List<GeneMatches> g = cache.complete( geneInput, species.getId(), Integer.MAX_VALUE,
-                    MatchType.EXACT_SYNONYM );
-            MatchType bestType;
-            if ( g.isEmpty() ) {
-                // No Match
-                g.add( new GeneMatches( geneInput, null, MatchType.NO_MATCH ) );
-                bestType = MatchType.NO_MATCH;
-            } else {
-                bestType = g.get( 0 ).getType();
-            }
-
-            for ( GeneMatches gm : g ) {
-                if ( !gm.getType().equals( bestType ) ) {
-                    // We've moved on to worse types because this list is sorted.
-                    break;
-                }
-                List<GeneMatches> gmList = results.get( gm.getType() );
-                if ( gmList == null ) {
-                    gmList = new ArrayList<>();
-                    results.put( gm.getType(), gmList );
-                }
-                gmList.add( gm );
-            }
-
+            GeneMatch match = cache.guessGeneBySymbol( geneInput, species );
+            results.put( geneInput, match );
         }
+
         return results;
     }
 

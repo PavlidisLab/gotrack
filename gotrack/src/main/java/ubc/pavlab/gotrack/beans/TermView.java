@@ -19,38 +19,10 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.io.Serializable;
-import java.sql.Date;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Queue;
-import java.util.Set;
-
-import javax.annotation.PostConstruct;
-import javax.faces.application.FacesMessage;
-import javax.faces.application.ProjectStage;
-import javax.faces.context.FacesContext;
-import javax.faces.view.ViewScoped;
-import javax.inject.Inject;
-import javax.inject.Named;
-
-import org.apache.log4j.Logger;
-import org.primefaces.context.RequestContext;
-
 import com.google.common.collect.Maps;
 import com.google.gson.Gson;
-
+import org.apache.log4j.Logger;
+import org.primefaces.context.RequestContext;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.beans.service.StatsService;
 import ubc.pavlab.gotrack.exception.TermNotFoundException;
@@ -64,6 +36,18 @@ import ubc.pavlab.gotrack.model.cytoscape.Graph;
 import ubc.pavlab.gotrack.model.cytoscape.Node;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.Relation;
+
+import javax.annotation.PostConstruct;
+import javax.faces.application.FacesMessage;
+import javax.faces.application.ProjectStage;
+import javax.faces.context.FacesContext;
+import javax.faces.view.ViewScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.Serializable;
+import java.sql.Date;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Backing bean for the term tracking functionality.
@@ -284,7 +268,7 @@ public class TermView implements Serializable {
         Map<Long, Integer> directTotalSeriesData = new HashMap<>();
         for ( Species sp : species ) {
 
-            Collection<Edition> eds = cache.getAllEditions( sp.getId() );
+            Collection<Edition> eds = cache.getAllEditions( sp );
 
             if ( eds != null ) {
 
@@ -296,13 +280,13 @@ public class TermView implements Serializable {
                     GeneOntologyTerm t = trackedTerms.get( ed.getGoEdition() );
                     if ( t != null ) {
                         // If term existed
-                        if ( cache.getAggregates( sp.getId(), ed ) != null ) {
+                        if ( cache.getAggregates( sp, ed ) != null ) {
                             // if this returns null it means the edition has no data in it
                             // most likely missing data
 
                             // Inferred annotations
 
-                            Integer cnt = cache.getInferredAnnotationCount( sp.getId(), ed, t );
+                            Integer cnt = cache.getInferredAnnotationCount( sp, ed, t );
                             cnt = ( cnt == null ) ? 0 : cnt;
                             s.addDataPoint( ed.getDate(), cnt );
 
@@ -313,7 +297,7 @@ public class TermView implements Serializable {
 
                             // Direct annotations
 
-                            cnt = cache.getDirectAnnotationCount( sp.getId(), ed, t );
+                            cnt = cache.getDirectAnnotationCount( sp, ed, t );
                             cnt = ( cnt == null ) ? 0 : cnt;
                             s2.addDataPoint( ed.getDate(), cnt );
 

@@ -32,7 +32,7 @@ package ubc.pavlab.gotrack.model;
 
 public enum Dataset {
 
-    SwissProt("SP"), TrEMBL("TrEMBL");
+    SwissProt( "SP" ), TrEMBL( "TrEMBL" ), Other( "Other" );
 
     private String label;
 
