@@ -26,24 +26,18 @@ package ubc.pavlab.gotrack.model.dto;
  * @version $Id$
  */
 public final class AnnotationCountDTO {
-    private final Integer species;
     private final Integer edition;
     private final String goId;
     private final Integer directCount;
     private final Integer inferredCount;
 
-    public AnnotationCountDTO( Integer species, Integer edition, String goId, Integer directCount,
+    public AnnotationCountDTO( Integer edition, String goId, Integer directCount,
             Integer inferredCount ) {
         super();
-        this.species = species;
         this.edition = edition;
         this.goId = goId;
         this.directCount = directCount;
         this.inferredCount = inferredCount;
-    }
-
-    public Integer getSpecies() {
-        return species;
     }
 
     public Integer getEdition() {

@@ -28,33 +28,49 @@ import ubc.pavlab.gotrack.model.Accession;
  * @version $Id$
  */
 public class AccessionDTO {
-    private final int geneId;
+    private final int id;
+    private final int speciesId;
+    private final int edition;
     private final String accession;
-    private final String sec;
-    private final Boolean sp;
+    private final String symbol;
+    private final String name;
+    private final String subset;
 
-    public AccessionDTO( int geneId, String accession, String sec, Boolean sp ) {
-        super();
-        this.geneId = geneId;
+    public AccessionDTO( int id, int speciesId, int edition, String accession, String symbol, String name, String subset ) {
+        this.id = id;
+        this.speciesId = speciesId;
+        this.edition = edition;
         this.accession = accession;
-        this.sec = sec;
-        this.sp = sp;
+        this.symbol = symbol;
+        this.name = name;
+        this.subset = subset;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public int getSpeciesId() {
+        return speciesId;
+    }
+
+    public int getEdition() {
+        return edition;
     }
 
     public String getAccession() {
         return accession;
     }
 
-    public String getSec() {
-        return sec;
+    public String getSymbol() {
+        return symbol;
     }
 
-    public Boolean getSp() {
-        return sp;
+    public String getName() {
+        return name;
     }
 
-    public int getGeneId() {
-        return geneId;
+    public String getSubset() {
+        return subset;
     }
-
 }

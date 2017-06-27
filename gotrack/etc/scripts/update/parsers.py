@@ -7,6 +7,11 @@ __author__ = 'mjacobson'
 from collections import defaultdict
 import gzip
 import re
+import logging
+from datetime import datetime
+from utility import deprecated
+
+log = logging.getLogger(__name__)
 
 
 def process_sec_ac(f):
@@ -22,6 +27,7 @@ def process_sec_ac(f):
                 header_found = True
 
 
+@deprecated
 def process_acindex(f):
     with open(f, "r") as infile:
         header_found = False
@@ -45,26 +51,152 @@ def process_acindex(f):
                 header_found = True
 
 
-def retrieve_meta_goa(f):
-    results = [None, None, None]
+def check_goa_gaf(f):
+    """Returns generated date and go version if everything looks OK else None"""
+    version = None
+    generated_tag = None
+    go_tag = None
+    error = False
+
     with gzip.open(f, "r") as infile:
         for line in infile:
             if line.startswith('!gaf-version'):
-                results[0] = line.split()[1]
+                version = line.split()[1]
             elif line.startswith('!Generated'):
-                results[1] = line.split()[1]
+                generated_tag = line.split()[1]
             elif line.startswith('!GO-version'):
-                results[2] = line.split()[1]
-
-            if None not in results:
+                go_tag = line.split()[1]
+            elif line.strip() and not line.startswith('!'):
                 break
 
-    return results
+    if version is None:
+        log.warn('Missing GAF Version Tag')
+        error = True
+    else:
+        if version not in ["2.0", "2.1"]:
+            log.warn('Unsupported GAF Version: %s', version)
+            error = True
 
+    if generated_tag is None:
+        log.warn('Missing Generated Tag')
+        error = True
+    else:
+        match = re.search(r'[\d]{4}\-[\d]{2}\-[\d]{2}', generated_tag)
+        if match is not None:
+            generated = datetime.strptime(match.group(0), "%Y-%m-%d").date()
+        else:
+            log.warn('Cannot parse Generated Tag as date: %s', generated_tag)
+            error = True
 
-def process_goa(f, sp_id, ed):
+    if go_tag is None:
+        log.warn('Missing GO-Version Tag')
+        error = True
+    else:
+        match = re.search(r'[\d]{4}\-[\d]{2}\-[\d]{2}', go_tag)
+        if match is not None:
+            go = datetime.strptime(match.group(0), "%Y-%m-%d").date()
+        else:
+            log.warn('Cannot parse GO-Version Tag as date: %s', go_tag)
+            error = True
+
+    return (generated, go) if not error else None
+
+def check_goa_gpa(f):
+    """Returns generated date and go version if everything looks OK else None"""
+    version = None
+    generated_tag = None
+    go_tag = None
+    error = False
+
     with gzip.open(f, "r") as infile:
         for line in infile:
+            if line.startswith('!gpa-version'):
+                version = line.split()[1]
+            elif line.startswith('!Generated'):
+                generated_tag = line.split()[1]
+            elif line.startswith('!GO-version'):
+                go_tag = line.split()[1]
+            elif line.strip() and not line.startswith('!'):
+                break
+
+    if version is None:
+        log.warn('Missing GPAD Version Tag')
+        error = True
+    else:
+        if version not in ["1.1"]:
+            log.warn('Unsupported GPAD Version: %s', version)
+            error = True
+
+    if generated_tag is None:
+        log.warn('Missing Generated Tag')
+        error = True
+    else:
+        match = re.search(r'[\d]{4}\-[\d]{2}\-[\d]{2}', generated_tag)
+        if match is not None:
+            generated = datetime.strptime(match.group(0), "%Y-%m-%d").date()
+        else:
+            log.warn('Cannot parse Generated Tag as date: %s', generated_tag)
+            error = True
+
+    if go_tag is None:
+        log.warn('Missing GO-Version Tag')
+        error = True
+    else:
+        match = re.search(r'[\d]{4}\-[\d]{2}\-[\d]{2}', go_tag)
+        if match is not None:
+            go = datetime.strptime(match.group(0), "%Y-%m-%d").date()
+        else:
+            log.warn('Cannot parse GO-Version Tag as date: %s', go_tag)
+            error = True
+
+    return (generated, go) if not error else None
+
+def check_goa_gpi(f):
+    """Returns generated date if everything looks OK else None"""
+    version = None
+    generated_tag = None
+    error = False
+
+    with gzip.open(f, "r") as infile:
+        for line in infile:
+            if line.startswith('!gpi-version'):
+                version = line.split()[1]
+            elif line.startswith('!Generated'):
+                generated_tag = line.split()[1]
+            elif line.strip() and not line.startswith('!'):
+                break
+
+    if version is None:
+        log.warn('Missing GPI Version Tag')
+        error = True
+    else:
+        if version not in ["1.2"]:
+            log.warn('Unsupported GPI Version: %s', version)
+            error = True
+
+    if generated_tag is None:
+        log.warn('Missing Generated Tag')
+        error = True
+    else:
+        match = re.search(r'[\d]{4}\-[\d]{2}\-[\d]{2}', generated_tag)
+        if match is not None:
+            generated = datetime.strptime(match.group(0), "%Y-%m-%d").date()
+        else:
+            log.warn('Cannot parse Generated Tag as date: %s', generated_tag)
+            error = True
+
+    return (generated,) if not error else None
+
+
+def process_goa_gaf(f):
+    meta = check_goa_gaf(f)
+    if meta is None:
+        log.warn("Issues parsing GAF file, returning...")
+        return
+
+    with gzip.open(f, "r") as infile:
+        for line in infile:
+            line=line.strip()
             if line.startswith('!'):
                 continue  # comment/metadata
             if line.strip():  # not empty
@@ -89,24 +221,75 @@ def process_goa(f, sp_id, ed):
                 # 16        Annotation Extension            optional    0 or greater    part_of(CL:0000576)
                 # 17        Gene Product Form ID            optional    0 or 1          UniProtKB:P12345-2
 
-                # yield ed, sp, @2, 1, 2, 3, 4, 5, 6, 7, 10, 11, 12, 13
-                acc = sl[1]
+                # yield 1, 2, 4, 5, 6, 7
 
-                # match = re.match(r"^[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){2}$", accession)
-                #
-                # if match == None:
-                #     match = re.match(r"^[A-NR-Z][0-9]([A-Z][A-Z0-9]{2}[0-9]){1}$", accession)
-                #     if match == None:
-                #         match = re.match(r"^[OPQ][0-9][A-Z0-9]{3}[0-9]$", accession)
-                #         if match == None:
-                #             # Not an accession
-                #             accession = None
-                #         else:
-                #             accession = accession[:6]
-                #     else:
-                #         accession = accession[:6]
-                # else:
-                #     accession = accession[:10]
+                yield sl[0], sl[1], sl[3], sl[4], sl[5], sl[6]
+
+def process_goa_gpa(f):
+    """Returns DB, DB_Object_ID, Qualifier, GO ID, DB:Reference(s), GO Evidence"""
+    meta = check_goa_gpa(f)
+    if meta is None:
+        log.warn("Issues parsing GPAD file, returning...")
+        return
+
+    with gzip.open(f, "r") as infile:
+        for line in infile:
+            line=line.strip()
+            if line.startswith('!'):
+                continue  # comment/metadata
+            if line.strip():  # not empty
+                sl = line.split("\t")
+
+                # Column  Content                 Required  Cardinality     Example
+                # 1       DB                      required  1               SGD
+                # 2       DB Object ID            required  1               P12345
+                # 3       Qualifier               required  1 or greater    enables
+                # 4       GO ID                   required  1               GO:0019104
+                # 5       DB:Reference(s)         required  1 or greater    PMID:20727966
+                # 6       Evidence code           required  1               ECO:0000021
+                # 7       With (or) From          optional  0 or greater    Ensembl:ENSRNOP00000010579
+                # 8       Interacting taxon ID    optional  0 or 1          4896
+                # 9       Date                    required  1               20130529
+                # 10      Assigned by             required  1               PomBase
+                # 11      Annotation Extension    optional  0 or greater    occurs_in(GO:0005739)
+                # 12      Annotation Properties   optional  0 or greater    annotation_identifier = 2113431320
+
+                # yield 1, 2, 3, 4, 5, @12
+
+                # Pipe delimited in property=value form: p1=v1|p2=v2|p3=v3|...
+                properties = {k: v for k, v in [p.split("=") for p in sl[11].split("|")]}
+
+                yield sl[0], sl[1], sl[2], sl[3], sl[4], properties.setdefault('go_evidence', None)
+
+def process_goa_gpi(f):
+    """Returns DB, accession, DB_Object_ID, DB_Object_Symbol, DB_Object_Name, DB_Object_Type, subset, List[Synonyms]"""
+    meta = check_goa_gpi(f)
+    if meta is None:
+        log.warn("Issues parsing GPI file, returning...")
+        return
+
+    with gzip.open(f, "r") as infile:
+        for line in infile:
+            line=line.strip()
+            if line.startswith('!'):
+                continue  # comment/metadata
+            if line.strip():  # not empty
+                sl = line.split("\t")
+
+                # column	name                   required? cardinality   GAF column #  Example content
+                # 1	        DB                     required  1             1             UniProtKB
+                # 2	        DB_Object_ID           required  1             2/17          Q4VCS5-1
+                # 3	        DB_Object_Symbol       required  1             3             AMOT
+                # 4	        DB_Object_Name         optional  0 or greater  10            Angiomotin
+                # 5	        DB_Object_Synonym(s)   optional  0 or greater  11            AMOT|KIAA1071
+                # 6	        DB_Object_Type         required  1             12            protein
+                # 7	        Taxon                  required  1             13            taxon:9606
+                # 8	        Parent_Object_ID       optional  0 or 1        -             UniProtKB:Q4VCS5
+                # 9	        DB_Xref(s)             optional  0 or greater  -             (not populated in gp_information files supplied by UniProt-GOA)
+                # 10	    Properties             optional  0 or greater  -             db_subset=Swiss-Prot
+
+                # yield 1, @2, 2, 3, 4, 6, @10, @5
+                acc = sl[1]
 
                 # See http://www.uniprot.org/help/accession_numbers
 
@@ -117,7 +300,10 @@ def process_goa(f, sp_id, ed):
                 else:
                     acc = None
 
-                yield ed, sp_id, acc, sl[0], sl[1], sl[2], sl[3], sl[4], sl[5], sl[6], sl[9], sl[10], sl[11], sl[12]
+                # Pipe delimited in property=value form: p1=v1|p2=v2|p3=v3|...
+                properties = {k: v for k, v in [p.split("=") for p in sl[9].split("|")]}
+
+                yield sl[0], acc, sl[1], sl[2], sl[3], sl[5], properties.setdefault('db_subset', None), sl[4].split("|")
 
 
 def parse_go_obo(filename):

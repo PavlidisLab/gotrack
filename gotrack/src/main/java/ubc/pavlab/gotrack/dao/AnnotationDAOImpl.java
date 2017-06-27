@@ -19,27 +19,22 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import static ubc.pavlab.gotrack.dao.DAOUtil.close;
+import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
+import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.dto.*;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.sql.Date;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.log4j.Logger;
-
-import com.google.common.collect.Lists;
-
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
-import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
-import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
-import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
-import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
+import static ubc.pavlab.gotrack.dao.DAOUtil.close;
 
 /**
  * TODO Document Me
@@ -53,38 +48,48 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     /* CURRENT QUERIES */
 
+    private static final String SQL_ANNOTATION = "annotation";
+    private static final String SQL_ACCESSION_HISTORY = "pp_accession_history";
+    private static final String SQL_ACCESSION = "accession";
+    private static final String SQL_EDITION = "edition";
+    private static final String SQL_EVIDENCE = "evidence_categories";
+
     // Get information from single gene, should be fast < 0.2s
     // species, symbol,species
-    private static final String SQL_TRACK = "SELECT distinct edition, go_id, qualifier, evidence, reference from pp_current_genes "
-            + "inner join pp_goa on pp_goa.pp_current_genes_id=pp_current_genes.id "
-            + "where pp_current_genes_id=? "
-            + "order by edition";
+
+    private static final String SQL_FULL_ANNOTATION_RANGE_EDITIONS_SINGLE_GENE = "select distinct edition, go_id, qualifier, evidence, reference from " + SQL_ANNOTATION + " ann " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on ppah.secondary_accession_id = ann.accession_id " +
+            "inner join " + SQL_ACCESSION + " acc on acc.id = ppah.secondary_accession_id " +
+            "where ppah.accession_id = ? AND edition between ? and ? " +
+            "order by edition";
 
     // Get information from multiple genes for running enrichment, should be quite fast and scale sublinearly
-    private static final String SQL_ENRICH = "SELECT distinct edition, go_id, pp_current_genes.id gene_id from pp_current_genes "
-            + "inner join pp_goa on pp_current_genes.id = pp_goa.pp_current_genes_id "
-            + "where pp_current_genes.id in (%s) "
-            + "ORDER BY NULL";
+    private static final String SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES = "select distinct acc.edition, go_id, ppah.accession_id gene_id from " + SQL_ANNOTATION + " ann " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on ppah.secondary_accession_id = ann.accession_id " +
+            "inner join " + SQL_ACCESSION + " acc on acc.id=ppah.secondary_accession_id " +
+            "where ppah.accession_id in (%s) AND edition between ? and ? " +
+            "ORDER BY NULL";
 
     // Get information from multiple genes for running enrichment in a single edition, should be extremely fast
-    private static final String SQL_ENRICH_SINGLE_EDITION = "SELECT distinct go_id, pp_current_genes.id gene_id from pp_current_genes "
-            + "inner join pp_goa on pp_current_genes.id = pp_goa.pp_current_genes_id "
-            + "where pp_current_genes.id in (%s) and pp_goa.edition=? "
-            + "ORDER BY NULL";
+    private static final String SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES = "select distinct go_id, ppah.accession_id gene_id from " + SQL_ANNOTATION + " ann " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on ppah.secondary_accession_id = ann.accession_id " +
+            "inner join " + SQL_ACCESSION + " acc on acc.id=ppah.secondary_accession_id " +
+            "where edition = ? and ppah.accession_id in (%s) " +
+            "ORDER BY NULL";
 
     // Collect evidence breakdown for a specific term, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
-    private static final String SQL_CATEGORY_BREAKDOWN_FOR_TERM = "select date, evidence_categories.category , COUNT(*) count from pp_current_genes "
-            + "inner join pp_goa on pp_goa.pp_current_genes_id = pp_current_genes.id "
-            + "inner join edition on edition.edition=pp_goa.edition and edition.species_id = pp_current_genes.species_id "
-            + "inner join evidence_categories on evidence_categories.evidence = pp_goa.evidence "
-            + "where go_id=? group by date, evidence_categories.category "
-            + "order by date";
+    private static final String SQL_CATEGORY_BREAKDOWN_RANGE_DATES_SINGLE_TERM = "select date, evcat.category , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
+            "inner join " + SQL_EVIDENCE + " evcat on evcat.evidence = ann.evidence " +
+            "inner join " + SQL_ACCESSION + " acc on acc.id=ann.accession_id  " +
+            "inner join " + SQL_EDITION + " ed using(species_id, edition) " +
+            "where go_id=? AND DATE BETWEEN ? AND ? group by date, evcat.category " +
+            "order by date";
 
     // Collect unique, directly annotated gene counts for a term, not used at the moment (pretty slow)
-    private static final String SQL_DIRECT_GENE_COUNTS_FOR_TERM = "select species_id, edition, COUNT(distinct symbol) count from pp_current_genes "
-            + "inner join pp_goa on pp_current_genes.id=pp_goa.pp_current_genes_id "
-            + "where go_id = ? "
-            + "group by species_id, edition";
+    private static final String SQL_DIRECT_GENE_CNT_ALL_EDITIONS_SINGLE_TERM = "select species_id, edition, COUNT(distinct accession_id) count from annotation ann " +
+            "inner join accession acc on acc.id=ann.accession_id " +
+            "where go_id = ? " +
+            "group by species_id, edition";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -105,18 +110,20 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     // Actions ------------------------------------------------------------------------------------
 
     @Override
-    public List<AnnotationDTO> track( Gene g ) throws DAOException {
+    public List<AnnotationDTO> fullAnnotationRangeEditions( Gene g, Integer minimum, Integer maximum ) throws DAOException {
 
-        List<Object> params = new ArrayList<Object>();
+        List<Object> params = new ArrayList<>();
 
         params.add( g.getId() );
+        params.add( minimum );
+        params.add( maximum );
 
         Connection connection = null;
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
         List<AnnotationDTO> results = new ArrayList<>();
-        String sql = SQL_TRACK;
+        String sql = SQL_FULL_ANNOTATION_RANGE_EDITIONS_SINGLE_GENE;
 
         log.debug( sql );
 
@@ -153,19 +160,22 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<EnrichmentDTO> enrich( Set<Gene> genes ) throws DAOException {
+    public List<EnrichmentDTO> simpleAnnotationRangeEditions( Set<Gene> genes, Integer minEdition, Integer maxEdition ) throws DAOException {
 
         if ( genes == null || genes.size() == 0 ) {
             return Lists.newArrayList();
         }
 
-        List<Object> params = new ArrayList<Object>();
+        List<Object> params = Lists.newArrayList();
 
-        String sql = String.format( SQL_ENRICH, DAOUtil.preparePlaceHolders( genes.size() ) );
+        String sql = String.format( SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
 
         for ( Gene g : genes ) {
             params.add( g.getId() );
         }
+
+        params.add( minEdition );
+        params.add( maxEdition );
 
         Connection connection = null;
         PreparedStatement statement = null;
@@ -209,7 +219,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<SimpleAnnotationDTO> enrichSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException {
+    public List<SimpleAnnotationDTO> simpleAnnotationSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException {
 
         if ( genes == null || genes.size() == 0 || ed == null ) {
             return Lists.newArrayList();
@@ -217,7 +227,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
         List<Object> params = new ArrayList<Object>();
 
-        String sql = String.format( SQL_ENRICH_SINGLE_EDITION, DAOUtil.preparePlaceHolders( genes.size() ) );
+        String sql = String.format( SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
 
         for ( Gene g : genes ) {
             params.add( g.getId() );
@@ -267,7 +277,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<CategoryCountDTO> categoryCounts( String goId ) throws DAOException {
+    public List<CategoryCountDTO> categoryCountsRangeDates( String goId, Date min, Date max  ) throws DAOException {
         // TODO This method of collecting the data is not robust, 
         // If editions across species in the same 'release' are have slightly differing dates, 
         // they will not be grouped appropriately
@@ -280,13 +290,15 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
         // species, symbol,species
         params.add( goId );
+        params.add( min );
+        params.add( max );
 
         Connection connection = null;
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
         List<CategoryCountDTO> results = new ArrayList<>();
-        String sql = SQL_CATEGORY_BREAKDOWN_FOR_TERM;
+        String sql = SQL_CATEGORY_BREAKDOWN_RANGE_DATES_SINGLE_TERM;
 
         log.debug( sql );
 
@@ -323,7 +335,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<DirectAnnotationCountDTO> directGeneCounts( String goId ) throws DAOException {
+    public List<DirectAnnotationCountDTO> directGeneCountsAllEditions( String goId ) throws DAOException {
 
         if ( goId == null || goId.equals( "" ) ) {
             return Lists.newArrayList();
@@ -339,7 +351,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         ResultSet resultSet = null;
 
         List<DirectAnnotationCountDTO> results = new ArrayList<>();
-        String sql = SQL_DIRECT_GENE_COUNTS_FOR_TERM;
+        String sql = SQL_DIRECT_GENE_CNT_ALL_EDITIONS_SINGLE_TERM;
 
         log.debug( sql );
 

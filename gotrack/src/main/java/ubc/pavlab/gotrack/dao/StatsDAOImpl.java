@@ -19,8 +19,8 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import static ubc.pavlab.gotrack.dao.DAOUtil.close;
-import static ubc.pavlab.gotrack.dao.DAOUtil.prepareStatement;
+import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
+import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -29,8 +29,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
-import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
+import static ubc.pavlab.gotrack.dao.DAOUtil.close;
+import static ubc.pavlab.gotrack.dao.DAOUtil.prepareStatement;
 
 /**
  * TODO Document Me
@@ -42,12 +42,14 @@ import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
 public class StatsDAOImpl implements StatsDAO {
 
     // Constants ----------------------------------------------------------------------------------
+    private static final String SQL_TRACK_GENE = "track_popular_genes";
+    private static final String SQL_TRACK_TERM = "track_popular_terms";
+    private static final String SQL_SEC_AC = "sec_ac";
 
-    private static final String SQL_FIND_BY_ID = "SELECT id, species_id, symbol, count FROM track_popular_genes WHERE id = ?";
-    private static final String SQL_LIST_GENE = "SELECT id, species_id, symbol, count FROM track_popular_genes";
-    private static final String SQL_LIST_TERM = "SELECT id, go_id, count FROM track_popular_terms";
-    private static final String SQL_INCREMENT_GENE = "INSERT INTO track_popular_genes(species_id, symbol, count) values (?,?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
-    private static final String SQL_INCREMENT_TERM = "INSERT INTO track_popular_terms(go_id, count) values (?, 1) ON DUPLICATE KEY UPDATE count = count + 1";
+    private static final String SQL_LIST_GENE = "SELECT tg.id, species_id, IFNULL(ac, accession) primary_accession, symbol, SUM(count) count FROM " + SQL_TRACK_GENE + " tg left join " + SQL_SEC_AC + " on accession=sec GROUP BY species_id, primary_accession";
+    private static final String SQL_LIST_TERM = "SELECT id, go_id, count FROM " + SQL_TRACK_TERM;
+    private static final String SQL_INCREMENT_GENE = "INSERT INTO " + SQL_TRACK_GENE + "(species_id, accession, symbol, count) values (?,?,?,1) ON DUPLICATE KEY UPDATE count = count + 1";
+    private static final String SQL_INCREMENT_TERM = "INSERT INTO " + SQL_TRACK_TERM + "(go_id, count) values (?,1) ON DUPLICATE KEY UPDATE count = count + 1";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -56,7 +58,7 @@ public class StatsDAOImpl implements StatsDAO {
     // Constructors -------------------------------------------------------------------------------
 
     /**
-     * Construct an User DAO for the given DAOFactory. Package private so that it can be constructed inside the DAO
+     * Construct an Stats DAO for the given DAOFactory. Package private so that it can be constructed inside the DAO
      * package only.
      * 
      * @param daoFactory The DAOFactory to construct this User DAO for.
@@ -114,13 +116,13 @@ public class StatsDAOImpl implements StatsDAO {
     }
 
     @Override
-    public void incrementGeneHit( Integer speciesId, String symbol ) {
+    public void incrementGeneHit( Integer speciesId, String accession, String symbol ) {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
 
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = prepareStatement( connection, SQL_INCREMENT_GENE, false, speciesId, symbol );
+            preparedStatement = prepareStatement( connection, SQL_INCREMENT_GENE, false, speciesId, accession, symbol );
             int result = preparedStatement.executeUpdate();
             if ( result == 0 ) {
                 throw new SQLException( "Something went wrong in the popular genes update!" );
@@ -175,7 +177,7 @@ public class StatsDAOImpl implements StatsDAO {
 
     private static GeneStatsDTO geneMap( ResultSet resultSet ) throws SQLException {
 
-        return new GeneStatsDTO( resultSet.getInt( "id" ), resultSet.getInt( "species_id" ),
+        return new GeneStatsDTO( resultSet.getInt( "id" ), resultSet.getInt( "species_id" ), resultSet.getString( "primary_accession" ),
                 resultSet.getString( "symbol" ), resultSet.getInt( "count" ) );
     }
 

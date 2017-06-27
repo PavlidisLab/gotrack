@@ -1,15 +1,15 @@
 <ui:composition template="/WEB-INF/templates/errorpage.xhtml"
-	xmlns="http://www.w3.org/1999/xhtml"
-	xmlns:ui="http://java.sun.com/jsf/facelets"
+                xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="http://java.sun.com/jsf/facelets"
 >
-	<ui:define name="pageTitle">Error 400</ui:define>
+    <ui:define name="pageTitle">Error 400</ui:define>
     <ui:define name="contentTitle">Error 400: Bad Request</ui:define>
     <ui:define name="errorContent">
         <p>The request could not be understood by the server due to malformed syntax.</p>
     </ui:define>
-	<ui:define name="js">
-		<script type="text/javascript">
-	        	googleAnalyticsTrackPageviewIfConfigured( "/gotrack/error/400" );
-	    </script>
-	</ui:define>
+    <ui:define name="js">
+        <script type="text/javascript">
+            googleAnalyticsTrackPageviewIfConfigured("/gotrack/error/400");
+        </script>
+    </ui:define>
 </ui:composition>

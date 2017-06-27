@@ -3,16 +3,184 @@ __author__ = 'mjacobson'
 """
 Contains functionality related to connecting, retrieving information and inserting information to the GOTrack
 database.
+
+############################################################
+TABLE DEFINITIONS
+
+CREATE TABLE `annotation` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `accession_id` int(11) unsigned NOT NULL,
+  `qualifier` varchar(255) NOT NULL,
+  `go_id` varchar(10) NOT NULL,
+  `reference` varchar(255) NOT NULL,
+  `evidence` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `acc_go_ev_ref_qual` (`accession_id`, `go_id`, `evidence`, `reference`, `qualifier`),
+  CONSTRAINT `annotation_idfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
+)
+
+CREATE TABLE `accession` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `species_id` int(11) NOT NULL,
+  `edition` int(11) NOT NULL,
+  `accession` varchar(10) DEFAULT NULL,
+  `symbol` varchar(255) NOT NULL,
+  `db` varchar(255) NOT NULL,
+  `db_object_id` varchar(255) NOT NULL,
+  `db_object_name` text NOT NULL,
+  `db_object_type` varchar(255) NOT NULL,
+  `subset` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `sp_ed_dbi` (`species_id`,`edition`,`db_object_id`),
+  #CONSTRAINT `accession_edfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`),
+  #CONSTRAINT `accession_spfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
+)
+
+CREATE TABLE `synonyms` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `accession_id` int(11) unsigned NOT NULL,
+  `synonym` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `acc_syn` (`accession_id`,`synonym`),
+  CONSTRAINT `synonyms_ibfk_1` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
+)
+
+CREATE TABLE `edition` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `edition` int(11) NOT NULL,
+  `species_id` int(11) NOT NULL,
+  `date` date NOT NULL,
+  `go_edition_id_fk` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `spec_ed` (`species_id`,`edition`)
+)
+
+CREATE TABLE `sec_ac` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `sec` varchar(10) NOT NULL,
+  `ac` varchar(10) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ac` (`ac`,`sec`)
+)
+
+CREATE TABLE `go_adjacency` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `go_edition_id_fk` int(10) unsigned NOT NULL,
+  `child` varchar(10) NOT NULL,
+  `parent` varchar(10) NOT NULL,
+  `relationship` enum('IS_A','PART_OF') NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `go_edition_id_fk` (`go_edition_id_fk`,`child`,`parent`,`relationship`)
+)
+
+CREATE TABLE `go_alternate` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `go_edition_id_fk` bigint(20) unsigned NOT NULL,
+  `alt` varchar(10) NOT NULL,
+  `primary` varchar(10) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `ed_alt` (`go_edition_id_fk`,`alt`),
+  KEY `ed_alt_primary` (`go_edition_id_fk`,`alt`,`primary`),
+  KEY `alt_primary` (`alt`,`primary`),
+  CONSTRAINT `fk_go_alt_go_edition` FOREIGN KEY (`go_edition_id_fk`) REFERENCES `go_edition` (`id`)
+)
+
+CREATE TABLE `go_definition` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `go_id` varchar(10) NOT NULL,
+  `definition` text NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `go_id` (`go_id`)
+)
+
+CREATE TABLE `go_edition` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `date` date DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `date` (`date`)
+)
+
+CREATE TABLE `go_term` (
+  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `go_edition_id_fk` bigint(20) unsigned NOT NULL,
+  `go_id` varchar(10) NOT NULL,
+  `name` text NOT NULL,
+  `aspect` enum('CC','BP','MF') DEFAULT NULL,
+  `is_obsolete` tinyint(1) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `go_ed_id_go_id` (`go_edition_id_fk`,`go_id`),
+  KEY `go_id` (`go_id`),
+  CONSTRAINT `fk_go_term_go_edition` FOREIGN KEY (`go_edition_id_fk`) REFERENCES `go_edition` (`id`)
+)
+
+Pre-processed
+
+CREATE TABLE `pp_accession_history` (
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `accession_id` int(11) unsigned NOT NULL,
+  `secondary_accession_id` int(11) unsigned NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `acc_acc` (`accession_id`,`secondary_accession_id`),
+  CONSTRAINT `acc_hist_acfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`),
+  CONSTRAINT `acc_hist_acfk2` FOREIGN KEY (`secondary_accession_id`) REFERENCES `accession` (`id`)
+)
+
+CREATE TABLE `pp_current_edition` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `species_id` int(11) NOT NULL,
+  `edition` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `sp` (`species_id`),
+  KEY `sp_ed` (`species_id`, `edition`),
+  CONSTRAINT `ppcured_fk` FOREIGN KEY (`species_id`, `edition`) REFERENCES `edition` (`species_id`, `edition`)
+)
+
+CREATE TABLE `pp_edition_aggregates` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `species_id` int(11) NOT NULL,
+  `edition` int(11) NOT NULL,
+  `gene_count` int(11) NOT NULL,
+  `avg_direct_terms_for_gene` double NOT NULL,
+  `avg_inferred_terms_for_gene` double NOT NULL,
+  `avg_inferred_genes_for_term` double NOT NULL,
+  `avg_multifunctionality` double NOT NULL,
+  `avg_direct_jaccard` double NOT NULL,
+  `avg_inferred_jaccard` double NOT NULL,
+  PRIMARY KEY (`id`)
+)
+
+CREATE TABLE `pp_go_annotation_counts` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `species_id` int(11) NOT NULL,
+  `edition` int(11) NOT NULL,
+  `go_id` varchar(10) NOT NULL,
+  `direct_annotation_count` int(11) DEFAULT NULL,
+  `inferred_annotation_count` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `sp_ed_go` (`species_id`,`edition`,`go_id`)
+)
+
+CREATE TABLE `track_popular_genes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `species_id` int(11) NOT NULL,
+  `accession` varchar(255) NOT NULL,
+  `symbol` varchar(255) NOT NULL,
+  `count` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `acc` (`accession`)
+)
+
+##################################################################
 """
 
-import logging
-import _mysql
 import MySQLdb
+import _mysql
+import logging
 import time
-
-
-from utility import grouper, timeit
 import warnings
+
+from utility import grouper
+
 warnings.filterwarnings("ignore", "Unknown table.*")
 
 log = logging.getLogger(__name__)
@@ -20,36 +188,36 @@ log = logging.getLogger(__name__)
 
 class GOTrack:
 
-    TABLES = {'go_term': "go_term",
-              'go_adjacency': "go_adjacency",
-              'go_alternate': "go_alternate",
-              'go_definition': "go_definition",
-              'gene_annotation': "gene_annotation",
-              'edition': "edition",
-              'species': "species",
-              'go_edition': "go_edition",
-              'sec_ac': "sec_ac",
-              'acindex': "acindex",
-              'pp_edition_aggregates': 'pp_edition_aggregates',
-              'pp_edition_aggregates_staging': 'pp_edition_aggregates_staging',
-              'pp_go_annotation_counts': 'pp_go_annotation_counts',
-              'pp_go_annotation_counts_staging': 'pp_go_annotation_counts_staging',
-              'pp_genes_staging': "pp_current_genes_staging",
-              'pp_goa_staging': "pp_goa_staging",
-              'pp_accession_staging': "pp_primary_accessions_staging",
-              'pp_synonym_staging': "pp_synonyms_staging",
-              'pp_genes': "pp_current_genes",
-              'pp_goa': "pp_goa",
-              'pp_accession': "pp_primary_accessions",
-              'pp_synonym': "pp_synonyms",
-              'new': "_tmp_newdata",  # tmp table creation suffix
-              'old': "_tmp_olddata"  # tmp table creation suffix
-              }
-
-    CONCURRENT_INSERTIONS = 1000
-
-    def __init__(self, **kwargs):
+    def __init__(self, tables=None, concurrent_insertions=1000, verbose=False, **kwargs):
         self.creds = kwargs
+        self.tables = {'go_edition':    'go_edition',
+                       'edition':       'edition_tmp',
+                       'species':       'species',
+                       'go_term':       'go_term',
+                       'go_adjacency':  'go_adjacency',
+                       'go_alternate':  'go_alternate',
+                       'accession':     'accession',
+                       'synonyms':      'synonyms',
+                       'annotation':    'annotation',
+                       'sec_ac':        'sec_ac_tmp',
+                       'go_definition': 'go_definition',
+
+                       'pp_current_edition':       'pp_current_edition',
+                       'pp_accession_history':     'pp_accession_history',
+                       'pp_edition_aggregates':    'pp_edition_aggregates',
+                       'pp_go_annotation_counts':  'pp_go_annotation_counts',
+
+                       'staging_pre':  'staging_',
+                       'previous_pre':      'previous_'
+                       }
+        self.staging_tables = ['pp_current_edition',
+                               'pp_accession_history',
+                               'pp_edition_aggregates',
+                               'pp_go_annotation_counts']
+        if tables:
+            self.table = tables
+        self.concurrent_insertions = concurrent_insertions
+        self.verbose = verbose
         try:
             self.con = MySQLdb.connect(**self.creds)
         except Exception, e:
@@ -64,708 +232,93 @@ class GOTrack:
             self.con = MySQLdb.connect(**self.creds)
         return self.con
 
-    def fetch_consistency(self):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
+    def reconnect(func):
+        """Wrap a function in order to test MySQL connection
+        and reconnect if necessary.
+        """
+        def wrapper(self, *args, **kwargs):
+            try:
+                self.con = self.test_and_reconnect()
+            except _mysql.Error, e:
+                log.error("Problem with database connection, %s", e)
+                raise
+            return func(*args, **kwargs)
 
+        # Tidy up the help()-visible docstrings to be nice
+        wrapper.__name__ = func.__name__
+        wrapper.__doc__ = func.__doc__
+
+        return wrapper
+
+    def transactional(func):
+        """Wrap a function in a SQL transaction as well as
+        reconnecting if necessary. Functions wrapped require
+        a cursor kwarg which supplies the db connection cursor.
+        """
+        def wrapper(self, *args, **kwargs):
+            try:
+                self.con = self.test_and_reconnect()
+            except _mysql.Error, e:
+                log.error("Problem with database connection, %s", e)
+                raise
+            with self.con as cursor:
                 try:
-                    results = {}
-                    cur.execute("SELECT id, short_name FROM {species}".format(**GOTrack.TABLES))
-                    species = [(x[0], x[1]) for x in cur.fetchall()]
-
-                    editions = {}
-                    for sp_id, sp in species:
-                        editions[sp_id] = []
-                    cur.execute("SELECT distinct species_id, edition from {edition}".format(**GOTrack.TABLES))
-                    for r in cur.fetchall():
-                        editions[r[0]].append(r[1])
-
-                    db_state = tuple((sp_id, max(eds)) for sp_id, eds in editions.iteritems() if len(eds) > 0)
-
-                    # Checks to see if pre-processed data is out of date. Specifically, if max edition present in
-                    # the pre-processed data is the same as the max edition inserted in the database for all species
-                    cur.execute("SELECT species_id, max(edition) from {pp_goa} goa "
-                                "inner join {pp_genes} cg on "
-                                "goa.pp_current_genes_id=cg.id group by species_id"
-                                .format(**GOTrack.TABLES))
-                    pp_state = cur.fetchall()
-                    results['preprocess_ood'] = pp_state != db_state
-
-                    # Checks to see if the aggregate data is out of date with the database. If not then a server
-                    # restart is required with suitable options for recreation of aggregates.
-                    cur.execute("SELECT species_id, max(edition) from {pp_go_annotation_counts} group by species_id"
-                                .format(**GOTrack.TABLES))
-                    pp_state = cur.fetchall()
-                    results['aggregate_ood'] = pp_state != db_state
-
-                    # Checks to see if all GOA editions have been linked to a GO Edition
-                    cur.execute("SELECT species_id, edition from {edition} where go_edition_id_fk is NULL"
-                                .format(**GOTrack.TABLES))
-                    unlinked_editions = cur.fetchall()
-                    results['unlinked_editions'] = unlinked_editions
-
-                    return results
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def fetch_current_state(self):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    results = {}
-                    cur.execute("SELECT id, short_name FROM {species}".format(**GOTrack.TABLES))
-                    species = [(x[0], x[1]) for x in cur.fetchall()]
-                    results['species'] = species
-
-                    editions = {}
-                    for sp_id, sp in species:
-                        editions[sp_id] = []
-                    cur.execute("SELECT distinct species_id, edition from {edition}".format(**GOTrack.TABLES))
-                    for r in cur.fetchall():
-                        editions[r[0]].append(r[1])
-                    results['editions'] = editions
-
-                    cur.execute("SELECT distinct id, date from {go_edition}".format(**GOTrack.TABLES))
-                    go_editions = cur.fetchall()
-                    results['go_editions'] = go_editions
-
-                    return results
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def update_sec_ac_table(self, data, verbose=False):
-
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    sql = "CREATE TABLE {sec_ac}{new} like {sec_ac}".format(**GOTrack.TABLES)
-                    cur.execute(sql)
-
-                    log.info("Inserting secondary accessions table")
-                    cnt = self.insert_multiple(GOTrack.TABLES['sec_ac'] + GOTrack.TABLES['new'], ["sec", "ac"], data,
-                                               GOTrack.CONCURRENT_INSERTIONS, cur, verbose)
-
-                    if cnt == 0:
-                        raise (ValueError("sec_ac.txt is either empty or malformed, code might need to be altered to "
-                                          "deal with a new file structure."))
-
-                    sql = "INSERT INTO {sec_ac}{new}(ac, sec) select distinct ac, ac from {sec_ac}{new}"\
-                        .format(**GOTrack.TABLES)
-                    cur.execute(sql)  # Reflexive associations
-
-                    sql = "RENAME TABLE {sec_ac} TO {sec_ac}{old}, {sec_ac}{new} to {sec_ac}".format(**GOTrack.TABLES)
-                    cur.execute(sql)
-
+                    retval = func(self, *args, cursor=cursor, **kwargs)
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
+                    log.error('Error rolling back, %s', repr(inst))
                     self.con.rollback()
                     raise
                 finally:
-                    if cur:
-                        cur.execute("DROP TABLE IF EXISTS {sec_ac}{old}".format(**GOTrack.TABLES))
-                        cur.execute("DROP TABLE IF EXISTS {sec_ac}{new}".format(**GOTrack.TABLES))
-                        cur.close()
+                    if cursor:
+                        cursor.close()
 
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
+            return retval
 
-    def update_acindex_table(self, data, verbose=False):
+        # Tidy up the help()-visible docstrings to be nice
+        wrapper.__name__ = func.__name__
+        wrapper.__doc__ = func.__doc__
 
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
+        return wrapper
 
+    def stream(func):
+        """Wrap a function in a SQL transaction as well as
+        reconnecting if necessary. Functions wrapped require
+        a cursor kwarg which supplies the db connection cursor.
+
+        Must be used if wrapped function is a generator.
+        """
+        def wrapper(self, *args, **kwargs):
+            try:
+                self.con = self.test_and_reconnect()
+            except _mysql.Error, e:
+                log.error("Problem with database connection, %s", e)
+                raise
+            with self.con as cursor:
                 try:
-                    cur.execute("CREATE TABLE {acindex}{new} like {acindex}".format(**GOTrack.TABLES))
-
-                    log.info("Inserting Swiss-Prot Accession Index Table")
-                    cnt = self.insert_multiple(GOTrack.TABLES['acindex'] + GOTrack.TABLES['new'],
-                                               ["accession", "symbol"], data, GOTrack.CONCURRENT_INSERTIONS, cur,
-                                               verbose)
-
-                    if cnt == 0:
-                        raise (ValueError("acindex.txt is either empty or malformed, code might need to be altered to "
-                                          "deal with a new file structure."))
-
-                    cur.execute("RENAME TABLE {acindex} TO {acindex}{old}, {acindex}{new} to {acindex}"
-                                .format(**GOTrack.TABLES))
-
+                    for x in func(self, *args, cursor=cursor, **kwargs):
+                        yield x
                     self.con.commit()
                 except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
+                    log.error('Error rolling back, %s', repr(inst))
                     self.con.rollback()
                     raise
                 finally:
-                    if cur:
-                        cur.execute("DROP TABLE IF EXISTS {acindex}{old}".format(**GOTrack.TABLES))
-                        cur.execute("DROP TABLE IF EXISTS {acindex}{new}".format(**GOTrack.TABLES))
-                        cur.close()
+                    if cursor:
+                        cursor.close()
 
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
+        # Tidy up the help()-visible docstrings to be nice
+        wrapper.__name__ = func.__name__
+        wrapper.__doc__ = func.__doc__
 
-    def update_go_table(self, ont):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-                try:
-                    # Insert new edition into go_edition table and retrieve insertion primary key
-                    log.info("Inserting New GO Edition")
-                    self.insert_multiple(GOTrack.TABLES['go_edition'], ["date"], [[ont.date.strftime('%Y-%m-%d')]],
-                                         1, cur, False)
-                    go_edition_id = self.con.insert_id()
+        return wrapper
 
-                    # Insert meta data for the meta data of individual GO nodes
-                    log.info("Inserting Term Nodes")
-                    data_generator = ((go_edition_id,) + x for x in ont.list_terms())
-                    self.insert_multiple(GOTrack.TABLES['go_term'],
-                                         ["go_edition_id_fk", "go_id", "name", "aspect", "is_obsolete"],
-                                         data_generator, self.CONCURRENT_INSERTIONS, cur, False)
-
-                    # Insert reflexive transitive closure
-                    # print "Inserting Reflexive Transitive Closure Table"
-                    # data_generator = transitiveClosure(termMap)
-                    # insert_multiple(cur, "go_ontology_tclosure",
-                    # ["go_edition_id_fk", "child", "parent", "relationship","min_distance"] ,
-                    # data_generator, concurrent_insertions, False)
-
-                    # Insert adjacency table
-                    log.info("Inserting Adjacency Table")
-                    data_generator = ((go_edition_id,) + x for x in ont.adjacency_list())
-                    self.insert_multiple(GOTrack.TABLES['go_adjacency'],
-                                         ["go_edition_id_fk", "child", "parent", "relationship"], data_generator,
-                                         self.CONCURRENT_INSERTIONS, cur, False)
-
-                    # Insert alternate table
-                    log.info("Inserting Alternate Table")
-                    data_generator = ((go_edition_id,) + x for x in ont.alternate_list())
-                    self.insert_multiple(GOTrack.TABLES['go_alternate'],
-                                         ["go_edition_id_fk", "alt", "primary"], data_generator,
-                                         self.CONCURRENT_INSERTIONS, cur, False)
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back %s, %s', ont.date.strftime('%Y-%m-%d'), inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def update_goa_table(self, sp_id, ed, date, data):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-                try:
-
-                    log.info("Attempting to link GOA Edition to GO Version")
-                    sql = "select id, date from {go_edition} where date <= %s order by date DESC LIMIT 1".format(
-                        **GOTrack.TABLES)
-                    cur.execute(sql, [date.strftime('%Y-%m-%d')])
-                    go_edition_id_fk = cur.fetchone()
-                    cur.nextset()
-
-                    if go_edition_id_fk is None:
-                        log.error("Failed to link date: {0} to a GO Release. Setting as NULL. FIX MANUALLY."
-                                  .format(date.strftime('%Y-%m-%d')))
-                        raise ValueError
-                    else:
-
-                        log.info("Linked date: {0} to GO Release: {1}".format(date.strftime('%Y-%m-%d'),
-                                 go_edition_id_fk[1]))
-
-                    log.info("Insert new edition")
-                    self.insert_multiple(GOTrack.TABLES['edition'],
-                                         ["edition", "species_id", "date", "go_edition_id_fk"],
-                                         [[ed, sp_id, date.strftime('%Y-%m-%d'), go_edition_id_fk[0]]], 1, cur, False)
-
-                    cols = ["edition", "species_id", "accession", "db", "db_object_id", "symbol", "qualifier",
-                            "go_id", "reference", "evidence", "db_object_name", "synonyms", "db_object_type",
-                            "taxon"]
-                    self.insert_multiple(GOTrack.TABLES['gene_annotation'], cols, data, self.CONCURRENT_INSERTIONS,
-                                         cur, False)
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back sp: %s, ed: %s, date: %s, %s', sp_id, ed, date.strftime('%Y-%m-%d'), inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    @timeit
-    def pre_process_current_genes_tables(self):
-
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-                log.info("pre_process_current_genes_tables (~4min)")
-                try:
-                    cur.execute("DROP TABLE IF EXISTS {pp_genes_staging}".format(**GOTrack.TABLES))
-                    cur.execute("CREATE TABLE {pp_genes_staging} LIKE {pp_genes}".format(**GOTrack.TABLES))
-
-                    cur.execute("DROP TABLE IF EXISTS {pp_accession_staging}".format(**GOTrack.TABLES))
-                    cur.execute("CREATE TABLE {pp_accession_staging} LIKE {pp_accession}".format(**GOTrack.TABLES))
-
-                    cur.execute("DROP TABLE IF EXISTS {pp_synonym_staging}".format(**GOTrack.TABLES))
-                    cur.execute("CREATE TABLE {pp_synonym_staging} LIKE {pp_synonym}".format(**GOTrack.TABLES))
-
-                    cur.execute("SELECT id from {species} order by id".format(**GOTrack.TABLES))
-                    species = [x[0] for x in cur.fetchall()]
-
-                    sql = """select distinct ga.species_id, symbol, accession, synonyms
-                                from {gene_annotation} ga inner join
-                                (select species_id, max(edition) as current_edition from {edition} group by species_id)
-                                    as current_editions
-                                on current_editions.current_edition=ga.edition
-                                    and current_editions.species_id = ga.species_id
-                            where accession is not null""".format(**GOTrack.TABLES)
-
-                    cur.execute(sql)
-                    raw_data = (x for x in cur.fetchall())
-                    log.info('Data fetched')
-
-                    gene_id_maps = {x: {} for x in species}
-
-                    pp_current_genes = []
-                    pp_synonyms = []
-                    pp_primary_accessions = []
-                    pp_current_genes_id = 1
-                    for row in raw_data:
-                        sp_id = row[0]
-                        gmap = gene_id_maps[sp_id]
-                        symbol = row[1]
-
-                        try:
-                            gene_id = gmap[symbol.upper()]
-                        except KeyError:
-                            gmap[symbol.upper()] = pp_current_genes_id
-                            gene_id = pp_current_genes_id
-                            pp_current_genes.append((gene_id, sp_id, symbol))
-                            pp_current_genes_id += 1
-
-                        pp_primary_accessions.append((gene_id, row[2]))
-
-                        for syn in row[3].split("|"):
-                            pp_synonyms.append((gene_id, syn.strip()))
-
-                    # case insensitive
-                    pp_current_genes = sorted({(x[0], x[1], x[2].lower()): x for x in pp_current_genes}.values())
-                    pp_synonyms = sorted({(x[0], x[1].lower()): x for x in pp_synonyms}.values())
-                    pp_primary_accessions = sorted({(x[0], x[1].lower()): x for x in pp_primary_accessions}.values())
-
-                    # print len(pp_current_genes)
-                    # print len(pp_synonyms)
-                    # print len(pp_primary_accessions)
-                    #
-                    # for i,gmap in enumerate(gene_id_maps):
-                    #     print i+1, len(gmap)
-
-                    log.info("Inserting current_genes table")
-                    cnt = self.insert_multiple(GOTrack.TABLES['pp_genes_staging'],
-                                               ["id", "species_id", "symbol"], pp_current_genes,
-                                               GOTrack.CONCURRENT_INSERTIONS, cur, False)
-                    if cnt == 0:
-                        raise (ValueError("No values inserted for current_genes table"))
-
-                    #####################
-
-                    log.info("Inserting synonym table")
-                    cnt = self.insert_multiple(GOTrack.TABLES['pp_synonym_staging'],
-                                               ["pp_current_genes_id", "synonym"], pp_synonyms,
-                                               GOTrack.CONCURRENT_INSERTIONS, cur, False)
-
-                    if cnt == 0:
-                        raise (ValueError("No values inserted for synonym table"))
-
-                    #####################
-
-                    log.info("Inserting accession table")
-                    cnt = self.insert_multiple(GOTrack.TABLES['pp_accession_staging'],
-                                               ["pp_current_genes_id", "accession"], pp_primary_accessions,
-                                               GOTrack.CONCURRENT_INSERTIONS, cur, False)
-
-                    if cnt == 0:
-                        raise (ValueError("No values inserted for accession table"))
-
-                    #####################
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    @timeit
-    def pre_process_goa_table(self):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-                log.info("pre_process_goa_table (~90min)")
-                try:
-                    cur.execute("DROP TABLE IF EXISTS {pp_goa_staging}".format(**GOTrack.TABLES))
-                    cur.execute("CREATE TABLE {pp_goa_staging} LIKE {pp_goa}".format(**GOTrack.TABLES))
-
-                    sql = """INSERT IGNORE INTO {pp_goa_staging}(pp_current_genes_id, edition, qualifier, go_id,
-                                evidence, reference)
-                             select distinct pp_current_genes_id, edition, qualifier , go_id,
-                                evidence, reference from {gene_annotation} ga
-                             inner join ( select species_id, pp_current_genes_id, sec from
-                                (select pp_current_genes_id, sec from {pp_accession_staging}
-                                    inner join {sec_ac} on ac=accession
-                                UNION ALL
-                                select pp_current_genes_id, ac from {pp_accession_staging}
-                                    inner join {sec_ac} on ac=accession
-                                UNION
-                                select pp_current_genes_id, accession from {pp_accession_staging}) as gene_mapping
-                                inner join
-                                {pp_genes_staging} cg on cg.id=pp_current_genes_id and species_id=%s ) as gmap
-                             on accession=sec and ga.species_id=gmap.species_id
-                             where accession is not null and ga.species_id=%s""".format(**GOTrack.TABLES)
-
-                    cur.execute("SELECT id from {species} order by id".format(**GOTrack.TABLES))
-                    species = [x[0] for x in cur.fetchall()]
-
-                    for sp_id in species:
-                        log.info('species: {0}'.format(sp_id))
-                        cur.execute(sql, [sp_id, sp_id])
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def push_staging_to_production(self):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    # Check to see if staging area has data
-                    # for t in ['{pp_genes_staging}', '{pp_goa_staging}', '{pp_accession_staging}',
-                    #           '{pp_synonym_staging}']:
-                    #
-                    #     sql = "SELECT COUNT(*) from " + t
-                    #     cur.execute(sql.format(**GOTrack.TABLES))
-                    #     cnt = cur.fetchone()
-                    #
-                    #     if cnt == 0:
-                    #         raise ValueError((t + " is empty; cancelling push to production").format(**GOTrack.TABLES))
-
-                    # Swap Staging and Production tables
-                    swap_template = "rename table {prod} TO {prod}{old}, {staging} to {prod}"
-
-                    for staging, prod in [('{pp_genes_staging}', '{pp_genes}'),
-                                          ('{pp_goa_staging}', '{pp_goa}'),
-                                          ('{pp_accession_staging}', '{pp_accession}'),
-                                          ('{pp_synonym_staging}', '{pp_synonym}'),
-                                          ('{pp_edition_aggregates_staging}', '{pp_edition_aggregates}'),
-                                          ('{pp_go_annotation_counts_staging}', '{pp_go_annotation_counts}')]:
-                        staging = staging.format(**GOTrack.TABLES)
-                        prod = prod.format(**GOTrack.TABLES)
-
-                        cur.execute("DROP TABLE IF EXISTS {prod}{old}".format(prod=prod, **GOTrack.TABLES))
-
-                        sql = swap_template.format(staging=staging, prod=prod, **GOTrack.TABLES)
-                        cur.execute(sql)
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    # Stuff to do with aggregate creation
-
-    def fetch_editions(self):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    cur.execute("select species_id, edition, ed.date goa_date, go_edition_id_fk, "
-                                "ged.date go_date from {edition} ed inner join {go_edition} ged on "
-                                "ed.go_edition_id_fk = ged.id".format(**GOTrack.TABLES))
-                    for row in cur:
-                            yield row
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def fetch_adjacency_list(self, go_ed):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    cur.execute("select child, parent, relationship from {go_adjacency} where go_edition_id_fk = %s"
-                                .format(**GOTrack.TABLES), [go_ed])
-                    for row in cur:
-                            yield row
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def fetch_term_list(self, go_ed):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    cur.execute("select go_id, name, aspect from {go_term} where go_edition_id_fk = %s"
-                                .format(**GOTrack.TABLES), [go_ed])
-                    for row in cur:
-                            yield row
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def fetch_all_annotations(self, sp_id, ed):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    cur.execute("select distinct go_id, ppc.id gene_id from {pp_genes_staging} ppc inner join "
-                                "{pp_goa_staging} ppg on ppc.id=ppg.pp_current_genes_id where species_id=%s "
-                                "and edition = %s".format(**GOTrack.TABLES), [sp_id, ed])
-                    for row in cur:
-                        yield row
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def create_aggregate_staging(self):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    cur.execute("DROP TABLE IF EXISTS {pp_edition_aggregates_staging}".format(**GOTrack.TABLES))
-                    cur.execute("CREATE TABLE {pp_edition_aggregates_staging} LIKE {pp_edition_aggregates}".format(**GOTrack.TABLES))
-
-                    cur.execute("DROP TABLE IF EXISTS {pp_go_annotation_counts_staging}".format(**GOTrack.TABLES))
-                    cur.execute("CREATE TABLE {pp_go_annotation_counts_staging} LIKE {pp_go_annotation_counts}".format(**GOTrack.TABLES))
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def write_aggregate(self, sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term, avg_mf, avg_direct_jaccard, avg_inferred_jaccard):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    self.insert_multiple(GOTrack.TABLES['pp_edition_aggregates_staging'],
-                                         ["species_id", "edition", "gene_count", "avg_direct_terms_for_gene", "avg_inferred_terms_for_gene", "avg_inferred_genes_for_term", "avg_multifunctionality", "avg_direct_jaccard", "avg_inferred_jaccard"],
-                                         [[sp_id, ed, gene_count, avg_direct_per_gene, avg_inferred_per_gene, avg_gene_per_term, avg_mf, avg_direct_jaccard, avg_inferred_jaccard]], 1, cur, False)
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def write_term_counts(self, sp_id, ed, d_map, i_map):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-
-                try:
-                    data_gen = ((sp_id, ed, term.id, d_map[term] if term in d_map else None, i_map[term] if term in i_map else None) for term in (d_map.viewkeys() | i_map.keys()))
-
-                    self.insert_multiple(GOTrack.TABLES['pp_go_annotation_counts_staging'],
-                                         ["species_id", "edition", "go_id", "direct_annotation_count", "inferred_annotation_count"],
-                                         data_gen, GOTrack.CONCURRENT_INSERTIONS, cur, False)
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back, %s', inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def write_alternate(self, go_edition_id, ont):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-                try:
-
-                    # Insert alternate table
-                    log.info("Inserting Alternate Table")
-                    data_generator = ((go_edition_id,) + x for x in ont.alternate_list())
-                    self.insert_multiple(GOTrack.TABLES['go_alternate'],
-                                         ["go_edition_id_fk", "alt", "`primary`"], data_generator,
-                                         self.CONCURRENT_INSERTIONS, cur, False)
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back %s, %s', ont.date.strftime('%Y-%m-%d'), inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    def write_definitions(self, ont):
-        try:
-            self.con = self.test_and_reconnect()
-            with self.con as cur:
-                try:
-
-                    # Insert definition table
-                    log.info("Inserting Definition Table")
-                    data_generator = ont.list_definitions()
-                    self.insert_multiple(GOTrack.TABLES['go_definition'],
-                                         ["go_id", "definition"], data_generator,
-                                         self.CONCURRENT_INSERTIONS, cur, False)
-
-                    self.con.commit()
-                except Exception as inst:
-                    log.error('Error rolling back %s, %s', ont.date.strftime('%Y-%m-%d'), inst)
-                    self.con.rollback()
-                    raise
-                finally:
-                    if cur:
-                        cur.close()
-
-        except _mysql.Error, e:
-            log.error("Problem with database connection, %s", e)
-            raise
-
-    # General use
-
-    def insert_multiple(self, table, columns, data, concurrent_insertions=1000, cur=None, verbose=False):
+    def insert_many(self, table, columns, data, cur, ignore=False):
         value_length = len(columns)
-
-        if cur is None:
-            cur = self.con.cursor()
-            close_cursor = True
-        else:
-            close_cursor = False
 
         # It is actually extremely important that 'values' be lowercase. DO NOT CHANGE.
         # See http://stackoverflow.com/a/3945860/4907830.
-        sql_template = "INSERT INTO {0}({1}) values {2}"
+        sql_template = "INSERT %sINTO {0}({1}) values {2}" % ("IGNORE " if ignore else "")
 
         values_template = "(" + ",".join(["%s"] * value_length) + ")"
 
@@ -773,62 +326,285 @@ class GOTrack:
 
         cnt = 0
         start = time.time()
-        for row_list in grouper(concurrent_insertions, data):
+        for row_list in grouper(self.concurrent_insertions, data):
             cnt += len(row_list)
-            if verbose:
+            if self.verbose:
                 log.info(cnt)
             cur.executemany(sql, row_list)
 
-        if verbose:
-            log.info("Row Count: {0}, Time: {1}".format(cnt, time.time() - start))
-
-        if close_cursor and cur:
-            cur.close()
+        if self.verbose:
+            log.info("Row Count: %s, Time: %s", cnt, time.time() - start)
 
         return cnt
 
-    def insert_multiple2(self, table, columns, data, concurrent_insertions=1000, cur=None, verbose=False):
-        # When you are finally fed up with executemany and its impressive amount of bugs, re-implement this.
-        value_length = len(columns)
+    @transactional
+    def fetch_current_state(self, cursor=None):
+        results = {}
+        cursor.execute("SELECT id, short_name FROM {species}".format(**self.tables))
+        species = [(x[0], x[1]) for x in cursor.fetchall()]
+        results['species'] = species
 
-        if cur is None:
-            cur = self.con.cursor()
-            close_cursor = True
+        editions = {}
+        for sp_id, sp in species:
+            editions[sp_id] = []
+        cursor.execute("SELECT distinct species_id, edition from {edition}".format(**self.tables))
+        for r in cursor.fetchall():
+            editions[r[0]].append(r[1])
+        results['editions'] = editions
+
+        cursor.execute("SELECT distinct id, date from {go_edition}".format(**self.tables))
+        go_editions = cursor.fetchall()
+        results['go_editions'] = go_editions
+
+        return results
+
+    @transactional
+    def fetch_editions(self, cursor=None):
+        sql = "select species_id, edition, ed.date goa_date, go_edition_id_fk, ged.date go_date from {edition} ed " \
+              "inner join {go_edition} ged on ed.go_edition_id_fk = ged.id"
+        cursor.execute(sql.format(**self.tables))
+        results = cursor.fetchall()
+        return results
+
+    @transactional
+    def fetch_staged_current_editions(self, cursor=None):
+        sql = "select species_id, edition, ed.date goa_date, go_edition_id_fk, ged.date go_date from {edition} ed " \
+              "inner join {staging_pre}{pp_current_edition} using(species_id, edition) " \
+              "inner join {go_edition} ged on ed.go_edition_id_fk = ged.id"
+        cursor.execute(sql.format(**self.tables))
+        results = cursor.fetchall()
+        return results
+
+    @stream
+    def stream_adjacency_list(self, go_ed, cursor=None):
+        sql = "select child, parent, relationship from {go_adjacency} where go_edition_id_fk = %s"
+        cursor.execute(sql.format(**self.tables), [go_ed])
+        for row in cursor:
+            yield row
+
+    @stream
+    def stream_staged_annotations(self, sp_id, ed, cursor=None):
+        sql = "select distinct annot.go_id, ppah.accession_id from {annotation} annot " \
+              "inner join {staging_pre}{pp_accession_history} ppah on ppah.secondary_accession_id=annot.accession_id " \
+              "inner join {accession} acc on acc.id=ppah.secondary_accession_id " \
+              "where acc.species_id = %s and acc.edition = %s"
+        cursor.execute(sql.format(**self.tables), [sp_id, ed])
+        for row in cursor:
+            yield row
+
+    def _insert_new_go_edition(self, cursor, date):
+        log.info("Insert new GO Edition")
+        cols = ["date"]
+        data = [[date.strftime('%Y-%m-%d')]]
+        self.insert_many(self.tables['go_edition'], cols, data, cursor)
+        return self.con.insert_id()
+
+    def _insert_term_nodes(self, cursor, go_edition_id, ont):
+        log.info("Inserting Term Nodes")
+        cols = ["go_edition_id_fk", "go_id", "name", "aspect", "is_obsolete"]
+        data = ((go_edition_id,) + x for x in ont.list_terms())
+        self.insert_many(self.tables['go_term'], cols, data, cursor)
+
+    def _insert_term_adjacencies(self, cursor, go_edition_id, ont):
+        log.info("Inserting Adjacency Table")
+        cols = ["go_edition_id_fk", "child", "parent", "relationship"]
+        data = ((go_edition_id,) + x for x in ont.adjacency_list())
+        self.insert_many(self.tables['go_adjacency'], cols, data, cursor)
+
+    def _insert_term_alternates(self, cursor, go_edition_id, ont):
+        log.info("Inserting Alternate Table")
+        cols = ["go_edition_id_fk", "alt", "primary"]
+        data = ((go_edition_id,) + x for x in ont.alternate_list())
+        self.insert_many(self.tables['go_alternate'], cols, data, cursor)
+
+    @transactional
+    def update_go_tables(self, ont, cursor=None):
+        # Insert new edition into go_edition table and retrieve insertion primary key
+        go_edition_id = self._insert_new_go_edition(cursor, ont.date)
+
+        # Insert meta data for the meta data of individual GO nodes
+        self._insert_term_nodes(cursor, go_edition_id, ont)
+
+        # Insert adjacency table
+        self._insert_term_adjacencies(cursor, go_edition_id, ont)
+
+        # Insert alternate table
+        self._insert_term_alternates(cursor, go_edition_id, ont)
+
+    @transactional
+    def update_current_go_definitions(self, ont, cursor=None):
+        cols = ["go_id", "definition"]
+        data = ont.list_definitions()
+        self.insert_many(self.tables['go_definition'], cols, data, cursor)
+
+    def _fetch_closest_go_edition_for_date(self, cursor, date):
+        sql = "select id, date from {go_edition} where date <= %s order by date DESC LIMIT 1".format(**self.tables)
+        cursor.execute(sql, [date.strftime('%Y-%m-%d')])
+        go_edition_id_fk, go_edition_date = cursor.fetchone()
+        cursor.nextset()
+        return go_edition_id_fk, go_edition_date
+
+    def _insert_new_edition(self, cursor, edition_id, species_id, date, go_edition_id):
+        log.info("Insert new edition")
+        cols = ["edition", "species_id", "date", "go_edition_id_fk"]
+        data = [[edition_id, species_id, date.strftime('%Y-%m-%d'), go_edition_id]]
+        self.insert_many(self.tables['edition'], cols, data, cursor)
+
+    def _insert_gpi_to_accession(self, cursor, data):
+        cols = ["species_id", "edition", "db", "accession", "db_object_id", "symbol", "db_object_name",
+                "db_object_type", "subset"]
+        self.insert_many(self.tables['accession'], cols, data, cursor)
+
+    def _retrieve_id_map_for_edition(self, species_id, edition_id, cursor):
+        cursor.execute("SELECT id, db, db_object_id  FROM {accession} where species_id={species_id} "
+                       "and edition={edition_id}".format(species_id=species_id, edition_id=edition_id, **self.tables))
+        id_map = {(db, db_object_id): acc_id for acc_id, db, db_object_id in cursor.fetchall()}
+
+        return id_map
+
+    def _insert_synonyms(self, cursor, data):
+        cols = ["accession_id", "synonym"]
+        self.insert_many(self.tables['synonyms'], cols, data, cursor, ignore=True)
+
+    def _insert_gpa_to_annotation(self, cursor, data):
+        cols = ["accession_id", "qualifier", "go_id", "reference", "evidence"]
+        self.insert_many(self.tables['annotation'], cols, data, cursor, ignore=True)
+
+    @transactional
+    def insert_annotations(self, species_id, edition_id, date, gpi_data, gpa_data, cursor=None):
+        go_edition_id, go_edition_date = self._fetch_closest_go_edition_for_date(cursor, date)
+
+        if go_edition_id is None:
+            log.error("Failed to link date: %s to a GO Release.", date.strftime('%Y-%m-%d'))
+            raise ValueError
         else:
-            close_cursor = False
+            log.info("Linked date: %s to GO Release: %s", date.strftime('%Y-%m-%d'), go_edition_date)
 
-        sql_template = "INSERT INTO {0}({1}) VALUES {2}"
+        self._insert_new_edition(cursor, edition_id, species_id, date, go_edition_id)
 
-        values_template = ",".join(["(" + ",".join(["%s"] * value_length) + ")"] * concurrent_insertions)
+        synonyms = []
 
-        sql = sql_template.format(table, ",".join(columns), values_template)
+        def accession_generator(data_generator):
+            """creates generator for accession table, also stores synonyms for later use"""
+            for row in data_generator:
+                yield (species_id, edition_id) + row[:-1]
+                synonyms.append((row[0], row[2], row[7]))
 
-        row_list = []
-        i = 0
-        cnt = 0
-        start = time.time()
-        for r in data:
-            i += 1
-            row_list += r
-            if i == concurrent_insertions:
-                cnt += i
-                cur.execute(sql, row_list)
-                if verbose:
-                    log.info(cnt)
-                i = 0
-                row_list = []
+        log.debug('Insert GPI information to `accession`')
+        self._insert_gpi_to_accession(cursor, accession_generator(gpi_data))
 
-        # insert the remainder rows
-        if i > 0:
-            values_template = ",".join(["(" + ",".join(["%s"] * value_length) + ")"] * i)
-            sql = sql_template.format(table, ",".join(columns), values_template)
+        # Retrieve id, db, db_object_id for newly inserted edition from DB
+        log.debug('Retrieve id, db, db_object_id for newly inserted edition from DB')
+        id_map = self._retrieve_id_map_for_edition(species_id, edition_id, cursor)
+        log.info("ID Map Size: %s", len(id_map))
 
-            cnt += i
-            cur.execute(sql, row_list)
+        # Insert synonyms
+        log.debug('Insert synonyms')
 
-        log.info("Row Count: {0}, Time: {1}".format(cnt, time.time() - start))
+        def flatten_and_id_synonyms(synonyms_rows):
+            for row in synonyms_rows:
+                accession_id = id_map[(row[0], row[1])]
+                for synonym in row[2]:
+                    yield (accession_id, synonym)
 
-        if close_cursor and cur:
-            cur.close()
+        self._insert_synonyms(cursor, flatten_and_id_synonyms(synonyms))
 
-        return cnt
+        # Insert annotations
+        log.debug('Insert annotations')
+
+        def map_gpa_data(gpa):
+            for row in gpa:
+                try:
+                    yield (id_map[(row[0], row[1])],) + row[2:]
+                except KeyError:
+                    log.warn("Could not find %s in GPI file, skipping annotation", (row[0], row[1]))
+
+        self._insert_gpa_to_annotation(cursor, map_gpa_data(gpa_data))
+
+    @transactional
+    def update_secondary_accession_table(self, data, cursor=None):
+        sql = "DROP TABLE IF EXISTS {staging_pre}{sec_ac}".format(**self.tables)
+        cursor.execute(sql)
+
+        sql = "CREATE TABLE {staging_pre}{sec_ac} like {sec_ac}".format(**self.tables)
+        cursor.execute(sql)
+
+        cols = ["sec", "ac"]
+        cnt = self.insert_many("{staging_pre}{sec_ac}".format(**self.tables), cols, data, cursor)
+
+        if cnt == 0:
+            raise (ValueError("secondary accession file is either empty or malformed, code might need to be altered to "
+                              "deal with a new file structure."))
+
+        # Reflexive associations
+        sql = "INSERT INTO {staging_pre}{sec_ac}(ac, sec) select distinct ac, ac from {staging_pre}{sec_ac}"\
+            .format(**self.tables)
+        cursor.execute(sql)
+
+        sql = "DROP TABLE IF EXISTS {sec_ac}".format(**self.tables)
+        cursor.execute(sql)
+
+        sql = "RENAME TABLE {staging_pre}{sec_ac} TO {sec_ac}".format(**self.tables)
+        cursor.execute(sql)
+
+    # Pre-process section
+
+    @transactional
+    def create_staging_tables(self, cursor=None):
+        sql_template_drop = "DROP TABLE IF EXISTS {staging_pre}{%s}"
+        sql_template_create = "CREATE TABLE {staging_pre}{%s} LIKE {%s}"
+        for table in self.staging_tables:
+            sql_drop = sql_template_drop % table
+            sql_create = sql_template_create % (table, table)
+            cursor.execute(sql_drop.format(**self.tables))
+            cursor.execute(sql_create.format(**self.tables))
+
+    @transactional
+    def push_staging_tables(self, cursor=None):
+        sql_template_drop = "DROP TABLE IF EXISTS {previous_pre}{%s}"
+        sql_template_swap = "rename table {%s} TO {previous_pre}{%s}, {staging_pre}{%s} to {%s}"
+        for table in self.staging_tables:
+            sql_drop = sql_template_drop % table
+            sql_swap = sql_template_swap % (table,) * 4
+            cursor.execute(sql_drop.format(**self.tables))
+            cursor.execute(sql_swap.format(**self.tables))
+
+    @transactional
+    def stage_current_editions(self, cursor=None):
+        sql = "insert into {staging_pre}{pp_current_edition} (species_id, edition) select species_id, " \
+              "max(edition) edition from {edition} group by species_id"
+        cursor.execute(sql.format(**self.tables))
+
+    @transactional
+    def stage_accession_history_table(self, cursor=None):
+        # Note, keep in mind this uses the staged version of {pp_current_edition}
+
+        sql = "insert into {staging_pre}{pp_accession_history} (accession_id, secondary_accession_id) " \
+              "select acc1.id, acc2.id from {accession} acc1 " \
+              "inner join {staging_pre}{pp_current_edition} using (species_id, edition) " \
+              "inner join {sec_ac} sec_ac on acc1.db_object_id=sec_ac.ac " \
+              "inner join {accession} acc2 on acc2.db_object_id=sec_ac.sec"
+
+        cursor.execute(sql.format(**self.tables))
+
+        # Missing those accession which have no secondary accessions
+        sql = "insert into {staging_pre}{pp_accession_history} (accession_id, secondary_accession_id) " \
+              "select acc1.id, acc2.id from {accession} acc1 " \
+              "inner join {staging_pre}{pp_current_edition} using (species_id, edition) " \
+              "left join {sec_ac} sec_ac on acc1.db_object_id=sec_ac.ac " \
+              "inner join {accession} acc2 on acc2.db_object_id=acc1.db_object_id " \
+              "where sec_ac.ac is null"
+
+        cursor.execute(sql.format(**self.tables))
+
+    @transactional
+    def stage_edition_aggregates(self, data, cursor=None):
+        cols = ["species_id", "edition", "gene_count", "avg_direct_terms_for_gene", "avg_inferred_terms_for_gene",
+                "avg_inferred_genes_for_term", "avg_multifunctionality", "avg_direct_jaccard", "avg_inferred_jaccard"]
+        self.insert_many("{staging_pre}{pp_edition_aggregates}".format(**self.tables), cols, data, cursor)
+
+    @transactional
+    def stage_term_counts(self, sp_id, ed, d_map, i_map, cursor=None):
+        cols = ["species_id", "edition", "go_id", "direct_annotation_count", "inferred_annotation_count"]
+        data = ((sp_id, ed, term.id, d_map[term] if term in d_map else None, i_map[term] if term in i_map else None) for term in (d_map.viewkeys() | i_map.keys()))
+        self.insert_many("{staging_pre}{pp_go_annotation_counts}".format(**self.tables), cols, data, cursor)

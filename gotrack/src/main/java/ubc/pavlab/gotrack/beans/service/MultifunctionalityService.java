@@ -19,27 +19,25 @@
 
 package ubc.pavlab.gotrack.beans.service;
 
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
+import jersey.repackaged.com.google.common.collect.Lists;
+import jersey.repackaged.com.google.common.collect.Maps;
+import org.apache.log4j.Logger;
+import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.model.Edition;
+import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import org.apache.log4j.Logger;
-
-import jersey.repackaged.com.google.common.collect.Lists;
-import jersey.repackaged.com.google.common.collect.Maps;
-import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * TODO Document Me
@@ -97,14 +95,14 @@ public class MultifunctionalityService implements Serializable {
     }
 
     public Double multifunctionality( Set<GeneOntologyTerm> terms, Species species, Edition ed ) {
-        Integer total = cache.getGeneCount( species.getId(), ed );
+        Integer total = cache.getGeneCount( species, ed );
         Double multi = null;
         if ( total != null ) {
             multi = 0.0;
             for ( GeneOntologyTerm t : terms ) {
                 // Multifunctionality
 
-                Integer inGroup = cache.getInferredAnnotationCount( species.getId(), ed, t );
+                Integer inGroup = cache.getInferredAnnotationCount( species, ed, t );
                 if ( inGroup != null && inGroup < total ) {
                     multi += 1.0 / ( inGroup * ( total - inGroup ) );
                 }
@@ -120,7 +118,7 @@ public class MultifunctionalityService implements Serializable {
     private Map<Edition, Set<GeneOntologyTerm>> retrieveData( Gene gene ) {
 
         Map<Edition, Set<GeneOntologyTerm>> data = annotationService
-                .fetchEnrichmentData( gene.getSpecies().getId(), Lists.newArrayList( gene ) ).get( gene );
+                .fetchEnrichmentData( gene.getSpecies(), Lists.newArrayList( gene ) ).get( gene );
 
         return propagate( data );
 
@@ -132,7 +130,7 @@ public class MultifunctionalityService implements Serializable {
     private Set<GeneOntologyTerm> retrieveData( Gene gene, Edition ed ) {
 
         Set<GeneOntologyTerm> data = annotationService
-                .fetchSingleEnrichmentData( ed, gene.getSpecies().getId(), Lists.newArrayList( gene ) ).get( gene );
+                .fetchSingleEnrichmentData( ed, Lists.newArrayList( gene ) ).get( gene );
 
         return cache.propagate( data, ed );
 

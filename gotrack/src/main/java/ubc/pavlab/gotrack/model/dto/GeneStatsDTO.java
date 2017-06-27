@@ -28,13 +28,15 @@ package ubc.pavlab.gotrack.model.dto;
 public class GeneStatsDTO {
     private final Integer id;
     private final Integer speciesId;
+    private final String accession;
     private final String symbol;
     private final Integer count;
 
-    public GeneStatsDTO( Integer id, Integer species_id, String symbol, Integer count ) {
+    public GeneStatsDTO( Integer id, Integer species_id, String accession, String symbol, Integer count ) {
         super();
         this.id = id;
         this.speciesId = species_id;
+        this.accession = accession;
         this.symbol = symbol;
         this.count = count;
     }
@@ -55,4 +57,7 @@ public class GeneStatsDTO {
         return count;
     }
 
+    public String getAccession() {
+        return accession;
+    }
 }

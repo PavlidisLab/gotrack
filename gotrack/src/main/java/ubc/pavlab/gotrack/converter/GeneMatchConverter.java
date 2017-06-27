@@ -19,6 +19,10 @@
 
 package ubc.pavlab.gotrack.converter;
 
+import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.search.GeneMatch;
+
 import javax.faces.application.FacesMessage;
 import javax.faces.component.UIComponent;
 import javax.faces.context.FacesContext;
@@ -27,14 +31,10 @@ import javax.faces.convert.ConverterException;
 import javax.faces.convert.FacesConverter;
 import javax.inject.Inject;
 
-import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.table.GeneMatches;
-
 /**
- * Converter for {@link GeneMatches}. Complicated getAsString as the use case in confirming multiple genes necessitates
+ * Converter for {@link GeneMatch}. Complicated getAsString as the use case in confirming multiple genes necessitates
  * it.
- * 
+ *
  * @author mjacobson
  * @version $Id$
  */
@@ -45,13 +45,11 @@ public class GeneMatchConverter implements Converter {
     private Cache cache;
 
     @Override
-    public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {
-        if ( value != null && value.trim().length() > 0 ) {
+    public Object getAsObject( FacesContext fc, UIComponent uic, String accession ) {
+        if ( accession != null && accession.trim().length() > 0 ) {
             try {
-                Integer species = ( Integer ) uic.getAttributes().get( "species" );
-                //                Cache cache = ( Cache ) fc.getExternalContext().getApplicationMap().get( "cache" );
-                return cache.getCurrentGene( species, value );
-            } catch ( NumberFormatException e ) {
+                return cache.getCurrentGene( accession );
+            } catch (NumberFormatException e) {
                 throw new ConverterException( new FacesMessage( FacesMessage.SEVERITY_ERROR,
                         "Conversion Error: getAsObject", "Not a valid gene." ) );
             }
@@ -64,9 +62,9 @@ public class GeneMatchConverter implements Converter {
     public String getAsString( FacesContext fc, UIComponent uic, Object object ) {
         if ( object != null ) {
             if ( object instanceof Gene ) {
-                return ( ( Gene ) object ).getSymbol();
-            } else if ( object instanceof GeneMatches ) {
-                return ( ( GeneMatches ) object ).getSelectedGene().getSymbol();
+                return ((Gene) object).getAccession().getAccession();
+            } else if ( object instanceof GeneMatch ) {
+                return ((GeneMatch) object).getSelectedGene().getAccession().getAccession();
             } else {
                 throw new ConverterException( new FacesMessage( FacesMessage.SEVERITY_ERROR,
                         "Conversion Error: getAsString - " + object, "Not a valid gene or genematch." ) );

@@ -19,6 +19,9 @@
 
 package ubc.pavlab.gotrack.converter;
 
+import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.model.Gene;
+
 import javax.faces.application.FacesMessage;
 import javax.faces.component.UIComponent;
 import javax.faces.context.FacesContext;
@@ -27,11 +30,8 @@ import javax.faces.convert.ConverterException;
 import javax.faces.convert.FacesConverter;
 import javax.inject.Inject;
 
-import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.model.Gene;
-
 /**
- * Converter for {@link Gene}. Must pass in a species attribute or it will fail.
+ * Converter for {@link Gene}.
  * 
  * @author mjacobson
  * @version $Id$
@@ -43,12 +43,10 @@ public class GeneConverter implements Converter {
     private Cache cache;
 
     @Override
-    public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {
-        if ( value != null && value.trim().length() > 0 ) {
+    public Object getAsObject( FacesContext fc, UIComponent uic, String accession ) {
+        if ( accession != null && accession.trim().length() > 0 ) {
             try {
-                Integer species = ( Integer ) uic.getAttributes().get( "species" );
-                //                Cache cache = ( Cache ) fc.getExternalContext().getApplicationMap().get( "cache" );
-                return cache.getCurrentGene( species, value );
+                return cache.getCurrentGene( accession );
             } catch ( NumberFormatException e ) {
                 throw new ConverterException(
                         new FacesMessage( FacesMessage.SEVERITY_ERROR, "Conversion Error", "Not a valid gene." ) );
@@ -61,7 +59,7 @@ public class GeneConverter implements Converter {
     @Override
     public String getAsString( FacesContext fc, UIComponent uic, Object object ) {
         if ( object != null ) {
-            return ( ( Gene ) object ).getSymbol();
+            return ((Gene) object).getAccession().getAccession();
         } else {
             return null;
         }

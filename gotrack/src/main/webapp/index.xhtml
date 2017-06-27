@@ -1,304 +1,322 @@
 <?xml version='1.0' encoding='UTF-8' ?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-	xmlns:h="http://java.sun.com/jsf/html"
-	xmlns:f="http://java.sun.com/jsf/core"
-	xmlns:p="http://primefaces.org/ui"
-	xmlns:of="http://omnifaces.org/functions"
-	xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:of="http://omnifaces.org/functions"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
 <h:head>
-	<title>GOtrack</title>
-	<h:outputStylesheet library="css" name="style.css" />
+    <title>GOtrack</title>
+    <h:outputStylesheet library="css" name="style.css"/>
 
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-	<!-- Prevents caching at the Proxy Server -->
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+    <!-- Prevents caching at the Proxy Server -->
 
-	<meta http-equiv="Expires" content="0" />
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<meta name="description"
-		content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms." />
+    <meta http-equiv="Expires" content="0"/>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <meta name="description"
+          content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms."/>
 
-	<meta name="keywords"
-		content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software,enrichment,GO" />
-	<meta name="author" content="GOtrack admin (jacobsonmt+gotrack@gmail.com)" />
+    <meta name="keywords"
+          content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software,enrichment,GO"/>
+    <meta name="author" content="GOtrack admin (jacobsonmt+gotrack@gmail.com)"/>
 
-	<ui:include src="/WEB-INF/templates/analytics.xhtml" />
+    <ui:include src="/WEB-INF/templates/analytics.xhtml"/>
 
-	<script type="text/javascript">
-        	googleAnalyticsTrackPageviewIfConfigured( "/gotrack/index" );
+    <script type="text/javascript">
+        googleAnalyticsTrackPageviewIfConfigured("/gotrack/index");
     </script>
 
 
 </h:head>
 
 <h:body>
-	<div id="site-wrapper">
-		<div id="header">
-			<div id="top">
-				<div class="left" id="logo">
-					<h:graphicImage library="img" width="130" height="110" name="logo1.png" />
-				</div>
-				<div class="left navigation" id="main-nav">
-					<ul class="tabbed">
-						<li class="current-tab"><h:link value="Home" outcome="/index.xhtml" /></li>
-						<li><h:link value="Track Gene" outcome="/genes.xhtml" /></li>
-						<li><h:link value="Track Term" outcome="/terms.xhtml" /></li>
-						<li><h:link value="Track Enrichment" outcome="/enrichment.xhtml" /></li>
-<!-- 						<li><h:link value="Tutorial" outcome="/about.xhtml" /></li>
-						<li><h:link value="Documentation" outcome="/documentation.xhtml" /></li>
-						<li><h:link value="Resources" outcome="/resources.xhtml" /></li> -->
-					</ul>
-					<div class="clearer">&nbsp;</div>
-				</div>
-				<div class="clearer">&nbsp;</div>
-			</div>
-		</div>
+    <div id="site-wrapper">
+        <div id="header">
+            <div id="top">
+                <div class="left" id="logo">
+                    <h:graphicImage library="img" width="130" height="110" name="logo1.png"/>
+                </div>
+                <div class="left navigation" id="main-nav">
+                    <ul class="tabbed">
+                        <li class="current-tab"><h:link value="Home" outcome="/index.xhtml"/></li>
+                        <li><h:link value="Track Gene" outcome="/genes.xhtml"/></li>
+                        <li><h:link value="Track Term" outcome="/terms.xhtml"/></li>
+                        <li><h:link value="Track Enrichment" outcome="/enrichment.xhtml"/></li>
+                        <!-- 						<li><h:link value="Tutorial" outcome="/about.xhtml" /></li>
+                                                <li><h:link value="Documentation" outcome="/documentation.xhtml" /></li>
+                                                <li><h:link value="Resources" outcome="/resources.xhtml" /></li> -->
+                    </ul>
+                    <div class="clearer">&nbsp;</div>
+                </div>
+                <div class="clearer">&nbsp;</div>
+            </div>
+        </div>
 
-		<!-- Middle splash -->
-		<div id="splash">
-			<div class="ui-grid ui-grid-responsive">
-
-
-				<div class="ui-grid-row">
-					<div class="ui-grid-col-4">
-						<h2 class="label label-green">Description</h2>
-						<p class="quiet large"></p>
-						<p>GOtrack is a user-friendly tool to browse the development of gene product annotations</p>
-						<p>GOtrack currently supports annotation data for 14 different organisms</p>
-					</div>
-
-					<div class="ui-grid-col-4">
-						<h2 class="label label-orange">Explore</h2>
-						<p class="quiet large"></p>
-						<ul>
-							<li><p>Changes in the Gene Ontology (GO) terms associated to a gene product</p></li>
-							<li><p>Changes in the gene products associated to a GO term</p></li>
-							<li><p>Measures of semantic similarity and multifunctionality between years</p></li>
-						</ul>
-					</div>
-
-					<div class="ui-grid-col-4">
-						<h2 class="label label-blue">Contact Us</h2>
-						<p>Please give us some feedback! In case you have any questions, you can contact us at:</p>
-						<p>jacobsonmt+gotrack (at) gmail (dot) com</p>
-					</div>
-					<div class="clearer">&nbsp;</div>
-				</div>
-			</div>
-		</div>
-		
-		<div id="content">
-
-		<div class="ui-grid ui-grid-responsive" style="margin-top:50px;">
+        <!-- Middle splash -->
+        <div id="splash">
+            <div class="ui-grid ui-grid-responsive">
 
 
-			<div class="ui-grid-row">
-				<div class="ui-grid-col-2">
-					<div class="section">
+                <div class="ui-grid-row">
+                    <div class="ui-grid-col-4">
+                        <h2 class="label label-green">Description</h2>
+                        <p class="quiet large"></p>
+                        <p>GOtrack is a user-friendly tool to browse the development of gene product annotations</p>
+                        <p>GOtrack currently supports annotation data for 14 different organisms</p>
+                    </div>
 
-						<div class="section-title">Examples</div>
+                    <div class="ui-grid-col-4">
+                        <h2 class="label label-orange">Explore</h2>
+                        <p class="quiet large"></p>
+                        <ul>
+                            <li><p>Changes in the Gene Ontology (GO) terms associated to a gene product</p></li>
+                            <li><p>Changes in the gene products associated to a GO term</p></li>
+                            <li><p>Measures of semantic similarity and multifunctionality between years</p></li>
+                        </ul>
+                    </div>
 
-				<p:lightBox styleClass="imagebox"> 
-				    <h:outputLink value="/gotrack/javax.faces.resource/top_25.png?ln=img" title="Enrichment Top 25">  
-				    	<h:graphicImage library="img" width="100" height="56" name="top_25.png" />  
-				    </h:outputLink>
-				 
-				    <f:facet name="inline">
-				        <h:graphicImage library="img" width="900" name="top_25.png" />    
-				    </f:facet>
-				</p:lightBox>
-				<p:lightBox styleClass="imagebox"> 
-				    <h:outputLink value="/gotrack/javax.faces.resource/current_similarity.png?ln=img" title="Similarity Analysis">  
-				    	<h:graphicImage library="img" width="100" height="56" name="current_similarity.png" />  
-				    </h:outputLink>
-				 
-				    <f:facet name="inline">
-				        <h:graphicImage library="img" width="900" name="current_similarity.png" />   
-				    </f:facet>
-				</p:lightBox>
-				<p:lightBox styleClass="imagebox"> 
-				    <h:outputLink value="/gotrack/javax.faces.resource/RB1-Details.png?ln=img" title="Gene Tracking Details">  
-				    	<h:graphicImage library="img" width="100" height="56" name="RB1-Details.png" />  
-				    </h:outputLink>
-				 
-				    <f:facet name="inline">
-				        <h:graphicImage library="img" width="900" name="RB1-Details.png" />  
-				    </f:facet>
-				</p:lightBox>
-				<p:lightBox styleClass="imagebox"> 
-				    <h:outputLink value="/gotrack/javax.faces.resource/FOXP2-Evidence.png?ln=img" title="Gene Tracking Evidence">  
-				    	<h:graphicImage library="img" width="100" height="56" name="FOXP2-Evidence.png" />  
-				    </h:outputLink>
-				 
-				    <f:facet name="inline">
-				        <h:graphicImage library="img" width="900" name="FOXP2-Evidence.png" />  
-				    </f:facet>
-				</p:lightBox>
-				</div>
-				</div>
-				<div class="ui-grid-col-8">
-					<div class="section" style="width:50%;margin: 0 auto;"/>
+                    <div class="ui-grid-col-4">
+                        <h2 class="label label-blue">Contact Us</h2>
+                        <p>Please give us some feedback! In case you have any questions, you can contact us at:</p>
+                        <p>jacobsonmt+gotrack (at) gmail (dot) com</p>
+                    </div>
+                    <div class="clearer">&nbsp;</div>
+                </div>
+            </div>
+        </div>
 
-					<div class="post">
-						<div class="post-body">
+        <div id="content">
 
-							<!-- PUT THE ACTUAL CONTENT -->
-							
-							
-
-							
-								
-								<p:panelGrid style="border:none;margin:0 auto;">
-								<h:form>
-								
-								
-								<p:row>
-									<p:column colspan="3" style="text-align:center;">
-										<div class="section-title" style="text-align:center;">Genes</div>
-									</p:column>
-								</p:row>
-								
-								<p:row>
-									<p:column>
-										<h:outputText value="Select species of interest: " />
-									</p:column>
-									<p:column>
-										<p:selectOneMenu id="selectspecies" value="#{geneSearchView.speciesId}">
-											<p:ajax event="change" process="@this"/>
-											<f:selectItems value="#{cache.speciesList}" var="spec"
-												itemValue="#{spec.id}" itemLabel="#{spec.commonName}" />
-										</p:selectOneMenu>
-									</p:column>
-									<p:column rowspan="2">
-										<p:commandButton type="submit" value="Continue" action="#{geneSearchView.go}"/>
-									</p:column>
-								</p:row>
-								
-								<p:row>
-									<p:column>
-										<h:outputText value="Enter a gene symbol: &nbsp;" />
-									</p:column>
-									<p:column>
-										<p:autoComplete id="geneInput" value="#{geneSearchView.query}"
-											completeMethod="#{geneSearchView.complete}" queryDelay="600"
-											minQueryLength="2" forceSelection="true" maxResults="10"
-											label="ID"
-											emptyMessage="No gene suggestions available, please try again."
-											var="gene" itemLabel="#{gene.selectedGene.symbol}" itemValue="#{gene.selectedGene.symbol}"
-											groupBy="#{gene.type.label}"/>
-									</p:column>
-								</p:row>
-								
-								<p:row>
-									<p:column colspan="3">
-										<p:separator/>
-									</p:column>
-								</p:row>
-								
-								<p:row>
-									<p:column colspan="3" style="text-align:center;">
-										<div class="section-title" style="text-align:center;">Gene Ontology Terms</div>
-									</p:column>
-								</p:row>
-								
-								<p:row>
-									<p:column>
-										<h:outputText value="Enter a GO Term ID or Name: &nbsp;" />
-									</p:column>
-									<p:column>
-										<p:autoComplete value="#{termSearchView.query}"
-											completeMethod="#{termSearchView.complete}" queryDelay="600"
-											minQueryLength="2" forceSelection="true" maxResults="10"
-											label="ID" panelStyleClass="autocomplete-largepanel"
-											emptyMessage="No term suggestions available, please try again."
-											var="term" itemLabel="#{term.goId}" itemValue="#{term.goId}">
-								            <p:column>
-								                <h:outputText value="#{term.goId} - #{term.name}" />
-								            </p:column>
-								            </p:autoComplete>
-									</p:column>
-									<p:column>
-										<p:commandButton type="submit" value="Continue" action="#{termSearchView.go}"/>
-									</p:column>
-								</p:row>
-								</h:form>
-								<p:row>
-									<p:column colspan="3">
-										<p:separator/>
-									</p:column>
-								</p:row>
-								
-								<p:row>
-									<p:column colspan="3" style="text-align:center;">
-										<div class="section-title" style="text-align:center;">Enrichment</div>
-									</p:column>
-								</p:row>
-								
-								<p:row>
-									<p:column colspan="3" style="text-align:center;">
-										<p:link value="Explore the stability and reliability of your GO Enrichment hit lists!" outcome="enrichment.xhtml" />
-									</p:column>
-								</p:row>
-									
-									
-									
-								</p:panelGrid>
-								
-								
-								
-							<!-- End of the FUNCTIONALITY CONTENT -->
-						</div>
-					</div>
-				
-				</div>
-				<div class="ui-grid-col-2">
-					<div class="section">
-
-						<div class="section-title">Most Popular Gene Searches</div>
-
-						<div class="nice-list">
-
-							<p:dataList value="#{statsService.popularGenes}" var="gene"
-								type="ordered">  
-		                #{gene.symbol} [#{gene.species.scientificName}]  
-		              </p:dataList>
-
-						</div>
-
-					</div>
-					<div class="section">
-
-						<div class="section-title">Most Popular Term Searches</div>
-
-						<div class="nice-list">
-
-							<p:dataList value="#{statsService.popularTerms}" var="term"
-								type="ordered">  
-		                <span title="#{term.name}">#{term.goId} [#{of:abbreviate(term.name, 15)}]</span>
-		              </p:dataList>
-
-						</div>
-
-					</div>
-				</div>
-			</div>
-		</div>
-		 </div>
+            <div class="ui-grid ui-grid-responsive" style="margin-top:50px;">
 
 
-	<div class="push"></div>
+                <div class="ui-grid-row">
+                    <div class="ui-grid-col-2">
+                        <div class="section">
 
-	</div>
+                            <div class="section-title">Examples</div>
 
-	<!-- This is the end of the two main columns -->
+                            <p:lightBox styleClass="imagebox">
+                                <h:outputLink value="/gotrack/javax.faces.resource/top_25.png?ln=img"
+                                              title="Enrichment Top 25">
+                                    <h:graphicImage library="img" width="100" height="56" name="top_25.png"/>
+                                </h:outputLink>
 
-	<div id="footer">
-		<div class="center" id="footer-left">
-			<p>
-				&copy; Michael Smith Laboratories, 2016
-				<h:link value="Terms and Conditions" outcome="terms.xhtml" />
-			</p>
-		</div>
-	</div>
+                                <f:facet name="inline">
+                                    <h:graphicImage library="img" width="900" name="top_25.png"/>
+                                </f:facet>
+                            </p:lightBox>
+                            <p:lightBox styleClass="imagebox">
+                                <h:outputLink value="/gotrack/javax.faces.resource/current_similarity.png?ln=img"
+                                              title="Similarity Analysis">
+                                    <h:graphicImage library="img" width="100" height="56"
+                                                    name="current_similarity.png"/>
+                                </h:outputLink>
+
+                                <f:facet name="inline">
+                                    <h:graphicImage library="img" width="900" name="current_similarity.png"/>
+                                </f:facet>
+                            </p:lightBox>
+                            <p:lightBox styleClass="imagebox">
+                                <h:outputLink value="/gotrack/javax.faces.resource/RB1-Details.png?ln=img"
+                                              title="Gene Tracking Details">
+                                    <h:graphicImage library="img" width="100" height="56" name="RB1-Details.png"/>
+                                </h:outputLink>
+
+                                <f:facet name="inline">
+                                    <h:graphicImage library="img" width="900" name="RB1-Details.png"/>
+                                </f:facet>
+                            </p:lightBox>
+                            <p:lightBox styleClass="imagebox">
+                                <h:outputLink value="/gotrack/javax.faces.resource/FOXP2-Evidence.png?ln=img"
+                                              title="Gene Tracking Evidence">
+                                    <h:graphicImage library="img" width="100" height="56" name="FOXP2-Evidence.png"/>
+                                </h:outputLink>
+
+                                <f:facet name="inline">
+                                    <h:graphicImage library="img" width="900" name="FOXP2-Evidence.png"/>
+                                </f:facet>
+                            </p:lightBox>
+                        </div>
+                    </div>
+                    <div class="ui-grid-col-8">
+                        <div class="section" style="width:50%;margin: 0 auto;"/>
+
+                        <div class="post">
+                            <div class="post-body">
+
+                                <!-- PUT THE ACTUAL CONTENT -->
+
+
+                                <p:panelGrid style="border:none;margin:0 auto;">
+                                    <h:form>
+
+
+                                        <p:row>
+                                            <p:column colspan="3" style="text-align:center;">
+                                                <div class="section-title" style="text-align:center;">Genes</div>
+                                            </p:column>
+                                        </p:row>
+
+                                        <p:row>
+                                            <p:column>
+                                                <h:outputText value="Select species of interest: "/>
+                                            </p:column>
+                                            <p:column>
+                                                <p:selectOneMenu id="selectspecies" value="#{geneSearchView.species}"
+                                                                 converter="speciesConverter">
+                                                    <p:ajax event="change" process="@this"/>
+                                                    <f:selectItems value="#{cache.speciesList}" var="spec"
+                                                                   itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
+                                                </p:selectOneMenu>
+                                            </p:column>
+                                            <p:column rowspan="2">
+                                                <p:commandButton type="submit" value="Continue"
+                                                                 action="#{geneSearchView.go}"/>
+                                            </p:column>
+                                        </p:row>
+
+                                        <p:row>
+                                            <p:column>
+                                                <h:outputText value="Enter a gene symbol: &nbsp;"/>
+                                            </p:column>
+                                            <p:column>
+                                                <p:autoComplete id="geneInput" value="#{geneSearchView.queryGene}"
+                                                                completeMethod="#{geneSearchView.complete}"
+                                                                queryDelay="600"
+                                                                minQueryLength="2" forceSelection="true" maxResults="10"
+                                                                label="ID"
+                                                                emptyMessage="No gene suggestions available, please try again."
+                                                                converter="geneConverter"
+                                                                var="gene"
+                                                                itemLabel="#{gene.selectedGene.symbol}"
+                                                                itemValue="#{gene.selectedGene}"
+                                                                groupBy="#{gene.level.label}">
+                                                    <p:column>
+                                                        <h:outputText
+                                                                value="#{gene.selectedGene.symbol} - #{gene.selectedGene.name}"/>
+                                                    </p:column>
+                                                </p:autoComplete>
+                                            </p:column>
+                                        </p:row>
+
+                                        <p:row>
+                                            <p:column colspan="3">
+                                                <p:separator/>
+                                            </p:column>
+                                        </p:row>
+
+                                        <p:row>
+                                            <p:column colspan="3" style="text-align:center;">
+                                                <div class="section-title"
+                                                     style="text-align:center;">Gene Ontology Terms
+                                                </div>
+                                            </p:column>
+                                        </p:row>
+
+                                        <p:row>
+                                            <p:column>
+                                                <h:outputText value="Enter a GO Term ID or Name: &nbsp;"/>
+                                            </p:column>
+                                            <p:column>
+                                                <p:autoComplete value="#{termSearchView.query}"
+                                                                completeMethod="#{termSearchView.complete}"
+                                                                queryDelay="600"
+                                                                minQueryLength="2" forceSelection="true" maxResults="10"
+                                                                label="ID" panelStyleClass="autocomplete-largepanel"
+                                                                emptyMessage="No term suggestions available, please try again."
+                                                                var="term" itemLabel="#{term.goId}"
+                                                                itemValue="#{term.goId}">
+                                                    <p:column>
+                                                        <h:outputText value="#{term.goId} - #{term.name}"/>
+                                                    </p:column>
+                                                </p:autoComplete>
+                                            </p:column>
+                                            <p:column>
+                                                <p:commandButton type="submit" value="Continue"
+                                                                 action="#{termSearchView.go}"/>
+                                            </p:column>
+                                        </p:row>
+                                    </h:form>
+                                    <p:row>
+                                        <p:column colspan="3">
+                                            <p:separator/>
+                                        </p:column>
+                                    </p:row>
+
+                                    <p:row>
+                                        <p:column colspan="3" style="text-align:center;">
+                                            <div class="section-title" style="text-align:center;">Enrichment</div>
+                                        </p:column>
+                                    </p:row>
+
+                                    <p:row>
+                                        <p:column colspan="3" style="text-align:center;">
+                                            <p:link value="Explore the stability and reliability of your GO Enrichment hit lists!"
+                                                    outcome="enrichment.xhtml"/>
+                                        </p:column>
+                                    </p:row>
+
+
+                                </p:panelGrid>
+
+
+                                <!-- End of the FUNCTIONALITY CONTENT -->
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="ui-grid-col-2">
+                        <div class="section">
+
+                            <div class="section-title">Most Popular Gene Searches</div>
+
+                            <div class="nice-list">
+
+                                <p:dataList value="#{statsService.popularGenes}" var="gene"
+                                            type="ordered">
+                                    #{gene.symbol} [#{gene.species.scientificName}]
+                                </p:dataList>
+
+                            </div>
+
+                        </div>
+                        <div class="section">
+
+                            <div class="section-title">Most Popular Term Searches</div>
+
+                            <div class="nice-list">
+
+                                <p:dataList value="#{statsService.popularTerms}" var="term"
+                                            type="ordered">
+                                    <span title="#{term.name}">#{term.goId} [#{of:abbreviate(term.name, 15)}]</span>
+                                </p:dataList>
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div class="push"></div>
+
+    </div>
+
+    <!-- This is the end of the two main columns -->
+
+    <div id="footer">
+        <div class="center" id="footer-left">
+            <p>
+                &copy; Michael Smith Laboratories, 2016
+                <h:link value="Terms and Conditions" outcome="terms.xhtml"/>
+            </p>
+        </div>
+    </div>
 </h:body>
 </html>

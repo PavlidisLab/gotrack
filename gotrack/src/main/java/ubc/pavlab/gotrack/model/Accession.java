@@ -19,10 +19,7 @@
 
 package ubc.pavlab.gotrack.model;
 
-import java.util.Collection;
-
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
+import ubc.pavlab.gotrack.model.dto.AccessionDTO;
 
 /**
  * Represents a primary accession of the most current edition.
@@ -32,28 +29,33 @@ import com.google.common.collect.ImmutableSet.Builder;
  */
 public final class Accession {
 
-    private final int geneId;
+    private final int id;
     private final String accession;
     private final Dataset dataset; // Swiss-Prot vs TrEMBL
-    private final Collection<String> secondary; // All accessions that now represent this primary accession
 
-    private Accession( AccessionBuilder builder ) {
-        this.geneId = builder.geneId;
-        this.accession = builder.accession;
-        this.dataset = builder.dataset;
-        this.secondary = builder.secondary.build();
+    public Accession( AccessionDTO dto ) {
+        this.id = dto.getId();
+        this.accession = dto.getAccession();
+
+        switch (dto.getSubset()) {
+            case "Swiss-Prot":
+                this.dataset = Dataset.SwissProt;
+                break;
+            case "TrEMBL":
+                this.dataset = Dataset.TrEMBL;
+                break;
+            default:
+                this.dataset = Dataset.Other;
+                break;
+        }
     }
 
-    public int getGeneId() {
-        return geneId;
+    public int getId() {
+        return id;
     }
 
     public String getAccession() {
         return accession;
-    }
-
-    public Collection<String> getSecondary() {
-        return secondary;
     }
 
     public Dataset getDataset() {
@@ -83,32 +85,6 @@ public final class Accession {
             if ( other.accession != null ) return false;
         } else if ( !accession.equals( other.accession ) ) return false;
         return true;
-    }
-
-    public static class AccessionBuilder {
-        private final int geneId;
-        private final String accession;
-        private final Dataset dataset;
-        private Builder<String> secondary = new ImmutableSet.Builder<String>();
-
-        public AccessionBuilder( int geneId, String accession, boolean sp ) {
-            this.geneId = geneId;
-            this.accession = accession;
-            if ( sp ) {
-                this.dataset = Dataset.SwissProt;
-            } else {
-                this.dataset = Dataset.TrEMBL;
-            }
-        }
-
-        public AccessionBuilder secondary( String sec ) {
-            this.secondary.add( sec );
-            return this;
-        }
-
-        public Accession build() {
-            return new Accession( this );
-        }
     }
 
 }

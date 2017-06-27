@@ -19,17 +19,17 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * Represents a population of entities with associated properties. Needs to make the ability to count the number of
@@ -47,8 +47,8 @@ public abstract class Population<T, G> {
         return new StandardPopulation<T, G>( annotationMap );
     }
 
-    public static CachedGOPopulation cachedGOPopulation( Cache cache, Integer speciesId, Edition edition ) {
-        return new CachedGOPopulation( cache, speciesId, edition );
+    public static CachedGOPopulation cachedGOPopulation( Cache cache, Species species, Edition edition ) {
+        return new CachedGOPopulation( cache, species, edition );
     }
 
 }
@@ -113,23 +113,23 @@ class StandardPopulation<T, G> extends Population<T, G> {
  * Cached Implementation of Gene population annotated with GeneOntology based on GOTrack's Cache Bean.
  */
 class CachedGOPopulation extends CachedPopulation<Cache, GeneOntologyTerm, Gene> {
-    private Integer speciesId;
+    private Species species;
     private Edition edition;
 
-    public CachedGOPopulation( Cache cache, Integer speciesId, Edition edition ) {
+    public CachedGOPopulation( Cache cache, Species species, Edition edition ) {
         super( cache );
         this.edition = edition;
-        this.speciesId = speciesId;
+        this.species = species;
     }
 
     @Override
     public Integer countProperty( GeneOntologyTerm t ) {
-        return cache.getInferredAnnotationCount( speciesId, edition, t );
+        return cache.getInferredAnnotationCount( species, edition, t );
     }
 
     @Override
     public int size() {
-        return cache.getGeneCount( speciesId, edition );
+        return cache.getGeneCount( species, edition );
     }
 
 };

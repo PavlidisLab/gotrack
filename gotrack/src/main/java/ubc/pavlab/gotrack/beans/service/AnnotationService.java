@@ -19,41 +19,25 @@
 
 package ubc.pavlab.gotrack.beans.service;
 
-import java.io.Serializable;
-import java.sql.Date;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Multimap;
+import org.apache.log4j.Logger;
+import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.beans.DAOFactoryBean;
+import ubc.pavlab.gotrack.dao.AnnotationDAO;
+import ubc.pavlab.gotrack.model.*;
+import ubc.pavlab.gotrack.model.dto.*;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import org.apache.log4j.Logger;
-
-import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.Multimap;
-
-import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.beans.DAOFactoryBean;
-import ubc.pavlab.gotrack.dao.AnnotationDAO;
-import ubc.pavlab.gotrack.model.Annotation;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Evidence;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
-import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
-import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
-import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
-import ubc.pavlab.gotrack.model.dto.SimpleAnnotationDTO;
-import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import java.io.Serializable;
+import java.sql.Date;
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Service layer on top of annotation DAO. Contains methods for fetching information related to annotations and counts
@@ -92,25 +76,38 @@ public class AnnotationService implements Serializable {
     public void init() {
         log.info( "AnnotationService init" );
         annotationDAO = daoFactoryBean.getGotrack().getAnnotationDAO();
-
     }
 
     /**
      * Method used to fetch data from database related to the GeneView
-     * 
-     * @param species species
+     *
      * @param g gene
      * @return Sets of annotations for each term in each edition related to this gene
      */
-    public Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> fetchTrackData( Species species, Gene g ) {
+    public Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> fetchTrackData( Gene g ) {
+        return fetchTrackData( g, null, null );
+    }
 
-        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> trackData = new LinkedHashMap<>();
+    /**
+     * Method used to fetch data from database related to the GeneView where  @minimum <= edition <= @maximum
+     *
+     * @param g gene
+     * @return Sets of annotations for each term in each edition related to this gene
+     */
+    private Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> fetchTrackData( Gene g, Edition min, Edition max ) {
+        if ( g == null ) {
+            return null;
+        }
 
-        List<AnnotationDTO> resultset = annotationDAO.track( g );
+        int minEdition = min == null ? cache.getGlobalMinEdition( g.getSpecies() ).getEdition() : min.getEdition();
+        int maxEdition = max == null ? cache.getCurrentEditions( g.getSpecies() ).getEdition() : max.getEdition();
 
+        List<AnnotationDTO> resultset = annotationDAO.fullAnnotationRangeEditions( g, minEdition, maxEdition );
+
+        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> trackData = Maps.newLinkedHashMap();
         for ( AnnotationDTO dto : resultset ) {
 
-            Edition ed = cache.getEdition( species.getId(), dto.getEdition() );
+            Edition ed = cache.getEdition( g.getSpecies(), dto.getEdition() ); //TODO: current-edition-refactor
 
             if ( ed == null ) {
                 log.warn( "Edition (" + dto.getEdition() + ") not found!" );
@@ -147,20 +144,28 @@ public class AnnotationService implements Serializable {
             annotationSet.add( new Annotation( dto.getQualifier(), evidence, dto.getReference() ) );
 
         }
-
         return trackData;
-
     }
 
     /**
      * Method used to fetch data from database related to the EnrichmentView
-     * 
-     * @param speciesId species id
+     *
+     * @param species species
      * @param genes gene
      * @return Sets of terms directly annotated to each gene in each edition
      */
-    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> fetchEnrichmentData( Integer speciesId,
-            Collection<Gene> genes ) {
+    public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> fetchEnrichmentData( Species species, Collection<Gene> genes ) {
+        return fetchEnrichmentData( species, genes, null, null );
+    }
+
+    /**
+     * Method used to fetch data from database related to the EnrichmentView where @minimum <= edition <= @maximum
+     *
+     * @param species species
+     * @param genes gene
+     * @return Sets of terms directly annotated to each gene in each edition
+     */
+    private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> fetchEnrichmentData( Species species, Collection<Gene> genes, Edition min, Edition max ) {
         Set<Gene> geneSet = new HashSet<>( genes );
 
         // Used to map strings back to genes, small efficiency boost as we don't have to hit gene cache in Cache service
@@ -169,7 +174,10 @@ public class AnnotationService implements Serializable {
             givenGenes.put( g.getId(), g );
         }
 
-        List<EnrichmentDTO> resultset = annotationDAO.enrich( geneSet );
+        int minEdition = min == null ? cache.getGlobalMinEdition( species ).getEdition() : min.getEdition();
+        int maxEdition = max == null ? cache.getCurrentEditions( species ).getEdition() : max.getEdition();
+
+        List<EnrichmentDTO> resultset = annotationDAO.simpleAnnotationRangeEditions( geneSet, minEdition, maxEdition );
 
         Multimap<String, EnrichmentDTO> missingTerms = ArrayListMultimap.create();
 
@@ -184,7 +192,7 @@ public class AnnotationService implements Serializable {
                 // g = new Gene( symbol, species );
             }
 
-            Edition ed = cache.getEdition( speciesId, enrichmentDTO.getEdition() );
+            Edition ed = cache.getEdition( species, enrichmentDTO.getEdition() ); //TODO: current-edition-refactor
 
             GeneOntologyTerm go = cache.getTerm( ed, enrichmentDTO.getGoId() );
 
@@ -259,7 +267,7 @@ public class AnnotationService implements Serializable {
                     // g = new Gene( symbol, species );
                 }
 
-                Edition ed = cache.getEdition( speciesId, enrichmentDTO.getEdition() );
+                Edition ed = cache.getEdition( species, enrichmentDTO.getEdition() ); //TODO: current-edition-refactor
 
                 GeneOntologyTerm go = new GeneOntologyTerm( entry.getValue() );
 
@@ -289,12 +297,10 @@ public class AnnotationService implements Serializable {
      * Method used to fetch data from database related to the Enrichment for a single edition
      * 
      * @param ed edition
-     * @param speciesId species id
      * @param genes gene
      * @return Sets of terms directly annotated to each gene in each edition
      */
-    public Map<Gene, Set<GeneOntologyTerm>> fetchSingleEnrichmentData( Edition ed, Integer speciesId,
-            Collection<Gene> genes ) {
+    public Map<Gene, Set<GeneOntologyTerm>> fetchSingleEnrichmentData( Edition ed, Collection<Gene> genes ) {
         Set<Gene> geneSet = new HashSet<>( genes );
 
         // Used to map strings back to genes, small efficiency boost as we don't have to hit gene cache in Cache service
@@ -303,7 +309,7 @@ public class AnnotationService implements Serializable {
             givenGenes.put( g.getId(), g );
         }
 
-        List<SimpleAnnotationDTO> resultset = annotationDAO.enrichSingleEdition( ed, geneSet );
+        List<SimpleAnnotationDTO> resultset = annotationDAO.simpleAnnotationSingleEdition( ed, geneSet );
 
         Multimap<String, SimpleAnnotationDTO> missingTerms = ArrayListMultimap.create();
 
@@ -349,23 +355,37 @@ public class AnnotationService implements Serializable {
 
     /**
      * Method used to get annotation count grouped by evidence category for a term.
-     * 
+     *
      * @param t term
      * @return Counts annotations for each evidence category grouped by date
      */
     public Map<String, Map<Date, Integer>> fetchCategoryCounts( GeneOntologyTerm t ) {
-        return fetchCategoryCounts( t.getGoId() );
+        return fetchCategoryCounts( t.getGoId(), null, null );
     }
 
     /**
-     * Method used to get annotation count grouped by evidence category for a term.
+     * Method used to get annotation count grouped by evidence category for a term between two dates
+     * 
+     * @param t term
+     * @return Counts annotations for each evidence category grouped by date
+     */
+    private Map<String, Map<Date, Integer>> fetchCategoryCounts( GeneOntologyTerm t, Date min, Date max ) {
+        return fetchCategoryCounts( t.getGoId(), min, max );
+    }
+
+    /**
+     * Method used to get annotation count grouped by evidence category for a term between two dates
      * 
      * @param goId term
      * @return Counts annotations for each evidence category grouped by date
      */
-    public Map<String, Map<Date, Integer>> fetchCategoryCounts( String goId ) {
+    private Map<String, Map<Date, Integer>> fetchCategoryCounts( String goId, Date min, Date max ) {
         Map<String, Map<Date, Integer>> results = new LinkedHashMap<>();
-        List<CategoryCountDTO> resultset = annotationDAO.categoryCounts( goId );
+
+        Date startDate = min == null ? cache.getGlobalMinGOEdition().getDate() : min;
+        Date stopDate = max == null ? cache.getGlobalMaxGOEdition().getDate() : max;
+
+        List<CategoryCountDTO> resultset = annotationDAO.categoryCountsRangeDates( goId, startDate, stopDate );
         for ( CategoryCountDTO dto : resultset ) {
             Map<Date, Integer> m2 = results.get( dto.getCategory() );
             if ( m2 == null ) {
@@ -379,8 +399,8 @@ public class AnnotationService implements Serializable {
 
     /**
      * This is not used as we are currently doing this with cached data.
-     * 
-     * @param goId term
+     *
+     * @param t term
      * @return Counts of genes that are directly annotated with this term grouped by species and edition.
      */
     public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( GeneOntologyTerm t ) {
@@ -389,13 +409,13 @@ public class AnnotationService implements Serializable {
 
     /**
      * This is not used as we are currently doing this with cached data.
-     * 
-     * @param t term
+     *
+     * @param goId term
      * @return Counts of genes that are directly annotated with this term grouped by species and edition.
      */
     public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( String goId ) {
         Map<Integer, Map<Edition, Integer>> results = new HashMap<>();
-        List<DirectAnnotationCountDTO> resultset = annotationDAO.directGeneCounts( goId );
+        List<DirectAnnotationCountDTO> resultset = annotationDAO.directGeneCountsAllEditions( goId );
         for ( DirectAnnotationCountDTO dto : resultset ) {
             Map<Edition, Integer> m2 = results.get( dto.getSpecies() );
             if ( m2 == null ) {

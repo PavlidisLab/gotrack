@@ -17,31 +17,28 @@
  *
  */
 
-package ubc.pavlab.gotrack.model;
+package ubc.pavlab.gotrack.model.dto;
 
 /**
- * Represents the section of UniProtKB to which the annotation belongs
- * 
- * UniProtKB/Swiss-Prot which is manually annotated and is reviewed and
- * 
- * UniProtKB/TrEMBL which is automatically annotated and is not reviewed.
- * 
+ * Data Transfer Object for pre-processing of aggregate data in cache start-up.
+ *
  * @author mjacobson
  * @version $Id$
  */
+public final class SynonymDTO {
+    private final int id;
+    private final String synonym;
 
-public enum Dataset {
-
-    SwissProt( "SP" ), TrEMBL( "TrEMBL" ), Other( "Other" );
-
-    private String label;
-
-    private Dataset( String label ) {
-        this.label = label;
+    public SynonymDTO( int id, String synonym ) {
+        this.id = id;
+        this.synonym = synonym;
     }
 
-    public String getLabel() {
-        return label;
+    public int getId() {
+        return id;
     }
 
+    public String getSynonym() {
+        return synonym;
+    }
 }

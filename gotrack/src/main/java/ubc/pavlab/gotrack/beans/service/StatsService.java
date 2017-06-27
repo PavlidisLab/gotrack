@@ -19,27 +19,8 @@
 
 package ubc.pavlab.gotrack.beans.service;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.inject.Named;
-
+import com.google.common.collect.*;
 import org.apache.log4j.Logger;
-
-import com.google.common.collect.ConcurrentHashMultiset;
-import com.google.common.collect.ImmutableMultiset;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Multiset.Entry;
-import com.google.common.collect.Multisets;
-
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.beans.DAOFactoryBean;
 import ubc.pavlab.gotrack.beans.SettingsCache;
@@ -48,6 +29,16 @@ import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
 import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
+import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Service layer on top of stats DAO. Contains methods for fetching information related to the tracking of
@@ -81,7 +72,7 @@ public class StatsService implements Serializable {
     private Multiset<Gene> trackPopularGenes = ConcurrentHashMultiset.create();
     private Multiset<GeneOntologyTerm> trackPopularTerms = ConcurrentHashMultiset.create();
 
-    private List<String> topMultifunc = new ArrayList<String>();
+    private List<String> topMultifunc = new ArrayList<>();
 
     public StatsService() {
         log.info( "StatsService created" );
@@ -92,8 +83,12 @@ public class StatsService implements Serializable {
         log.info( "StatsService init" );
         statsDAO = daoFactoryBean.getGotrack().getStatsDAO();
         for ( GeneStatsDTO dto : statsDAO.listGenes() ) {
-            trackPopularGenes.setCount( cache.getCurrentGene( dto.getSpeciesId(), dto.getSymbol().toUpperCase() ),
-                    dto.getCount() );
+            Gene gene = cache.getCurrentGene( dto.getAccession() );
+            if ( gene == null ) {
+                log.warn( "Tracked gene no longer exists: " + dto.getAccession() + " - " + dto.getSymbol() );
+            } else {
+                trackPopularGenes.setCount( gene, dto.getCount() );
+            }
         }
 
         for ( TermStatsDTO dto : statsDAO.listTerms() ) {
@@ -102,7 +97,7 @@ public class StatsService implements Serializable {
             trackPopularTerms.setCount( t, dto.getCount() );
         }
 
-        topMultifunc.addAll( Arrays.asList( new String[] { "One", "Two", "Three", "Four" } ) );
+        topMultifunc.addAll( Arrays.asList( "One", "Two", "Three", "Four" ) );
 
     }
 
@@ -115,30 +110,17 @@ public class StatsService implements Serializable {
     }
 
     public List<Gene> getPopularGenes() {
-        List<Gene> tmp = new ArrayList<>();
-        ImmutableMultiset<Gene> a = Multisets.copyHighestCountFirst( trackPopularGenes );
-        for ( Iterator<Entry<Gene>> iterator = Iterables.limit( a.entrySet(), 5 ).iterator(); iterator.hasNext(); ) {
-            tmp.add( iterator.next().getElement() );
-
-        }
-        return tmp;
+        return Lists.newArrayList( Iterables.limit( Multisets.copyHighestCountFirst( trackPopularGenes ).elementSet(), 5 ) );
     }
 
     public List<GeneOntologyTerm> getPopularTerms() {
-        List<GeneOntologyTerm> tmp = new ArrayList<>();
-        ImmutableMultiset<GeneOntologyTerm> a = Multisets.copyHighestCountFirst( trackPopularTerms );
-        for ( Iterator<Entry<GeneOntologyTerm>> iterator = Iterables.limit( a.entrySet(), 5 ).iterator(); iterator
-                .hasNext(); ) {
-            tmp.add( iterator.next().getElement() );
-
-        }
-        return tmp;
+        return Lists.newArrayList( Iterables.limit( Multisets.copyHighestCountFirst( trackPopularTerms ).elementSet(), 5 ) );
     }
 
     public void countGeneHit( Gene g ) {
         trackPopularGenes.add( g );
         if ( settingsCache.isPopularTableUpdateable() ) {
-            statsDAO.incrementGeneHit( g.getSpecies().getId(), g.getSymbol() );
+            statsDAO.incrementGeneHit( g.getSpecies().getId(), g.getAccession().getAccession(), g.getSymbol() );
         }
         // log.debug( "Hits Map: " + trackPopularGenes );
     }

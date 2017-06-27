@@ -19,34 +19,22 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Random;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.mockito.Mockito;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import gnu.trove.map.hash.TObjectDoubleHashMap;
+import org.apache.log4j.Logger;
+import org.hamcrest.Matchers;
+import org.junit.*;
+import org.mockito.Mockito;
 import ubc.pavlab.gotrack.BaseTest;
-import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.hashkey.HyperUCFKey;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * TODO Document Me
@@ -81,8 +69,8 @@ public class EnrichmentTest extends BaseTest {
         List<Gene> genes = Lists.newArrayList();
 
         for ( int i = 1; i < n + 1; i++ ) {
-            genes.add( new Gene.GeneBuilder( i, "Gene" + String.format( "%02d", i ),
-                    new Species( 7, "Human", "", 9606, null ), Collections.<Accession> emptySet() ).build() );
+            genes.add( new Gene.GeneBuilder( i, "Gene" + String.format( "%02d", i ), "",
+                    new Species( 7, "Human", "", 9606, null ), null ).build() );
         }
         return genes;
     }
