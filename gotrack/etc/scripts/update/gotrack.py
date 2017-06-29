@@ -621,7 +621,7 @@ class GOTrack:
         sql_template_swap = "rename table {%s} TO {previous_pre}{%s}, {staging_pre}{%s} to {%s}"
         for table in self.staging_tables:
             sql_drop = sql_template_drop % table
-            sql_swap = sql_template_swap % (table,) * 4
+            sql_swap = sql_template_swap % ((table,) * 4)
             cursor.execute(sql_drop.format(**self.tables))
             cursor.execute(sql_swap.format(**self.tables))
 
