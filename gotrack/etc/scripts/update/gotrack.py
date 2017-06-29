@@ -191,7 +191,7 @@ class GOTrack:
     def __init__(self, tables=None, concurrent_insertions=1000, verbose=False, **kwargs):
         self.creds = kwargs
         self.tables = {'go_edition':    'go_edition',
-                       'edition':       'edition_tmp',
+                       'edition':       'edition',
                        'species':       'species',
                        'go_term':       'go_term',
                        'go_adjacency':  'go_adjacency',
@@ -199,7 +199,7 @@ class GOTrack:
                        'accession':     'accession',
                        'synonyms':      'synonyms',
                        'annotation':    'annotation',
-                       'sec_ac':        'sec_ac_tmp',
+                       'sec_ac':        'sec_ac',
                        'go_definition': 'go_definition',
 
                        'pp_current_edition':       'pp_current_edition',
@@ -444,10 +444,24 @@ class GOTrack:
         cursor.nextset()
         return go_edition_id_fk, go_edition_date
 
-    def _insert_new_edition(self, cursor, edition_id, species_id, date, go_edition_id):
+    def _fetch_or_create_goa_release_for_date(self, cursor, date):
+        sql = "select distinct goa_release from {edition} where date between %s - INTERVAL 1 DAY and " \
+              "%s + INTERVAL 1 DAY order by goa_release ASC LIMIT 1;".format(**self.tables)
+        cursor.execute(sql, [date.strftime('%Y-%m-%d'), date.strftime('%Y-%m-%d')])
+        goa_release = cursor.fetchone()
+        cursor.nextset()
+        if not goa_release:
+            sql = "select max(goa_release) + 1 from {edition}".format(**self.tables)
+            cursor.execute(sql)
+            goa_release = cursor.fetchone()
+            cursor.nextset()
+            log.info("Creating new GOA release: %s", goa_release)
+        return goa_release
+
+    def _insert_new_edition(self, cursor, edition_id, species_id, date, goa_release, go_edition_id):
         log.info("Insert new edition")
-        cols = ["edition", "species_id", "date", "go_edition_id_fk"]
-        data = [[edition_id, species_id, date.strftime('%Y-%m-%d'), go_edition_id]]
+        cols = ["edition", "species_id", "date", "goa_release", "go_edition_id_fk"]
+        data = [[edition_id, species_id, date.strftime('%Y-%m-%d'), goa_release, go_edition_id]]
         self.insert_many(self.tables['edition'], cols, data, cursor)
 
     def _insert_gpi_to_accession(self, cursor, data):
@@ -480,7 +494,13 @@ class GOTrack:
         else:
             log.info("Linked date: %s to GO Release: %s", date.strftime('%Y-%m-%d'), go_edition_date)
 
-        self._insert_new_edition(cursor, edition_id, species_id, date, go_edition_id)
+        # See if another edition from this release is in the database.
+        # We determine this by looking for other editions that were released within
+        # one day of this (pick the smallest if more than one). If this release
+        # doesn't yet exist, create a new one by incrementing the highest existing edition.
+        goa_release = self._fetch_or_create_goa_release_for_date(cursor, date)
+
+        self._insert_new_edition(cursor, edition_id, species_id, date, goa_release, go_edition_id)
 
         synonyms = []
 
@@ -521,6 +541,22 @@ class GOTrack:
 
         self._insert_gpa_to_annotation(cursor, map_gpa_data(gpa_data))
 
+    # Pre-process section
+
+    @transactional
+    def requires_proprocessing(self, cursor=None):
+        requires_proprocessing = False
+        cursor.execute("select species_id, max(edition) edition from {edition} "
+                       "group by species_id".format(**self.tables))
+        edition_max = {x[0]: x[1] for x in cursor.fetchall()}
+
+        cursor.execute("select species_id, edition from {pp_current_edition}".format(**self.tables))
+        for r in cursor.fetchall():
+            # If returning early remember to move the cursor to the next set
+            requires_proprocessing = requires_proprocessing or (r[1] != edition_max[r[0]])
+
+        return requires_proprocessing
+
     @transactional
     def update_secondary_accession_table(self, data, cursor=None):
         sql = "DROP TABLE IF EXISTS {staging_pre}{sec_ac}".format(**self.tables)
@@ -547,8 +583,6 @@ class GOTrack:
         sql = "RENAME TABLE {staging_pre}{sec_ac} TO {sec_ac}".format(**self.tables)
         cursor.execute(sql)
 
-    # Pre-process section
-
     @transactional
     def create_staging_tables(self, cursor=None):
         sql_template_drop = "DROP TABLE IF EXISTS {staging_pre}{%s}"
@@ -559,8 +593,30 @@ class GOTrack:
             cursor.execute(sql_drop.format(**self.tables))
             cursor.execute(sql_create.format(**self.tables))
 
+        # Add missing foreign keys
+        sql_fk = "alter table {staging_pre}{pp_current_edition} add foreign key " \
+                 "ppcured_fk (species_id, edition) references {edition}(species_id, edition)"
+        cursor.execute(sql_fk.format(**self.tables))
+
+        sql_fk = "alter table {staging_pre}{pp_accession_history} add foreign key " \
+                 "acc_hist_acfk (accession_id) references {accession}(id)"
+        cursor.execute(sql_fk.format(**self.tables))
+
+        sql_fk = "alter table {staging_pre}{pp_accession_history} add foreign key " \
+                 "acc_hist_acfk2 (secondary_accession_id) references {accession}(id)"
+        cursor.execute(sql_fk.format(**self.tables))
+
     @transactional
     def push_staging_tables(self, cursor=None):
+        # Check if all staging tables exist
+        log.info("Checking to see if all staging tables exist")
+        sql_template_exist = "SELECT 1 FROM {staging_pre}{%s} LIMIT 1"
+        for table in self.staging_tables:
+            sql_exist = sql_template_exist % table
+            cursor.execute(sql_exist.format(**self.tables))
+            cursor.fetchall()
+
+        log.info("Pushing all staging tables")
         sql_template_drop = "DROP TABLE IF EXISTS {previous_pre}{%s}"
         sql_template_swap = "rename table {%s} TO {previous_pre}{%s}, {staging_pre}{%s} to {%s}"
         for table in self.staging_tables:

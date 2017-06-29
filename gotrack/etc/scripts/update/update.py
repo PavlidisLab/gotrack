@@ -7,7 +7,7 @@ import shutil
 from collections import defaultdict
 import MySQLdb.cursors
 
-from utility import query_yes_no, timeit
+from utility import query_yes_no, timeit, Password
 import parsers
 import gotrack as gtdb
 from model import Ontology
@@ -19,14 +19,9 @@ logging.addLevelName(logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevel
 logging.addLevelName(logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 LOG = logging.getLogger()
 
-CREDS = {'host': 'abe',
-         'user': 'gotrack',
-         'passwd': 'XXXXXX',
-         'db': 'gotrack'
-         }
 
 @timeit
-def main(resource_directory=None, cron=False, no_download=False, force_preprocess=False):
+def main(resource_directory=None, cron=False, no_download=False):
     """ Overview:
         Collect resources
         Display info on missing ones
@@ -155,14 +150,20 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
         data = parsers.process_sec_ac(res.sec_ac)
         gotrack.update_secondary_accession_table(data)
 
-    if cron or query_yes_no("Pre-process database? (Make sure new GO, GOA, and secondary"
-                            "accession data has been imported (Affects tables: '{staging_pre}{pp_current_edition}', "
-                            "'{staging_pre}{pp_accession_history}', '{staging_pre}{pp_edition_aggregates}', "
-                            "'{staging_pre}{pp_go_annotation_counts}')"
-                            .format(**gotrack.tables)):
-        pre_process(gotrack)
+    if gotrack.requires_proprocessing():
+        if cron or query_yes_no("Pre-process required, continue? (Make sure new GO, GOA, and secondary "
+                                "accession data has been imported (Affects tables: '{staging_pre}{pp_current_edition}', "
+                                "'{staging_pre}{pp_accession_history}', '{staging_pre}{pp_edition_aggregates}', "
+                                "'{staging_pre}{pp_go_annotation_counts}')"
+                                .format(**gotrack.tables)):
+            pre_process(gotrack)
+            return True
+        else:
+            LOG.info("Pre-processing skipped")
     else:
-        LOG.info("Pre-processing skipped")
+        LOG.info("Pre-processing not required")
+
+    return False
 
 
 def cleanup(d, cron=False):
@@ -176,7 +177,7 @@ def pre_process(gotrack=None):
     # thus we process to staging tables and swap them with production
     # tables once everything is done
 
-    LOG.info("Preprocessing database...")
+    LOG.info("Pre-processing database...")
 
     gotrack.create_staging_tables()
 
@@ -378,8 +379,20 @@ def jaccard_similarity(s1, s2):
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description='Update GOTrack Database')
-    parser.add_argument('--resources', dest='resources', type=str, required=True, default=None,
+    parser = argparse.ArgumentParser(description='Update GOTrack Database', add_help=False)
+
+    parser.add_argument('--help', action='help', help='show this help message and exit')
+
+    parser.add_argument('-h', dest='host', type=str, required=True, help='DB host')
+
+    parser.add_argument('-u', dest='user', type=str, required=True, help='DB user')
+
+    parser.add_argument('-d', dest='db', type=str, required=True, help='DB name')
+
+    parser.add_argument('-p', action=Password, nargs='?', dest='password', required=True,
+                        help='Ask for DB user password')
+
+    parser.add_argument('--resources', dest='resources', type=str, required=True,
                         help='a folder holding resources to use in the update')
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -403,27 +416,43 @@ if __name__ == '__main__':
                         help='No interactivity mode')
     parser.add_argument('--no-downloads', dest='dl', action='store_true',
                         help='Prevent all downloads')
-    parser.add_argument('--force-pp', dest='force_pp', action='store_true',
-                        help='Force preprocessing of database (regardless of need)')
 
     args = parser.parse_args()
+
+    CREDS = {'host': args.host,
+             'user': args.user,
+             'passwd': args.password,
+             'db': args.db
+             }
+
     if args.meta:
         LOG.info("Host: {host}, db: {db}, user: {user}".format(**CREDS))
         gotrack_db = gtdb.GOTrack(**CREDS)
         LOG.info('Tables: \n%s', "\n".join(sorted([str(table) for table in gotrack_db.tables.iteritems()])))
     elif args.update_push:
         # Update followed by push to production
-        main(args.resources, args.cron, args.dl, args.force_pp)
-        if args.cron or query_yes_no("Push staging to production?"):
-            push_to_production()
+        preprocessed = main(args.resources, args.cron, args.dl)
+        if preprocessed:
+            if args.cron or query_yes_no("Push staging to production?"):
+                push_to_production()
+            else:
+                LOG.info("Push to production skipped")
+        else:
+            LOG.info("Push to production not required: Database was not pre-processed.")
     elif args.push:
         # Push Staging to Production
         push_to_production()
     elif args.process:
         # Update aggregate tables
-        pre_process()
+        gotrack_db = gtdb.GOTrack(**CREDS)
+        if gotrack_db.requires_proprocessing() or \
+                query_yes_no("Database does not require pre-processing, continue anyways?"):
+            gotrack_db = None
+            pre_process()
+        else:
+            LOG.info("Pre-processing skipped")
     elif args.update:
         # Update database
-        main(args.resources, args.cron, args.dl, args.force_pp)
+        main(args.resources, args.cron, args.dl)
     else:
         LOG.error("No goal supplied.")
