@@ -182,8 +182,7 @@
                                                 </p:selectOneMenu>
                                             </p:column>
                                             <p:column rowspan="2">
-                                                <p:commandButton type="submit" value="Continue"
-                                                                 action="#{geneSearchView.go}"/>
+                                                <p:commandButton value="Continue" ajax="false" process="@form" action="#{geneSearchView.go}"/>
                                             </p:column>
                                         </p:row>
 
@@ -244,8 +243,7 @@
                                                 </p:autoComplete>
                                             </p:column>
                                             <p:column>
-                                                <p:commandButton type="submit" value="Continue"
-                                                                 action="#{termSearchView.go}"/>
+                                                <p:commandButton ajax="false" value="Continue" process="@form" action="#{termSearchView.go}"/>
                                             </p:column>
                                         </p:row>
                                     </h:form>
