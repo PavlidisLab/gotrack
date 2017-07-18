@@ -111,6 +111,9 @@ public class Cache implements Serializable {
     // Maps gene id to gene
     private Map<String, Gene> accessionToGene = new ConcurrentHashMap<>();
 
+    // Useful derived constants
+    private ImmutableSet<Integer> availableYears;
+
     // These are used for autocompletion
     // *********************************
 
@@ -215,6 +218,9 @@ public class Cache implements Serializable {
         return AnnotationType.values();
     }
 
+    public ImmutableSet<Integer> getAvailableYears() {
+        return availableYears;}
+
 
     private void createSpecies() {
         Set<Integer> sr = Sets.newHashSet();
@@ -285,6 +291,9 @@ public class Cache implements Serializable {
             currentEditionsTemp.put( dto.getSpecies(), dto.getEdition() );
         }
 
+        // Populate derived constants
+        ImmutableSet.Builder<Integer> availableYearsBuilder = ImmutableSet.builder();
+
         // Create Edition objects
         for ( EditionDTO dto : cacheDAO.getAllEditions( speciesRestrictions ) ) {
 
@@ -302,6 +311,11 @@ public class Cache implements Serializable {
             if ( minRelease > dto.getRelease() ) {
                 continue;
             }
+
+            // Populate derived constants
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(dto.getDate() );
+            availableYearsBuilder.add( cal.get( Calendar.YEAR ) );
 
             Species species = speciesCache.get( dto.getSpecies() );
             Map<Integer, Edition> m = allEditions.get( species );
@@ -333,6 +347,8 @@ public class Cache implements Serializable {
                 }
             }
         }
+
+        availableYears = availableYearsBuilder.build();
 
         currentGOEdition = Collections.max( allGOEditions.values() );
 

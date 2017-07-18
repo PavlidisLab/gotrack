@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+        PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:of="http://omnifaces.org/functions"
+      xmlns:composite="http://java.sun.com/jsf/composite"
+>
+<composite:interface>
+
+    <composite:attribute name="update"/>
+
+</composite:interface>
+
+<composite:implementation>
+
+    <script type="text/javascript">
+
+        function annotation_dl_start() {
+            $('.annotation-dl-loading').show();
+        }
+
+        function annotation_dl_stop() {
+            $('.annotation-dl-loading').hide();
+        }
+
+    </script>
+
+
+    <p:outputPanel id="content">
+
+        <h:panelGrid columns="2" style="border:none;margin:0 auto;">
+
+            <p:outputLabel for="species_select" value="Species:" />
+            <p:selectOneMenu id="species_select" value="#{annotationDownloadView.species}"
+                             converter="speciesConverter">
+                <f:selectItems value="#{cache.speciesList}" var="spec"
+                               itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
+                <p:ajax event="change" process="@this"/>
+            </p:selectOneMenu>
+
+            <p:outputLabel for="year_select" value="Year:" />
+            <p:selectOneMenu id="year_select" value="#{annotationDownloadView.year}">
+                <f:selectItems value="#{cache.availableYears}"/>
+                <p:ajax event="change" process="@this" update="edition_select"
+                        listener="#{annotationDownloadView.filterEditions}"/>
+            </p:selectOneMenu>
+
+            <p:outputLabel for="edition_select" value="Edition:" />
+            <p:selectOneMenu id="edition_select" value="#{annotationDownloadView.edition}"
+                             converter="editionConverter">
+                <f:selectItems value="#{annotationDownloadView.filteredEditions}" var="ed"
+                               itemLabel="#{ed.edition} : #{of:formatDate(ed.date, 'MMM dd')}"
+                               itemValue="#{ed}"/>
+                <f:attribute name="species" value="#{annotationDownloadView.species}"/>
+            </p:selectOneMenu>
+
+        </h:panelGrid>
+
+        <p:commandButton value="Download" ajax="false" onclick="PrimeFaces.monitorDownload(annotation_dl_start, annotation_dl_stop);"
+                         icon="ui-icon-arrowthick-1-s" style="margin-top: 5px;">
+            <p:fileDownload value="#{annotationDownloadView.downloadFile()}"/>
+        </p:commandButton>
+
+        <div style="display:inline-block;height:14px;">
+            <div class="annotation-dl-loading loading-small" style="display: none;"/>
+        </div>
+
+    </p:outputPanel>
+
+</composite:implementation>
+</html>

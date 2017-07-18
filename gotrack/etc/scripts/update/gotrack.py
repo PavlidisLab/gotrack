@@ -635,22 +635,15 @@ class GOTrack:
     def stage_accession_history_table(self, cursor=None):
         # Note, keep in mind this uses the staged version of {pp_current_edition}
 
-        sql = "insert into {staging_pre}{pp_accession_history} (accession_id, secondary_accession_id) " \
-              "select acc1.id, acc2.id from {accession} acc1 " \
-              "inner join {staging_pre}{pp_current_edition} using (species_id, edition) " \
-              "inner join {sec_ac} sec_ac on acc1.db_object_id=sec_ac.ac " \
-              "inner join {accession} acc2 on acc2.db_object_id=sec_ac.sec"
-
+        sql = "INSERT INTO {staging_pre}{pp_accession_history} (ac, sec) SELECT ac, sec FROM {sec_ac}"
         cursor.execute(sql.format(**self.tables))
 
         # Missing those accession which have no secondary accessions
-        sql = "insert into {staging_pre}{pp_accession_history} (accession_id, secondary_accession_id) " \
-              "select acc1.id, acc2.id from {accession} acc1 " \
-              "inner join {staging_pre}{pp_current_edition} using (species_id, edition) " \
-              "left join {sec_ac} sec_ac on acc1.db_object_id=sec_ac.ac " \
-              "inner join {accession} acc2 on acc2.db_object_id=acc1.db_object_id " \
-              "where sec_ac.ac is null"
-
+        sql = "INSERT INTO {staging_pre}{pp_accession_history} (ac, sec) " \
+              "SELECT db_object_id, db_object_id FROM {accession} acc " \
+              "INNER JOIN {staging_pre}{pp_current_edition} USING (species_id, edition) " \
+              "LEFT JOIN {sec_ac} sec_ac on db_object_id = ac " \
+              "WHERE ac IS NULL"
         cursor.execute(sql.format(**self.tables))
 
     @transactional

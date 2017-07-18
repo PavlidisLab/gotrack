@@ -6,7 +6,8 @@
       xmlns:f="http://java.sun.com/jsf/core"
       xmlns:p="http://primefaces.org/ui"
       xmlns:of="http://omnifaces.org/functions"
-      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+      xmlns:comps="http://java.sun.com/jsf/composite/composites">
 <h:head>
     <title>GOtrack</title>
     <h:outputStylesheet library="css" name="style.css"/>
@@ -141,7 +142,14 @@
                                 </f:facet>
                             </p:lightBox>
                         </div>
+                        <div class="section">
+                            <div class="section-title">Download Annotations</div>
+                            <h:form>
+                                <comps:annotationDownload id="annotationDownload1" />
+                            </h:form>
+                        </div>
                     </div>
+
                     <div class="ui-grid-col-8">
                         <div class="section" style="width:50%;margin: 0 auto;"/>
 

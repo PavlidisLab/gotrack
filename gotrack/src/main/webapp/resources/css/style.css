@@ -741,3 +741,21 @@ div.imagebox  img {
 div.autocomplete-largepanel {
 	width: 500px !important
 }
+
+.loading {
+	background-image: url(img/spinner.gif);
+	background-position: center center;
+	background-repeat: no-repeat;
+	height: 100px;
+}
+
+.loading-small {
+	background-image: url(img/spinner.gif);
+	background-position: center center;
+	background-repeat: no-repeat;
+	height: 18px;
+	background-size: 18px auto;
+	width: 18px;
+	height: 18px;
+	position: relative;
+}

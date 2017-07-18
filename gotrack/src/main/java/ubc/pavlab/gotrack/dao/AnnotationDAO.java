@@ -21,7 +21,9 @@ package ubc.pavlab.gotrack.dao;
 
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.*;
+import ubc.pavlab.gotrack.utilities.Tuples;
 
 import java.sql.Date;
 import java.util.List;
@@ -59,4 +61,8 @@ public interface AnnotationDAO {
      */
     List<SimpleAnnotationDTO> simpleAnnotationSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException;
 
+    /**
+     * Retrieve data necessary for bulk download of a single edition - terms only
+     */
+    List<Tuples.Tuple2<String,String>> simpleAnnotationSingleEditionCompleteSpecies( Species species, Edition edition ) throws DAOException;
 }

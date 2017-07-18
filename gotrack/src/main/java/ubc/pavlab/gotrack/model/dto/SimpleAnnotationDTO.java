@@ -27,20 +27,20 @@ package ubc.pavlab.gotrack.model.dto;
  */
 public final class SimpleAnnotationDTO {
     private final String goId;
-    private final int geneId;
+    private final String accession;
 
-    public SimpleAnnotationDTO( String goId, int geneId ) {
+    public SimpleAnnotationDTO( String goId, String accession ) {
         super();
         this.goId = goId;
-        this.geneId = geneId;
+        this.accession = accession;
     }
 
     public String getGoId() {
         return goId;
     }
 
-    public int getGeneId() {
-        return geneId;
+    public String getAccession() {
+        return accession;
     }
 
 }

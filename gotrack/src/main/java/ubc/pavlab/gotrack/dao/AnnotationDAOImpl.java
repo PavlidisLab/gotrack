@@ -23,7 +23,9 @@ import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
+import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.*;
+import ubc.pavlab.gotrack.utilities.Tuples;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -37,10 +39,8 @@ import java.util.Set;
 import static ubc.pavlab.gotrack.dao.DAOUtil.close;
 
 /**
- * TODO Document Me
  * 
  * @author mjacobson
- * @version $Id$
  */
 public class AnnotationDAOImpl implements AnnotationDAO {
 
@@ -57,25 +57,25 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     // Get information from single gene, should be fast < 0.2s
     // species, symbol,species
 
-    private static final String SQL_FULL_ANNOTATION_RANGE_EDITIONS_SINGLE_GENE = "select distinct edition, go_id, qualifier, evidence, reference from " + SQL_ANNOTATION + " ann " +
-            "inner join " + SQL_ACCESSION_HISTORY + " ppah on ppah.secondary_accession_id = ann.accession_id " +
-            "inner join " + SQL_ACCESSION + " acc on acc.id = ppah.secondary_accession_id " +
-            "where ppah.accession_id = ? AND edition between ? and ? " +
+    private static final String SQL_FULL_ANNOTATION_RANGE_EDITIONS_SINGLE_GENE = "select distinct edition, go_id, qualifier, evidence, reference from " + SQL_ACCESSION + " acc " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
+            "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
+            "where ppah.ac = ? AND edition between ? and ? " +
             "order by edition";
 
     // Get information from multiple genes for running enrichment, should be quite fast and scale sublinearly
-    private static final String SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES = "select distinct acc.edition, go_id, ppah.accession_id gene_id from " + SQL_ANNOTATION + " ann " +
-            "inner join " + SQL_ACCESSION_HISTORY + " ppah on ppah.secondary_accession_id = ann.accession_id " +
-            "inner join " + SQL_ACCESSION + " acc on acc.id=ppah.secondary_accession_id " +
-            "where ppah.accession_id in (%s) AND edition between ? and ? " +
-            "ORDER BY NULL";
+    private static final String SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES = "select distinct edition, go_id, ac from " + SQL_ACCESSION + " acc " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
+            "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
+            "where ppah.ac in (%s) AND edition between ? and ? " +
+            "order by NULL";
 
     // Get information from multiple genes for running enrichment in a single edition, should be extremely fast
-    private static final String SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES = "select distinct go_id, ppah.accession_id gene_id from " + SQL_ANNOTATION + " ann " +
-            "inner join " + SQL_ACCESSION_HISTORY + " ppah on ppah.secondary_accession_id = ann.accession_id " +
-            "inner join " + SQL_ACCESSION + " acc on acc.id=ppah.secondary_accession_id " +
-            "where edition = ? and ppah.accession_id in (%s) " +
-            "ORDER BY NULL";
+    private static final String SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES = "select distinct go_id, ac from " + SQL_ACCESSION + " acc " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
+            "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
+            "where ppah.ac in (%s) AND edition = ? " +
+            "order by NULL";
 
     // Collect evidence breakdown for a specific term, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
     private static final String SQL_CATEGORY_BREAKDOWN_RANGE_DATES_SINGLE_TERM = "select date, evcat.category , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
@@ -90,6 +90,12 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             "inner join accession acc on acc.id=ann.accession_id " +
             "where go_id = ? " +
             "group by species_id, edition";
+
+    private static final String SQL_SIMPLE_ANNOTATION_SINGLE_EDITION = "select distinct ac, go_id from " + SQL_ACCESSION + " acc " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
+            "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
+            "where species_id = ? AND edition = ? " +
+            "order by NULL";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -114,7 +120,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
         List<Object> params = new ArrayList<>();
 
-        params.add( g.getId() );
+        params.add( g.getAccession().getAccession() );
         params.add( minimum );
         params.add( maximum );
 
@@ -171,7 +177,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         String sql = String.format( SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
 
         for ( Gene g : genes ) {
-            params.add( g.getId() );
+            params.add( g.getAccession().getAccession() );
         }
 
         params.add( minEdition );
@@ -230,7 +236,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         String sql = String.format( SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
 
         for ( Gene g : genes ) {
-            params.add( g.getId() );
+            params.add( g.getAccession().getAccession() );
         }
 
         params.add( ed.getEdition() );
@@ -387,17 +393,65 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         return results;
     }
 
+    @Override
+    public List<Tuples.Tuple2<String,String>> simpleAnnotationSingleEditionCompleteSpecies( Species species, Edition edition ) throws DAOException {
+
+        List<Object> params = new ArrayList<>();
+
+        params.add( species.getId() );
+        params.add( edition.getEdition() );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<Tuples.Tuple2<String,String>> results = new ArrayList<>();
+        String sql = SQL_SIMPLE_ANNOTATION_SINGLE_EDITION;
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while ( resultSet.next() ) {
+                results.add( new Tuples.Tuple2<>( resultSet.getString( "ac" ), resultSet.getString( "go_id" ) ) );
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
     private static EnrichmentDTO enrichmentMap( ResultSet resultSet ) throws SQLException {
         Integer edition = resultSet.getInt( "edition" );
-        Integer geneId = resultSet.getInt( "gene_id" );
+        String accession = resultSet.getString( "ac" );
         String goId = resultSet.getString( "go_id" );
-        return new EnrichmentDTO( edition, geneId, goId );
+        return new EnrichmentDTO( edition, accession, goId );
     }
 
     private static SimpleAnnotationDTO simpleEnrichmentMap( ResultSet resultSet ) throws SQLException {
-        Integer geneId = resultSet.getInt( "gene_id" );
+        String accession = resultSet.getString( "ac" );
         String goId = resultSet.getString( "go_id" );
-        return new SimpleAnnotationDTO( goId, geneId );
+        return new SimpleAnnotationDTO( goId, accession );
     }
 
 }
