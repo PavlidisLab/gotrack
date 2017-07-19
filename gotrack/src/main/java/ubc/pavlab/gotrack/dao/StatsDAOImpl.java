@@ -33,10 +33,8 @@ import static ubc.pavlab.gotrack.dao.DAOUtil.close;
 import static ubc.pavlab.gotrack.dao.DAOUtil.prepareStatement;
 
 /**
- * TODO Document Me
- * 
+ *
  * @author mjacobson
- * @version $Id$
  */
 
 public class StatsDAOImpl implements StatsDAO {
@@ -44,9 +42,10 @@ public class StatsDAOImpl implements StatsDAO {
     // Constants ----------------------------------------------------------------------------------
     private static final String SQL_TRACK_GENE = "track_popular_genes";
     private static final String SQL_TRACK_TERM = "track_popular_terms";
-    private static final String SQL_SEC_AC = "sec_ac";
+    private static final String SQL_ACCESSION_HISTORY = "pp_accession_history";
 
-    private static final String SQL_LIST_GENE = "SELECT tg.id, species_id, IFNULL(ac, accession) primary_accession, symbol, SUM(count) count FROM " + SQL_TRACK_GENE + " tg left join " + SQL_SEC_AC + " on accession=sec GROUP BY species_id, primary_accession";
+    private static final String SQL_LIST_GENE = "SELECT tg.id, species_id, IFNULL(ac, accession) primary_accession, symbol, SUM(count) count FROM " + SQL_TRACK_GENE + " tg " +
+            "left join " + SQL_ACCESSION_HISTORY + " on accession=sec GROUP BY species_id, primary_accession";
     private static final String SQL_LIST_TERM = "SELECT id, go_id, count FROM " + SQL_TRACK_TERM;
     private static final String SQL_INCREMENT_GENE = "INSERT INTO " + SQL_TRACK_GENE + "(species_id, accession, symbol, count) values (?,?,?,1) ON DUPLICATE KEY UPDATE count = count + 1";
     private static final String SQL_INCREMENT_TERM = "INSERT INTO " + SQL_TRACK_TERM + "(go_id, count) values (?,1) ON DUPLICATE KEY UPDATE count = count + 1";
