@@ -180,7 +180,7 @@
                         </p:column>
                         <p:column>
                             <p:selectOneMenu id="selectspecies" converter="speciesConverter"
-                                             value="#{geneSearchView.species}" style="margin-right:5px;">
+                                             value="#{sessionManager.species}" style="margin-right:5px;">
                                 <p:ajax event="change" process="@this"/>
                                 <f:selectItems value="#{cache.speciesList}" var="spec"
                                                itemValue="#{spec}" itemLabel="#{spec.commonName}"/>

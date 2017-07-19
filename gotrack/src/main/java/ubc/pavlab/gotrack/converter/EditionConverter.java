@@ -20,6 +20,7 @@
 package ubc.pavlab.gotrack.converter;
 
 import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.beans.SessionManager;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Species;
 
@@ -42,14 +43,16 @@ public class EditionConverter implements Converter {
     @Inject
     private Cache cache;
 
+    @Inject
+    private SessionManager session;
+
     @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {
         if ( value != null && value.trim().length() > 0 ) {
             try {
-                Species species = ( Species ) uic.getAttributes().get( "species" );
                 Integer edition = Integer.valueOf( value );
 
-                return cache.getEdition( species, edition );
+                return cache.getEdition( session.getSpecies(), edition );
             } catch ( NumberFormatException e ) {
                 throw new ConverterException( new FacesMessage( FacesMessage.SEVERITY_ERROR, "Conversion Error",
                         "Not a valid Edition." ) );

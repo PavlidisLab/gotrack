@@ -27,10 +27,10 @@ import org.apache.log4j.Logger;
 import org.primefaces.model.DefaultStreamedContent;
 import org.primefaces.model.StreamedContent;
 import ubc.pavlab.gotrack.beans.Cache;
+import ubc.pavlab.gotrack.beans.SessionManager;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import javax.annotation.PostConstruct;
@@ -55,7 +55,6 @@ public class AnnotationDownloadView implements Serializable {
 
     private static final Logger log = Logger.getLogger( AnnotationDownloadView.class );
 
-    private Species species = null;
     private Integer year = null;
     private Edition edition = null;
 
@@ -68,6 +67,9 @@ public class AnnotationDownloadView implements Serializable {
     @Inject
     private AnnotationService annotationService;
 
+    @Inject
+    private SessionManager session;
+
 
     public AnnotationDownloadView() {
         log.info( "AnnotationDownloadView created" );
@@ -76,20 +78,11 @@ public class AnnotationDownloadView implements Serializable {
     @PostConstruct
     public void init() {
         log.info( "AnnotationDownloadView init" );
-        species = cache.getSpecies( 7 );
-        edition = cache.getCurrentEditions( species );
+        edition = cache.getCurrentEditions( session.getSpecies() );
         Calendar cal = Calendar.getInstance();
         cal.setTime( edition.getDate() );
         year = cal.get( Calendar.YEAR );
         filterEditions();
-    }
-
-    public Species getSpecies() {
-        return species;
-    }
-
-    public void setSpecies( Species species ) {
-        this.species = species;
     }
 
     public Integer getYear() {
@@ -117,18 +110,17 @@ public class AnnotationDownloadView implements Serializable {
                 return calendar.get( Calendar.YEAR ) == year;
             }
         };
-        filteredEditions = Lists.newArrayList( Iterables.filter( cache.getAllEditions( species ), predicate ));
+        filteredEditions = Lists.newArrayList( Iterables.filter( cache.getAllEditions( session.getSpecies() ), predicate ));
         Collections.sort( filteredEditions );
     }
 
     public List<Edition> getFilteredEditions(){
-        log.info( "getFilteredEditions" );
         return filteredEditions;
     }
 
     private void loadFile() {
         // TODO: Cache files to disk
-        Map<Gene, Set<GeneOntologyTerm>> data =  annotationService.fetchEditionSimple( species, edition );
+        Map<Gene, Set<GeneOntologyTerm>> data =  annotationService.fetchEditionSimple( session.getSpecies(), edition );
         final StringBuilder sb = new StringBuilder();
         Joiner joiner = Joiner.on("|").skipNulls();
         for ( Map.Entry<Gene, Set<GeneOntologyTerm>> geneEntry: data.entrySet()) {
@@ -144,7 +136,7 @@ public class AnnotationDownloadView implements Serializable {
         }
         InputStream in = new ByteArrayInputStream(sb.toString().getBytes( StandardCharsets.UTF_8));
         log.info( "Finished loading file." );
-        String filename = species.getCommonName() + "-" + edition.getEdition() + "-" + edition.getDate().toString() + ".tsv";
+        String filename = session.getSpecies().getCommonName() + "-" + edition.getEdition() + "-" + edition.getDate().toString() + ".tsv";
         file = new DefaultStreamedContent( in, "text/plain", filename );
     }
 

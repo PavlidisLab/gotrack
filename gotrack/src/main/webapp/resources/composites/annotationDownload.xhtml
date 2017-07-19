@@ -32,15 +32,7 @@
 
     <p:outputPanel id="content">
 
-        <h:panelGrid columns="2" style="border:none;margin:0 auto;">
-
-            <p:outputLabel for="species_select" value="Species:" />
-            <p:selectOneMenu id="species_select" value="#{annotationDownloadView.species}"
-                             converter="speciesConverter">
-                <f:selectItems value="#{cache.speciesList}" var="spec"
-                               itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
-                <p:ajax event="change" process="@this"/>
-            </p:selectOneMenu>
+        <h:panelGrid columns="5" style="border:none;">
 
             <p:outputLabel for="year_select" value="Year:" />
             <p:selectOneMenu id="year_select" value="#{annotationDownloadView.year}">
@@ -55,15 +47,14 @@
                 <f:selectItems value="#{annotationDownloadView.filteredEditions}" var="ed"
                                itemLabel="#{ed.edition} : #{of:formatDate(ed.date, 'MMM dd')}"
                                itemValue="#{ed}"/>
-                <f:attribute name="species" value="#{annotationDownloadView.species}"/>
             </p:selectOneMenu>
-
+            <p:commandButton value="Download" ajax="false" onclick="PrimeFaces.monitorDownload(annotation_dl_start, annotation_dl_stop);"
+                             icon="ui-icon-arrowthick-1-s" process="@form">
+                <p:fileDownload value="#{annotationDownloadView.downloadFile()}"/>
+            </p:commandButton>
         </h:panelGrid>
 
-        <p:commandButton value="Download" ajax="false" onclick="PrimeFaces.monitorDownload(annotation_dl_start, annotation_dl_stop);"
-                         icon="ui-icon-arrowthick-1-s" style="margin-top: 5px;">
-            <p:fileDownload value="#{annotationDownloadView.downloadFile()}"/>
-        </p:commandButton>
+
 
         <div style="display:inline-block;height:14px;">
             <div class="annotation-dl-loading loading-small" style="display: none;"/>

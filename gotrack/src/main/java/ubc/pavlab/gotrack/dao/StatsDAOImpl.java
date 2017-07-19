@@ -19,14 +19,18 @@
 
 package ubc.pavlab.gotrack.dao;
 
+import com.google.common.collect.Lists;
 import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
 import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import static ubc.pavlab.gotrack.dao.DAOUtil.close;
@@ -43,12 +47,33 @@ public class StatsDAOImpl implements StatsDAO {
     private static final String SQL_TRACK_GENE = "track_popular_genes";
     private static final String SQL_TRACK_TERM = "track_popular_terms";
     private static final String SQL_ACCESSION_HISTORY = "pp_accession_history";
+    private static final String SQL_ACCESSION = "accession";
+    private static final String SQL_ANNOTATION = "annotation";
+    private static final String SQL_TERM = "go_term";
+    private static final String SQL_ADJACENCY = "go_adjacency";
+    private static final String SQL_EDITION = "edition";
+    private static final String SQL_GO_EDITION = "go_edition";
+    private static final String SQL_CURRENT_EDITION = "pp_current_edition";
+
 
     private static final String SQL_LIST_GENE = "SELECT tg.id, species_id, IFNULL(ac, accession) primary_accession, symbol, SUM(count) count FROM " + SQL_TRACK_GENE + " tg " +
             "left join " + SQL_ACCESSION_HISTORY + " on accession=sec GROUP BY species_id, primary_accession";
     private static final String SQL_LIST_TERM = "SELECT id, go_id, count FROM " + SQL_TRACK_TERM;
+
+    private static final String SQL_ROW_COUNT = "SELECT table_rows FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name = ?";
+
+    private static final String SQL_LAST_UPDATED = "select max(date) last_updated from " + SQL_EDITION + " inner join " + SQL_CURRENT_EDITION + " using (species_id, edition)";
+
+    private static final String SQL_SPECIES_COUNT = "select COUNT(distinct species_id) species_count from " + SQL_ACCESSION;
+
+    private static final String SQL_YEARS_AVAILABLE = "select ROUND(TIMESTAMPDIFF(MONTH, min(date), max(date))/12) years from " + SQL_EDITION;
+
+    private static final String SQL_GO_EDITION_COUNT = "select COUNT(*) from " + SQL_GO_EDITION;
+    private static final String SQL_EDITION_COUNT = "select COUNT(*) from " + SQL_EDITION;
+
     private static final String SQL_INCREMENT_GENE = "INSERT INTO " + SQL_TRACK_GENE + "(species_id, accession, symbol, count) values (?,?,?,1) ON DUPLICATE KEY UPDATE count = count + 1";
     private static final String SQL_INCREMENT_TERM = "INSERT INTO " + SQL_TRACK_TERM + "(go_id, count) values (?,1) ON DUPLICATE KEY UPDATE count = count + 1";
+
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -112,6 +137,76 @@ public class StatsDAOImpl implements StatsDAO {
         }
 
         return list;
+    }
+
+    @Override
+    public Integer annotationCount() throws DAOException {
+        return ((BigInteger) fetchSingle( SQL_ROW_COUNT, SQL_ANNOTATION )).intValue();
+    }
+
+    @Override
+    public Integer goCount() throws DAOException {
+        return ((BigInteger) fetchSingle( SQL_ROW_COUNT, SQL_TERM )).intValue();
+    }
+
+    @Override
+    public Integer adjacencyCount() throws DAOException {
+        return ((BigInteger) fetchSingle( SQL_ROW_COUNT, SQL_ADJACENCY )).intValue();
+    }
+
+    @Override
+    public Date latestUpdate() throws DAOException {
+        return (Date) fetchSingle( SQL_LAST_UPDATED );
+    }
+
+    @Override
+    public Integer speciesCount() throws DAOException {
+        return ((Long) fetchSingle( SQL_SPECIES_COUNT )).intValue();
+    }
+
+    @Override
+    public Integer yearsAvailable() throws DAOException {
+        return ((BigDecimal) fetchSingle( SQL_YEARS_AVAILABLE )).intValue();
+    }
+
+    @Override
+    public Integer goEditionCount() throws DAOException {
+        return ((Long) fetchSingle( SQL_GO_EDITION_COUNT )).intValue();
+    }
+
+    @Override
+    public Integer editionCount() throws DAOException {
+        return ((Long) fetchSingle( SQL_EDITION_COUNT )).intValue();
+    }
+
+    private Object fetchSingle(String sql ) throws DAOException {
+        return fetchSingle( sql, Lists.newArrayList() );
+    }
+
+    private Object fetchSingle(String sql, Object param) throws DAOException {
+        return fetchSingle( sql, Lists.newArrayList(param) );
+    }
+
+    private Object fetchSingle(String sql, List<Object> params) throws DAOException {
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        Object result = null;
+        try {
+            connection = daoFactory.getConnection();
+            preparedStatement = connection.prepareStatement( sql );
+            DAOUtil.setValues( preparedStatement, params.toArray() );
+            resultSet = preparedStatement.executeQuery();
+            if(resultSet.next()){
+                result = resultSet.getObject( 1 );
+            }
+        } catch ( SQLException e ) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, preparedStatement, resultSet );
+        }
+
+        return result;
     }
 
     @Override

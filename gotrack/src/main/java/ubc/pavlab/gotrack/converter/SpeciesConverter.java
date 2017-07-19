@@ -32,9 +32,8 @@ import javax.inject.Inject;
 
 /**
  * Converter for {@link Species}.
- * 
+ *
  * @author mjacobson
- * @version $Id$
  */
 @FacesConverter("speciesConverter")
 public class SpeciesConverter implements Converter {
@@ -47,7 +46,6 @@ public class SpeciesConverter implements Converter {
         if ( value != null && value.trim().length() > 0 ) {
             try {
                 Integer speciesId = Integer.valueOf( value );
-                //                Cache cache = ( Cache ) fc.getExternalContext().getApplicationMap().get( "cache" );
                 return cache.getSpecies( speciesId );
             } catch ( NumberFormatException e ) {
                 //                return null;
