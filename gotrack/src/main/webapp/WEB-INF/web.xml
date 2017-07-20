@@ -24,6 +24,11 @@
 	    <param-name>javax.faces.FACELETS_SKIP_COMMENTS</param-name>
 	    <param-value>true</param-value>
 	</context-param>
+
+	<context-param>
+		<param-name>primefaces.FONT_AWESOME</param-name>
+		<param-value>true</param-value>
+	</context-param>
 	
 	<!-- Install slf4j bridge handler -->
 	<listener>
@@ -166,4 +171,8 @@
 		<extension>svg</extension>
 		<mime-type>image/svg+xml</mime-type>
 	</mime-mapping>
+    <mime-mapping>
+        <extension>woff2</extension>
+        <mime-type>application/x-font-woff2</mime-type>
+    </mime-mapping>
 </web-app>
