@@ -1,5 +1,5 @@
 function onLoad() {
-   $("#right-toggler").append('<span class="vertical toggled-header">Terms Ever Annotated</span>');
+   $("#right-toggler").append('<span class="vertical toggled-header">Terms Annotated in Selected Edition</span>');
 }
 
 function centerResize() {
@@ -53,22 +53,6 @@ function afterRowSelection() {
    
 }
 
-
-function handleDatatableDialog(wdgDlgId, wdgTabId, noLoop) {
-   var dlg = PF(wdgDlgId);
-   
-   if ( dlg.isVisible() ) {
-      // If the dialog is already visible, we may safely filter
-      PF(wdgTabId).filter();
-   } else {
-      // Dialog has yet to  be shown, filtering now will error, leave it to dialog's onShow
-      if (!noLoop) {
-         dlg.show();
-      }
-      
-   } 
-}
-
 function showViewAnnotationsDlg() {
    try {
    var dlg = PF('viewAnnotationsDlgWdg');
@@ -107,13 +91,6 @@ function fetchCharts() {
    }
 }
 
-function handleFilterCharts(xhr, status, args) {
-   console.log(args);
-   if (args.filtered) {
-      fetchCharts();
-   }
-}
-
 function handleFetchAnnotationChart(xhr, status, args) {
    
    try {
@@ -142,22 +119,41 @@ function handleFetchAnnotationChart(xhr, status, args) {
       return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 3)+'</b><br/>';
    };
 
-   options.plotOptions.series.point = {
-                                       events: {
-                                          click: function () {
-                                             fetchAnnotationPointData([{name:'edition', value:GLOBALS.dateToEdition[this.x]} ]);
-                                          }
-                                       }
-   }
-   
+    options.plotOptions.series.point = {
+        events: {
+            click: function () {
+                fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
+                redrawSelectedEditionAllCharts(this.x);
+            }
+        }
+    };
+
    options.chart.events = {
          click: function(event) {
             fetchAnnotationPointData([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
+             redrawSelectedEditionAllCharts(this.hoverPoint.x);
          }
-   }
-      
+   };
+
+   $.extend(options.xAxis, {
+       crosshair: {
+           width: 1,
+           color: 'red',
+           dashStyle: 'shortdot'
+       }
+   });
+
+
    plotting.charts.annotation.options = options;
-   plotting.charts.annotation.recreate(options);
+   plotting.charts.annotation.recreate(options, function (c) {
+      console.log(c);
+       c.xAxis[0].addPlotLine({
+           value: c.xAxis[0].dataMax,
+           color: 'red',
+           width: 1,
+           id: 'plot-line-selected'
+       });
+   });
 }
 
 function handleFetchSimilarityChart(xhr, status, args) {
@@ -189,6 +185,22 @@ function handleFetchSimilarityChart(xhr, status, args) {
    };
    
    options.yAxis.endOnTick = false; // Make sure log axis follows our given max
+
+    options.plotOptions.series.point = {
+        events: {
+            click: function () {
+                fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
+                redrawSelectedEditionAllCharts(this.x);
+            }
+        }
+    };
+
+    options.chart.events = {
+        click: function(event) {
+            fetchAnnotationPointData([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
+            redrawSelectedEditionAllCharts(this.hoverPoint.x);
+        }
+    };
    
    plotting.charts.similarity.options = options;
    plotting.charts.similarity.recreate(options);
@@ -220,6 +232,22 @@ function handleFetchMultiChart(xhr, status, args) {
    options.tooltip.pointFormatter = function(){
       return '<span style="color:'+this.color+'">\u25CF</span> '+this.series.name+': <b>'+utility.sigFigs(this.y, 3)+'</b><br/>';
    };
+
+    options.plotOptions.series.point = {
+        events: {
+            click: function () {
+                fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
+                redrawSelectedEditionAllCharts(this.x);
+            }
+        }
+    };
+
+    options.chart.events = {
+        click: function(event) {
+            fetchAnnotationPointData([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
+            redrawSelectedEditionAllCharts(this.hoverPoint.x);
+        }
+    };
    
    plotting.charts.multi.options = options;
    plotting.charts.multi.recreate(options);
@@ -387,6 +415,23 @@ function handleFetchTimeline(xhr, status, args) {
    });
    
    
+}
+
+function redrawSelectedEditionAllCharts(x) {
+    chartsToDraw = [plotting.charts.annotation.chart,
+                    plotting.charts.similarity.chart,
+                    plotting.charts.multi.chart];
+    chartsToDraw.forEach(function (c) {
+        c.xAxis[0].removePlotLine('plot-line-selected');
+        c.xAxis[0].addPlotLine({
+            value: x,
+            color: 'red',
+            width: 1,
+            id: 'plot-line-selected'
+        });
+    });
+
+
 }
 
 $(document).ready(function() {

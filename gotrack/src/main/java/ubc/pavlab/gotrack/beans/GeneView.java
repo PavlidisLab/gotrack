@@ -19,12 +19,10 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import com.google.common.base.Predicate;
 import com.google.common.collect.*;
 import com.google.gson.Gson;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
-import org.primefaces.component.datatable.DataTable;
 import org.primefaces.context.RequestContext;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.beans.service.MultifunctionalityService;
@@ -35,10 +33,7 @@ import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.table.AnnotationValues;
-import ubc.pavlab.gotrack.model.table.CompareTermsTableValues;
-import ubc.pavlab.gotrack.model.table.CompareTermsTableValues.TermComparison;
-import ubc.pavlab.gotrack.model.table.GeneTableValues;
+import ubc.pavlab.gotrack.model.table.GeneViewRightPanelRow;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 import javax.annotation.PostConstruct;
@@ -57,7 +52,6 @@ import java.util.Map.Entry;
  * Backing bean for the gene tracking functionality.
  * 
  * @author mjacobson
- * @version $Id$
  */
 @Named
 @ViewScoped
@@ -86,41 +80,26 @@ public class GeneView implements Serializable {
 
     // Data
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData;
-    private boolean filtered = false;
 
     // Meta
     private Edition currentEdition;
 
     // Right Panel
-    private Collection<GeneTableValues> allTerms = new HashSet<>();
-    private List<GeneTableValues> selectedTerms;
-    private Collection<GeneTableValues> filteredAllTerms;
+    private List<GeneViewRightPanelRow> rightPanelTerms = Lists.newArrayList();
+    private List<GeneViewRightPanelRow> rightPanelSelectedTerms;
+    private Collection<GeneViewRightPanelRow> rightPanelFilteredTerms;
+    private Edition rightPanelEdition;
+
+    // Right Panel Click
+//    private Collection<Annotation> rightPanelAnnotations = Sets.newHashSet();
 
     // View Annotations List
-    private Collection<AnnotationValues> viewAnnotations = new ArrayList<>();
-    private Collection<AnnotationValues> filteredViewAnnotations; // TODO use this
+    private Collection<Annotation> viewAnnotations = new ArrayList<>();
+    private Collection<Annotation> filteredViewAnnotations; // TODO use this
     private GeneOntologyTerm viewTerm;
 
     // Click event lists
     private Edition clickEdition;
-
-    // Range select event lists
-    private Edition selectEditionStart;
-    private Edition selectEditionStop;
-
-    // Annotation clicks
-    private Collection<CompareTermsTableValues> allClickTerms = new HashSet<>();
-    private Collection<CompareTermsTableValues> clickTerms = new HashSet<>();
-    private List<CompareTermsTableValues> selectedClickTerms;
-    private Collection<CompareTermsTableValues> filteredClickTerms;
-
-    // Annotation Click Meta
-    private int totalTerms;
-    private int gainTerms;
-    private int lossTerms;
-
-    // Annotation Clicks TermComparison Selector
-    private TermComparison termComparisonFilter = null;
 
     public GeneView() {
         log.info( "GeneView created" );
@@ -170,6 +149,7 @@ public class GeneView implements Serializable {
         log.info( "Gene: " + gene );
 
         currentEdition = cache.getCurrentEditions( gene.getSpecies() );
+        rightPanelEdition = currentEdition;
 
         return null;
 
@@ -186,9 +166,9 @@ public class GeneView implements Serializable {
      * Attempt to get data from cache, if not in cache get from DB. Afterwards apply filter.
      */
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> retrieveData(
-            Collection<GeneTableValues> filterTableValues ) {
+            Collection<GeneViewRightPanelRow> filterTableValues ) {
         Set<GeneOntologyTerm> filterTerms = Sets.newHashSet();
-        for ( GeneTableValues tv : filterTableValues ) {
+        for ( GeneViewRightPanelRow tv : filterTableValues ) {
             filterTerms.add( tv.getTerm() );
         }
         return retrieveData( filterTerms );
@@ -274,6 +254,26 @@ public class GeneView implements Serializable {
 
     }
 
+    private List<GeneViewRightPanelRow> fetchRightPanelRows(Edition edition) {
+        return fetchRightPanelRows( edition, rawData.get( AnnotationType.I ).row( edition ).keySet() );
+    }
+
+    private List<GeneViewRightPanelRow> fetchRightPanelRows(Edition edition,  Collection<GeneOntologyTerm> terms) {
+        List<GeneViewRightPanelRow> results = Lists.newArrayList();
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> directs = rawData.get( AnnotationType.D ).row( edition );
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> inferred = rawData.get( AnnotationType.I ).row( edition );
+        for ( GeneOntologyTerm term : terms ) {
+            Set<Annotation> annotations = inferred.get( term );
+            if (annotations != null ) {
+                results.add( new GeneViewRightPanelRow( term,
+                        directs.containsKey( term ) ? AnnotationType.D : AnnotationType.I, annotations ) );
+            }
+        }
+
+        Collections.sort(results);
+        return results;
+    }
+
     /**
      * Entry point for initiating the retrieval of necessary data.
      */
@@ -292,29 +292,9 @@ public class GeneView implements Serializable {
 
         RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
 
-        // Now create a list of terms that will be displayed in a front-end right panel
-        // Cannot simply use columnKeySet as there are no guarantees as to which terms will be chosen
-        // We want the most recent of each term.
-
         //allTerms = rawData.get( AnnotationType.DIRECT ).columnKeySet();
-        allTerms = new HashSet<>();
-        ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> data = new ArrayList<>(
-                rawData.get( AnnotationType.I ).rowMap().entrySet() );
-
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( data ) ) {
-            Set<GeneOntologyTerm> terms = entry.getValue().keySet();
-            Edition ed = entry.getKey();
-            int age = currentEdition.getEdition() - ed.getEdition();
-            for ( GeneOntologyTerm t : terms ) {
-                if ( !allTerms.contains( t ) ) {
-                    // Only keep the most recent
-                    allTerms.add( new GeneTableValues( ed, t, age ) );
-                }
-            }
-        }
-
-        allTerms = new ArrayList<>( allTerms );
-        Collections.sort( ( List<GeneTableValues> ) allTerms );
+        rightPanelTerms = fetchRightPanelRows( rightPanelEdition );
+//        Collections.sort( rightPanelTerms );
 
     }
 
@@ -545,52 +525,25 @@ public class GeneView implements Serializable {
     }
 
     /**
-     * Filter charts to include only those terms selected from right panel
-     */
-    public void filterCharts() {
-        if ( selectedTerms == null || selectedTerms.size() == 0 ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "filtered", false );
-            return;
-        }
-
-        HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
-
-        rawData = retrieveData( filterTerms );
-        filtered = true;
-
-        RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
-
-    }
-
-    /**
-     * Remove all filters on charts
-     */
-    public void resetCharts() {
-        rawData = retrieveData();
-        filtered = false;
-        RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
-    }
-
-    /**
      * Entry point for fetching data to create a gantt chart of annotations categories over time
      */
     public void fetchTimeline() {
         log.debug( "fetchTimeline" );
-        if ( selectedTerms == null || selectedTerms.size() == 0 ) {
+        if ( rightPanelSelectedTerms == null || rightPanelSelectedTerms.size() == 0 ) {
             // No Terms
             RequestContext.getCurrentInstance().addCallbackParam( "HC",
                     new Gson().toJson( createHCCallbackParamFail( "No Terms Selected." ) ) );
             return;
         }
 
-        if ( selectedTerms.size() > 20 ) {
+        if ( rightPanelSelectedTerms.size() > 20 ) {
             // Too many terms
             RequestContext.getCurrentInstance().addCallbackParam( "HC",
                     new Gson().toJson( createHCCallbackParamFail( "Too Many Terms Selected. Maximum 20." ) ) );
             return;
         }
 
-        HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
+        HashSet<GeneViewRightPanelRow> filterTerms = new HashSet<>( rightPanelSelectedTerms );
 
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> data = retrieveData( filterTerms )
                 .get( AnnotationType.I );
@@ -609,7 +562,7 @@ public class GeneView implements Serializable {
 
         Map<String, String> termNames = new HashMap<>();
 
-        for ( GeneTableValues tv : filterTerms ) {
+        for ( GeneViewRightPanelRow tv : filterTerms ) {
             GeneOntologyTerm t = tv.getTerm();
             termNames.put( t.getGoId(), t.getName() );
             Series s = new Series( t.getGoId() );
@@ -641,80 +594,12 @@ public class GeneView implements Serializable {
 
     }
 
-    /**
-     * Entry point to view a terms annotations in a specific edition. This is reached by clicking a term in a table of
-     * terms after clicking a data point in the annotation chart.
-     */
-    public void fetchAnnotations() {
-        log.debug( "fetchAnnotations" );
-        //        if ( selectedClickTerms == null || selectedClickTerms.isEmpty() ) {
-        //            return;
-        //        }
-        //viewTerm = selectedClickTerms.iterator().next();
-        log.debug( viewTerm );
-
-        Set<Annotation> data = rawData.get( AnnotationType.D ).get( clickEdition, viewTerm );
-
-        viewAnnotations = new HashSet<>();
-        if ( data != null ) {
-
-            // Add direct annotations
-            for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.D ) );
-            }
-        }
-        data = rawData.get( AnnotationType.I ).get( clickEdition, viewTerm );
-
-        if ( data != null ) {
-
-            // Next add the inferred as they will not overwrite the direct if the direct already exists
-            for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.I ) );
-            }
-        }
-
-        filteredViewAnnotations = null;
+    public Collection<Annotation> fetchTermAnnotations(GeneOntologyTerm term) {
+        log.info( "fetchTermAnnotations" );
+        return rawData.get( AnnotationType.I ).row( rightPanelEdition).get( term );
     }
 
-    /**
-     * Range select event functionality for annotation chart
-     */
-    public void fetchAnnotationRangeData() {
-        log.debug( "fetchAnnotationRangeData" );
-        Integer editionId1;
-        Integer editionId2;
-        try {
 
-            editionId1 = Integer.valueOf(
-                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition1" ) );
-            editionId2 = Integer.valueOf(
-                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition2" ) );
-
-        } catch ( NumberFormatException e ) {
-            log.error( e );
-            return;
-        }
-
-        selectEditionStart = cache.getEdition( this.gene.getSpecies(), editionId1 );
-        if ( selectEditionStart == null ) {
-            log.warn( "selectEditionStart edition id has no corresponding edition object" );
-            return;
-        }
-
-        selectEditionStop = cache.getEdition( this.gene.getSpecies(), editionId2 );
-        if ( selectEditionStop == null ) {
-            log.warn( "selectEditionStop edition id has no corresponding edition object" );
-            return;
-        }
-
-        try {
-            allClickTerms = compareEditions( selectEditionStop, selectEditionStart );
-        } catch ( NullPointerException e ) {
-            log.error( e );
-            return;
-        }
-
-    }
 
     /**
      * Click event functionality for annotation chart
@@ -739,38 +624,17 @@ public class GeneView implements Serializable {
         }
 
         try {
-            allClickTerms = compareEditions( clickEdition );
+            rightPanelTerms = fetchRightPanelRows( clickEdition );
+            rightPanelFilteredTerms = null;
+            rightPanelSelectedTerms = null;
+            rightPanelEdition = clickEdition;
+//            allClickTerms = compareEditions( clickEdition );
+//            termsFromAnnotationClick = compareEditions2( clickEdition );
         } catch ( NullPointerException e ) {
             log.error( e );
             return;
         }
 
-    }
-
-    /**
-     * Click event functionality for annotation chart
-     */
-    public void fetchFilteredAnnotationClickTerms() {
-        if ( termComparisonFilter != null ) {
-            Predicate<CompareTermsTableValues> predicate = new Predicate<CompareTermsTableValues>() {
-                @Override
-                public boolean apply( CompareTermsTableValues input ) {
-                    return input.getComparison().equals( termComparisonFilter );
-                }
-            };
-            clickTerms = Collections2.filter( allClickTerms, predicate );
-        } else {
-            clickTerms = allClickTerms;
-        }
-        selectedClickTerms = null;
-        filteredClickTerms = null;
-
-        // This prevents datatable filter issues
-        DataTable dataTable = ( DataTable ) FacesContext.getCurrentInstance().getViewRoot()
-                .findComponent( ":clickTermsForm:clickTermsTable" );
-        dataTable.reset();
-        // Resets custom filter inputs
-        RequestContext.getCurrentInstance().reset( "clickTermsForm:clickTermsTable" );
     }
 
     /**
@@ -792,87 +656,8 @@ public class GeneView implements Serializable {
 
         viewTerm = cache.getTerm( clickEdition, goId );
 
-        Set<Annotation> data = rawData.get( AnnotationType.D ).get( clickEdition, viewTerm );
-
-        viewAnnotations = new HashSet<>();
-        if ( data != null ) {
-
-            // Add direct annotations
-            for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.D ) );
-            }
-        }
-        data = rawData.get( AnnotationType.I ).get( clickEdition, viewTerm );
-
-        if ( data != null ) {
-
-            // Next add the inferred as they will not overwrite the direct if the direct already exists
-            for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.I ) );
-            }
-        }
-
+        viewAnnotations = rawData.get( AnnotationType.I).get( clickEdition, viewTerm );
         filteredViewAnnotations = null;
-
-    }
-
-    /**
-     * Compare the loss and gain of GO Terms and edition and the edition before it.
-     */
-    private Collection<CompareTermsTableValues> compareEditions( Edition ed ) {
-        // get previous edition, yes this is ugly. I don't wanna talk about it.
-        Edition previousEdition = null;
-        for ( Edition e : rawData.get( AnnotationType.I ).rowMap().keySet() ) {
-            if ( e.equals( ed ) ) {
-                break;
-            }
-            previousEdition = e;
-        }
-
-        if ( previousEdition == null ) {
-            log.warn( "Selected Edition on has no previous edition to compare to." );
-            return compareEditions( ed, ed );
-        }
-        return compareEditions( ed, previousEdition );
-    }
-
-    /**
-     * Compare the loss and gain of GO Terms between two editions.
-     * Gains : GO Terms present in ed1 but not ed2.
-     * Loss: GO Terms present in ed2 but not ed1.
-     */
-    private Collection<CompareTermsTableValues> compareEditions( Edition ed1, Edition ed2 ) {
-        List<CompareTermsTableValues> results = Lists.newArrayList();
-        totalTerms = 0;
-        gainTerms = 0;
-        lossTerms = 0;
-        try {
-            ImmutableSet<GeneOntologyTerm> set1 = rawData.get( AnnotationType.I ).row( ed1 ).keySet();
-
-            ImmutableSet<GeneOntologyTerm> set2 = rawData.get( AnnotationType.I ).row( ed2 ).keySet();
-            for ( GeneOntologyTerm t : set1 ) {
-                if ( set2.contains( t ) ) {
-                    results.add( new CompareTermsTableValues( t, TermComparison.CONSTANT ) );
-                    totalTerms++;
-                } else {
-                    results.add( new CompareTermsTableValues( t, TermComparison.GAIN ) );
-                    totalTerms++;
-                    gainTerms++;
-                }
-            }
-
-            for ( GeneOntologyTerm t : Sets.difference( set2, set1 ) ) {
-                results.add( new CompareTermsTableValues( t, TermComparison.LOSS ) );
-                lossTerms++;
-            }
-
-            Collections.sort( results );
-
-        } catch ( NullPointerException e ) {
-            log.error( e );
-            return Lists.newArrayList();
-        }
-        return results;
     }
 
     // Getters & Setters
@@ -893,11 +678,11 @@ public class GeneView implements Serializable {
         this.gene = gene;
     }
 
-    public Collection<AnnotationValues> getViewAnnotations() {
+    public Collection<Annotation> getViewAnnotations() {
         return viewAnnotations;
     }
 
-    public Collection<AnnotationValues> getFilteredViewAnnotations() {
+    public Collection<Annotation> getFilteredViewAnnotations() {
         return filteredViewAnnotations;
     }
 
@@ -913,80 +698,31 @@ public class GeneView implements Serializable {
         return clickEdition;
     }
 
-    public Edition getSelectEditionStart() {
-        return selectEditionStart;
+    public List<GeneViewRightPanelRow> getRightPanelTerms() {
+        return rightPanelTerms;
     }
 
-    public Edition getSelectEditionStop() {
-        return selectEditionStop;
+    public void setRightPanelTerms( List<GeneViewRightPanelRow> rightPanelTerms ) {
+        this.rightPanelTerms = rightPanelTerms;
     }
 
-    public Collection<CompareTermsTableValues> getClickTerms() {
-        return clickTerms;
+    public List<GeneViewRightPanelRow> getRightPanelSelectedTerms() {
+        return rightPanelSelectedTerms;
     }
 
-    public Collection<CompareTermsTableValues> getAllClickTerms() {
-        return allClickTerms;
+    public void setRightPanelSelectedTerms( List<GeneViewRightPanelRow> rightPanelSelectedTerms ) {
+        this.rightPanelSelectedTerms = rightPanelSelectedTerms;
     }
 
-    public List<CompareTermsTableValues> getSelectedClickTerms() {
-        return selectedClickTerms;
+    public Collection<GeneViewRightPanelRow> getRightPanelFilteredTerms() {
+        return rightPanelFilteredTerms;
     }
 
-    public void setSelectedClickTerms( List<CompareTermsTableValues> selectedClickTerms ) {
-        this.selectedClickTerms = selectedClickTerms;
+    public void setRightPanelFilteredTerms( Collection<GeneViewRightPanelRow> rightPanelFilteredTerms ) {
+        this.rightPanelFilteredTerms = rightPanelFilteredTerms;
     }
 
-    public Collection<CompareTermsTableValues> getFilteredClickTerms() {
-        return filteredClickTerms;
+    public Edition getRightPanelEdition() {
+        return rightPanelEdition;
     }
-
-    public void setFilteredClickTerms( Collection<CompareTermsTableValues> filteredClickTerms ) {
-        this.filteredClickTerms = filteredClickTerms;
-    }
-
-    public Collection<GeneTableValues> getAllTerms() {
-        return allTerms;
-    }
-
-    public List<GeneTableValues> getSelectedTerms() {
-        return selectedTerms;
-    }
-
-    public void setSelectedTerms( List<GeneTableValues> selectedTerms ) {
-        this.selectedTerms = selectedTerms;
-    }
-
-    public Collection<GeneTableValues> getFilteredAllTerms() {
-        return filteredAllTerms;
-    }
-
-    public void setFilteredAllTerms( Collection<GeneTableValues> filteredAllTerms ) {
-        this.filteredAllTerms = filteredAllTerms;
-    }
-
-    public boolean isFiltered() {
-        return filtered;
-    }
-
-    public TermComparison getTermComparisonFilter() {
-        return termComparisonFilter;
-    }
-
-    public void setTermComparisonFilter( TermComparison termComparisonFilter ) {
-        this.termComparisonFilter = termComparisonFilter;
-    }
-
-    public int getTotalTerms() {
-        return totalTerms;
-    }
-
-    public int getGainTerms() {
-        return gainTerms;
-    }
-
-    public int getLossTerms() {
-        return lossTerms;
-    }
-
 }
