@@ -13,7 +13,7 @@ svg g.edgePath.PART_OF path {
 	fill: #056aff;
 }
 
-svg g.node.selectedTerm>rect {
+svg g.node.base>rect {
 	fill: #888a85;
 }
 

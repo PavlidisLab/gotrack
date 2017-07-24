@@ -20,6 +20,7 @@
 package ubc.pavlab.gotrack.beans;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 import org.primefaces.context.RequestContext;
@@ -31,11 +32,8 @@ import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
-import ubc.pavlab.gotrack.model.cytoscape.Edge;
-import ubc.pavlab.gotrack.model.cytoscape.Graph;
-import ubc.pavlab.gotrack.model.cytoscape.Node;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.go.Relation;
+import ubc.pavlab.gotrack.model.visualization.Graph;
 
 import javax.annotation.PostConstruct;
 import javax.faces.application.FacesMessage;
@@ -166,13 +164,23 @@ public class TermView implements Serializable {
      * entry point to fetch data to create the most current ancestry DAG
      */
     public void fetchDAGData() {
-        // make some data for cyto.js
 
-        Graph eles = calcElements( currentTerm );
+//        Collection<String> goids = Sets.newHashSet("GO:0005783","GO:0005886","GO:0005887","GO:0008021","GO:0009986","GO:0014069","GO:0017146","GO:0030054","GO:0030425","GO:0043005","GO:0043083","GO:0043195","GO:0043197","GO:0045202","GO:0045211","GO:0060076");
 
-        RequestContext.getCurrentInstance().addCallbackParam( "cyto_graph", new Gson().toJson( eles ) );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "current_id", currentTerm.getId() );
+        Set<GeneOntologyTerm> terms = Sets.newHashSet();
+        terms.add( currentTerm );
+
+//        for ( String goid : goids ) {
+//            GeneOntologyTerm t = cache.getCurrentTerm( goid );
+//            if (t != null) {
+//                terms.add( t );
+//            }
+//        }
+
+        Graph eles = Graph.fromGO( terms );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", new Gson().toJson( eles ) );
     }
 
     private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
@@ -209,10 +217,10 @@ public class TermView implements Serializable {
             dateToGOEditionId.put( entry.getKey().getDate().getTime(), entry.getKey().getId() );
             if ( t != null ) {
 
-                Graph eles = calcElements( t );
+                Graph eles = Graph.fromGO( t );
 
                 if ( prevEles != null ) {
-                    Map<String, Graph> diff = graphDiff( prevEles, eles );
+                    Graph diff = Graph.fromGraphDiff( prevEles, eles );
                     structureSeries.addDataPoint( entry.getKey().getDate().getTime(), diff != null ? 1 : 0 );
                 } else {
                     structureSeries.addDataPoint( entry.getKey().getDate().getTime(), -1 );
@@ -388,7 +396,7 @@ public class TermView implements Serializable {
 
         GeneOntologyTerm selectedTerm = trackedTerms.get( selectedEdition );
 
-        Graph graph = calcElements( selectedTerm );
+        Graph graph = null;
 
         if ( showDiff ) {
 
@@ -406,23 +414,15 @@ public class TermView implements Serializable {
             }
 
             if ( compareEdition != null ) {
-
-                Graph oldGraph = calcElements( trackedTerms.get( compareEdition ) );
-
-                Map<String, Graph> diff = graphDiff( oldGraph, graph );
-                RequestContext.getCurrentInstance().addCallbackParam( "vis_diff", new Gson().toJson( diff ) );
-                // if there is a difference then we want to graph the old one and draw over the changes,
-                // if there is no difference then we just graph the new one
-                if ( diff != null ) {
-                    graph = oldGraph;
-                }
+                graph = Graph.fromGODiff( trackedTerms.get( compareEdition ), selectedTerm );
             }
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "cyto_graph", new Gson().toJson( graph ) );
+        if (graph == null) {
+            graph = Graph.fromGO( selectedTerm );
+        }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "current_id", currentTerm.getId() );
-
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", new Gson().toJson( graph ) );
     }
 
     /**
@@ -432,120 +432,9 @@ public class TermView implements Serializable {
 
         GOEdition compareEdition = cache.getGOEdition( compareEditionId );
 
-        Map<String, Graph> diff = graphDiff( calcElements( currentTerm ),
-                calcElements( trackedTerms.get( compareEdition ) ) );
+        Graph diff = Graph.fromGODiff( currentTerm, trackedTerms.get( compareEdition ) );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "vis_diff", new Gson().toJson( diff ) );
-
-    }
-
-    /**
-     * Creates a graph object with required information to create an ancestry DAG using cyto.js in the front-end.
-     * Essentially collects all nodes and edges in the ancestry chart.
-     * 
-     * @param t term
-     * @return
-     */
-    private Graph calcElements( GeneOntologyTerm t ) {
-
-        if ( t == null ) {
-            return new Graph();
-        }
-
-        Set<Node> nodes = new LinkedHashSet<>();
-        Set<Edge> edges = new LinkedHashSet<>();
-
-        Set<GeneOntologyTerm> discovered = new HashSet<>();
-
-        Queue<GeneOntologyTerm> termQ = new LinkedList<>();
-        termQ.add( t );
-
-        while ( !termQ.isEmpty() ) {
-            GeneOntologyTerm term = termQ.remove();
-
-            nodes.add( new Node( term.getId(), term.getName() ) );
-            discovered.add( term );
-
-            // Sort for consistent graph layouts in the front-end
-            List<Relation<GeneOntologyTerm>> sortedParents = new ArrayList<>( term.getParents() );
-            Collections.sort( sortedParents, new Comparator<Relation<GeneOntologyTerm>>() {
-                @Override
-                public int compare( Relation<GeneOntologyTerm> o1, Relation<GeneOntologyTerm> o2 ) {
-                    return o1.getRelation().compareTo( o2.getRelation() );
-                }
-            } );
-
-            for ( Relation<GeneOntologyTerm> p : sortedParents ) {
-                edges.add( new Edge( term.getId(), p.getRelation().getId(), p.getType() ) );
-                if ( !discovered.contains( p.getRelation() ) ) {
-                    termQ.add( p.getRelation() );
-                }
-            }
-
-        }
-
-        return new Graph( nodes, edges );
-
-    }
-
-    /**
-     * Collects the difference between two charts
-     * 
-     * @param baseGraph
-     * @param newGraph
-     * @return Map of ['added', 'deleted'] -> Graph object containing either added or deleted nodes/edges
-     */
-    public Map<String, Graph> graphDiff( Graph baseGraph, Graph newGraph ) {
-
-        Set<Node> newNodes = new HashSet<>();
-        Set<Node> deletedNodes = new HashSet<>();
-        Set<Edge> newEdges = new HashSet<>();
-        Set<Edge> deletedEdges = new HashSet<>();
-
-        boolean changed = false;
-
-        // Find new nodes
-        for ( Node n : newGraph.getNodes() ) {
-            if ( !baseGraph.getNodes().contains( n ) ) {
-                newNodes.add( n );
-                changed = true;
-            }
-        }
-
-        // Find deleted nodes
-        for ( Node n : baseGraph.getNodes() ) {
-            if ( !newGraph.getNodes().contains( n ) ) {
-                deletedNodes.add( n );
-                changed = true;
-            }
-        }
-
-        // Find new edges
-        for ( Edge n : newGraph.getEdges() ) {
-            if ( !baseGraph.getEdges().contains( n ) ) {
-                newEdges.add( n );
-                changed = true;
-            }
-        }
-
-        // Find deleted edges
-        for ( Edge n : baseGraph.getEdges() ) {
-            if ( !newGraph.getEdges().contains( n ) ) {
-                deletedEdges.add( n );
-                changed = true;
-            }
-        }
-
-        if ( !changed ) {
-            return null;
-        }
-
-        Map<String, Graph> results = new HashMap<>();
-        results.put( "added", new Graph( newNodes, newEdges ) );
-        results.put( "deleted", new Graph( deletedNodes, deletedEdges ) );
-
-        return results;
-
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", new Gson().toJson( diff ) );
     }
 
     public GeneOntologyTerm getCurrentTerm() {
