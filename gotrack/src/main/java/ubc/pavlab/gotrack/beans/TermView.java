@@ -180,7 +180,7 @@ public class TermView implements Serializable {
 
         Graph eles = Graph.fromGO( terms );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", new Gson().toJson( eles ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", eles.getJsonString() );
     }
 
     private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
@@ -422,7 +422,7 @@ public class TermView implements Serializable {
             graph = Graph.fromGO( selectedTerm );
         }
 
-        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", new Gson().toJson( graph ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
     }
 
     /**
@@ -434,7 +434,7 @@ public class TermView implements Serializable {
 
         Graph diff = Graph.fromGODiff( currentTerm, trackedTerms.get( compareEdition ) );
 
-        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", new Gson().toJson( diff ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", diff.getJsonString() );
     }
 
     public GeneOntologyTerm getCurrentTerm() {
