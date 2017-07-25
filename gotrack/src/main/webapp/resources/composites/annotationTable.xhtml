@@ -17,7 +17,7 @@
 
 <composite:implementation>
 
-    <p:dataTable var="annot" value="#{cc.attrs.value}" emptyMessage="No annotations found with given criteria">
+    <p:dataTable id="annotaationTable-#{cc.id}"  var="annot" value="#{cc.attrs.value}" emptyMessage="No annotations found with given criteria">
         <p:column headerText="Qualifier">
             <h:outputText value="#{annot.qualifier}"/>
         </p:column>
@@ -31,21 +31,7 @@
                                  styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
                                  title="Help"
                                  type="button"/>
-                <p:overlayPanel for="categoryHelpBtn-#{cc.id}" hideEffect="fade"
-                                style="width:400px;text-align:left;">
-                    <p>Manually-assigned evidence codes fall into four general
-                        categories: experimental, computational analysis, author
-                        statements, and curatorial statements. Out of all the evidence codes available, only Inferred
-                        from Electronic Annotation (IEA) is not assigned by a curator.</p>
-                    <p:lightBox>
-                        <h:outputLink
-                                value="/gotrack/javax.faces.resource/diag-evCodeFlowChartGood.png?ln=img"
-                                title="Evidence Code Flow Chart">
-                            <h:graphicImage library="img" width="100" height="56"
-                                            name="diag-evCodeFlowChartGood.png"/>
-                        </h:outputLink>
-                    </p:lightBox>
-                </p:overlayPanel>
+
             </f:facet>
 
             <h:outputText value="#{annot.evidence.category}"/>
@@ -61,6 +47,21 @@
             &#8203;
         </f:facet>
     </p:dataTable>
+    <p:overlayPanel for="annotaationTable-#{cc.id}:categoryHelpBtn-#{cc.id}" hideEffect="fade"
+                    style="width:400px;text-align:left;" appendToBody="true">
+        <p>Manually-assigned evidence codes fall into four general
+            categories: experimental, computational analysis, author
+            statements, and curatorial statements. Out of all the evidence codes available, only Inferred
+            from Electronic Annotation (IEA) is not assigned by a curator.</p>
+        <p:lightBox>
+            <h:outputLink
+                    value="/gotrack/javax.faces.resource/diag-evCodeFlowChartGood.png?ln=img"
+                    title="Evidence Code Flow Chart">
+                <h:graphicImage library="img" width="100" height="56"
+                                name="diag-evCodeFlowChartGood.png"/>
+            </h:outputLink>
+        </p:lightBox>
+    </p:overlayPanel>
 
 </composite:implementation>
 </html>
