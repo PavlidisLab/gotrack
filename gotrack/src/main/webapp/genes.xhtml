@@ -16,6 +16,7 @@
     <ui:define name="pageTitle">GOtrack</ui:define>
     <ui:define name="css">
         <h:outputStylesheet library="css" name="genes.css"/>
+        <h:outputStylesheet library="css" name="gograph.css"/>
         <h:outputStylesheet library="css" name="tipsy.css"/>
     </ui:define>
     <ui:define name="js">
@@ -32,8 +33,11 @@
         <h:outputScript library="js" name="export-csv.js"/>
 
         <h:outputScript library="js" name="tipsy.js"/>
+        <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <h:outputScript library="js" name="dagre-d3.min.js"/>
 
         <h:outputScript library="js" name="plotting.js"/>
+        <h:outputScript library="js" name="gograph.js"/>
         <h:outputScript library="js" name="genes.js"/>
         <h:outputScript rendered="#{geneView.gene != null}">
             $(document).ready(function () {
@@ -87,8 +91,10 @@
                     </p:column>
                     <p:column filterBy="#{termRow.term.goId}" filterMatchMode="contains"
                               headerText="Id" width="25%">
-                        <i class="fa fa-external-link fa-sm" style="font-size: 0.7em;"/>
-                        <p:link value="  #{termRow.term.goId}" outcome="terms" target="_blank">
+                        <p:commandLink actionListener="#{geneView.fetchTermGraph(termRow.term)}" oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
+                            <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
+                        </p:commandLink>
+                        <p:link value="#{termRow.term.goId}" outcome="terms" target="_blank">
                             <f:param name="query" value="#{termRow.term.goId}"/>
                         </p:link>
                     </p:column>
@@ -116,6 +122,8 @@
                     <f:facet name="footer">
                         <p:commandButton icon="ui-icon-search" widgetVar="viewTermsWdg"
                                          value="View Terms" oncomplete="fetchTimeline()"/>
+                        <p:commandButton icon="fa fa-sitemap" widgetVar="viewGOGraphWdg" value="View GO Graph" actionListener="#{geneView.fetchTermGraphFromSelected()}"
+                                         oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"/>
                     </f:facet>
                 </p:dataTable>
             </h:form>
@@ -257,7 +265,26 @@
                              oncomplete="showViewAnnotationsDlg();"
                              action="#{geneView.fetchTimelinePointData()}"/>
 
+            <p:remoteCommand name="fetchGraph"
+                             oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
+                             actionListener="#{geneView.fetchTermGraph}"/>
+
         </h:form>
+
+        <p:dialog id="graphDlg"
+                  header="Ancestor Chart"
+                  widgetVar="graphDlgWdg"
+                  modal="false"
+                  showEffect="fade"
+                  hideEffect="fade"
+                  resizable="false"
+                  height="600px;"
+                  width="800px;"
+                  style="max-width:80%;max-height:80%;"
+                  closeOnEscape="true"
+                >
+            <svg id="dagDialog" height="500" width="700"/>
+        </p:dialog>
 
         <p:dialog id="timelineDlg" widgetVar="timelineDlgWdg" modal="true" showEffect="fade"
                   hideEffect="fade" height="800" width="1200"

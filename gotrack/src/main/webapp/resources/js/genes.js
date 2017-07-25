@@ -38,14 +38,15 @@ function timelineDlgResize() {
 
 function afterRowSelection() {
    var cnt = PF('funcTable').getSelectedRowsCount();
-   var wdg = PF('viewTermsWdg');
    try {
       if (cnt > 1) {
          // enable View Terms button
-         wdg.enable();
+          PF('viewTermsWdg').enable();
+          PF('viewGOGraphWdg').enable();
       } else {
          // disable View Terms button
-         wdg.disable();
+          PF('viewTermsWdg').disable();
+          PF('viewGOGraphWdg').disable();
       }
    } catch (e) {
       console.log(e);
@@ -80,6 +81,12 @@ function fetchCharts() {
    } catch (e) {
       console.log(e);
    }
+
+    try {
+        PF('viewGOGraphWdg').disable();
+    } catch (e) {
+        console.log(e);
+    }
    
    try {
       plotting.destroyAllCharts();
@@ -89,6 +96,11 @@ function fetchCharts() {
    } catch (e) {
       console.log(e);
    }
+}
+
+function handleFetchGraphDialog(xhr, status, args) {
+    console.log(args);
+    gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
 }
 
 function handleFetchAnnotationChart(xhr, status, args) {

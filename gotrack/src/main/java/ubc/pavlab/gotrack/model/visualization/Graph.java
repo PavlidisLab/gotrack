@@ -19,7 +19,9 @@
 
 package ubc.pavlab.gotrack.model.visualization;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.Relation;
 
@@ -31,8 +33,7 @@ import java.util.*;
  * @author mjacobson
  */
 public class Graph {
-
-    private final Collection<Node> nodes;
+    private final Map<Integer, Node> nodes;
     private final Collection<Edge> edges;
 
     /**
@@ -47,22 +48,19 @@ public class Graph {
             return new Graph();
         }
 
-        return Graph.fromGO( Sets.newHashSet( term ) );
+        return Graph.fromGO( Collections.singleton( term ) );
     }
 
-    public static Graph fromGO( Set<GeneOntologyTerm> terms ) {
+    public static Graph fromGO( Collection<GeneOntologyTerm> terms ) {
 
         if ( terms == null || terms.isEmpty() ) {
             return new Graph();
         }
 
-        Set<Node> nodes = new LinkedHashSet<>();
+        Map<Integer, Node> nodes = Maps.newLinkedHashMap();
         Set<Edge> edges = new LinkedHashSet<>();
 
-        Set<GeneOntologyTerm> discovered = new HashSet<>();
-
         for ( GeneOntologyTerm t : terms ) {
-
 
             Queue<GeneOntologyTerm> termQ = new LinkedList<>();
             termQ.add( t );
@@ -70,11 +68,7 @@ public class Graph {
             while (!termQ.isEmpty()) {
                 GeneOntologyTerm term = termQ.remove();
                 Node node = new Node( term.getId(), term.getName() );
-                if ( terms.contains( term ) ) {
-                    node.addClass( "base" );
-                }
-                nodes.add( node );
-                discovered.add( term );
+                nodes.put(node.getId(), node );
 
                 // Sort for consistent graph layouts in the front-end
                 List<Relation<GeneOntologyTerm>> sortedParents = new ArrayList<>( term.getParents() );
@@ -87,7 +81,7 @@ public class Graph {
 
                 for ( Relation<GeneOntologyTerm> p : sortedParents ) {
                     edges.add( new Edge( term.getId(), p.getRelation().getId(), p.getType() ) );
-                    if ( !discovered.contains( p.getRelation() ) ) {
+                    if ( !nodes.containsKey( p.getRelation().getId() ) ) {
                         termQ.add( p.getRelation() );
                     }
                 }
@@ -95,11 +89,16 @@ public class Graph {
             }
         }
 
+        // Apply class for base terms
+        for ( GeneOntologyTerm term : terms ) {
+            nodes.get( term.getId() ).addClass( "base" );
+        }
+
         return new Graph( nodes, edges );
     }
 
     public static Graph fromGODiff( GeneOntologyTerm term1, GeneOntologyTerm term2 ) {
-        return Graph.fromGODiff( Sets.newHashSet( term1 ), Sets.newHashSet( term2 ) );
+        return Graph.fromGODiff( Collections.singleton( term1 ), Collections.singleton( term2 ) );
     }
 
     /**
@@ -110,7 +109,7 @@ public class Graph {
      * @param termSet2
      * @return Annotated modified graph of termSet1 including nodes/edges that exist only in termSet2
      */
-    public static Graph fromGODiff( Set<GeneOntologyTerm> termSet1, Set<GeneOntologyTerm> termSet2 ) {
+    public static Graph fromGODiff( Collection<GeneOntologyTerm> termSet1, Collection<GeneOntologyTerm> termSet2 ) {
 
         if ( termSet1 == null || termSet2 == null ) {
             return new Graph();
@@ -134,7 +133,7 @@ public class Graph {
         for ( Node n : newGraph.getNodes() ) {
             if ( !baseGraph.getNodes().contains( n ) ) {
                 n.addClass( "added" );
-                baseGraph.nodes.add( n );
+                baseGraph.nodes.put( n.getId(), n );
                 changed = true;
             }
         }
@@ -171,22 +170,29 @@ public class Graph {
         return baseGraph;
     }
 
-    public Graph( Collection<Node> nodes, Collection<Edge> edges ) {
+    private Graph( Map<Integer, Node> nodes, Collection<Edge> edges ) {
         super();
         this.nodes = nodes;
         this.edges = edges;
     }
 
     public Graph() {
-        this( new LinkedHashSet<Node>(), new LinkedHashSet<Edge>() );
+        this( Maps.<Integer, Node>newLinkedHashMap(), new LinkedHashSet<Edge>() );
     }
 
     public Collection<Node> getNodes() {
-        return nodes;
+        return nodes.values();
     }
 
     public Collection<Edge> getEdges() {
         return edges;
     }
 
+
+    public String getJsonString() {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put( "nodes", new JSONArray(this.getNodes()) );
+        jsonObject.put( "edges", new JSONArray(this.getEdges()) );
+        return jsonObject.toString();
+    }
 }

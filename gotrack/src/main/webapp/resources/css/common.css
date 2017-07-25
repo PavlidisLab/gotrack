@@ -210,3 +210,15 @@ div.ui-datatable thead th.ui-filter-column > div.ui-column-customfilter input {
 body .ui-button-icon-only .ui-icon.fa, body .ui-button-text-icon-left .ui-icon.fa, body .ui-button-text-icon-right .ui-icon.fa {
 	margin-top: -6px;
 }
+
+i.fa.emphasize-hover:hover {
+	-moz-box-shadow: 0 0 5px #85b2cb;
+	-webkit-box-shadow: 0 0 8px #85b2cb;
+	box-shadow: 0 0 8px #85b2cb;
+}
+
+/* Theme overrides */
+
+.ui-state-hover a, .ui-state-hover a:hover {
+	text-decoration: underline;
+}

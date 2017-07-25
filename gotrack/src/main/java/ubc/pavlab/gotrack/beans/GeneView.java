@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.beans;
 
+import com.google.common.base.Function;
 import com.google.common.collect.*;
 import com.google.gson.Gson;
 import org.apache.commons.lang3.StringUtils;
@@ -34,6 +35,7 @@ import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.GeneViewRightPanelRow;
+import ubc.pavlab.gotrack.model.visualization.Graph;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 import javax.annotation.PostConstruct;
@@ -658,6 +660,22 @@ public class GeneView implements Serializable {
 
         viewAnnotations = rawData.get( AnnotationType.I).get( clickEdition, viewTerm );
         filteredViewAnnotations = null;
+    }
+
+    public void fetchTermGraph( GeneOntologyTerm term) {
+        Graph graph = Graph.fromGO( term );
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
+    }
+
+    public void fetchTermGraphFromSelected() {
+        Collection<GeneOntologyTerm> test = Collections2.transform( rightPanelSelectedTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
+            @Override
+            public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
+                return row.getTerm();
+            }
+        } );
+        Graph graph = Graph.fromGO( test );
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
     }
 
     // Getters & Setters
