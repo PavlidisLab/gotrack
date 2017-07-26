@@ -98,6 +98,36 @@ function fetchCharts() {
    }
 }
 
+function handleFetchEditionsForSelectedTerms(xhr, status, args) {
+    var missing_edition_arr = JSON.parse(args.missing_editions);
+
+    var missing_edition = {};
+    for (var i = 0; i < missing_edition_arr.length; ++i) {
+        missing_edition[missing_edition_arr[i]] = 1;
+    }
+
+    console.log(missing_edition);
+
+    var chart = plotting.charts.annotation.chart;
+    var series = chart.series;
+
+    // deselect all points;
+    Highcharts.each(chart.getSelectedPoints(), function (point) {
+        point.select(false);
+    });
+
+    for(var j=0;j< series.length;j++) {
+        var s = series[j];
+        for (var k = 0; k < s.points.length; k++) {
+            var p = s.points[k];
+            if (!missing_edition[p.x]) {
+                p.select(true, true);
+            }
+        }
+    }
+
+}
+
 function handleFetchGraphDialog(xhr, status, args) {
     console.log(args);
     gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
@@ -146,6 +176,18 @@ function handleFetchAnnotationChart(xhr, status, args) {
              redrawSelectedEditionAllCharts(this.hoverPoint.x);
          }
    };
+
+   // ********** Used for Highlighting editions **********
+   options.plotOptions.series.marker = {
+       states: {
+           select: {
+               fillColor: null,
+               lineColor: "red",
+               lineWidth: 1
+           }
+       }
+   };
+   // ****************************************************
 
    $.extend(options.xAxis, {
        crosshair: {

@@ -668,14 +668,35 @@ public class GeneView implements Serializable {
     }
 
     public void fetchTermGraphFromSelected() {
-        Collection<GeneOntologyTerm> test = Collections2.transform( rightPanelSelectedTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
+        Collection<GeneOntologyTerm> terms = Collections2.transform( rightPanelSelectedTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
             @Override
             public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
                 return row.getTerm();
             }
         } );
-        Graph graph = Graph.fromGO( test );
+        Graph graph = Graph.fromGO( terms );
         RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
+    }
+
+    public void fetchEditionsForSelectedTerms() {
+        List<Long> missingEditionDates = Lists.newArrayList();
+        ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> inferred = rawData.get( AnnotationType.I );
+
+        Collection<GeneOntologyTerm> terms = Collections2.transform( rightPanelSelectedTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
+            @Override
+            public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
+                return row.getTerm();
+            }
+        } );
+
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> editionMapEntry : inferred.rowMap().entrySet() ) {
+            Edition edition = editionMapEntry.getKey();
+            Boolean disjoint = Collections.disjoint( terms, editionMapEntry.getValue().keySet());
+            if (disjoint) {
+                missingEditionDates.add( edition.getDate().getTime() );
+            }
+        }
+        RequestContext.getCurrentInstance().addCallbackParam( "missing_editions", new Gson().toJson( missingEditionDates ) );
     }
 
     // Getters & Setters

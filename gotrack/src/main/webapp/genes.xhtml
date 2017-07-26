@@ -124,6 +124,9 @@
                                          value="View Terms" oncomplete="fetchTimeline()"/>
                         <p:commandButton icon="fa fa-sitemap" widgetVar="viewGOGraphWdg" value="View GO Graph" actionListener="#{geneView.fetchTermGraphFromSelected()}"
                                          oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"/>
+                        <!--<p:commandButton icon="fa fa-filter" widgetVar="filterWdg" value="Highlight Editions"-->
+                                         <!--actionListener="#{geneView.fetchEditionsForSelectedTerms()}"-->
+                                         <!--oncomplete="handleFetchEditionsForSelectedTerms(xhr, status, args);"/>-->
                     </f:facet>
                 </p:dataTable>
             </h:form>
@@ -268,6 +271,7 @@
             <p:remoteCommand name="fetchGraph"
                              oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
                              actionListener="#{geneView.fetchTermGraph}"/>
+
 
         </h:form>
 
