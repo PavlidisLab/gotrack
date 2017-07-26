@@ -165,7 +165,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
         events: {
             click: function () {
                 fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
-                redrawSelectedEditionAllCharts(this.x);
+                redrawSelectedEditionPlotLineAllCharts(this);
             }
         }
     };
@@ -173,7 +173,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
    options.chart.events = {
          click: function(event) {
             fetchAnnotationPointData([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
-             redrawSelectedEditionAllCharts(this.hoverPoint.x);
+             redrawSelectedEditionPlotLineAllCharts(this.hoverPoint);
          }
    };
 
@@ -200,13 +200,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
 
    plotting.charts.annotation.options = options;
    plotting.charts.annotation.recreate(options, function (c) {
-      console.log(c);
-       c.xAxis[0].addPlotLine({
-           value: c.xAxis[0].dataMax,
-           color: 'red',
-           width: 1,
-           id: 'plot-line-selected'
-       });
+        redrawSelectedEditionPlotLine( c, c.series[0].points[c.series[0].points.length -1]);
    });
 }
 
@@ -244,7 +238,7 @@ function handleFetchSimilarityChart(xhr, status, args) {
         events: {
             click: function () {
                 fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
-                redrawSelectedEditionAllCharts(this.x);
+                redrawSelectedEditionPlotLineAllCharts(this);
             }
         }
     };
@@ -252,12 +246,14 @@ function handleFetchSimilarityChart(xhr, status, args) {
     options.chart.events = {
         click: function(event) {
             fetchAnnotationPointData([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
-            redrawSelectedEditionAllCharts(this.hoverPoint.x);
+            redrawSelectedEditionPlotLineAllCharts(this.hoverPoint);
         }
     };
    
    plotting.charts.similarity.options = options;
-   plotting.charts.similarity.recreate(options);
+   plotting.charts.similarity.recreate(options, function (c) {
+       redrawSelectedEditionPlotLine( c, c.series[0].points[c.series[0].points.length -1]);
+   });
 }
 
 function handleFetchMultiChart(xhr, status, args) {
@@ -291,7 +287,7 @@ function handleFetchMultiChart(xhr, status, args) {
         events: {
             click: function () {
                 fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
-                redrawSelectedEditionAllCharts(this.x);
+                redrawSelectedEditionPlotLineAllCharts(this);
             }
         }
     };
@@ -299,12 +295,14 @@ function handleFetchMultiChart(xhr, status, args) {
     options.chart.events = {
         click: function(event) {
             fetchAnnotationPointData([{name:'edition', value:GLOBALS.dateToEdition[this.hoverPoint.x]} ]);
-            redrawSelectedEditionAllCharts(this.hoverPoint.x);
+            redrawSelectedEditionPlotLineAllCharts(this.hoverPoint);
         }
     };
    
    plotting.charts.multi.options = options;
-   plotting.charts.multi.recreate(options);
+   plotting.charts.multi.recreate(options, function (c) {
+       redrawSelectedEditionPlotLine( c, c.series[0].points[c.series[0].points.length -1]);
+   });
 }
 
 function handleFetchTimeline(xhr, status, args) {
@@ -471,18 +469,36 @@ function handleFetchTimeline(xhr, status, args) {
    
 }
 
-function redrawSelectedEditionAllCharts(x) {
-    chartsToDraw = [plotting.charts.annotation.chart,
+function redrawSelectedEditionPlotLine(c, p) {
+    var chart = c;
+    chart.xAxis[0].removePlotLine('plot-line-selected');
+    chart.xAxis[0].addPlotLine({
+        value: p.x,
+        color: 'red',
+        width: 1,
+        id: 'plot-line-selected'
+    });
+    if (c.clickLabel) {
+        c.clickLabel.destroy();
+    }
+    c.clickLabel = chart.renderer.text("Edition: " + GLOBALS.dateToEdition[p.x], chart.plotLeft + 5, chart.plotTop + 20)
+        .attr({
+            rotation: 0,
+        })
+        .css({
+            color: 'red',
+            fontSize: '12px'
+        })
+        .add();
+    console.log(c.clickLabel);
+}
+
+function redrawSelectedEditionPlotLineAllCharts(p) {
+    var chartsToDraw = [plotting.charts.annotation.chart,
                     plotting.charts.similarity.chart,
                     plotting.charts.multi.chart];
     chartsToDraw.forEach(function (c) {
-        c.xAxis[0].removePlotLine('plot-line-selected');
-        c.xAxis[0].addPlotLine({
-            value: x,
-            color: 'red',
-            width: 1,
-            id: 'plot-line-selected'
-        });
+        redrawSelectedEditionPlotLine(c, p);
     });
 
 
