@@ -155,51 +155,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
     args.HC.xMax = GLOBALS.xMax;
 
     var options = plotting.defaultHCOptions(args.HC);
-    plotting.addLegend(options);
-    plotting.addScaleToggle(options, args.HC);
-
-    options.legend = {};
-
-    options.tooltip.pointFormatter = function () {
-        return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 3) + '</b><br/>';
-    };
-
-    options.plotOptions.series.point = {
-        events: {
-            click: function () {
-                fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
-                redrawSelectedEditionPlotLineAllCharts(this);
-            }
-        }
-    };
-
-    options.chart.events = {
-        click: function (event) {
-            fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.hoverPoint.x]}]);
-            redrawSelectedEditionPlotLineAllCharts(this.hoverPoint);
-        }
-    };
-
-    // ********** Used for Highlighting editions **********
-    options.plotOptions.series.marker = {
-        states: {
-            select: {
-                fillColor: null,
-                lineColor: "red",
-                lineWidth: 1
-            }
-        }
-    };
-    // ****************************************************
-
-    $.extend(options.xAxis, {
-        crosshair: {
-            width: 1,
-            color: 'red',
-            dashStyle: 'shortdot'
-        }
-    });
-
+    commonOptions(options, args.HC);
 
     plotting.charts.annotation.options = options;
     plotting.charts.annotation.recreate(options, function (c) {
@@ -229,32 +185,9 @@ function handleFetchSimilarityChart(xhr, status, args) {
     args.HC.xMax = GLOBALS.xMax;
 
     var options = plotting.defaultHCOptions(args.HC);
-    plotting.addLegend(options);
-    plotting.addScaleToggle(options, args.HC);
-
-    options.legend = {};
-
-    options.tooltip.pointFormatter = function () {
-        return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 3) + '</b><br/>';
-    };
+    commonOptions(options, args.HC);
 
     options.yAxis.endOnTick = false; // Make sure log axis follows our given max
-
-    options.plotOptions.series.point = {
-        events: {
-            click: function () {
-                fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
-                redrawSelectedEditionPlotLineAllCharts(this);
-            }
-        }
-    };
-
-    options.chart.events = {
-        click: function (event) {
-            fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.hoverPoint.x]}]);
-            redrawSelectedEditionPlotLineAllCharts(this.hoverPoint);
-        }
-    };
 
     plotting.charts.similarity.options = options;
     plotting.charts.similarity.recreate(options, function (c) {
@@ -283,30 +216,7 @@ function handleFetchMultiChart(xhr, status, args) {
     args.HC.xMax = GLOBALS.xMax;
 
     var options = plotting.defaultHCOptions(args.HC);
-    plotting.addLegend(options);
-    plotting.addScaleToggle(options, args.HC);
-
-    options.legend = {};
-
-    options.tooltip.pointFormatter = function () {
-        return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 3) + '</b><br/>';
-    };
-
-    options.plotOptions.series.point = {
-        events: {
-            click: function () {
-                fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
-                redrawSelectedEditionPlotLineAllCharts(this);
-            }
-        }
-    };
-
-    options.chart.events = {
-        click: function (event) {
-            fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.hoverPoint.x]}]);
-            redrawSelectedEditionPlotLineAllCharts(this.hoverPoint);
-        }
-    };
+    commonOptions(options, args.HC);
 
     plotting.charts.multi.options = options;
     plotting.charts.multi.recreate(options, function (c) {
@@ -513,6 +423,54 @@ function redrawSelectedEditionPlotLineAllCharts(p) {
 
 }
 
+function commonOptions(options, config) {
+    plotting.addLegend(options);
+    plotting.addScaleToggle(options, config);
+    options.subtitle = {
+        text: "Click to view annotations at a specific date",
+        style: {"font-size": "10px"}
+    };
+    options.legend = {};
+    options.tooltip.pointFormatter = function () {
+        return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 3) + '</b><br/>';
+    };
+    options.plotOptions.series.point = {
+        events: {
+            click: function () {
+                fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
+                redrawSelectedEditionPlotLineAllCharts(this);
+            }
+        }
+    };
+
+    options.chart.events = {
+        click: function (event) {
+            fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[this.hoverPoint.x]}]);
+            redrawSelectedEditionPlotLineAllCharts(this.hoverPoint);
+        }
+    };
+
+    // ********** Used for Highlighting editions **********
+    options.plotOptions.series.marker = {
+        states: {
+            select: {
+                fillColor: null,
+                lineColor: "red",
+                lineWidth: 1
+            }
+        }
+    };
+    // ****************************************************
+
+    $.extend(options.xAxis, {
+        crosshair: {
+            width: 1,
+            color: 'red',
+            dashStyle: 'shortdot'
+        }
+    });
+}
+
 $(document).ready(function () {
     //escDialog();
 
@@ -598,12 +556,11 @@ $(document).ready(function () {
         });
     }(Highcharts));
 
-    GLOBALS = {};
-
+    GLOBALS = {dateToEdition: {}};
 
     plotting.createNewChart('annotation');
     plotting.createNewChart('similarity');
     plotting.createNewChart('multi');
     plotting.createNewChart('timeline');
 
-})
+});
