@@ -1,11 +1,11 @@
 /**
  * @memberOf GOGraph
  */
-(function( gograph, $, undefined ) {
+(function (gograph, $, undefined) {
 
     gograph.graphs = [];
 
-    gograph.createNewGraph = function(id, graph_data, callback) {
+    gograph.createNewGraph = function (id, graph_data, callback) {
         console.log("Creating graph: " + id);
         this.graphs.push(new GOGraph(id, graph_data, callback));
     };
@@ -30,7 +30,8 @@
          *
          * */
         if (isUndefined(callback)) {
-            callback = function () {};
+            callback = function () {
+            };
         }
 
 
@@ -256,13 +257,17 @@
         this.graph = g;
         this.legend = legend;
         this.renderer = render;
-        this.nodes = function() {return svgGroup.selectAll("g.node");};
-        this.edges = function() {return svgGroup.selectAll("g.edge");};
+        this.nodes = function () {
+            return svgGroup.selectAll("g.node");
+        };
+        this.edges = function () {
+            return svgGroup.selectAll("g.edge");
+        };
         this.id = id;
         callback();
     }
 
-    var isUndefined = function(variable){
+    var isUndefined = function (variable) {
         return ( typeof variable === 'undefined' );
     };
 
@@ -575,4 +580,4 @@
         }
     }
 
-}( window.gograph = window.gograph || {}, jQuery ));
+}(window.gograph = window.gograph || {}, jQuery));
