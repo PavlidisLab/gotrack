@@ -153,8 +153,11 @@ function handleFetchAnnotationChart(xhr, status, args) {
    args.HC.renderTo = 'hc_annotation_container';
    args.HC.xMin = GLOBALS.xMin;
    args.HC.xMax = GLOBALS.xMax;
-   var options = plotting.defaultHCOptions(args.HC, true);
-   
+
+   var options = plotting.defaultHCOptions(args.HC);
+   plotting.addLegend(options);
+   plotting.addScaleToggle(options, args.HC);
+
    options.legend = {};
    
    options.tooltip.pointFormatter = function(){
@@ -224,7 +227,10 @@ function handleFetchSimilarityChart(xhr, status, args) {
    args.HC.renderTo = 'hc_similarity_container';
    args.HC.xMin = GLOBALS.xMin;
    args.HC.xMax = GLOBALS.xMax;
-   var options = plotting.defaultHCOptions(args.HC, true);
+
+   var options = plotting.defaultHCOptions(args.HC);
+   plotting.addLegend(options);
+   plotting.addScaleToggle(options, args.HC);
    
    options.legend = {};
    
@@ -275,7 +281,10 @@ function handleFetchMultiChart(xhr, status, args) {
    args.HC.renderTo = 'hc_multi_container';
    args.HC.xMin = GLOBALS.xMin;
    args.HC.xMax = GLOBALS.xMax;
-   var options = plotting.defaultHCOptions(args.HC, true);
+
+   var options = plotting.defaultHCOptions(args.HC);
+   plotting.addLegend(options);
+   plotting.addScaleToggle(options, args.HC);
    
    options.legend = {};
    
@@ -344,12 +353,11 @@ function handleFetchTimeline(xhr, status, args) {
    args.HC.renderTo = 'hc_timeline_container';
    args.HC.xMin = GLOBALS.xMin;
    args.HC.xMax = GLOBALS.xMax;
-   var options = plotting.defaultHCOptions(args.HC, false);
-   
+
+   var options = plotting.ganttHCOptions(args.HC);
+   options.colors = plotting.MAXIMALLY_DISTINCT_COLORS;
+
    options.legend = {};
-   
-   options.chart.type = 'xrange';
-   options.chart.zoomType = 'xy';
    options.yAxis =  {
       categories: categories,
       min:0,
@@ -361,22 +369,22 @@ function handleFetchTimeline(xhr, status, args) {
          }
       }
    };
-   options.plotOptions.series.grouping = false;
-   options.plotOptions.series.turboThreshold = 0;
-   options.plotOptions.series.cropThreshold = 100000;
-   options.tooltip.shared = false;
-   //options.legend.enabled = false;
-   options.series = []; // Not optimal as we're recreating for no reason, change later
-   //options.colors = [];
-   
-   options.plotOptions.series.point = {
-                                       events: {
-                                          click: function () {
-                                             fetchTimelinePointData([{name:'edition', value:GLOBALS.dateToEdition[this.x]}, {name:'termId', value:categories[this.y]} ]);
-                                          }
-                                       }
-   }  
-   
+
+   options.plotOptions = {
+       series : {
+           grouping: false,
+           turboThreshold: 0,
+           cropThreshold: 100000,
+           point: {
+               events: {
+                   click: function () {
+                       fetchTimelinePointData([{name:'edition', value:GLOBALS.dateToEdition[this.x]}, {name:'termId', value:categories[this.y]} ]);
+                   }
+               }
+           }
+       }
+   };
+
    options.yAxis.labels.formatter = function() {
       var name = termNames[this.value];
       var trimName = name;

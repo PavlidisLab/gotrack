@@ -155,6 +155,14 @@
                          categories: []
                       },
 
+                      plotOptions : {
+                          series : {
+                              events: {
+
+                              }
+                          }
+                      },
+
                       tooltip: {
                          shared:false,
                          formatter: function() {
@@ -185,10 +193,10 @@
       };
             
       return options;
-   }
+   };
 
    
-   plotting.defaultHCOptions = function(config, scaleToggle, legendTooltips) {
+   plotting.defaultHCOptions = function(config) {
       /*
        * config.renderTo
        * config.title
@@ -201,55 +209,7 @@
        * config.xMax
        * 
        * */
-      var scaleToggle = isUndefined(scaleToggle) ? false : scaleToggle;
-      var legendTooltips = isUndefined(legendTooltips) ? false : legendTooltips;
-      
-      var doubleClicker = {
-                           target: -1,
-                           clickedOnce : false,
-                           timer : null,
-                           timeBetweenClicks : 400
-                       };
-      
-      var resetDoubleClick = function() {
-         clearTimeout(doubleClicker.timer);
-         doubleClicker.timer = null;
-         doubleClicker.clickedOnce = false;
-         doubleClicker.target = -1;
-       };
-       
-       var isolate = function(self) {
-          var seriesIndex = self.index;
-          var series = self.chart.series;
 
-          var reset = self.isolated;
-
-
-          for (var i = 0; i < series.length; i++)
-          {
-             if (series[i].index != seriesIndex)
-             {
-                if (reset) {
-                   series[i].setVisible(true, false)
-                   series[i].isolated=false;
-                } else {
-                   series[i].setVisible(false, false)
-                   series[i].isolated=false; 
-                }
-
-             } else {
-                if (reset) {
-                   series[i].setVisible(true, false)
-                   series[i].isolated=false;
-                } else {
-                   series[i].setVisible(true, false)
-                   series[i].isolated=true;
-                }
-             }
-          }
-          self.chart.redraw();
-       }
-      
       var options =  {
                       chart: {
                          renderTo: config.renderTo,
@@ -259,8 +219,8 @@
                             position: {
                                align: 'left',
                                // verticalAlign: 'top', // by default
-                               x: scaleToggle ? 105 : 30,
-                               y: 10,
+                               x: 30,
+                               y: 10
                             }
                          }
                       },
@@ -295,31 +255,7 @@
                       plotOptions : {
                          series : {
                             events: {
-                               legendItemClick: function(event) {
-                                  var s = event.target;
-                                  var isolateBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
 
-                                  if (isolateBehaviour) {
-
-                                     isolate(s);
-
-                                     return false;
-                                  } else {
-                                  
-                                     if (doubleClicker.clickedOnce === true && doubleClicker.target === s.index && doubleClicker.timer) {
-                                        resetDoubleClick();
-                                        isolate(s);
-                                        return false;
-                                      } else {
-                                         doubleClicker.clickedOnce = true;
-                                         doubleClicker.target = s.index;
-                                         doubleClicker.timer = setTimeout(function(){
-                                           resetDoubleClick();
-                                         }, doubleClicker.timeBetweenClicks);
-                                      }
-                                  }
-                                  
-                               }
                             }
                          }
                       },
@@ -330,12 +266,6 @@
                             hour:"%B %Y", 
                             minute:"%B %Y"
                          }
-                      },
-                      legend : {
-                         align : 'right',
-                         verticalAlign: 'top',
-                         layout: 'vertical',
-                         y:20
                       },
 
                       series: [],
@@ -350,58 +280,7 @@
                             dateFormat: '%Y-%m-%d'
                          }
                       }
-      }
-      if (scaleToggle) {
-         options.exporting.buttons = {
-                                      scaleToggle: {
-                                         align:'left',
-                                         //verticalAlign:'middle', 
-                                         x: 20, 
-                                         onclick: function () {
-                                            // The toggling of the text is not using an official API, can break with version update!
-                                            if (this.yAxis[0].isLog) {
-                                               this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
-                                               this.yAxis[0].update({ type: 'linear', min:config.min, max:config.max});
-                                            } else {
-                                               this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
-                                               this.yAxis[0].update({ type: 'logarithmic', min: null, max:config.max});
-                                            }
-
-                                         },
-                                         symbol: 'circle',
-                                         symbolFill: '#bada55',
-                                         symbolStroke: '#330033',
-                                         symbolStrokeWidth: 1,
-                                         _titleKey: 'axis_toggle', 
-                                         text: 'Linear'
-                                      }
-         };
-         options.lang = {
-            axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
-         };
-      }
-      
-      if ( legendTooltips ) {
-         var styleTooltip = function(description) {
-            return "<p class='description'>" + description + "</p>";
-         };
-         options.chart.events = {
-            load: function () {
-               var chart = this,
-                   legend = chart.legend;
-               for (var i = 0, len = legend.allItems.length; i < len; i++) {
-                   (function(i) {
-                       var item = legend.allItems[i];
-                       if (!isUndefined( item.userOptions.title ) ) {
-                          item.legendGroup.element.setAttribute("title", styleTooltip(item.userOptions.title));
-                          $(item.legendGroup.element).tipsy({ gravity: "w", opacity: 0.8, html: true });
-                       }
-                   })(i);
-               }
-
-           }
-         };
-      }
+      };
 
       if ( !isUndefined(config.data) ){
          for (var i = 0; i < config.data.series.length; i++) {
@@ -433,6 +312,149 @@
       return options;
    
    };
+
+   plotting.addLegend = function (options) {
+       var doubleClicker = {
+           target: -1,
+           clickedOnce : false,
+           timer : null,
+           timeBetweenClicks : 400
+       };
+
+       var resetDoubleClick = function() {
+           clearTimeout(doubleClicker.timer);
+           doubleClicker.timer = null;
+           doubleClicker.clickedOnce = false;
+           doubleClicker.target = -1;
+       };
+
+       var isolate = function(self) {
+           var seriesIndex = self.index;
+           var series = self.chart.series;
+
+           var reset = self.isolated;
+
+
+           for (var i = 0; i < series.length; i++)
+           {
+               if (series[i].index != seriesIndex)
+               {
+                   if (reset) {
+                       series[i].setVisible(true, false)
+                       series[i].isolated=false;
+                   } else {
+                       series[i].setVisible(false, false)
+                       series[i].isolated=false;
+                   }
+
+               } else {
+                   if (reset) {
+                       series[i].setVisible(true, false)
+                       series[i].isolated=false;
+                   } else {
+                       series[i].setVisible(true, false)
+                       series[i].isolated=true;
+                   }
+               }
+           }
+           self.chart.redraw();
+       };
+
+       options.legend = {
+           align : 'right',
+               verticalAlign: 'top',
+               layout: 'vertical',
+               y:20
+       };
+
+       options.plotOptions.series =options.plotOptions.series || {};
+       options.plotOptions.series.events = options.plotOptions.series.events || {};
+       $.extend(options.plotOptions.series.events, {
+           legendItemClick: function (event) {
+               var s = event.target;
+               var isolateBehaviour = event.browserEvent.metaKey || event.browserEvent.ctrlKey;
+
+               if (isolateBehaviour) {
+
+                   isolate(s);
+
+                   return false;
+               } else {
+
+                   if (doubleClicker.clickedOnce === true && doubleClicker.target === s.index && doubleClicker.timer) {
+                       resetDoubleClick();
+                       isolate(s);
+                       return false;
+                   } else {
+                       doubleClicker.clickedOnce = true;
+                       doubleClicker.target = s.index;
+                       doubleClicker.timer = setTimeout(function () {
+                           resetDoubleClick();
+                       }, doubleClicker.timeBetweenClicks);
+                   }
+               }
+
+           }
+       });
+
+   };
+
+    plotting.addScaleToggle = function (options, config) {
+        options.chart.resetZoomButton.position.x = 105;
+        options.exporting = options.exporting || {};
+        options.exporting.buttons = options.exporting.buttons || {};
+        $.extend(options.exporting.buttons, {
+            scaleToggle: {
+                align: 'left',
+                //verticalAlign:'middle',
+                x: 20,
+                onclick: function () {
+                    // The toggling of the text is not using an official API, can break with version update!
+                    if (this.yAxis[0].isLog) {
+                        this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
+                        this.yAxis[0].update({type: 'linear', min: config.min, max: config.max});
+                    } else {
+                        this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
+                        this.yAxis[0].update({type: 'logarithmic', min: null, max: config.max});
+                    }
+
+                },
+                symbol: 'circle',
+                symbolFill: '#bada55',
+                symbolStroke: '#330033',
+                symbolStrokeWidth: 1,
+                _titleKey: 'axis_toggle',
+                text: 'Linear'
+            }
+        });
+        options.lang = options.lang || {};
+        $.extend(options.lang, {
+            axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
+        });
+    };
+
+    plotting.addLegendTooltips = function (options) {
+            var styleTooltip = function(description) {
+                return "<p class='description'>" + description + "</p>";
+            };
+            options.chart.events = options.chart.events || {};
+            $.extend(options.chart.events, {
+                load: function () {
+                    var chart = this,
+                        legend = chart.legend;
+                    for (var i = 0, len = legend.allItems.length; i < len; i++) {
+                        (function(i) {
+                            var item = legend.allItems[i];
+                            if (!isUndefined( item.userOptions.title ) ) {
+                                item.legendGroup.element.setAttribute("title", styleTooltip(item.userOptions.title));
+                                $(item.legendGroup.element).tipsy({ gravity: "w", opacity: 0.8, html: true });
+                            }
+                        })(i);
+                    }
+
+                }
+            });
+    };
    
    
 }( window.plotting = window.plotting || {}, jQuery ));

@@ -156,7 +156,8 @@ function createTermsChart(xhr, status, args) {
    console.log(xhr, status, args);
 
    args.HC_terms.renderTo = 'hc_terms_container';
-   var options = plotting.defaultHCOptions(args.HC_terms, false);
+   var options = plotting.defaultHCOptions(args.HC_terms);
+    plotting.addLegend(options);
    
    plotting.charts.terms.options = options;
    plotting.charts.terms.recreate(options);
@@ -166,7 +167,8 @@ function createSimilarityChart(xhr, status, args) {
    console.log(xhr, status, args);
    
    args.HC_similarity.renderTo = 'hc_similarity_container';
-   var options = plotting.defaultHCOptions(args.HC_similarity, false);
+   var options = plotting.defaultHCOptions(args.HC_similarity);
+   plotting.addLegend(options);
   
    options.yAxis.minorTickInterval = 0.05;
    
@@ -206,7 +208,9 @@ function handleGraphSelected(xhr, status, args) {
    console.log(args);
    
    args.HC_enrichment.renderTo = 'hc_enrichment_container';
-   var options = plotting.defaultHCOptions(args.HC_enrichment, false, true);
+   var options = plotting.defaultHCOptions(args.HC_enrichment);
+   plotting.addLegend(options);
+   plotting.addLegendTooltips(options);
    options.chart.zoomType = 'xy';
   
    options.subtitle = {

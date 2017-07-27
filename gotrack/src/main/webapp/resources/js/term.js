@@ -199,7 +199,8 @@ function createOverviewChart(args) {
 function createGeneCountChart(args) {
 
     args.HC_gene.renderTo = 'hc_gene_container';
-    var options = plotting.defaultHCOptions(args.HC_gene, false);
+    var options = plotting.defaultHCOptions(args.HC_gene);
+    plotting.addLegend(options);
 
 
     if (!utility.isUndefined(args.HC_gene.data)) {
@@ -287,8 +288,8 @@ function createGeneCountChart(args) {
 function createEvidenceCountChart(args) {
 
     args.HC_evidence.renderTo = 'hc_evidence_container';
-    var options = plotting.defaultHCOptions(args.HC_evidence, false);
-
+    var options = plotting.defaultHCOptions(args.HC_evidence);
+    plotting.addLegend(options);
 
     plotting.charts.evidence.options = options;
     plotting.charts.evidence.recreate(options);
