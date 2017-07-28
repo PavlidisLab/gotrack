@@ -96,3 +96,24 @@ tr.gene-table-term-previous > td > div.gene-term-existence > div.previous {
 i.fa.fa-external-link:hover {
 	color: inherit;
 }
+
+div.inline {
+    display: inline-block;
+}
+
+/* Adding FA Icons to select many buttons***************/
+
+div.selectButtonFA > div.ui-button > span:before {
+    content: "\f02b";
+    font-family: 'FontAwesome';
+}
+
+div.selectButtonFA > div.ui-button:nth-child(1) > span:before {
+    color: red;
+}
+
+div.selectButtonFA > div.ui-button:nth-child(2) > span:before {
+    color: purple;
+}
+
+/*******************************************************/

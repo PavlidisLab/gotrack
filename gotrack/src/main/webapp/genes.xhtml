@@ -81,13 +81,29 @@
                     <p:ajax event="rowUnselect" onstart="afterRowSelection();return false;"/>
 
                     <p:headerRow>
-                        <p:column colspan="4">
+                        <p:column colspan="5">
                             <h:outputText value="#{termRow.type.label}" />
                         </p:column>
                     </p:headerRow>
 
                     <p:column style="width:16px">
                         <p:rowToggler />
+                    </p:column>
+                    <p:column headerText="Tags" filterBy="#{termRow.inSet}" filterFunction="#{geneView.filterByBitSet}"
+                              rendered="#{geneView.rightPanelCompareEdition != null}" style="width:80px;">
+                        <f:facet name="filter">
+                            <p:selectManyButton onchange="PF('funcTable').filter()" style="font-size: 75%" styleClass="selectButtonFA">
+                                <!-- FA icon added through CSS -->
+                                <f:selectItem itemLabel="" itemValue="0" />
+                                <f:selectItem itemLabel="" itemValue="1" />
+                            </p:selectManyButton>
+                        </f:facet>
+                        <p:outputPanel rendered="#{termRow.inSet.get(0)}" styleClass="inline">
+                            <i class="fa fa-tag" style="margin-right: 5px;color:red;"/>
+                        </p:outputPanel>
+                        <p:outputPanel rendered="#{termRow.inSet.get(1)}" styleClass="inline">
+                            <i class="fa fa-tag" style="margin-right: 5px;color:purple;"/>
+                        </p:outputPanel>
                     </p:column>
                     <p:column filterBy="#{termRow.term.goId}" filterMatchMode="contains"
                               headerText="Id" width="25%">
@@ -262,6 +278,9 @@
             <p:remoteCommand name="fetchAnnotationPointData"
                              update=":rightForm"
                              actionListener="#{geneView.fetchAnnotationPointData()}"/>
+            <p:remoteCommand name="fetchAnnotationComparisonData"
+                             update=":rightForm"
+                             actionListener="#{geneView.fetchAnnotationComparisonData()}"/>
 
             <p:remoteCommand name="fetchTimelinePointData"
                              update=":viewAnnotationsDlg"

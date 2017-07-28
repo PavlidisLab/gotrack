@@ -91,6 +91,7 @@ public class GeneView implements Serializable {
     private List<GeneViewRightPanelRow> rightPanelSelectedTerms;
     private Collection<GeneViewRightPanelRow> rightPanelFilteredTerms;
     private Edition rightPanelEdition;
+    private Edition rightPanelCompareEdition;
 
     // Right Panel Click
 //    private Collection<Annotation> rightPanelAnnotations = Sets.newHashSet();
@@ -270,6 +271,47 @@ public class GeneView implements Serializable {
                 results.add( new GeneViewRightPanelRow( term,
                         directs.containsKey( term ) ? AnnotationType.D : AnnotationType.I, annotations ) );
             }
+        }
+
+        Collections.sort(results);
+        return results;
+    }
+
+    private List<GeneViewRightPanelRow> fetchRightPanelRowsComparison(Edition editionA, Edition editionB ) {
+        List<GeneViewRightPanelRow> results = Lists.newArrayList();
+
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> inferredA = rawData.get( AnnotationType.I ).row( editionA );
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> directsA = rawData.get( AnnotationType.D ).row( editionA );
+
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> inferredB = rawData.get( AnnotationType.I ).row( editionB );
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> directsB = rawData.get( AnnotationType.D ).row( editionB );
+
+        for ( Entry<GeneOntologyTerm, Set<Annotation>> entry : inferredA.entrySet() ) {
+            GeneOntologyTerm term = entry.getKey();
+            Set<Annotation> annotations = entry.getValue();
+            BitSet inSet = new BitSet();
+            inSet.set( 0 );
+            inSet.set( 1, inferredB.containsKey( term ) );
+            results.add( new GeneViewRightPanelRow(
+                    term,
+                    directsA.containsKey( term ) ? AnnotationType.D : AnnotationType.I,
+                    annotations,
+                    inSet ) );
+
+        }
+
+        // Considered using Maps.difference. However, this method is not as efficient
+        // as the view returned by Sets.difference
+        BitSet inSet = new BitSet();
+        inSet.set( 0, 0 );
+        inSet.set( 1 );
+        for ( GeneOntologyTerm term : Sets.difference( inferredB.keySet(), inferredA.keySet() ) ) {
+            Set<Annotation> annotations = inferredB.get( term );
+            results.add( new GeneViewRightPanelRow(
+                    term,
+                    directsB.containsKey( term ) ? AnnotationType.D : AnnotationType.I,
+                    annotations,inSet ) );
+
         }
 
         Collections.sort(results);
@@ -630,8 +672,43 @@ public class GeneView implements Serializable {
             rightPanelFilteredTerms = null;
             rightPanelSelectedTerms = null;
             rightPanelEdition = clickEdition;
-//            allClickTerms = compareEditions( clickEdition );
-//            termsFromAnnotationClick = compareEditions2( clickEdition );
+
+            // Reset comparison fields
+            rightPanelCompareEdition = null;
+
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return;
+        }
+
+    }
+
+    /**
+     * Ctrl-Click event functionality for annotation chart
+     */
+    public void fetchAnnotationComparisonData() {
+        log.debug( "fetchAnnotationComparisonData" );
+        Integer compareEditionId;
+        try {
+            compareEditionId = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "compareEdition" ) );
+        } catch ( NumberFormatException e ) {
+            log.error( e );
+            return;
+        }
+
+        Edition compareEdition = cache.getEdition( this.gene.getSpecies(), compareEditionId );
+
+        if ( compareEdition == null ) {
+            log.warn( "Selected compare edition id has no corresponding edition object" );
+            return;
+        }
+
+        try {
+            rightPanelTerms = fetchRightPanelRowsComparison( rightPanelEdition, compareEdition );
+            rightPanelFilteredTerms = null;
+            rightPanelSelectedTerms = null;
+            rightPanelCompareEdition = compareEdition;
         } catch ( NullPointerException e ) {
             log.error( e );
             return;
@@ -699,6 +776,29 @@ public class GeneView implements Serializable {
         RequestContext.getCurrentInstance().addCallbackParam( "missing_editions", new Gson().toJson( missingEditionDates ) );
     }
 
+    /**
+     * custom filter function for primefaces data table column, filters by multiple booleans
+     */
+    public boolean filterByBitSet( Object value, Object filter, Locale locale ) {
+        Set<String> filterIndices = ( filter == null ) ? null : Sets.newHashSet((String[]) filter);
+        if ( filterIndices == null || filterIndices.isEmpty() ) {
+            return true;
+        }
+
+        if ( value == null ) {
+            return false;
+        }
+
+        BitSet enabledBits = (BitSet) value;
+
+        BitSet filterBits = new BitSet(enabledBits.length());
+        for ( String i : filterIndices ) {
+            filterBits.set( Integer.valueOf( i ) );
+        }
+
+        return filterBits.equals( enabledBits );
+    }
+
     // Getters & Setters
 
     public String getQueryAccession() {
@@ -763,5 +863,9 @@ public class GeneView implements Serializable {
 
     public Edition getRightPanelEdition() {
         return rightPanelEdition;
+    }
+
+    public Edition getRightPanelCompareEdition() {
+        return rightPanelCompareEdition;
     }
 }

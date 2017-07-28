@@ -23,6 +23,7 @@ import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.AnnotationType;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
+import java.util.BitSet;
 import java.util.Collection;
 
 /**
@@ -35,10 +36,18 @@ public class GeneViewRightPanelRow implements Comparable<GeneViewRightPanelRow> 
     private final AnnotationType type;
     private final Collection<Annotation> annotations;
 
+    /* Used for set comparison */
+    private final BitSet inSet;
+
     public GeneViewRightPanelRow( GeneOntologyTerm term, AnnotationType type, Collection<Annotation> annotations ) {
+        this( term, type, annotations, null );
+    }
+
+    public GeneViewRightPanelRow( GeneOntologyTerm term, AnnotationType type, Collection<Annotation> annotations, BitSet inSet ) {
         this.term = term;
         this.type = type;
         this.annotations = annotations;
+        this.inSet = inSet;
     }
 
     public GeneOntologyTerm getTerm() {
@@ -51,6 +60,10 @@ public class GeneViewRightPanelRow implements Comparable<GeneViewRightPanelRow> 
 
     public Collection<Annotation> getAnnotations() {
         return annotations;
+    }
+
+    public BitSet getInSet() {
+        return inSet;
     }
 
     @Override
