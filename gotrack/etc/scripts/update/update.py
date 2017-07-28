@@ -41,7 +41,7 @@ def main(resource_directory=None, cron=False, no_download=False):
         resource_directory = tempfile.mkdtemp()
         LOG.warn("No resource directory specified. Creating temporary folder at %s", resource_directory)
 
-    check_ftp = not no_download and query_yes_no("Check FTP sites for new data?")
+    check_ftp = not no_download and (cron or query_yes_no("Check FTP sites for new data?"))
     res = Resources(resource_directory, gotrack.fetch_current_state(), check_ftp)
 
     # Display current state of resource directory, database, and ftp site
