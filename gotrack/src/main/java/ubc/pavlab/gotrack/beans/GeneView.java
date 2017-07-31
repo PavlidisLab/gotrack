@@ -91,7 +91,10 @@ public class GeneView implements Serializable {
     private List<GeneViewRightPanelRow> rightPanelSelectedTerms;
     private Collection<GeneViewRightPanelRow> rightPanelFilteredTerms;
     private Edition rightPanelEdition;
+
+    // Comparisons
     private Edition rightPanelCompareEdition;
+    private int comparisons = 0;
 
     // Right Panel Click
 //    private Collection<Annotation> rightPanelAnnotations = Sets.newHashSet();
@@ -314,8 +317,56 @@ public class GeneView implements Serializable {
 
         }
 
+        comparisons = 1;
+
         Collections.sort(results);
         return results;
+    }
+
+
+    private List<GeneViewRightPanelRow> addRightPanelRowsComparison(Edition newComparison ) {
+
+//        if (rightPanelTerms == null || rightPanelTerms.isEmpty()) {
+//            return fetchRightPanelRowsComparison( rightPanelEdition, newComparison );
+//        }
+
+        BitSet example = rightPanelTerms.iterator().next().getInSet();
+        int nextBitIndex = comparisons + 1;
+
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> newInferred = rawData.get( AnnotationType.I ).row( newComparison );
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> newDirect = rawData.get( AnnotationType.D ).row( newComparison );
+
+        for ( GeneViewRightPanelRow rightPanelTerm : rightPanelTerms ) {
+            BitSet inSet = rightPanelTerm.getInSet();
+            inSet.set( nextBitIndex , newInferred.containsKey( rightPanelTerm.getTerm() ) );
+        }
+
+
+
+        // Not too fast but better than alternatives... probably
+        Set<GeneOntologyTerm> termsInRightPanel = Sets.newHashSet( Collections2.transform( rightPanelTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
+            @Override
+            public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
+                return row.getTerm();
+            }
+        } ) );
+
+        BitSet inSet = new BitSet( nextBitIndex );
+        inSet.set( nextBitIndex );
+        for ( GeneOntologyTerm term : Sets.difference( newInferred.keySet(), termsInRightPanel ) ) {
+            Set<Annotation> annotations = newInferred.get( term );
+            rightPanelTerms.add( new GeneViewRightPanelRow(
+                    term,
+                    newDirect.containsKey( term ) ? AnnotationType.D : AnnotationType.I,
+                    annotations,
+                    inSet ) );
+
+        }
+
+        comparisons++;
+
+        Collections.sort(rightPanelTerms);
+        return rightPanelTerms;
     }
 
     /**
@@ -675,6 +726,7 @@ public class GeneView implements Serializable {
 
             // Reset comparison fields
             rightPanelCompareEdition = null;
+            comparisons = 0;
 
         } catch ( NullPointerException e ) {
             log.error( e );
@@ -706,6 +758,39 @@ public class GeneView implements Serializable {
 
         try {
             rightPanelTerms = fetchRightPanelRowsComparison( rightPanelEdition, compareEdition );
+            rightPanelFilteredTerms = null;
+            rightPanelSelectedTerms = null;
+            rightPanelCompareEdition = compareEdition;
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return;
+        }
+
+    }
+
+    /**
+     * Ctrl-Shift-Click event functionality for annotation chart
+     */
+    public void addAnnotationComparisonData() {
+        log.debug( "addAnnotationComparisonData" );
+        Integer compareEditionId;
+        try {
+            compareEditionId = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "compareEdition" ) );
+        } catch ( NumberFormatException e ) {
+            log.error( e );
+            return;
+        }
+
+        Edition compareEdition = cache.getEdition( this.gene.getSpecies(), compareEditionId );
+
+        if ( compareEdition == null ) {
+            log.warn( "Selected compare edition id has no corresponding edition object" );
+            return;
+        }
+
+        try {
+            addRightPanelRowsComparison( compareEdition );
             rightPanelFilteredTerms = null;
             rightPanelSelectedTerms = null;
             rightPanelCompareEdition = compareEdition;
@@ -867,5 +952,9 @@ public class GeneView implements Serializable {
 
     public Edition getRightPanelCompareEdition() {
         return rightPanelCompareEdition;
+    }
+
+    public int getComparisons() {
+        return comparisons;
     }
 }

@@ -391,35 +391,73 @@ function handleFetchTimeline(xhr, status, args) {
 
 }
 
-function setCompareEdition(c, p) {
-    var chart = c;
+var comparisons = [];
+function setCompareEdition(p, color) {
+    destroyCompareEdition();
+    addCompareEdition(p, color);
 
-    destroyCompareEdition(chart);
-
-    chart.xAxis[0].addPlotLine({
-        value: p.x,
-        color: 'purple',
-        width: 1,
-        id: 'plot-line-compare'
-    });
-
-    c.compareEditionLabel = chart.renderer.text("Compare to edition: " + GLOBALS.dateToEdition[p.x], chart.plotLeft + 5, chart.plotTop + 40)
-        .attr({
-            rotation: 0,
-        })
-        .css({
-            color: 'purple',
-            fontSize: '12px'
-        })
-        .add();
 }
 
-function destroyCompareEdition(c) {
-    c.xAxis[0].removePlotLine('plot-line-compare');
+function addCompareEdition(p, color) {
+    var edition = GLOBALS.dateToEdition[p.x];
+    if ( comparisons.length > 2 || comparisons.indexOf(edition) > -1 ) {
+        return false;
+    }
+
+    comparisons.push(edition);
+    console.log(comparisons);
+
+    if (utility.isUndefined(color) ) {
+        color = plotting.comparisonColors[comparisons.length];
+    }
+
+    var comparisonsLabel = "Compared: ";
+    for (var i = 0; i < comparisons.length; i++) {
+        var edColor = plotting.comparisonColors[i+1];
+        comparisonsLabel += '<span style="color: ' + edColor + '">' + comparisons[i] + '</span>, ';
+    }
+    comparisonsLabel = comparisonsLabel.slice(0, -2);
+
+    plotting.mainCharts.forEach(function (c) {
+
+        c.xAxis[0].addPlotLine({
+            value: p.x,
+            color: color,
+            width: 1,
+            id: 'plot-line-compare'
+        });
+
+        destroyCompareEditionLabel(c);
+
+        c.compareEditionLabel = c.renderer.text(comparisonsLabel, c.plotLeft + 5, c.plotTop + 40)
+            .attr({
+                rotation: 0
+            })
+            .css({
+                fontSize: '12px'
+            })
+            .add();
+    });
+    return true;
+}
+
+function destroyCompareEdition() {
+    comparisons = [];
+    plotting.mainCharts.forEach(function (c) {
+        destroyCompareEditionLabel(c);
+        destroyCompareEditionLine(c);
+    });
+}
+
+function destroyCompareEditionLabel(c) {
     if (c.compareEditionLabel) {
         c.compareEditionLabel.destroy();
         c.compareEditionLabel = null;
     }
+}
+
+function destroyCompareEditionLine(c) {
+    c.xAxis[0].removePlotLine('plot-line-compare');
 }
 
 function destroySelectedEdition(c) {
@@ -438,17 +476,17 @@ function redrawSelectedEditionPlotLine(c, p) {
 
     chart.xAxis[0].addPlotLine({
         value: p.x,
-        color: 'red',
+        color: plotting.comparisonColors[0],
         width: 1,
         id: 'plot-line-selected'
     });
 
     c.clickLabel = chart.renderer.text("Edition: " + GLOBALS.dateToEdition[p.x], chart.plotLeft + 5, chart.plotTop + 20)
         .attr({
-            rotation: 0,
+            rotation: 0
         })
         .css({
-            color: 'red',
+            color: plotting.comparisonColors[0],
             fontSize: '12px'
         })
         .add();
@@ -465,23 +503,34 @@ function commonOptions(options, config) {
     options.tooltip.pointFormatter = function () {
         return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 3) + '</b><br/>';
     };
+
+    var clickBehaviour = function(event, p) {
+        var compareBehaviour = event.metaKey || event.ctrlKey;
+        if (!compareBehaviour) {
+            fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[p.x]}]);
+            plotting.mainCharts.forEach(function (c) {
+                redrawSelectedEditionPlotLine(c, p);
+            });
+            destroyCompareEdition();
+        } else {
+            if (event.shiftKey) {
+                var added = addCompareEdition(p);
+                if (added) {
+                    addAnnotationComparisonData([{name: 'compareEdition', value: GLOBALS.dateToEdition[p.x]}]);
+                }
+            } else {
+                fetchAnnotationComparisonData([{name: 'compareEdition', value: GLOBALS.dateToEdition[p.x]}]);
+                setCompareEdition(p);
+
+            }
+        }
+    };
+
     options.plotOptions.series.point = {
         events: {
             click: function (event) {
                 var p = this;
-                var compareBehaviour = event.metaKey || event.ctrlKey;
-                if (!compareBehaviour) {
-                    fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[p.x]}]);
-                    plotting.mainCharts.forEach(function (c) {
-                        redrawSelectedEditionPlotLine(c, p);
-                        destroyCompareEdition(c);
-                    });
-                }else {
-                    fetchAnnotationComparisonData([{name: 'compareEdition', value: GLOBALS.dateToEdition[p.x]}]);
-                    plotting.mainCharts.forEach(function (c) {
-                        setCompareEdition(c, p);
-                    });
-                }
+                clickBehaviour(event, p);
             }
         }
     };
@@ -489,19 +538,7 @@ function commonOptions(options, config) {
     options.chart.events = {
         click: function (event) {
             var p = this.hoverPoint;
-            var compareBehaviour = event.metaKey || event.ctrlKey;
-            if (!compareBehaviour) {
-                fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[p.x]}]);
-                plotting.mainCharts.forEach(function (c) {
-                    redrawSelectedEditionPlotLine(c, p);
-                    destroyCompareEdition(c);
-                });
-            } else {
-                fetchAnnotationComparisonData([{name: 'compareEdition', value: GLOBALS.dateToEdition[p.x]}]);
-                plotting.mainCharts.forEach(function (c) {
-                    setCompareEdition(c, p);
-                });
-            }
+            clickBehaviour(event, p);
         }
     };
 
@@ -619,5 +656,19 @@ $(document).ready(function () {
     plotting.createNewChart('timeline');
 
     plotting.mainCharts = [];
+
+    plotting.comparisonColors = ['#FF0000','#800080','#80ff1c', '#05feff'];
+
+// Used for arbitrary numbers of tags
+/*    var n = plotting.MAXIMALLY_DISTINCT_COLORS.length;
+    var style = document.createElement('style');
+    style.type = 'text/css';
+    style.innerHTML = '';
+    for (var i = 0; i < plotting.MAXIMALLY_DISTINCT_COLORS.length; i++) {
+        var color = plotting.MAXIMALLY_DISTINCT_COLORS[n - 1 - i];
+        style.innerHTML += '.tag-' + i + ' { color: ' + color + '; }\n';
+        style.innerHTML += 'div.selectButtonFA > div.ui-button:nth-child(' + (i+1) + ') > span:before { color: ' + color + '; }\n';
+    }
+    document.getElementsByTagName('head')[0].appendChild(style);*/
 
 });

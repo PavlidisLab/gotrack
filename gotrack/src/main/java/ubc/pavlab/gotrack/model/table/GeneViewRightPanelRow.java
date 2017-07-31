@@ -40,7 +40,7 @@ public class GeneViewRightPanelRow implements Comparable<GeneViewRightPanelRow> 
     private final BitSet inSet;
 
     public GeneViewRightPanelRow( GeneOntologyTerm term, AnnotationType type, Collection<Annotation> annotations ) {
-        this( term, type, annotations, null );
+        this( term, type, annotations, BitSet.valueOf( new long[] {1} ));
     }
 
     public GeneViewRightPanelRow( GeneOntologyTerm term, AnnotationType type, Collection<Annotation> annotations, BitSet inSet ) {

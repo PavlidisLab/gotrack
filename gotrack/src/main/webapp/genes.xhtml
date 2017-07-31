@@ -5,7 +5,8 @@
                 xmlns:ui="http://java.sun.com/jsf/facelets"
                 xmlns:p="http://primefaces.org/ui"
                 xmlns:o="http://omnifaces.org/ui"
-                xmlns:comps="http://java.sun.com/jsf/composite/composites">
+                xmlns:comps="http://java.sun.com/jsf/composite/composites"
+                xmlns:c="http://java.sun.com/jsp/jstl/core">
 
     <ui:define name="metadata">
         <f:metadata>
@@ -92,18 +93,18 @@
                     <p:column headerText="Tags" filterBy="#{termRow.inSet}" filterFunction="#{geneView.filterByBitSet}"
                               rendered="#{geneView.rightPanelCompareEdition != null}" style="width:80px;">
                         <f:facet name="filter">
-                            <p:selectManyButton onchange="PF('funcTable').filter()" style="font-size: 75%" styleClass="selectButtonFA">
+                            <p:selectManyButton onchange="PF('funcTable').filter()" style="font-size: #{geneView.comparisons > 1 ? 60 : 75}%" styleClass="selectButtonFA">
                                 <!-- FA icon added through CSS -->
-                                <f:selectItem itemLabel="" itemValue="0" />
-                                <f:selectItem itemLabel="" itemValue="1" />
+                                <c:forEach begin="0" end="#{geneView.comparisons}" var="i">
+                                    <f:selectItem itemLabel="" itemValue="#{i}" />
+                                </c:forEach>
                             </p:selectManyButton>
                         </f:facet>
-                        <p:outputPanel rendered="#{termRow.inSet.get(0)}" styleClass="inline">
-                            <i class="fa fa-tag" style="margin-right: 5px;color:red;"/>
-                        </p:outputPanel>
-                        <p:outputPanel rendered="#{termRow.inSet.get(1)}" styleClass="inline">
-                            <i class="fa fa-tag" style="margin-right: 5px;color:purple;"/>
-                        </p:outputPanel>
+                        <c:forEach begin="0" end="#{geneView.comparisons}" var="i">
+                            <p:outputPanel rendered="#{termRow.inSet.get(i)}" styleClass="inline">
+                                <i class="fa fa-tag tag-#{i}" style="margin-right: 5px;"/>
+                            </p:outputPanel>
+                        </c:forEach>
                     </p:column>
                     <p:column filterBy="#{termRow.term.goId}" filterMatchMode="contains"
                               headerText="Id" width="25%">
@@ -281,6 +282,9 @@
             <p:remoteCommand name="fetchAnnotationComparisonData"
                              update=":rightForm"
                              actionListener="#{geneView.fetchAnnotationComparisonData()}"/>
+            <p:remoteCommand name="addAnnotationComparisonData"
+                             update=":rightForm"
+                             actionListener="#{geneView.addAnnotationComparisonData()}"/>
 
             <p:remoteCommand name="fetchTimelinePointData"
                              update=":viewAnnotationsDlg"

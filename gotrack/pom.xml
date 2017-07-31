@@ -52,7 +52,11 @@
 			<artifactId>javax.servlet-api</artifactId>
 			<version>${servlet.version}</version>
 		</dependency>
-
+		<dependency>
+			<groupId>javax.servlet.jsp.jstl</groupId>
+			<artifactId>jstl-api</artifactId>
+			<version>1.2</version>
+		</dependency>
 		<!-- Facelets -->
 
 		<dependency>
