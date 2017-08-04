@@ -634,6 +634,15 @@ $(document).ready(function () {
 
     plotting.comparisonColors = ['#FF0000','#800080','#80ff1c', '#05feff'];
 
+    // This fixes some strange functionality in PrimeFaces Datatable filtering.
+    // By default pressing ctrl (among other things) while a filter is focused
+    // will activate a table filter. This combined with the fact that clicking
+    // on our HighCharts charts does not make the filers lose focus means we
+    // needlessly reloading table data on Chart ctrl-clicks.
+    $('div.ui-tabs-panels').on("click", "div.highcharts-container", function() {
+        $('input.ui-column-filter').blur();
+    });
+
 // Used for arbitrary numbers of tags
 /*    var n = plotting.MAXIMALLY_DISTINCT_COLORS.length;
     var style = document.createElement('style');
