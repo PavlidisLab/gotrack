@@ -405,18 +405,10 @@ function addCompareEdition(p, color) {
     }
 
     comparisons.push(edition);
-    console.log(comparisons);
 
     if (utility.isUndefined(color) ) {
         color = plotting.comparisonColors[comparisons.length];
     }
-
-    var comparisonsLabel = "Compared: ";
-    for (var i = 0; i < comparisons.length; i++) {
-        var edColor = plotting.comparisonColors[i+1];
-        comparisonsLabel += '<span style="color: ' + edColor + '">' + comparisons[i] + '</span>, ';
-    }
-    comparisonsLabel = comparisonsLabel.slice(0, -2);
 
     plotting.mainCharts.forEach(function (c) {
 
@@ -426,17 +418,6 @@ function addCompareEdition(p, color) {
             width: 1,
             id: 'plot-line-compare'
         });
-
-        destroyCompareEditionLabel(c);
-
-        c.compareEditionLabel = c.renderer.text(comparisonsLabel, c.plotLeft + 5, c.plotTop + 40)
-            .attr({
-                rotation: 0
-            })
-            .css({
-                fontSize: '12px'
-            })
-            .add();
     });
     return true;
 }
@@ -444,16 +425,8 @@ function addCompareEdition(p, color) {
 function destroyCompareEdition() {
     comparisons = [];
     plotting.mainCharts.forEach(function (c) {
-        destroyCompareEditionLabel(c);
         destroyCompareEditionLine(c);
     });
-}
-
-function destroyCompareEditionLabel(c) {
-    if (c.compareEditionLabel) {
-        c.compareEditionLabel.destroy();
-        c.compareEditionLabel = null;
-    }
 }
 
 function destroyCompareEditionLine(c) {
@@ -462,11 +435,6 @@ function destroyCompareEditionLine(c) {
 
 function destroySelectedEdition(c) {
     c.xAxis[0].removePlotLine('plot-line-selected');
-
-    if (c.clickLabel) {
-        c.clickLabel.destroy();
-        c.clickLabel = null;
-    }
 }
 
 function redrawSelectedEditionPlotLine(c, p) {
@@ -480,16 +448,21 @@ function redrawSelectedEditionPlotLine(c, p) {
         width: 1,
         id: 'plot-line-selected'
     });
+}
 
-    c.clickLabel = chart.renderer.text("Edition: " + GLOBALS.dateToEdition[p.x], chart.plotLeft + 5, chart.plotTop + 20)
-        .attr({
-            rotation: 0
-        })
-        .css({
-            color: plotting.comparisonColors[0],
-            fontSize: '12px'
-        })
-        .add();
+function toggleTags() {
+    var chkBox = PF('colToggler').itemContainer.children('li:nth-child(2)').children('div.ui-chkbox');
+    PF('colToggler').toggle(chkBox);
+}
+
+function showTags() {
+    var chkBox = PF('colToggler').itemContainer.children('li:nth-child(2)').children('div.ui-chkbox');
+    PF('colToggler').check(chkBox);
+}
+
+function hideTags() {
+    var chkBox = PF('colToggler').itemContainer.children('li:nth-child(2)').children('div.ui-chkbox');
+    PF('colToggler').uncheck(chkBox);
 }
 
 function commonOptions(options, config) {
@@ -507,12 +480,14 @@ function commonOptions(options, config) {
     var clickBehaviour = function(event, p) {
         var compareBehaviour = event.metaKey || event.ctrlKey;
         if (!compareBehaviour) {
+            hideTags();
             fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[p.x]}]);
             plotting.mainCharts.forEach(function (c) {
                 redrawSelectedEditionPlotLine(c, p);
             });
             destroyCompareEdition();
         } else {
+            showTags();
             if (event.shiftKey) {
                 var added = addCompareEdition(p);
                 if (added) {

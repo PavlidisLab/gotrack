@@ -68,6 +68,7 @@
                              value="#{geneView.rightPanelTerms}"
                              scrollable="true"
                              style="margin-bottom:0"
+                             styleClass="auto"
                              emptyMessage="No annotations found with given criteria"
                              filteredValue="#{geneView.rightPanelFilteredTerms}"
                              selection="#{geneView.rightPanelSelectedTerms}"
@@ -80,34 +81,45 @@
                     <p:ajax event="rowDblselect" oncomplete="afterRowSelection();fetchTimeline();"/>
                     <p:ajax event="rowSelect" onstart="afterRowSelection();return false;"/>
                     <p:ajax event="rowUnselect" onstart="afterRowSelection();return false;"/>
-
+                    <f:facet name="header">
+                        <p:outputPanel id="headerPanel">
+                            <h:outputText value="Edition "/>
+                            <h:outputText value="#{geneView.rightPanelEdition.edition} " styleClass="#{not empty geneView.comparisons ? 'tag-0' : ''}"/>
+                            <h:outputText rendered="#{not empty geneView.comparisons}" value="compared to: " />
+                            <p:repeat value="#{geneView.comparisons}" var="compareEdition" varStatus="loopStatus">
+                                <h:outputText value="#{compareEdition.edition} " styleClass="tag-#{loopStatus.index + 1}"/>
+                            </p:repeat>
+                        </p:outputPanel>
+                        <p:commandButton id="toggler" type="button" value="Columns" icon="ui-icon-calculator" style="display:none;"/>
+                        <p:columnToggler widgetVar="colToggler" datasource="funcTable" trigger="toggler" />
+                    </f:facet>
                     <p:headerRow>
                         <p:column colspan="5">
                             <h:outputText value="#{termRow.type.label}" />
                         </p:column>
                     </p:headerRow>
 
-                    <p:column style="width:16px">
+                    <p:column style="width:25px" styleClass="fixed">
                         <p:rowToggler />
                     </p:column>
                     <p:column headerText="Tags" filterBy="#{termRow.inSet}" filterFunction="#{geneView.filterByBitSet}"
-                              rendered="#{geneView.rightPanelCompareEdition != null}" style="width:80px;">
+                              visible="#{not empty geneView.comparisons}" style="width:80px;" styleClass="fixed">
                         <f:facet name="filter">
-                            <p:selectManyButton onchange="PF('funcTable').filter()" style="font-size: #{geneView.comparisons > 1 ? 60 : 75}%" styleClass="selectButtonFA">
+                            <p:selectManyButton id="tagFilter" onchange="PF('funcTable').filter()" style="font-size: #{geneView.comparisons.size() > 1 ? 60 : 75}%" styleClass="selectButtonFA">
                                 <!-- FA icon added through CSS -->
-                                <c:forEach begin="0" end="#{geneView.comparisons}" var="i">
+                                <c:forEach begin="0" end="#{geneView.comparisons.size()}" var="i">
                                     <f:selectItem itemLabel="" itemValue="#{i}" />
                                 </c:forEach>
                             </p:selectManyButton>
                         </f:facet>
-                        <c:forEach begin="0" end="#{geneView.comparisons}" var="i">
+                        <c:forEach begin="0" end="#{geneView.comparisons.size()}" var="i">
                             <p:outputPanel rendered="#{termRow.inSet.get(i)}" styleClass="inline">
                                 <i class="fa fa-tag tag-#{i}" style="margin-right: 5px;"/>
                             </p:outputPanel>
                         </c:forEach>
                     </p:column>
                     <p:column filterBy="#{termRow.term.goId}" filterMatchMode="contains"
-                              headerText="Id" width="25%">
+                              headerText="Id" style="width:120px" styleClass="fixed">
                         <p:commandLink actionListener="#{geneView.fetchTermGraph(termRow.term)}" oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
                             <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
                         </p:commandLink>
@@ -116,7 +128,7 @@
                         </p:link>
                     </p:column>
                     <p:column filterBy="#{termRow.term.aspect}" filterMatchMode="in"
-                              headerText="Aspect" style="width:150px;">
+                              headerText="Aspect" style="width:155px;" styleClass="fixed">
                         <f:facet name="filter">
                             <p:selectManyButton
                                     onchange="PF('funcTable').filter()"
@@ -128,7 +140,7 @@
                         <h:outputText value="#{termRow.term.aspect.label}"/>
                     </p:column>
                     <p:column filterBy="#{termRow.term.name}" filterMatchMode="contains"
-                              headerText="Name" width="55%">
+                              headerText="Name" styleClass="auto">
                         <h:outputText value="#{termRow.term.name}"/>
                     </p:column>
 
@@ -277,13 +289,19 @@
                              actionListener="#{geneView.fetchTimeline()}"/>
 
             <p:remoteCommand name="fetchAnnotationPointData"
-                             update=":rightForm"
-                             actionListener="#{geneView.fetchAnnotationPointData()}"/>
+                             process="@this"
+                             update=":rightForm:funcTable:headerPanel"
+                             oncomplete="PF('funcTable').filter()"
+                             actionListener="#{geneView.fetchAnnotationPointData}"/>
             <p:remoteCommand name="fetchAnnotationComparisonData"
-                             update=":rightForm"
+                             process="@this"
+                             update=":rightForm:funcTable:tagFilter, :rightForm:funcTable:headerPanel"
+                             oncomplete="PF('funcTable').filter()"
                              actionListener="#{geneView.fetchAnnotationComparisonData()}"/>
             <p:remoteCommand name="addAnnotationComparisonData"
-                             update=":rightForm"
+                             process="@this"
+                             update=":rightForm:funcTable:tagFilter, :rightForm:funcTable:headerPanel"
+                             oncomplete="PF('funcTable').filter()"
                              actionListener="#{geneView.addAnnotationComparisonData()}"/>
 
             <p:remoteCommand name="fetchTimelinePointData"

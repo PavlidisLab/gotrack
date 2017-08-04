@@ -93,8 +93,7 @@ public class GeneView implements Serializable {
     private Edition rightPanelEdition;
 
     // Comparisons
-    private Edition rightPanelCompareEdition;
-    private int comparisons = 0;
+    private List<Edition> comparisons = Lists.newArrayList();
 
     // Right Panel Click
 //    private Collection<Annotation> rightPanelAnnotations = Sets.newHashSet();
@@ -317,7 +316,7 @@ public class GeneView implements Serializable {
 
         }
 
-        comparisons = 1;
+        comparisons = Lists.newArrayList( editionB );
 
         Collections.sort(results);
         return results;
@@ -331,7 +330,7 @@ public class GeneView implements Serializable {
 //        }
 
         BitSet example = rightPanelTerms.iterator().next().getInSet();
-        int nextBitIndex = comparisons + 1;
+        int nextBitIndex = comparisons.size() + 1;
 
         ImmutableMap<GeneOntologyTerm, Set<Annotation>> newInferred = rawData.get( AnnotationType.I ).row( newComparison );
         ImmutableMap<GeneOntologyTerm, Set<Annotation>> newDirect = rawData.get( AnnotationType.D ).row( newComparison );
@@ -363,7 +362,7 @@ public class GeneView implements Serializable {
 
         }
 
-        comparisons++;
+        comparisons.add( newComparison );
 
         Collections.sort(rightPanelTerms);
         return rightPanelTerms;
@@ -725,9 +724,7 @@ public class GeneView implements Serializable {
             rightPanelEdition = clickEdition;
 
             // Reset comparison fields
-            rightPanelCompareEdition = null;
-            comparisons = 0;
-
+            comparisons = Lists.newArrayList();
         } catch ( NullPointerException e ) {
             log.error( e );
             return;
@@ -760,7 +757,6 @@ public class GeneView implements Serializable {
             rightPanelTerms = fetchRightPanelRowsComparison( rightPanelEdition, compareEdition );
             rightPanelFilteredTerms = null;
             rightPanelSelectedTerms = null;
-            rightPanelCompareEdition = compareEdition;
         } catch ( NullPointerException e ) {
             log.error( e );
             return;
@@ -793,7 +789,6 @@ public class GeneView implements Serializable {
             addRightPanelRowsComparison( compareEdition );
             rightPanelFilteredTerms = null;
             rightPanelSelectedTerms = null;
-            rightPanelCompareEdition = compareEdition;
         } catch ( NullPointerException e ) {
             log.error( e );
             return;
@@ -950,11 +945,7 @@ public class GeneView implements Serializable {
         return rightPanelEdition;
     }
 
-    public Edition getRightPanelCompareEdition() {
-        return rightPanelCompareEdition;
-    }
-
-    public int getComparisons() {
+    public List<Edition> getComparisons() {
         return comparisons;
     }
 }

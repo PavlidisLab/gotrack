@@ -128,3 +128,21 @@ div.selectButtonFA.ui-buttonset {
 }
 
 /*******************************************************/
+
+div.ui-datatable.auto table {
+    table-layout: auto;
+}
+
+div.ui-datatable.auto table > thead > tr > th.fixed > span.ui-column-title {
+    display:block;
+    width: inherit;
+}
+
+div.ui-datatable.auto table > thead > tr > th.auto  {
+    width: initial !important;
+}
+
+div.ui-datatable.auto div.ui-datatable-scrollable-body {
+    overflow-x: hidden;
+}
+
