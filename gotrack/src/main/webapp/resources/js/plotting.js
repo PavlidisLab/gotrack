@@ -3,6 +3,8 @@
  */
 (function (plotting, $, undefined) {
 
+    Highcharts.getOptions().exporting.buttons.contextButton.menuItems.splice(8, 1);
+
     function HChart(id) {
         this.id = id;
         this.chart = null;
