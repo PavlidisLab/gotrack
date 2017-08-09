@@ -42,7 +42,7 @@ public class ChartValues {
         this(null, null, null);
     }
 
-    public ChartValues( String title, String xLabel, String yLabel ) {
+    public ChartValues( String title, String yLabel, String xLabel ) {
         super();
         this.title = title;
         this.xLabel = xLabel;
