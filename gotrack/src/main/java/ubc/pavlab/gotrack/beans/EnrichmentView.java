@@ -329,16 +329,10 @@ public class EnrichmentView implements Serializable {
 
     }
 
-    private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
-            Integer max, ChartValues chart ) {
+    private Map<String, Object> createHCCallbackParamMap( ChartValues chart ) {
         Map<String, Object> hcGsonMap = Maps.newHashMap();
         hcGsonMap.put( "success", true );
-        hcGsonMap.put( "title", title );
-        hcGsonMap.put( "yLabel", yLabel );
-        hcGsonMap.put( "xLabel", xLabel );
-        hcGsonMap.put( "min", min );
-        hcGsonMap.put( "max", max );
-        hcGsonMap.put( "data", chart );
+        hcGsonMap.put( "chart", chart );
         return hcGsonMap;
     }
 
@@ -348,7 +342,8 @@ public class EnrichmentView implements Serializable {
      * Create Term Count chart
      */
     private void createTermCountChart() {
-        ChartValues cv = new ChartValues();
+        ChartValues cv = new ChartValues("GO Term Counts by Edition",
+                "Count of Unique GO Terms", "Date");
         Series significantTerms = new Series( "Significant Terms" );
         Series allTerms = new Series( "All Tested Terms" );
         Series rejectedTerms = new Series( "Rejected Terms" );
@@ -366,8 +361,7 @@ public class EnrichmentView implements Serializable {
         cv.addSeries( significantTerms );
         cv.addSeries( rejectedTerms );
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "GO Term Counts by Edition",
-                "Count of Unique GO Terms", "Date", null, null, cv );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( cv );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_terms", new Gson().toJson( hcGsonMap ) );
     }
@@ -379,7 +373,12 @@ public class EnrichmentView implements Serializable {
      */
     private void createSimilarityChart() {
         // Create Similarity Chart
-        ChartValues cv = new ChartValues();
+        ChartValues cv = new ChartValues("Enrichment Similarity to "
+                + ( similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current" )
+                + " Edition",
+                "Jaccard Similarity Index", "Date");
+        cv.setMin( 0 );
+        cv.setMax( 1 );
 
         // Prepare series
         Series completeTermJaccard = new Series( "All Terms" );
@@ -408,10 +407,7 @@ public class EnrichmentView implements Serializable {
             cv.addSeries( topParentsJaccard );
         }
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Enrichment Similarity to "
-                + ( similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current" )
-                + " Edition",
-                "Jaccard Similarity Index", "Date", 0, 1, cv );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( cv );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_similarity", new Gson().toJson( hcGsonMap ) );
 
@@ -482,7 +478,9 @@ public class EnrichmentView implements Serializable {
                 }
 
             }
-            cv = new ChartValues();
+            cv = new ChartValues(
+                    selectedTerms.size() == 1 ? "Enrichment Stability Results" : "Enrichment Results",
+                    "P-Value", "Date");
 
             for ( Series s : series.values() ) {
                 cv.addSeries( s );
@@ -493,9 +491,7 @@ public class EnrichmentView implements Serializable {
                 cutoffs.put( ed.getDate().getTime(), analysis.getCutoff( ed ) );
             }
 
-            hcGsonMap = createHCCallbackParamMap(
-                    selectedTerms.size() == 1 ? "Enrichment Stability Results" : "Enrichment Results",
-                    "P-Value", "Date", null, null, cv );
+            hcGsonMap = createHCCallbackParamMap( cv );
             hcGsonMap.put( "type", "pvalue" );
             hcGsonMap.put( "cutoffs", cutoffs );
 
@@ -606,14 +602,14 @@ public class EnrichmentView implements Serializable {
 
             }
 
-            cv = new ChartValues();
+            cv = new ChartValues("Enrichment Results by Relative Rank",
+                    "Relative Rank", "Date");
 
             for ( Series s : series.values() ) {
                 cv.addSeries( s );
             }
 
-            hcGsonMap = createHCCallbackParamMap( "Enrichment Results by Relative Rank",
-                    "Relative Rank", "Date", null, null, cv );
+            hcGsonMap = createHCCallbackParamMap( cv );
             hcGsonMap.put( "maxRank", maxRank );
             hcGsonMap.put( "dateToMaxSigRank", dateToMaxSigRank );
             hcGsonMap.put( "insignificantCheck", insignificantCheck );

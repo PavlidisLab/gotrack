@@ -324,7 +324,7 @@ function handleGraphSelected(xhr, status, args) {
         //rank
         var maxRank = args.HC_enrichment.maxRank;
 
-        var opacity = Math.min(10 / args.HC_enrichment.data.series.length + 1 / 100, 0.1);
+        var opacity = Math.min(10 / args.HC_enrichment.chart.series.length + 1 / 100, 0.1);
         //var opacity = Math.min(10/maxRank+1/100,0.1);
 
         var dateToMaxSigRank = args.HC_enrichment.dateToMaxSigRank;

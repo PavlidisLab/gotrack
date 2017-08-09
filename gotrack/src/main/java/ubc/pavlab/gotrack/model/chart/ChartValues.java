@@ -31,11 +31,24 @@ import java.util.Set;
  */
 public class ChartValues {
 
-    Set<Series> series = new LinkedHashSet<>();
+    private Set<Series> series = new LinkedHashSet<>();
+    private final String title;
+    private final String xLabel;
+    private final String yLabel;
+    private Integer min;
+    private Integer max;
 
     public ChartValues() {
-        super();
+        this(null, null, null);
     }
+
+    public ChartValues( String title, String xLabel, String yLabel ) {
+        super();
+        this.title = title;
+        this.xLabel = xLabel;
+        this.yLabel = yLabel;
+    }
+
 
     public boolean addSeries( Series s ) {
         s.sort();
@@ -52,6 +65,34 @@ public class ChartValues {
 
     public Set<Series> getSeries() {
         return series;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getxLabel() {
+        return xLabel;
+    }
+
+    public String getyLabel() {
+        return yLabel;
+    }
+
+    public Integer getMin() {
+        return min;
+    }
+
+    public void setMin( Integer min ) {
+        this.min = min;
+    }
+
+    public Integer getMax() {
+        return max;
+    }
+
+    public void setMax( Integer max ) {
+        this.max = max;
     }
 
     public void sortSeries() {

@@ -252,11 +252,10 @@ function handleFetchTimeline(xhr, status, args) {
         evidenceCategories[tmp[cat]] = cat;
     }
 
-
     var categories = [];
     var tooltipData = {};
-    for (var i = 0; i < args.HC.data.series.length; i++) {
-        categories.push(args.HC.data.series[i].name);
+    for (var i = 0; i < args.HC.chart.series.length; i++) {
+        categories.push(args.HC.chart.series[i].name);
         tooltipData[i] = {};
     }
 
@@ -331,8 +330,8 @@ function handleFetchTimeline(xhr, status, args) {
         });
     }
 
-    for (var i = 0; i < args.HC.data.series.length; i++) {
-        var series = args.HC.data.series[i];
+    for (var i = 0; i < args.HC.chart.series.length; i++) {
+        var series = args.HC.chart.series[i];
         var name = series.name;
         var data = []
         var tData = tooltipData[i];

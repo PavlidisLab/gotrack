@@ -122,10 +122,10 @@ function createOverviewChart(args) {
         }
     };
 
-    if (!utility.isUndefined(args.HC_overview.data)) {
+    if (!utility.isUndefined(args.HC_overview.chart)) {
 
-        for (var i = 0; i < args.HC_overview.data.series.length; i++) {
-            var series = args.HC_overview.data.series[i];
+        for (var i = 0; i < args.HC_overview.chart.series.length; i++) {
+            var series = args.HC_overview.chart.series[i];
             var name = series.name;
 
             options.yAxis.categories.push(name);
@@ -203,7 +203,7 @@ function createGeneCountChart(args) {
     plotting.addLegend(options);
 
 
-    if (!utility.isUndefined(args.HC_gene.data)) {
+    if (!utility.isUndefined(args.HC_gene.chart)) {
         //args.hc_gene_data.series.sort(function(a,b) {return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);} );
         for (var i = 0; i < options.series.length; i++) {
             var series = options.series[i];

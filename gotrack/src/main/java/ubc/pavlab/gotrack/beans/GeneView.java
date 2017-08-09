@@ -413,16 +413,10 @@ public class GeneView implements Serializable {
         return hcGsonMap;
     }
 
-    private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
-            Integer max, ChartValues chart ) {
+    private Map<String, Object> createHCCallbackParamMap( ChartValues chart ) {
         Map<String, Object> hcGsonMap = Maps.newHashMap();
         hcGsonMap.put( "success", true );
-        hcGsonMap.put( "title", title );
-        hcGsonMap.put( "yLabel", yLabel );
-        hcGsonMap.put( "xLabel", xLabel );
-        hcGsonMap.put( "min", min );
-        hcGsonMap.put( "max", max );
-        hcGsonMap.put( "data", chart );
+        hcGsonMap.put( "chart", chart );
         return hcGsonMap;
     }
 
@@ -439,7 +433,9 @@ public class GeneView implements Serializable {
         // Collect data from cache about species aggregates
         //        Map<Edition, Aggregate> aggregates = cache.getAggregates( species.getId() );
 
-        ChartValues chart = new ChartValues();
+        ChartValues chart = new ChartValues("Terms Annotated to " + gene.getSymbol() + " vs Time",
+                "Annotations Count", "Date");
+        chart.setMin( 0 );
 
         //        // Create series for species aggregates
         //        Series aggregateSeries = new Series( "Species Direct Avg" );
@@ -484,8 +480,7 @@ public class GeneView implements Serializable {
         chart.addSeries( directCountSeries );
         chart.addSeries( inferredCountSeries );
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Terms Annotated to " + gene.getSymbol() + " vs Time",
-                "Annotations Count", "Date", 0, null, chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
@@ -512,7 +507,10 @@ public class GeneView implements Serializable {
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> inferredData = rawData
                 .get( AnnotationType.I );
 
-        ChartValues chart = new ChartValues();
+        ChartValues chart = new ChartValues("Similarity of " + gene.getSymbol() + " vs Time",
+                "Jaccard Similarity Index", "Date");
+        chart.setMin( 0 );
+        chart.setMax( 1 );
 
         // Create jaccard between edition and current edition
         Edition currentEdition = Collections.max( directData.rowKeySet() );
@@ -553,8 +551,7 @@ public class GeneView implements Serializable {
         chart.addSeries( directSeries );
         chart.addSeries( inferredSeries );
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Similarity of " + gene.getSymbol() + " vs Time",
-                "Jaccard Similarity Index", "Date", 0, 1, chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
@@ -578,7 +575,9 @@ public class GeneView implements Serializable {
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchMultifunctionalityChart" );
 
-        ChartValues chart = new ChartValues();
+        ChartValues chart = new ChartValues("Multifunctionality of " + gene.getSymbol() + " vs Time", "Multifunctionality [10^-5]",
+                "Date");
+        chart.setMin(0);
 
         // Calculate multifunctionality of the gene in each edition
         Series multiSeries = new Series( "Multifunctionality" );
@@ -604,9 +603,7 @@ public class GeneView implements Serializable {
         chart.addSeries( averageSeries );
         chart.addSeries( multiSeries );
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap(
-                "Multifunctionality of " + gene.getSymbol() + " vs Time", "Multifunctionality [10^-5]",
-                "Date", 0, null, chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
@@ -649,7 +646,8 @@ public class GeneView implements Serializable {
             categoryPositions.put( cat, i++ );
         }
 
-        ChartValues chart = new ChartValues();
+        ChartValues chart = new ChartValues("Annotation Categories of " + gene.getSymbol() + " vs Time",
+                "", "Date");
 
         List<Edition> allEditions = new ArrayList<>( cache.getAllEditions( this.gene.getSpecies() ) );
         Collections.sort( allEditions );
@@ -679,9 +677,7 @@ public class GeneView implements Serializable {
             chart.addSeries( s );
         }
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap(
-                "Annotation Categories of " + gene.getSymbol() + " vs Time",
-                "", "Date", null, null, chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
         hcGsonMap.put( "category_positions", categoryPositions );
         hcGsonMap.put( "term_names", termNames );
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );

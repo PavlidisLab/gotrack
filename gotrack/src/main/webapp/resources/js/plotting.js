@@ -133,13 +133,13 @@
                 }
             },
             title: {
-                text: config.title
+                text: config.chart.title
             },
 
             xAxis: {
                 type: 'datetime',
                 title: {
-                    text: config.xLabel
+                    text: config.chart.xLabel
                 },
                 minRange: 60 * 24 * 3600000 // fourteen days
             },
@@ -154,8 +154,8 @@
                         return this.value;
                     }
                 },
-                min: isUndefined(config.min) ? null : config.min,
-                max: isUndefined(config.max) ? null : config.max,
+                min: isUndefined(config.chart.min) ? null : config.chart.min,
+                max: isUndefined(config.chart.max) ? null : config.chart.max,
                 categories: []
             },
 
@@ -201,12 +201,7 @@
     plotting.defaultHCOptions = function (config) {
         /*
          * config.renderTo
-         * config.title
-         * config.xLabel
-         * config.yLabel
-         * config.min
-         * config.max
-         * config.data
+         * config.chart
          * config.xMin
          * config.xMax
          *
@@ -227,13 +222,13 @@
                 }
             },
             title: {
-                text: config.title
+                text: config.chart.title
             },
 
             xAxis: {
                 type: 'datetime',
                 title: {
-                    text: config.xLabel
+                    text: config.chart.xLabel
                 },
                 minRange: 60 * 24 * 3600000, // fourteen days
                 min: isUndefined(config.xMin) ? null : config.xMin,
@@ -243,15 +238,15 @@
             yAxis: {
                 type: 'linear',
                 title: {
-                    text: config.yLabel
+                    text: config.chart.yLabel
                 },
                 labels: {
                     formatter: function () {
                         return this.value;
                     }
                 },
-                min: isUndefined(config.min) ? null : config.min,
-                max: isUndefined(config.max) ? null : config.max,
+                min: isUndefined(config.chart.min) ? null : config.chart.min,
+                max: isUndefined(config.chart.max) ? null : config.chart.max,
             },
 
             plotOptions: {
@@ -282,9 +277,9 @@
             }
         };
 
-        if (!isUndefined(config.data)) {
-            for (var i = 0; i < config.data.series.length; i++) {
-                var series = config.data.series[i];
+        if (!isUndefined(config.chart)) {
+            for (var i = 0; i < config.chart.series.length; i++) {
+                var series = config.chart.series[i];
                 var name = series.name;
                 var data = []
 
@@ -410,10 +405,10 @@
                     // The toggling of the text is not using an official API, can break with version update!
                     if (this.yAxis[0].isLog) {
                         this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
-                        this.yAxis[0].update({type: 'linear', min: config.min, max: config.max});
+                        this.yAxis[0].update({type: 'linear', min: config.chart.min, max: config.chart.max});
                     } else {
                         this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
-                        this.yAxis[0].update({type: 'logarithmic', min: null, max: config.max});
+                        this.yAxis[0].update({type: 'logarithmic', min: null, max: config.chart.max});
                     }
 
                 },

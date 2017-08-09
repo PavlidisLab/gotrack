@@ -183,16 +183,10 @@ public class TermView implements Serializable {
         RequestContext.getCurrentInstance().addCallbackParam( "graph_data", eles.getJsonString() );
     }
 
-    private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
-            Integer max, ChartValues chart ) {
+    private Map<String, Object> createHCCallbackParamMap( ChartValues chart ) {
         Map<String, Object> hcGsonMap = Maps.newHashMap();
         hcGsonMap.put( "success", true );
-        hcGsonMap.put( "title", title );
-        hcGsonMap.put( "yLabel", yLabel );
-        hcGsonMap.put( "xLabel", xLabel );
-        hcGsonMap.put( "min", min );
-        hcGsonMap.put( "max", max );
-        hcGsonMap.put( "data", chart );
+        hcGsonMap.put( "chart", chart );
         return hcGsonMap;
     }
 
@@ -205,7 +199,11 @@ public class TermView implements Serializable {
         Map<Long, String[]> dateToNameChange = new HashMap<>();
 
         // Create the 'did this term exist' chart
-        ChartValues existChart = new ChartValues();
+        ChartValues existChart = new ChartValues("Overview of " + query + " vs Time",
+                "", "Date");
+        existChart.setMin( 0 );
+        existChart.setMax( 2 );
+
         Series existSeries = new Series( "Existence" );
         Series structureSeries = new Series( "Structure Change" );
         Series nameChange = new Series( "Name Change" );
@@ -252,8 +250,7 @@ public class TermView implements Serializable {
         existChart.addSeries( structureSeries );
         existChart.addSeries( existSeries );
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Overview of " + query + " vs Time",
-                "", "Date", 0, 2, existChart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( existChart );
 
         hcGsonMap.put( "dateToGOEditionId", dateToGOEditionId );
         hcGsonMap.put( "dateToNameChange", dateToNameChange );
@@ -269,7 +266,8 @@ public class TermView implements Serializable {
     public void fetchGeneChart() {
         // Create the 'Gene Count' chart
         Collection<Species> species = cache.getSpeciesList();
-        ChartValues geneChart = new ChartValues();
+        ChartValues geneChart = new ChartValues("Genes Annotated to " + query + " vs Time",
+                "Gene Count", "Date");
         Map<Species, Series> series = new HashMap<>();
         Map<Species, Series> directSeries = new HashMap<>();
         Map<Long, Integer> totalSeriesData = new HashMap<>();
@@ -344,8 +342,7 @@ public class TermView implements Serializable {
             geneChart.addSeries( directSeries.get( sp ) );
         }
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Genes Annotated to " + query + " vs Time",
-                "Gene Count", "Date", null, null, geneChart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( geneChart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_gene", new Gson().toJson( hcGsonMap ) );
     }
@@ -360,7 +357,8 @@ public class TermView implements Serializable {
 
         Map<String, Map<Date, Integer>> evidenceCounts = annotationService.fetchCategoryCounts( currentTerm );
 
-        ChartValues evidenceChart = new ChartValues();
+        ChartValues evidenceChart = new ChartValues("Annotation Count of " + query + " vs Time",
+                "Annotation Count", "Date");
 
         // Done in this manner to keep order and color of categories constant
         for ( String category : cache.getEvidenceCategories() ) {
@@ -374,8 +372,7 @@ public class TermView implements Serializable {
             evidenceChart.addSeries( s );
         }
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Annotation Count of " + query + " vs Time",
-                "Annotation Count", "Date", null, null, evidenceChart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( evidenceChart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_evidence", new Gson().toJson( hcGsonMap ) );
     }
