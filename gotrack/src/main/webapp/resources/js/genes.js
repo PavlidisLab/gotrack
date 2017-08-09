@@ -150,11 +150,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
 
     console.log('handleFetchAnnotationChart', args);
 
-    args.HC.renderTo = 'hc_annotation_container';
-    args.HC.xMin = GLOBALS.xMin;
-    args.HC.xMax = GLOBALS.xMax;
-
-    var options = plotting.defaultHCOptions(args.HC);
+    var options = plotting.defaultHCOptions('hc_annotation_container', args.HC.chart);
     commonOptions(options, args.HC);
 
     plotting.charts.annotation.options = options;
@@ -181,11 +177,7 @@ function handleFetchSimilarityChart(xhr, status, args) {
 
     console.log('handleFetchSimilarityChart', args);
 
-    args.HC.renderTo = 'hc_similarity_container';
-    args.HC.xMin = GLOBALS.xMin;
-    args.HC.xMax = GLOBALS.xMax;
-
-    var options = plotting.defaultHCOptions(args.HC);
+    var options = plotting.defaultHCOptions('hc_similarity_container', args.HC.chart);
     commonOptions(options, args.HC);
 
     options.yAxis.endOnTick = false; // Make sure log axis follows our given max
@@ -213,11 +205,7 @@ function handleFetchMultiChart(xhr, status, args) {
     }
     console.log('handleFetchMultiChart', args);
 
-    args.HC.renderTo = 'hc_multi_container';
-    args.HC.xMin = GLOBALS.xMin;
-    args.HC.xMax = GLOBALS.xMax;
-
-    var options = plotting.defaultHCOptions(args.HC);
+    var options = plotting.defaultHCOptions('hc_multi_container', args.HC.chart);
     commonOptions(options, args.HC);
 
     plotting.charts.multi.options = options;
@@ -261,11 +249,7 @@ function handleFetchTimeline(xhr, status, args) {
 
     var termNames = args.HC.term_names;
 
-    args.HC.renderTo = 'hc_timeline_container';
-    args.HC.xMin = GLOBALS.xMin;
-    args.HC.xMax = GLOBALS.xMax;
-
-    var options = plotting.ganttHCOptions(args.HC);
+    var options = plotting.ganttHCOptions('hc_timeline_container', args.HC.chart);
     options.colors = plotting.MAXIMALLY_DISTINCT_COLORS;
 
     options.legend = {};
@@ -533,7 +517,9 @@ function commonOptions(options, config) {
             width: 1,
             color: 'red',
             dashStyle: 'shortdot'
-        }
+        },
+        min: utility.isUndefined(GLOBALS.xMin) ? null : GLOBALS.xMin,
+        max: utility.isUndefined(GLOBALS.xMax) ? null : GLOBALS.xMax
     });
 }
 

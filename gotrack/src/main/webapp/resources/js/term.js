@@ -99,8 +99,7 @@ function createOverviewChart(args) {
     var dateToGOEditionId = args.HC_overview.dateToGOEditionId;
     var nameChange = args.HC_overview.dateToNameChange;
 
-    args.HC_overview.renderTo = 'hc_overview_container';
-    var options = plotting.ganttHCOptions(args.HC_overview); // Custom data importer ahead
+    var options = plotting.ganttHCOptions('hc_overview_container', args.HC_overview.chart); // Custom data importer ahead
 
     //options.yAxis.categories = ['Name Change', 'Structure Change','Existence']
 
@@ -198,8 +197,7 @@ function createOverviewChart(args) {
 
 function createGeneCountChart(args) {
 
-    args.HC_gene.renderTo = 'hc_gene_container';
-    var options = plotting.defaultHCOptions(args.HC_gene);
+    var options = plotting.defaultHCOptions('hc_gene_container', args.HC_gene.chart);
     plotting.addLegend(options);
 
 
@@ -287,8 +285,7 @@ function createGeneCountChart(args) {
 
 function createEvidenceCountChart(args) {
 
-    args.HC_evidence.renderTo = 'hc_evidence_container';
-    var options = plotting.defaultHCOptions(args.HC_evidence);
+    var options = plotting.defaultHCOptions('hc_evidence_container', args.HC_evidence.chart);
     plotting.addLegend(options);
 
     plotting.charts.evidence.options = options;

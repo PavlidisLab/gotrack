@@ -153,8 +153,7 @@ function enrichmentChartHide() {
 function createTermsChart(xhr, status, args) {
     console.log(xhr, status, args);
 
-    args.HC_terms.renderTo = 'hc_terms_container';
-    var options = plotting.defaultHCOptions(args.HC_terms);
+    var options = plotting.defaultHCOptions('hc_terms_container', args.HC_terms.chart);
     plotting.addLegend(options);
 
     plotting.charts.terms.options = options;
@@ -164,8 +163,7 @@ function createTermsChart(xhr, status, args) {
 function createSimilarityChart(xhr, status, args) {
     console.log(xhr, status, args);
 
-    args.HC_similarity.renderTo = 'hc_similarity_container';
-    var options = plotting.defaultHCOptions(args.HC_similarity);
+    var options = plotting.defaultHCOptions('hc_similarity_container', args.HC_similarity.chart);
     plotting.addLegend(options);
 
     options.yAxis.minorTickInterval = 0.05;
@@ -204,8 +202,7 @@ function handleGraphSelected(xhr, status, args) {
 
     console.log(args);
 
-    args.HC_enrichment.renderTo = 'hc_enrichment_container';
-    var options = plotting.defaultHCOptions(args.HC_enrichment);
+    var options = plotting.defaultHCOptions('hc_enrichment_container', args.HC_enrichment.chart);
     plotting.addLegend(options);
     plotting.addLegendTooltips(options);
     options.chart.zoomType = 'xy';

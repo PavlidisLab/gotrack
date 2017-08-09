@@ -117,10 +117,10 @@
 
     };
 
-    plotting.ganttHCOptions = function (config) {
+    plotting.ganttHCOptions = function (renderTo, chart) {
         var options = {
             chart: {
-                renderTo: config.renderTo,
+                renderTo: renderTo,
                 type: 'xrange',
                 zoomType: 'x',
                 resetZoomButton: {
@@ -133,13 +133,13 @@
                 }
             },
             title: {
-                text: config.chart.title
+                text: chart.title
             },
 
             xAxis: {
                 type: 'datetime',
                 title: {
-                    text: config.chart.xLabel
+                    text: chart.xLabel
                 },
                 minRange: 60 * 24 * 3600000 // fourteen days
             },
@@ -154,8 +154,8 @@
                         return this.value;
                     }
                 },
-                min: isUndefined(config.chart.min) ? null : config.chart.min,
-                max: isUndefined(config.chart.max) ? null : config.chart.max,
+                min: isUndefined(chart.min) ? null : chart.min,
+                max: isUndefined(chart.max) ? null : chart.max,
                 categories: []
             },
 
@@ -198,18 +198,11 @@
     };
 
 
-    plotting.defaultHCOptions = function (config) {
-        /*
-         * config.renderTo
-         * config.chart
-         * config.xMin
-         * config.xMax
-         *
-         * */
+    plotting.defaultHCOptions = function (renderTo, chart) {
 
         var options = {
             chart: {
-                renderTo: config.renderTo,
+                renderTo: renderTo,
                 zoomType: 'x',
                 resetZoomButton: {
                     relativeTo: 'chart',
@@ -222,31 +215,29 @@
                 }
             },
             title: {
-                text: config.chart.title
+                text: chart.title
             },
 
             xAxis: {
                 type: 'datetime',
                 title: {
-                    text: config.chart.xLabel
+                    text: chart.xLabel
                 },
-                minRange: 60 * 24 * 3600000, // fourteen days
-                min: isUndefined(config.xMin) ? null : config.xMin,
-                max: isUndefined(config.xMax) ? null : config.xMax,
+                minRange: 60 * 24 * 3600000 // fourteen days
             },
 
             yAxis: {
                 type: 'linear',
                 title: {
-                    text: config.chart.yLabel
+                    text: chart.yLabel
                 },
                 labels: {
                     formatter: function () {
                         return this.value;
                     }
                 },
-                min: isUndefined(config.chart.min) ? null : config.chart.min,
-                max: isUndefined(config.chart.max) ? null : config.chart.max,
+                min: isUndefined(chart.min) ? null : chart.min,
+                max: isUndefined(chart.max) ? null : chart.max,
             },
 
             plotOptions: {
@@ -277,9 +268,9 @@
             }
         };
 
-        if (!isUndefined(config.chart)) {
-            for (var i = 0; i < config.chart.series.length; i++) {
-                var series = config.chart.series[i];
+        if (!isUndefined(chart)) {
+            for (var i = 0; i < chart.series.length; i++) {
+                var series = chart.series[i];
                 var name = series.name;
                 var data = []
 
