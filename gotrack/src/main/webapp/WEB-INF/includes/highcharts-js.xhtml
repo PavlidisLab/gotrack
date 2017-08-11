@@ -1,0 +1,24 @@
+<ui:composition
+        xmlns="http://www.w3.org/1999/xhtml"
+        xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+        xmlns:h="http://xmlns.jcp.org/jsf/html">
+
+    <script src="https://code.highcharts.com/5.0.14/highcharts.js"></script>
+
+    <script type="text/javascript">
+        !window.Highcharts &amp;&amp; document.write('&lt;script src="#{resource['js/highcharts.js']}"&gt;&lt;\/script&gt;')
+    </script>
+
+    <script src="https://code.highcharts.com/5.0.14/modules/exporting.js"></script>
+
+    <script type="text/javascript">
+        !window.Highcharts.getOptions().exporting &amp;&amp; document.write('&lt;script src="#{resource['js/exporting.js']}"&gt;&lt;\/script&gt;')
+    </script>
+
+    <script src="https://code.highcharts.com/5.0.14/modules/export-data.js"></script>
+
+    <script type="text/javascript">
+        !window.Highcharts.Chart.prototype.getCSV &amp;&amp; document.write('&lt;script src="#{resource['js/export-data.js']}"&gt;&lt;\/script&gt;')
+    </script>
+
+</ui:composition>

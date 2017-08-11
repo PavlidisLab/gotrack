@@ -3,7 +3,10 @@
  */
 (function (plotting, $, undefined) {
 
-    Highcharts.getOptions().exporting.buttons.contextButton.menuItems.splice(8, 1);
+    var idx = $.inArray('viewData', Highcharts.getOptions().exporting.buttons.contextButton.menuItems);
+    if (idx >= 0 ) {
+        Highcharts.getOptions().exporting.buttons.contextButton.menuItems.splice(idx, 1);
+    }
 
     function HChart(id) {
         this.id = id;
@@ -272,7 +275,7 @@
             for (var i = 0; i < chart.series.length; i++) {
                 var series = chart.series[i];
                 var name = series.name;
-                var data = []
+                var data = [];
 
                 for (var j = 0; j < series.data.length; j++) {
                     var point = series.data[j];
