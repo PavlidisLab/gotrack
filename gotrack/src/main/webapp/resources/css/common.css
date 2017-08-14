@@ -222,3 +222,26 @@ i.fa.emphasize-hover:hover {
 .ui-state-hover a, .ui-state-hover a:hover {
 	text-decoration: underline;
 }
+
+/* General */
+
+#page-title h1, #page-title h1 > a, #page-title h2, #page-title h3 {
+	color: #888;
+	margin: auto;
+	margin-top: 10px;
+}
+
+#page-title h2 > p {
+	margin-top: 10px;
+	margin-bottom: 10px;
+}
+
+#page-title h3 {
+	margin-top: 5px;
+	margin-bottom: 5px;
+	font-size: 1em;
+}
+
+#page-title {
+	text-align: center;
+}

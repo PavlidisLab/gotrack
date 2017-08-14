@@ -8,15 +8,6 @@ table.termSearchTable {
 	border: 1px solid grey;
 }
 
-#page-title h1 {
-	color: #888;
-	margin: auto;
-}
-
-#page-title {
-	text-align: center;
-}
-
 div.child-table {
 	min-width: 300px;
 	display: table;	
