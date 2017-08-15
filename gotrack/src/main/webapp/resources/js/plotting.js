@@ -443,5 +443,39 @@
         });
     };
 
+    plotting.addSynchronization = function(options) {
+        var that = this;
+        $.extend(options.plotOptions.series, {
+            point: {
+                events: {
+                    mouseOver: function (e) {
+                        var p = this;
+                        var hoverChart = p.series.chart;
+                        for (var ckey in that.charts) {
+                            var chart = that.charts[ckey].chart;
+                            if ( hoverChart.syncGroup === chart.syncGroup ) {
+                                var point = chart.series[0].data[p.index];
+                                // chart.series[0].data[chart.hoverIndex].setState();
+                                // chart.series[0].data[p.index].setState('hover');
+                                // chart.xAxis[0].drawCrosshair(e, point); // Show the crosshair
+                                chart.xAxis[0].removePlotLine('plot-line-sync');
+                                chart.xAxis[0].addPlotLine({
+                                    value: point.x,
+                                    color: "#cccccc",
+                                    width: 1,
+                                    id: 'plot-line-sync'
+                                });
+                                // chart.hoverIndex = p.index;
+                            } else {
+                                chart.xAxis[0].removePlotLine('plot-line-sync');
+                                // chart.xAxis[0].hideCrosshair(); // hide other crosshairs
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
 
 }(window.plotting = window.plotting || {}, jQuery));
