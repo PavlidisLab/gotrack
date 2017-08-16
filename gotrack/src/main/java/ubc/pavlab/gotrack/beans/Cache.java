@@ -1285,6 +1285,10 @@ public class Cache implements Serializable {
         return false;
     }
 
+    public Collection<GeneOntology> getAllOntologies() {
+        return ontologies.values();
+    }
+
     public GOEdition getGOEdition( Integer edId ) {
         if ( edId == null ) return null;
         return allGOEditions.get( edId );
