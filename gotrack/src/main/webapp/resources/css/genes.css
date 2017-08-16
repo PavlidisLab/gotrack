@@ -76,10 +76,6 @@ i.fa.fa-external-link:hover {
 	color: inherit;
 }
 
-div.inline {
-    display: inline-block;
-}
-
 /* Adding FA Icons to select many buttons***************/
 
 div.selectButtonFA > div.ui-button > span:before {
