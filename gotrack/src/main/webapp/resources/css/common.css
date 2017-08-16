@@ -1,9 +1,17 @@
 /* Common  */
+
 body {
 	font: normal 85% sans-serif;
-	/*background-color: #B7D897;*/
+	margin: 0px;
+	height: 100%;
+	overflow-x: hidden;
+	overflow-y: auto;
 	background-color: #20272a;
 	font-family: 'exoregular', "Trebuchet MS", Arial, Helvetica, sans-serif;
+}
+
+.underline {
+	text-decoration: underline;
 }
 
 a:focus, a:hover {
@@ -218,6 +226,11 @@ span.ui-menuitem-icon.ui-icon.fa {
 	border-radius: 0;
 	line-height:16px;
 }
+
+.ui-widget {
+	font-size: 90%;
+}
+
 
 /* General */
 
