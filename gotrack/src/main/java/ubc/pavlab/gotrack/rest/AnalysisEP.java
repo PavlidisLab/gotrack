@@ -510,7 +510,7 @@ public class AnalysisEP {
                 entryJSON.put( "top_genes", score.getTopGenes() );
 
                 entryJSON.put( "top_parents_mf",
-                        multifunctionalityService.multifunctionality( score.getTopParents(), species, ed ) );
+                        multifunctionalityService.multifunctionality( score.getTopParents(), ed ) );
 
                 entryJSON.put( "values", valuesJSON );
 
@@ -562,7 +562,7 @@ public class AnalysisEP {
         long minDayDiff = Math.abs( getDateDiff( closestEdition.getDate(), inputDate, TimeUnit.DAYS ) );
 
         for ( Edition edition : cache.getAllEditions( species ) ) {
-            if ( cache.getAggregates( species, edition ) != null ) {
+            if ( cache.getAggregate( edition ) != null ) {
                 // Make sure there is data for this edition
                 long dayDiff = Math.abs( getDateDiff( edition.getDate(), inputDate, TimeUnit.DAYS ) );
                 if ( dayDiff < minDayDiff ) {

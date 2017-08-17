@@ -115,8 +115,7 @@ public class EnrichmentAnalysis {
 
             StandardPopulation<GeneOntologyTerm, Gene> sample = Population.standardPopulation( data );
 
-            Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, this.currentSpecies,
-                    ed );
+            Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, ed );
 
             Enrichment<GeneOntologyTerm, Gene> enrichment = new Enrichment<>( test, threshold, minAnnotatedPopulation,
                     maxAnnotatedPopulation );

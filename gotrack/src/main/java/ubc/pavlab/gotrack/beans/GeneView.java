@@ -468,7 +468,7 @@ public class GeneView implements Serializable {
             inferredCountSeries.addDataPoint( ed.getDate(), count );
 
             // Averages
-            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
+            Aggregate agg = cache.getAggregate( ed );
             if ( agg != null ) {
                 aggregateSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
                 aggregateInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
@@ -539,7 +539,7 @@ public class GeneView implements Serializable {
             inferredSeries.addDataPoint( ed.getDate(), jaccard );
 
             // Averages
-            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
+            Aggregate agg = cache.getAggregate( ed );
             if ( agg != null ) {
                 averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
                 averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
@@ -587,14 +587,14 @@ public class GeneView implements Serializable {
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
 
-            Double multi = multifunctionalityService.multifunctionality( entry.getValue().keySet(), this.gene.getSpecies(), ed );
+            Double multi = multifunctionalityService.multifunctionality( entry.getValue().keySet(), ed );
             if ( multi != null ) {
                 // Scaled by 10^4
                 multiSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * multi );
             }
 
             // Averages
-            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
+            Aggregate agg = cache.getAggregate( ed );
             if ( agg != null ) {
                 // Scaled by 10^4
                 averageSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * agg.getAvgMultifunctionality() );

@@ -162,8 +162,7 @@ public class GeneEP {
                             termData.put( annotationsToJSON( entry2.getKey(), directTerms.contains( t ), minimal ) );
                         }
                         editionResults.put( "terms", termData );
-                        editionResults.put( "mf",
-                                multifunctionalityService.multifunctionality( termsMap.keySet(), species, ed ) );
+                        editionResults.put( "mf", multifunctionalityService.multifunctionality( termsMap.keySet(), ed ) );
 
                         editionArray.put( editionResults );
                     }
@@ -398,7 +397,7 @@ public class GeneEP {
         long minDayDiff = Math.abs( getDateDiff( closestEdition.getDate(), inputDate, TimeUnit.DAYS ) );
 
         for ( Edition edition : cache.getAllEditions( species ) ) {
-            if ( cache.getAggregates( species, edition ) != null ) {
+            if ( cache.getAggregate( edition ) != null ) {
                 // Make sure there is data for this edition
                 long dayDiff = Math.abs( getDateDiff( edition.getDate(), inputDate, TimeUnit.DAYS ) );
                 if ( dayDiff < minDayDiff ) {

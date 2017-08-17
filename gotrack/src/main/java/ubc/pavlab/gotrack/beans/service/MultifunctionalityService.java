@@ -25,7 +25,6 @@ import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import javax.annotation.PostConstruct;
@@ -73,20 +72,20 @@ public class MultifunctionalityService implements Serializable {
 
     public Double multifunctionality( Gene g, Edition ed ) {
         Set<GeneOntologyTerm> terms = retrieveData( g, ed );
-        return multifunctionality( terms, g.getSpecies(), ed );
+        return multifunctionality( terms, ed );
     }
 
     public Map<Edition, Double> multifunctionality( Gene g ) {
         Map<Edition, Set<GeneOntologyTerm>> data = retrieveData( g );
-        return multifunctionality( data, g.getSpecies() );
+        return multifunctionality( data );
     }
 
-    public Map<Edition, Double> multifunctionality( Map<Edition, Set<GeneOntologyTerm>> data, Species species ) {
+    public Map<Edition, Double> multifunctionality( Map<Edition, Set<GeneOntologyTerm>> data ) {
         Map<Edition, Double> results = Maps.newHashMap();
         for ( Entry<Edition, Set<GeneOntologyTerm>> entry : data.entrySet() ) {
             Edition ed = entry.getKey();
             Set<GeneOntologyTerm> terms = entry.getValue();
-            Double multi = multifunctionality( terms, species, ed );
+            Double multi = multifunctionality( terms, ed );
             if ( multi != null ) {
                 results.put( ed, multi );
             }
@@ -94,15 +93,15 @@ public class MultifunctionalityService implements Serializable {
         return results;
     }
 
-    public Double multifunctionality( Set<GeneOntologyTerm> terms, Species species, Edition ed ) {
-        Integer total = cache.getGeneCount( species, ed );
+    public Double multifunctionality( Set<GeneOntologyTerm> terms, Edition ed ) {
+        Integer total = cache.getGeneCount( ed );
         Double multi = null;
         if ( total != null ) {
             multi = 0.0;
             for ( GeneOntologyTerm t : terms ) {
                 // Multifunctionality
 
-                Integer inGroup = cache.getInferredAnnotationCount( species, ed, t );
+                Integer inGroup = cache.getInferredAnnotationCount( ed, t );
                 if ( inGroup != null && inGroup < total ) {
                     multi += 1.0 / ( inGroup * ( total - inGroup ) );
                 }

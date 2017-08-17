@@ -24,7 +24,6 @@ import com.google.common.collect.Sets;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import java.util.Map;
@@ -47,8 +46,8 @@ public abstract class Population<T, G> {
         return new StandardPopulation<T, G>( annotationMap );
     }
 
-    public static CachedGOPopulation cachedGOPopulation( Cache cache, Species species, Edition edition ) {
-        return new CachedGOPopulation( cache, species, edition );
+    public static CachedGOPopulation cachedGOPopulation( Cache cache, Edition edition ) {
+        return new CachedGOPopulation( cache, edition );
     }
 
 }
@@ -113,23 +112,21 @@ class StandardPopulation<T, G> extends Population<T, G> {
  * Cached Implementation of Gene population annotated with GeneOntology based on GOTrack's Cache Bean.
  */
 class CachedGOPopulation extends CachedPopulation<Cache, GeneOntologyTerm, Gene> {
-    private Species species;
     private Edition edition;
 
-    public CachedGOPopulation( Cache cache, Species species, Edition edition ) {
+    public CachedGOPopulation( Cache cache, Edition edition ) {
         super( cache );
         this.edition = edition;
-        this.species = species;
     }
 
     @Override
     public Integer countProperty( GeneOntologyTerm t ) {
-        return cache.getInferredAnnotationCount( species, edition, t );
+        return cache.getInferredAnnotationCount( edition, t );
     }
 
     @Override
     public int size() {
-        return cache.getGeneCount( species, edition );
+        return cache.getGeneCount( edition );
     }
 
 };

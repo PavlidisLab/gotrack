@@ -35,10 +35,8 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.util.Map;
-import java.util.Map.Entry;
 
 /**
- *
  * @author mjacobson
  */
 @Named
@@ -61,32 +59,29 @@ public class Trends {
     @PostConstruct
     public void postConstruct() {
 
-        ChartValues ontSize = new ChartValues("Size of Gene Ontology", "# Terms", "Date");
+        ChartValues ontSize = new ChartValues( "Size of Gene Ontology", "# Terms", "Date" );
         Series termCountSeries = new Series( "Distinct Terms" );
+
+
         for ( GeneOntology ont : cache.getAllOntologies() ) {
             termCountSeries.addDataPoint( ont.getEdition().getDate(), ont.size() );
         }
         ontSize.addSeries( termCountSeries );
 
-        Map<Species, Map<Edition, Aggregate>> aggregates = cache.getAggregates();
-        for ( Entry<Species, Map<Edition, Aggregate>> speciesEntry : aggregates.entrySet() ) {
-            Species sp = speciesEntry.getKey();
-            Map<Edition, Aggregate> speciesAggregates = speciesEntry.getValue();
+        for ( Species sp : cache.getSpeciesList() ) {
+            ChartValues geneCountChart = new ChartValues( "Distinct Annotated Genes", "# Genes", "Date" );
+            ChartValues termsForGeneChart = new ChartValues( "Terms Annotated Per Gene", "# Terms", "Date" );
+            ChartValues inferredGenesForTermChart = new ChartValues( "Genes Annotated Per Term", "# Genes", "Date" );
+            ChartValues multifunctionalityChart = new ChartValues( "Multifunctionality", "Multifunctionality [10^-5]", "Date" );
+            ChartValues geneJaccardChart = new ChartValues( "Semantic Similarity", "Jaccard Index", "Date" );
 
-            ChartValues geneCountChart = new ChartValues("Distinct Annotated Genes", "# Genes", "Date");
-            ChartValues termsForGeneChart = new ChartValues("Terms Annotated Per Gene", "# Terms", "Date");
-            ChartValues inferredGenesForTermChart = new ChartValues("Genes Annotated Per Term", "# Genes", "Date");
-            ChartValues multifunctionalityChart = new ChartValues("Multifunctionality", "Multifunctionality [10^-5]", "Date");
-            ChartValues geneJaccardChart = new ChartValues("Semantic Similarity", "Jaccard Index", "Date");
+            geneCountChart.setMin( 0 );
+            termsForGeneChart.setMin( 0 );
+            geneJaccardChart.setMin( 0 );
+            inferredGenesForTermChart.setMin( 0 );
+            multifunctionalityChart.setMin( 0 );
 
-
-            geneCountChart.setMin(0);
-            termsForGeneChart.setMin(0);
-            geneJaccardChart.setMin(0);
-            inferredGenesForTermChart.setMin(0);
-            multifunctionalityChart.setMin(0);
-
-            geneJaccardChart.setMax(1);
+            geneJaccardChart.setMax( 1 );
 
             Series geneCountSeries = new Series( "Distinct Genes" );
             Series directTermsForGeneSeries = new Series( "Direct" );
@@ -96,9 +91,9 @@ public class Trends {
             Series geneDirectJaccardSeries = new Series( "Direct" );
             Series geneInferredJaccardSeries = new Series( "Inferred" );
 
-            for ( Entry<Edition, Aggregate> editionEntry : speciesAggregates.entrySet() ) {
-                Edition ed = editionEntry.getKey();
-                Aggregate agg = editionEntry.getValue();
+            for ( Edition ed : cache.getAllEditions( sp ) ) {
+
+                Aggregate agg = cache.getAggregate( ed );
 
                 geneCountSeries.addDataPoint( ed.getDate(), agg.getGeneCount() );
                 directTermsForGeneSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
@@ -107,7 +102,6 @@ public class Trends {
                 inferredTermsForGeneSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
                 geneInferredJaccardSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
                 multifunctionalitySeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * agg.getAvgMultifunctionality() );
-
             }
 
             geneCountChart.addSeries( geneCountSeries );
@@ -120,22 +114,21 @@ public class Trends {
 
             Map<String, ChartValues> chartsMap = Maps.newHashMap();
 
-            chartsMap.put("geneCount", geneCountChart);
-            chartsMap.put("termsPerGene", termsForGeneChart);
-            chartsMap.put("genesPerTerm", inferredGenesForTermChart);
-            chartsMap.put("multi", multifunctionalityChart);
-            chartsMap.put("similarity", geneJaccardChart);
+            chartsMap.put( "geneCount", geneCountChart );
+            chartsMap.put( "termsPerGene", termsForGeneChart );
+            chartsMap.put( "genesPerTerm", inferredGenesForTermChart );
+            chartsMap.put( "multi", multifunctionalityChart );
+            chartsMap.put( "similarity", geneJaccardChart );
 
             chartsMap.put( "ontSize", ontSize );
 
-            allChartsJSON.put(sp, new Gson().toJson( chartsMap ));
+            allChartsJSON.put( sp, new Gson().toJson( chartsMap ) );
+
         }
-
-
     }
 
-    public void loadCharts(Species species) {
-        RequestContext.getCurrentInstance().addCallbackParam( "HC_map",  allChartsJSON.get(species));
+    public void loadCharts( Species species ) {
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_map", allChartsJSON.get( species ) );
     }
 
 }

@@ -286,13 +286,13 @@ public class TermView implements Serializable {
                     GeneOntologyTerm t = trackedTerms.get( ed.getGoEdition() );
                     if ( t != null ) {
                         // If term existed
-                        if ( cache.getAggregates( sp, ed ) != null ) {
+                        if ( cache.getAggregate( ed ) != null ) {
                             // if this returns null it means the edition has no data in it
                             // most likely missing data
 
                             // Inferred annotations
 
-                            Integer cnt = cache.getInferredAnnotationCount( sp, ed, t );
+                            Integer cnt = cache.getInferredAnnotationCount( ed, t );
                             cnt = ( cnt == null ) ? 0 : cnt;
                             s.addDataPoint( ed.getDate(), cnt );
 
@@ -303,7 +303,7 @@ public class TermView implements Serializable {
 
                             // Direct annotations
 
-                            cnt = cache.getDirectAnnotationCount( sp, ed, t );
+                            cnt = cache.getDirectAnnotationCount( ed, t );
                             cnt = ( cnt == null ) ? 0 : cnt;
                             s2.addDataPoint( ed.getDate(), cnt );
 
