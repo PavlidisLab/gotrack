@@ -115,14 +115,13 @@ CREATE TABLE `go_term` (
 
 Pre-processed
 
-CREATE TABLE `pp_accession_history` (
+accession_history | CREATE TABLE `pp_accession_history` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `accession_id` int(11) unsigned NOT NULL,
-  `secondary_accession_id` int(11) unsigned NOT NULL,
+  `sec` varchar(10) NOT NULL,
+  `ac` varchar(10) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `acc_acc` (`accession_id`,`secondary_accession_id`),
-  CONSTRAINT `acc_hist_acfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`),
-  CONSTRAINT `acc_hist_acfk2` FOREIGN KEY (`secondary_accession_id`) REFERENCES `accession` (`id`)
+  UNIQUE KEY `ac` (`ac`,`sec`),
+  UNIQUE KEY `sec` (`sec`,`ac`)
 )
 
 CREATE TABLE `pp_current_edition` (
@@ -596,14 +595,6 @@ class GOTrack:
         # Add missing foreign keys
         sql_fk = "alter table {staging_pre}{pp_current_edition} add foreign key " \
                  "ppcured_fk (species_id, edition) references {edition}(species_id, edition)"
-        cursor.execute(sql_fk.format(**self.tables))
-
-        sql_fk = "alter table {staging_pre}{pp_accession_history} add foreign key " \
-                 "acc_hist_acfk (accession_id) references {accession}(id)"
-        cursor.execute(sql_fk.format(**self.tables))
-
-        sql_fk = "alter table {staging_pre}{pp_accession_history} add foreign key " \
-                 "acc_hist_acfk2 (secondary_accession_id) references {accession}(id)"
         cursor.execute(sql_fk.format(**self.tables))
 
     @transactional
