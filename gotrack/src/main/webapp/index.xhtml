@@ -99,7 +99,7 @@
                                             value="#{gene.selectedGene.symbol} - #{gene.selectedGene.name}"/>
                                 </p:column>
                             </p:autoComplete>
-                            <p:commandButton value="Track" ajax="false" process="@form" action="#{geneSearchView.go}" style="margin-left:5px;"/>
+                            <p:commandButton value="Track" process="@form" action="#{geneSearchView.go}" style="margin-left:5px;"/>
                         </h:form>
                         <p:separator style="width:30px;"/>
                         <p:outputLabel for="term_select" value="GO Term ID or Name:" />
@@ -116,7 +116,7 @@
                                     <h:outputText value="#{term.goId} - #{term.name}"/>
                                 </p:column>
                             </p:autoComplete>
-                            <p:commandButton value="Track" ajax="false" process="@form" action="#{termSearchView.go}" style="margin-left:5px;"/>
+                            <p:commandButton value="Track" process="@form" action="#{termSearchView.go}" style="margin-left:5px;"/>
                         </h:form>
                         <h:panelGroup/>
                         <h:panelGroup>
