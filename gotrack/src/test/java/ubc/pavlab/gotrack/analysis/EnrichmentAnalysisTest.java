@@ -146,9 +146,9 @@ public class EnrichmentAnalysisTest extends BaseTest {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {
                         Object[] args = invocation.getArguments();
-                        Map<GeneOntologyTerm, Set<Gene>> m = populationMap.get( args[1] );
+                        Map<GeneOntologyTerm, Set<Gene>> m = populationMap.get( args[0] );
                         if ( m == null ) return null;
-                        Set<Gene> s = m.get( args[2] );
+                        Set<Gene> s = m.get( args[1] );
                         if ( s == null ) return null;
                         return s.size();
                     }
