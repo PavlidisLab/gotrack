@@ -19,21 +19,19 @@
 
 package ubc.pavlab.gotrack.beans.service;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
+import org.apache.log4j.Logger;
+import ubc.pavlab.gotrack.beans.DAOFactoryBean;
+import ubc.pavlab.gotrack.dao.SpeciesDAO;
+import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import org.apache.log4j.Logger;
-
-import ubc.pavlab.gotrack.beans.DAOFactoryBean;
-import ubc.pavlab.gotrack.dao.SpeciesDAO;
-import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Service layer on top of species DAO. Contains methods for fetching information related to species from the database.
@@ -74,6 +72,23 @@ public class SpeciesService implements Serializable {
     public List<Species> list() {
 
         List<SpeciesDTO> dto = speciesDAO.list();
+        List<Species> species = new ArrayList<>();
+
+        for ( SpeciesDTO speciesDTO : dto ) {
+            species.add( new Species( speciesDTO.getId(), speciesDTO.getCommonName(), speciesDTO.getScientificName(),
+                    speciesDTO.getTaxon(), speciesDTO.getInteractingTaxon() ) );
+        }
+
+        return species;
+
+    }
+
+    /**
+     * @return list of all species with associated editions ordered by id.
+     */
+    public List<Species> listWithData() {
+
+        List<SpeciesDTO> dto = speciesDAO.listWithData();
         List<Species> species = new ArrayList<>();
 
         for ( SpeciesDTO speciesDTO : dto ) {

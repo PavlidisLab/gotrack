@@ -232,7 +232,7 @@ public class Cache implements Serializable {
             }
         }
 
-        List<Species> speciesList = speciesService.list();
+        List<Species> speciesList = speciesService.listWithData();
 
         for ( Species species : speciesList ) {
             if ( sr.isEmpty() || sr.contains( species.getId() ) ) {

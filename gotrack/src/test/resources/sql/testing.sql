@@ -446,7 +446,7 @@ CREATE TABLE `species` (
 
 LOCK TABLES `species` WRITE;
 /*!40000 ALTER TABLE `species` DISABLE KEYS */;
-INSERT INTO `species` VALUES (7,'taxon:9606','Human','Homo sapiens','human'),(8,'taxon:10090','Mouse','Mus musculus','mouse');
+INSERT INTO `species` VALUES (7,'taxon:9606','Human','Homo sapiens','human'),(8,'taxon:10090','Mouse','Mus musculus','mouse'),(99,'taxon:99999','Unknown','Mysterious','unknown');
 /*!40000 ALTER TABLE `species` ENABLE KEYS */;
 UNLOCK TABLES;
 

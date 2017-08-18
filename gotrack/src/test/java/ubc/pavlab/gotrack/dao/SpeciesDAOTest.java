@@ -19,18 +19,13 @@
 
 package ubc.pavlab.gotrack.dao;
 
-import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.*;
 import ubc.pavlab.gotrack.BaseTest;
 import ubc.pavlab.gotrack.model.dto.SpeciesDTO;
+
+import java.util.List;
 
 /**
  * TODO Document Me
@@ -83,6 +78,41 @@ public class SpeciesDAOTest extends BaseTest {
     @Test
     public void testList() {
         List<SpeciesDTO> dtos = speciesDAO.list();
+        Assert.assertThat( dtos.size(), Matchers.is( 3 ) );
+
+        // ordered by id
+
+        SpeciesDTO dto = dtos.get( 0 );
+
+        Assert.assertThat( dto, Matchers.notNullValue() );
+        Assert.assertThat( dto.getId(), Matchers.is( 7 ) );
+        Assert.assertThat( dto.getCommonName(), Matchers.is( "Human" ) );
+        Assert.assertThat( dto.getScientificName(), Matchers.is( "Homo sapiens" ) );
+        Assert.assertThat( dto.getTaxon(), Matchers.is( 9606 ) );
+        Assert.assertThat( dto.getInteractingTaxon(), Matchers.nullValue() );
+
+        dto = dtos.get( 1 );
+
+        Assert.assertThat( dto, Matchers.notNullValue() );
+        Assert.assertThat( dto.getId(), Matchers.is( 8 ) );
+        Assert.assertThat( dto.getCommonName(), Matchers.is( "Mouse" ) );
+        Assert.assertThat( dto.getScientificName(), Matchers.is( "Mus musculus" ) );
+        Assert.assertThat( dto.getTaxon(), Matchers.is( 10090 ) );
+        Assert.assertThat( dto.getInteractingTaxon(), Matchers.nullValue() );
+
+        dto = dtos.get( 2 );
+
+        Assert.assertThat( dto, Matchers.notNullValue() );
+        Assert.assertThat( dto.getId(), Matchers.is( 99 ) );
+        Assert.assertThat( dto.getCommonName(), Matchers.is( "Unknown" ) );
+        Assert.assertThat( dto.getScientificName(), Matchers.is( "Mysterious" ) );
+        Assert.assertThat( dto.getTaxon(), Matchers.is( 99999 ) );
+        Assert.assertThat( dto.getInteractingTaxon(), Matchers.nullValue() );
+    }
+
+    @Test
+    public void testListWithData() {
+        List<SpeciesDTO> dtos = speciesDAO.listWithData();
         Assert.assertThat( dtos.size(), Matchers.is( 2 ) );
 
         // ordered by id

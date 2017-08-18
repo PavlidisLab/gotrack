@@ -41,11 +41,14 @@ public class SpeciesDAOImpl implements SpeciesDAO {
 
     // Constants ----------------------------------------------------------------------------------
     private static final String SQL_SPECIES = "species";
+    private static final String SQL_EDITION = "edition";
 
     private static final String SQL_SELECT = "id, taxon, common_name, scientific_name";
     private static final String SQL_FIND_BY_ID = "SELECT " + SQL_SELECT + " FROM " + SQL_SPECIES + " WHERE id = ?";
     private static final String SQL_LIST_ORDER_BY_NAME = "SELECT " + SQL_SELECT + " FROM " + SQL_SPECIES + " ORDER BY common_name";
     private static final String SQL_LIST_ORDER_BY_ID = "SELECT " + SQL_SELECT + " FROM " + SQL_SPECIES + " ORDER BY id";
+    private static final String SQL_LIST_WITH_DATA_ORDER_BY_ID = "SELECT " + SQL_SELECT + " FROM " + SQL_SPECIES +
+            " WHERE id in (SELECT DISTINCT species_id from " + SQL_EDITION + ") ORDER BY id";
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -77,17 +80,25 @@ public class SpeciesDAOImpl implements SpeciesDAO {
 
     @Override
     public List<SpeciesDTO> list() throws DAOException {
+        return fetchMultiple( SQL_LIST_ORDER_BY_ID );
+    }
+
+    @Override
+    public List<SpeciesDTO> listWithData() throws DAOException {
+        return fetchMultiple( SQL_LIST_WITH_DATA_ORDER_BY_ID );
+    }
+
+    private List<SpeciesDTO> fetchMultiple(String sql) throws DAOException {
         Connection connection = null;
         PreparedStatement preparedStatement = null;
         ResultSet resultSet = null;
-        List<SpeciesDTO> list = new ArrayList<>();
-
+        List<SpeciesDTO> result = new ArrayList<>();
         try {
             connection = daoFactory.getConnection();
-            preparedStatement = connection.prepareStatement( SQL_LIST_ORDER_BY_ID );
+            preparedStatement = connection.prepareStatement( sql );
             resultSet = preparedStatement.executeQuery();
-            while ( resultSet.next() ) {
-                list.add( map( resultSet ) );
+            while (resultSet.next()) {
+                result.add( map( resultSet ) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );
@@ -95,7 +106,7 @@ public class SpeciesDAOImpl implements SpeciesDAO {
             close( connection, preparedStatement, resultSet );
         }
 
-        return list;
+        return result;
     }
 
     private SpeciesDTO execute( String sql, Object... values ) throws DAOException {
