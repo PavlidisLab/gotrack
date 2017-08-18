@@ -95,13 +95,15 @@ public class Trends {
 
                 Aggregate agg = cache.getAggregate( ed );
 
-                geneCountSeries.addDataPoint( ed.getDate(), agg.getGeneCount() );
-                directTermsForGeneSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
-                geneDirectJaccardSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
-                inferredGenesForTermSeries.addDataPoint( ed.getDate(), agg.getAvgGenesByTerm() );
-                inferredTermsForGeneSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
-                geneInferredJaccardSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
-                multifunctionalitySeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * agg.getAvgMultifunctionality() );
+                if (agg != null) {
+                    geneCountSeries.addDataPoint( ed.getDate(), agg.getGeneCount() );
+                    directTermsForGeneSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
+                    geneDirectJaccardSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
+                    inferredGenesForTermSeries.addDataPoint( ed.getDate(), agg.getAvgGenesByTerm() );
+                    inferredTermsForGeneSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
+                    geneInferredJaccardSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
+                    multifunctionalitySeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * agg.getAvgMultifunctionality() );
+                }
             }
 
             geneCountChart.addSeries( geneCountSeries );
