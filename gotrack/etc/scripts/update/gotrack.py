@@ -383,10 +383,10 @@ class GOTrack:
 
     @stream
     def stream_staged_annotations(self, sp_id, ed, cursor=None):
-        sql = "select distinct annot.go_id, ppah.accession_id from {annotation} annot " \
-              "inner join {staging_pre}{pp_accession_history} ppah on ppah.secondary_accession_id=annot.accession_id " \
-              "inner join {accession} acc on acc.id=ppah.secondary_accession_id " \
-              "where acc.species_id = %s and acc.edition = %s"
+        sql = "select distinct ppah.ac, annot.go_id from {annotation} annot " \
+              "inner join {accession} acc on acc.id=annot.accession_id " \
+              "inner join {staging_pre}{pp_accession_history} ppah on acc.db_object_id = ppah.sec " \
+              "where acc.species_id = %s AND acc.edition = %s"
         cursor.execute(sql.format(**self.tables), [sp_id, ed])
         for row in cursor:
             yield row
