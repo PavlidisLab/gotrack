@@ -77,11 +77,11 @@ CREATE TABLE `go_alternate` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `go_edition_id_fk` bigint(20) unsigned NOT NULL,
   `alt` varchar(10) NOT NULL,
-  `primary` varchar(10) NOT NULL,
+  `principle` varchar(10) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ed_alt` (`go_edition_id_fk`,`alt`),
-  KEY `ed_alt_primary` (`go_edition_id_fk`,`alt`,`primary`),
-  KEY `alt_primary` (`alt`,`primary`),
+  KEY `ed_alt_primary` (`go_edition_id_fk`,`alt`,`principle`),
+  KEY `alt_primary` (`alt`,`principle`),
   CONSTRAINT `fk_go_alt_go_edition` FOREIGN KEY (`go_edition_id_fk`) REFERENCES `go_edition` (`id`)
 )
 
@@ -412,7 +412,7 @@ class GOTrack:
 
     def _insert_term_alternates(self, cursor, go_edition_id, ont):
         log.info("Inserting Alternate Table")
-        cols = ["go_edition_id_fk", "alt", "primary"]
+        cols = ["go_edition_id_fk", "alt", "principle"]
         data = ((go_edition_id,) + x for x in ont.alternate_list())
         self.insert_many(self.tables['go_alternate'], cols, data, cursor)
 
