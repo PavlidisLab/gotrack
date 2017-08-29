@@ -52,18 +52,18 @@ def main(resource_directory=None, cron=False, no_download=False):
         missing_cnt = len(res.missing_go)
         if missing_cnt:
             LOG.warn("Missing %s GO Versions from FTP", missing_cnt)
-            if query_yes_no("Download missing GO Versions?"):
+            if cron or query_yes_no("Download missing GO Versions?"):
                 res.download_missing_go_data()
 
         missing_cnt = sum([len(goa_sp) for goa_sp in res.missing_goa.values()])
         if missing_cnt:
             LOG.warn("Missing %s GOA Editions from FTP", missing_cnt)
-            if query_yes_no("Download missing GOA Editions?"):
+            if cron or query_yes_no("Download missing GOA Editions?"):
                 res.download_missing_goa_data()
 
         if not res.sec_ac:
             LOG.warn("Missing secondary accession file (sec_ac.txt)")
-            if query_yes_no("Download missing secondary accession file?"):
+            if cron or query_yes_no("Download missing secondary accession file?"):
                 res.download_accession_history()
 
         LOG.info("Re-checking state of resource directory")
@@ -71,7 +71,7 @@ def main(resource_directory=None, cron=False, no_download=False):
         res.populate_missing_data()
         LOG.info(res)
 
-        if not query_yes_no("Continue with updates?"):
+        if res.missing_data or not (cron or query_yes_no("Continue with updates?")):
             return
 
     # Insert new GO data
