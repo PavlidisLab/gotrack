@@ -80,7 +80,8 @@ def main(resource_directory=None, cron=False, no_download=False):
         LOG.info("New GO Versions ready to update: %s", len(new_go))
         if cron or query_yes_no("Update GO tables? (Affected tables: '{go_edition}', '{go_term}', "
                                 "'{go_adjacency}', '{go_alternate}')".format(**gotrack.tables)):
-            for go_date, go_file in new_go.iteritems():
+            for go_date in sorted(new_go.keys()):
+                go_file = new_go[go_date]
                 LOG.info("Begin: %s", go_date.strftime('%Y-%m-%d'))
                 ont = Ontology.from_file_data(go_date, go_file)
                 gotrack.update_go_tables(ont)
