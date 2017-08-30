@@ -93,6 +93,7 @@ CREATE TABLE `go_definition` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `go_id` varchar(10) NOT NULL,
   `definition` text NOT NULL,
+  `date` date NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `go_id` (`go_id`)
 )
@@ -444,9 +445,29 @@ class GOTrack:
 
     @transactional
     def update_current_go_definitions(self, ont, cursor=None):
-        cols = ["go_id", "definition"]
-        data = ont.list_definitions()
-        self.insert_many(self.tables['go_definition'], cols, data, cursor)
+
+        go_date = ont.date.strftime('%Y-%m-%d')
+        data = (x + (go_date,) for x in ont.list_definitions())
+        # Custom SQL for this. We want to insert a definition if it doesn't exist or update it if it has changed
+        # and is newer than the previous.
+
+        # It is actually extremely important that 'values' be lowercase. DO NOT CHANGE.
+        # See http://stackoverflow.com/a/3945860/4907830.
+        sql = "INSERT INTO {table} (go_id, definition, date) values (%s, %s, %s) " \
+              "ON DUPLICATE KEY UPDATE definition = IF(date < VALUES(date), VALUES(definition), definition), " \
+              "date = IF( date < VALUES(date) and definition != VALUES(definition), VALUES(date), date)"
+        sql = sql.format(table=self.tables['go_definition'])
+
+        cnt = 0
+        start = time.time()
+        for row_list in grouper(self.concurrent_insertions, data):
+            cnt += len(row_list)
+            if self.verbose:
+                log.info(cnt)
+            cursor.executemany(sql, row_list)
+
+        if self.verbose:
+            log.info("Row Count: %s, Time: %s", cnt, time.time() - start)
 
     def _fetch_closest_go_edition_for_date(self, cursor, date):
         sql = "select id, date from {go_edition} where date <= %s order by date DESC LIMIT 1".format(**self.tables)
