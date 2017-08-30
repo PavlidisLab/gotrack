@@ -15,8 +15,10 @@ CREATE TABLE `annotation` (
   `reference` varchar(255) NOT NULL,
   `evidence` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `acc_go_ev_ref_qual` (`accession_id`, `go_id`, `evidence`, `reference`, `qualifier`),
-  CONSTRAINT `annotation_idfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
+  UNIQUE KEY `acc_go_ev_ref_qual` (`accession_id`,`go_id`,`evidence`,`reference`,`qualifier`),
+  KEY `category_counts_go_ev_acc2` (`go_id`,`evidence`,`accession_id`),
+  KEY `category_counts_go_ev_acc` (`go_id`,`accession_id`,`evidence`),
+  CONSTRAINT `annotation_ibfk_1` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
 )
 
 CREATE TABLE `accession` (
@@ -32,8 +34,7 @@ CREATE TABLE `accession` (
   `subset` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `sp_ed_dbi` (`species_id`,`edition`,`db_object_id`),
-  #CONSTRAINT `accession_edfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`),
-  #CONSTRAINT `accession_spfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
+  KEY `doi` (`db_object_id`)
 )
 
 CREATE TABLE `synonyms` (
@@ -49,10 +50,12 @@ CREATE TABLE `edition` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `edition` int(11) NOT NULL,
   `species_id` int(11) NOT NULL,
+  `goa_release` int(11) unsigned DEFAULT NULL,
   `date` date NOT NULL,
-  `go_edition_id_fk` int(10) unsigned NOT NULL,
+  `go_edition_id_fk` int(11) unsigned NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `spec_ed` (`species_id`,`edition`)
+  UNIQUE KEY `spec_ed` (`species_id`,`edition`),
+  KEY `spec_ed_rel` (`species_id`,`edition`,`goa_release`)
 )
 
 CREATE TABLE `sec_ac` (
@@ -60,7 +63,8 @@ CREATE TABLE `sec_ac` (
   `sec` varchar(10) NOT NULL,
   `ac` varchar(10) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `ac` (`ac`,`sec`)
+  UNIQUE KEY `ac` (`ac`,`sec`),
+  UNIQUE KEY `sec` (`sec`,`ac`)
 )
 
 CREATE TABLE `go_adjacency` (
@@ -75,7 +79,7 @@ CREATE TABLE `go_adjacency` (
 
 CREATE TABLE `go_alternate` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `go_edition_id_fk` bigint(20) unsigned NOT NULL,
+  `go_edition_id_fk` int(11) unsigned NOT NULL,
   `alt` varchar(10) NOT NULL,
   `principle` varchar(10) NOT NULL,
   PRIMARY KEY (`id`),
@@ -94,7 +98,7 @@ CREATE TABLE `go_definition` (
 )
 
 CREATE TABLE `go_edition` (
-  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `date` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `date` (`date`)
@@ -102,7 +106,7 @@ CREATE TABLE `go_edition` (
 
 CREATE TABLE `go_term` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `go_edition_id_fk` bigint(20) unsigned NOT NULL,
+  `go_edition_id_fk` int(11) unsigned NOT NULL,
   `go_id` varchar(10) NOT NULL,
   `name` text NOT NULL,
   `aspect` enum('CC','BP','MF') DEFAULT NULL,
@@ -115,7 +119,7 @@ CREATE TABLE `go_term` (
 
 Pre-processed
 
-accession_history | CREATE TABLE `pp_accession_history` (
+CREATE TABLE `pp_accession_history` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `sec` varchar(10) NOT NULL,
   `ac` varchar(10) NOT NULL,
@@ -167,6 +171,14 @@ CREATE TABLE `track_popular_genes` (
   `count` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `acc` (`accession`)
+)
+
+CREATE TABLE `track_popular_terms` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `go_id` varchar(10) NOT NULL,
+  `count` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `go_id` (`go_id`)
 )
 
 ##################################################################
