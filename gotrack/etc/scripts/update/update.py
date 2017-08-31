@@ -222,10 +222,14 @@ def stage_aggregates(gotrack=None):
         adjacency_list = gotrack.stream_adjacency_list(go_ed)
         ont = Ontology.from_adjacency("1900-01-01", adjacency_list)  
         for sp_id, ed in eds:
-            LOG.info("Starting Species (%s), Edition (%s)", sp_id, ed)
+            LOG.info("Starting Species (%s), Edition (%s), GO Edition (%s)", sp_id, ed, go_ed)
             annotations = gotrack.stream_staged_annotations(sp_id, ed)
             _, direct_term_set_per_gene_id, term_set_per_gene_id, _, _ = aggregate_annotations(annotations, ont, sp_id, ed)
             current_term_set_cache[sp_id] = [direct_term_set_per_gene_id, term_set_per_gene_id]
+            if len(term_set_per_gene_id) == 0 or len(direct_term_set_per_gene_id) == 0:
+                LOG.error("No data for current edition, pre-process failed.")
+                raise ValueError("No Data")
+            LOG.info("Cached Term Sets: (%s), Direct: (%s)", len(term_set_per_gene_id), len(direct_term_set_per_gene_id))
 
     # Loops through all editions and calculate aggregate stats for each
     i = 0
@@ -277,7 +281,7 @@ def aggregate_annotations(all_annotations_stream, ont, sp_id, ed):
     # Propagation Cache for performance purposes
     annotation_count = 0
 
-    for go_id, gene_id in all_annotations_stream:
+    for gene_id, go_id in all_annotations_stream:
         term = ont.get_term(go_id)
 
         if term is not None:
@@ -448,8 +452,7 @@ if __name__ == '__main__':
         gotrack_db = gtdb.GOTrack(**CREDS)
         if gotrack_db.requires_proprocessing() or \
                 query_yes_no("Database does not require pre-processing, continue anyways?"):
-            gotrack_db = None
-            pre_process()
+            pre_process(gotrack_db)
         else:
             LOG.info("Pre-processing skipped")
     elif args.update:
