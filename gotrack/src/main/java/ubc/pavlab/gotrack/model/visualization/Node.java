@@ -17,23 +17,31 @@
  *
  */
 
-package ubc.pavlab.gotrack.model.cytoscape;
+package ubc.pavlab.gotrack.model.visualization;
+
+import com.google.common.collect.Lists;
+
+import java.util.List;
 
 /**
  * Represents a node with a unique id
  * 
  * @author mjacobson
- * @version $Id$
  */
 public class Node {
 
     private final int id;
     private final String label;
+    private final List<String> classes;
 
-    public Node( int id, String label ) {
-        super();
+    public Node( int id, String label, List<String> classes ) {
         this.id = id;
         this.label = label;
+        this.classes = classes;
+    }
+
+    public Node( int id, String label ) {
+        this(id, label, Lists.<String>newArrayList());
     }
 
     public int getId() {
@@ -42,6 +50,14 @@ public class Node {
 
     public String getLabel() {
         return label;
+    }
+
+    public List<String> getClasses() {
+        return classes;
+    }
+
+    public void addClass(String clazz) {
+        classes.add( clazz );
     }
 
     @Override

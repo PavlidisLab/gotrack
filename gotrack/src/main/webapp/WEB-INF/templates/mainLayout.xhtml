@@ -13,9 +13,6 @@
         <title><ui:insert name="pageTitle"/></title>
         <link rel="shortcut icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
         <link rel="icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
-        <h:outputStylesheet
-                name="webjars/font-awesome/4.2.0/css/font-awesome.css"/>
-        <h:outputStylesheet library="css" name="showcase.css"/>
         <h:outputStylesheet library="css" name="custom.css"/>
         <h:outputStylesheet library="css" name="common.css"/>
         <ui:insert name="css"/>
@@ -42,15 +39,17 @@
             <p:growl id="globalGrowl" globalOnly="true" autoUpdate="true" life="5000" escape="false"/>
             <p:layoutUnit id="top" position="north" size="50">
                 <h:form id="topForm">
-                    <p:menubar toggleEvent="click">
-                        <p:menuitem value="&nbsp; Home" outcome="/index.xhtml"
-                                    icon="fa fa-home" styleClass="right-border"/>
-                        <p:menuitem value="&nbsp; Track Gene" outcome="/genes.xhtml"
-                                    icon="fa fa-line-chart" styleClass="right-border"/>
-                        <p:menuitem value="&nbsp; Track Term" outcome="/terms.xhtml"
-                                    icon="fa fa-globe" styleClass="right-border"/>
-                        <p:menuitem value="&nbsp; Track Enrichment" outcome="/enrichment.xhtml"
-                                    icon="fa fa-bar-chart" styleClass="right-border"/>
+                    <p:menubar toggleEvent="click" style="border: 1px solid transparent">
+                        <p:menuitem value="Home" outcome="/index.xhtml"
+                                    icon="fa fa-home"/>
+                        <p:menuitem value="Track Gene" outcome="/genes.xhtml"
+                                    icon="fa fa-line-chart"/>
+                        <p:menuitem value="Track Term" outcome="/terms.xhtml"
+                                    icon="fa fa-sitemap"/>
+                        <p:menuitem value="Track Enrichment" outcome="/enrichment.xhtml"
+                                    icon="fa fa-bar-chart"/>
+                        <p:menuitem value="Global Trends" outcome="/trends.xhtml"
+                                    icon="fa fa-globe"/>
                         <!-- 						<p:menuitem value="&nbsp; Tutorial" outcome="/about.xhtml" icon="fa fa-question-circle" styleClass="right-border" />
                                                 <p:menuitem value="&nbsp; Documentation" outcome="/documentation.xhtml" icon="fa fa-book" styleClass="right-border" />
                                                 <p:menuitem value="&nbsp; Resources" outcome="/resources.xhtml" icon="fa fa-info-circle" styleClass="right-border" /> -->

@@ -111,7 +111,7 @@ public class TerminalHandler implements Serializable {
                     return "Malformed Input : speciesId, edition";
                 }
                 Edition ed = cache.getEdition( species, editionId );
-                Aggregate agg = cache.getAggregates( species, ed );
+                Aggregate agg = cache.getAggregate( ed );
                 if ( agg == null ) {
                     return "Null";
                 }
@@ -155,7 +155,7 @@ public class TerminalHandler implements Serializable {
                 return "Term not found.";
             }
 
-            Integer val = cache.getInferredAnnotationCount( species, ed, t );
+            Integer val = cache.getInferredAnnotationCount( ed, t );
 
             return t.toString() + "<br/>" + "GO Set Size: " + ( val == null ? "" : val.toString() );
         } else if ( command.equals( "" ) ) {

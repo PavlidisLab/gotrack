@@ -19,12 +19,11 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import com.google.common.base.Predicate;
+import com.google.common.base.Function;
 import com.google.common.collect.*;
 import com.google.gson.Gson;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
-import org.primefaces.component.datatable.DataTable;
 import org.primefaces.context.RequestContext;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.beans.service.MultifunctionalityService;
@@ -35,10 +34,8 @@ import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
-import ubc.pavlab.gotrack.model.table.AnnotationValues;
-import ubc.pavlab.gotrack.model.table.CompareTermsTableValues;
-import ubc.pavlab.gotrack.model.table.CompareTermsTableValues.TermComparison;
-import ubc.pavlab.gotrack.model.table.GeneTableValues;
+import ubc.pavlab.gotrack.model.table.GeneViewRightPanelRow;
+import ubc.pavlab.gotrack.model.visualization.Graph;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 import javax.annotation.PostConstruct;
@@ -57,7 +54,6 @@ import java.util.Map.Entry;
  * Backing bean for the gene tracking functionality.
  * 
  * @author mjacobson
- * @version $Id$
  */
 @Named
 @ViewScoped
@@ -86,41 +82,29 @@ public class GeneView implements Serializable {
 
     // Data
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData;
-    private boolean filtered = false;
 
     // Meta
     private Edition currentEdition;
 
     // Right Panel
-    private Collection<GeneTableValues> allTerms = new HashSet<>();
-    private List<GeneTableValues> selectedTerms;
-    private Collection<GeneTableValues> filteredAllTerms;
+    private List<GeneViewRightPanelRow> rightPanelTerms = Lists.newArrayList();
+    private List<GeneViewRightPanelRow> rightPanelSelectedTerms;
+    private Collection<GeneViewRightPanelRow> rightPanelFilteredTerms;
+    private Edition rightPanelEdition;
+
+    // Comparisons
+    private List<Edition> comparisons = Lists.newArrayList();
+
+    // Right Panel Click
+//    private Collection<Annotation> rightPanelAnnotations = Sets.newHashSet();
 
     // View Annotations List
-    private Collection<AnnotationValues> viewAnnotations = new ArrayList<>();
-    private Collection<AnnotationValues> filteredViewAnnotations; // TODO use this
+    private Collection<Annotation> viewAnnotations = new ArrayList<>();
+    private Collection<Annotation> filteredViewAnnotations; // TODO use this
     private GeneOntologyTerm viewTerm;
 
     // Click event lists
     private Edition clickEdition;
-
-    // Range select event lists
-    private Edition selectEditionStart;
-    private Edition selectEditionStop;
-
-    // Annotation clicks
-    private Collection<CompareTermsTableValues> allClickTerms = new HashSet<>();
-    private Collection<CompareTermsTableValues> clickTerms = new HashSet<>();
-    private List<CompareTermsTableValues> selectedClickTerms;
-    private Collection<CompareTermsTableValues> filteredClickTerms;
-
-    // Annotation Click Meta
-    private int totalTerms;
-    private int gainTerms;
-    private int lossTerms;
-
-    // Annotation Clicks TermComparison Selector
-    private TermComparison termComparisonFilter = null;
 
     public GeneView() {
         log.info( "GeneView created" );
@@ -170,6 +154,7 @@ public class GeneView implements Serializable {
         log.info( "Gene: " + gene );
 
         currentEdition = cache.getCurrentEditions( gene.getSpecies() );
+        rightPanelEdition = currentEdition;
 
         return null;
 
@@ -186,9 +171,9 @@ public class GeneView implements Serializable {
      * Attempt to get data from cache, if not in cache get from DB. Afterwards apply filter.
      */
     private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> retrieveData(
-            Collection<GeneTableValues> filterTableValues ) {
+            Collection<GeneViewRightPanelRow> filterTableValues ) {
         Set<GeneOntologyTerm> filterTerms = Sets.newHashSet();
-        for ( GeneTableValues tv : filterTableValues ) {
+        for ( GeneViewRightPanelRow tv : filterTableValues ) {
             filterTerms.add( tv.getTerm() );
         }
         return retrieveData( filterTerms );
@@ -274,6 +259,115 @@ public class GeneView implements Serializable {
 
     }
 
+    private List<GeneViewRightPanelRow> fetchRightPanelRows(Edition edition) {
+        return fetchRightPanelRows( edition, rawData.get( AnnotationType.I ).row( edition ).keySet() );
+    }
+
+    private List<GeneViewRightPanelRow> fetchRightPanelRows(Edition edition,  Collection<GeneOntologyTerm> terms) {
+        List<GeneViewRightPanelRow> results = Lists.newArrayList();
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> directs = rawData.get( AnnotationType.D ).row( edition );
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> inferred = rawData.get( AnnotationType.I ).row( edition );
+        for ( GeneOntologyTerm term : terms ) {
+            Set<Annotation> annotations = inferred.get( term );
+            if (annotations != null ) {
+                results.add( new GeneViewRightPanelRow( term,
+                        directs.containsKey( term ) ? AnnotationType.D : AnnotationType.I, annotations ) );
+            }
+        }
+
+        Collections.sort(results);
+        return results;
+    }
+
+    private List<GeneViewRightPanelRow> fetchRightPanelRowsComparison(Edition editionA, Edition editionB ) {
+        List<GeneViewRightPanelRow> results = Lists.newArrayList();
+
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> inferredA = rawData.get( AnnotationType.I ).row( editionA );
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> directsA = rawData.get( AnnotationType.D ).row( editionA );
+
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> inferredB = rawData.get( AnnotationType.I ).row( editionB );
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> directsB = rawData.get( AnnotationType.D ).row( editionB );
+
+        for ( Entry<GeneOntologyTerm, Set<Annotation>> entry : inferredA.entrySet() ) {
+            GeneOntologyTerm term = entry.getKey();
+            Set<Annotation> annotations = entry.getValue();
+            BitSet inSet = new BitSet();
+            inSet.set( 0 );
+            inSet.set( 1, inferredB.containsKey( term ) );
+            results.add( new GeneViewRightPanelRow(
+                    term,
+                    directsA.containsKey( term ) ? AnnotationType.D : AnnotationType.I,
+                    annotations,
+                    inSet ) );
+
+        }
+
+        // Considered using Maps.difference. However, this method is not as efficient
+        // as the view returned by Sets.difference
+        BitSet inSet = new BitSet();
+        inSet.set( 0, 0 );
+        inSet.set( 1 );
+        for ( GeneOntologyTerm term : Sets.difference( inferredB.keySet(), inferredA.keySet() ) ) {
+            Set<Annotation> annotations = inferredB.get( term );
+            results.add( new GeneViewRightPanelRow(
+                    term,
+                    directsB.containsKey( term ) ? AnnotationType.D : AnnotationType.I,
+                    annotations,inSet ) );
+
+        }
+
+        comparisons = Lists.newArrayList( editionB );
+
+        Collections.sort(results);
+        return results;
+    }
+
+
+    private List<GeneViewRightPanelRow> addRightPanelRowsComparison(Edition newComparison ) {
+
+//        if (rightPanelTerms == null || rightPanelTerms.isEmpty()) {
+//            return fetchRightPanelRowsComparison( rightPanelEdition, newComparison );
+//        }
+
+        BitSet example = rightPanelTerms.iterator().next().getInSet();
+        int nextBitIndex = comparisons.size() + 1;
+
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> newInferred = rawData.get( AnnotationType.I ).row( newComparison );
+        ImmutableMap<GeneOntologyTerm, Set<Annotation>> newDirect = rawData.get( AnnotationType.D ).row( newComparison );
+
+        for ( GeneViewRightPanelRow rightPanelTerm : rightPanelTerms ) {
+            BitSet inSet = rightPanelTerm.getInSet();
+            inSet.set( nextBitIndex , newInferred.containsKey( rightPanelTerm.getTerm() ) );
+        }
+
+
+
+        // Not too fast but better than alternatives... probably
+        Set<GeneOntologyTerm> termsInRightPanel = Sets.newHashSet( Collections2.transform( rightPanelTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
+            @Override
+            public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
+                return row.getTerm();
+            }
+        } ) );
+
+        BitSet inSet = new BitSet( nextBitIndex );
+        inSet.set( nextBitIndex );
+        for ( GeneOntologyTerm term : Sets.difference( newInferred.keySet(), termsInRightPanel ) ) {
+            Set<Annotation> annotations = newInferred.get( term );
+            rightPanelTerms.add( new GeneViewRightPanelRow(
+                    term,
+                    newDirect.containsKey( term ) ? AnnotationType.D : AnnotationType.I,
+                    annotations,
+                    inSet ) );
+
+        }
+
+        comparisons.add( newComparison );
+
+        Collections.sort(rightPanelTerms);
+        return rightPanelTerms;
+    }
+
     /**
      * Entry point for initiating the retrieval of necessary data.
      */
@@ -292,29 +386,9 @@ public class GeneView implements Serializable {
 
         RequestContext.getCurrentInstance().addCallbackParam( "dateToEdition", new Gson().toJson( dateToEdition ) );
 
-        // Now create a list of terms that will be displayed in a front-end right panel
-        // Cannot simply use columnKeySet as there are no guarantees as to which terms will be chosen
-        // We want the most recent of each term.
-
         //allTerms = rawData.get( AnnotationType.DIRECT ).columnKeySet();
-        allTerms = new HashSet<>();
-        ArrayList<Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>>> data = new ArrayList<>(
-                rawData.get( AnnotationType.I ).rowMap().entrySet() );
-
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : Lists.reverse( data ) ) {
-            Set<GeneOntologyTerm> terms = entry.getValue().keySet();
-            Edition ed = entry.getKey();
-            int age = currentEdition.getEdition() - ed.getEdition();
-            for ( GeneOntologyTerm t : terms ) {
-                if ( !allTerms.contains( t ) ) {
-                    // Only keep the most recent
-                    allTerms.add( new GeneTableValues( ed, t, age ) );
-                }
-            }
-        }
-
-        allTerms = new ArrayList<>( allTerms );
-        Collections.sort( ( List<GeneTableValues> ) allTerms );
+        rightPanelTerms = fetchRightPanelRows( rightPanelEdition );
+//        Collections.sort( rightPanelTerms );
 
     }
 
@@ -339,16 +413,10 @@ public class GeneView implements Serializable {
         return hcGsonMap;
     }
 
-    private Map<String, Object> createHCCallbackParamMap( String title, String yLabel, String xLabel, Integer min,
-            Integer max, ChartValues chart ) {
+    private Map<String, Object> createHCCallbackParamMap( ChartValues chart ) {
         Map<String, Object> hcGsonMap = Maps.newHashMap();
         hcGsonMap.put( "success", true );
-        hcGsonMap.put( "title", title );
-        hcGsonMap.put( "yLabel", yLabel );
-        hcGsonMap.put( "xLabel", xLabel );
-        hcGsonMap.put( "min", min );
-        hcGsonMap.put( "max", max );
-        hcGsonMap.put( "data", chart );
+        hcGsonMap.put( "chart", chart );
         return hcGsonMap;
     }
 
@@ -365,7 +433,9 @@ public class GeneView implements Serializable {
         // Collect data from cache about species aggregates
         //        Map<Edition, Aggregate> aggregates = cache.getAggregates( species.getId() );
 
-        ChartValues chart = new ChartValues();
+        ChartValues chart = new ChartValues("Terms Annotated to " + gene.getSymbol() + " vs Time",
+                "Annotations Count", "Date");
+        chart.setMin( 0 );
 
         //        // Create series for species aggregates
         //        Series aggregateSeries = new Series( "Species Direct Avg" );
@@ -398,7 +468,7 @@ public class GeneView implements Serializable {
             inferredCountSeries.addDataPoint( ed.getDate(), count );
 
             // Averages
-            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
+            Aggregate agg = cache.getAggregate( ed );
             if ( agg != null ) {
                 aggregateSeries.addDataPoint( ed.getDate(), agg.getAvgDirectByGene() );
                 aggregateInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredByGene() );
@@ -410,8 +480,7 @@ public class GeneView implements Serializable {
         chart.addSeries( directCountSeries );
         chart.addSeries( inferredCountSeries );
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Terms Annotated to " + gene.getSymbol() + " vs Time",
-                "Annotations Count", "Date", 0, null, chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
@@ -438,7 +507,10 @@ public class GeneView implements Serializable {
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> inferredData = rawData
                 .get( AnnotationType.I );
 
-        ChartValues chart = new ChartValues();
+        ChartValues chart = new ChartValues("Similarity of " + gene.getSymbol() + " vs Time",
+                "Jaccard Similarity Index", "Date");
+        chart.setMin( 0 );
+        chart.setMax( 1 );
 
         // Create jaccard between edition and current edition
         Edition currentEdition = Collections.max( directData.rowKeySet() );
@@ -467,7 +539,7 @@ public class GeneView implements Serializable {
             inferredSeries.addDataPoint( ed.getDate(), jaccard );
 
             // Averages
-            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
+            Aggregate agg = cache.getAggregate( ed );
             if ( agg != null ) {
                 averageDirectSeries.addDataPoint( ed.getDate(), agg.getAvgDirectSimilarity() );
                 averageInferredSeries.addDataPoint( ed.getDate(), agg.getAvgInferredSimilarity() );
@@ -479,8 +551,7 @@ public class GeneView implements Serializable {
         chart.addSeries( directSeries );
         chart.addSeries( inferredSeries );
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap( "Similarity of " + gene.getSymbol() + " vs Time",
-                "Jaccard Similarity Index", "Date", 0, 1, chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
@@ -504,7 +575,9 @@ public class GeneView implements Serializable {
             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData ) {
         log.debug( "fetchMultifunctionalityChart" );
 
-        ChartValues chart = new ChartValues();
+        ChartValues chart = new ChartValues("Multifunctionality of " + gene.getSymbol() + " vs Time", "Multifunctionality [10^-5]",
+                "Date");
+        chart.setMin(0);
 
         // Calculate multifunctionality of the gene in each edition
         Series multiSeries = new Series( "Multifunctionality" );
@@ -514,14 +587,14 @@ public class GeneView implements Serializable {
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
 
-            Double multi = multifunctionalityService.multifunctionality( entry.getValue().keySet(), this.gene.getSpecies(), ed );
+            Double multi = multifunctionalityService.multifunctionality( entry.getValue().keySet(), ed );
             if ( multi != null ) {
                 // Scaled by 10^4
                 multiSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * multi );
             }
 
             // Averages
-            Aggregate agg = cache.getAggregates( this.gene.getSpecies(), ed );
+            Aggregate agg = cache.getAggregate( ed );
             if ( agg != null ) {
                 // Scaled by 10^4
                 averageSeries.addDataPoint( ed.getDate(), MULTIFUNCTIONALITY_SCALE * agg.getAvgMultifunctionality() );
@@ -530,9 +603,7 @@ public class GeneView implements Serializable {
         chart.addSeries( averageSeries );
         chart.addSeries( multiSeries );
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap(
-                "Multifunctionality of " + gene.getSymbol() + " vs Time", "Multifunctionality [10^-5]",
-                "Date", 0, null, chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
     }
@@ -545,52 +616,25 @@ public class GeneView implements Serializable {
     }
 
     /**
-     * Filter charts to include only those terms selected from right panel
-     */
-    public void filterCharts() {
-        if ( selectedTerms == null || selectedTerms.size() == 0 ) {
-            RequestContext.getCurrentInstance().addCallbackParam( "filtered", false );
-            return;
-        }
-
-        HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
-
-        rawData = retrieveData( filterTerms );
-        filtered = true;
-
-        RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
-
-    }
-
-    /**
-     * Remove all filters on charts
-     */
-    public void resetCharts() {
-        rawData = retrieveData();
-        filtered = false;
-        RequestContext.getCurrentInstance().addCallbackParam( "filtered", true );
-    }
-
-    /**
      * Entry point for fetching data to create a gantt chart of annotations categories over time
      */
     public void fetchTimeline() {
         log.debug( "fetchTimeline" );
-        if ( selectedTerms == null || selectedTerms.size() == 0 ) {
+        if ( rightPanelSelectedTerms == null || rightPanelSelectedTerms.size() == 0 ) {
             // No Terms
             RequestContext.getCurrentInstance().addCallbackParam( "HC",
                     new Gson().toJson( createHCCallbackParamFail( "No Terms Selected." ) ) );
             return;
         }
 
-        if ( selectedTerms.size() > 20 ) {
+        if ( rightPanelSelectedTerms.size() > 20 ) {
             // Too many terms
             RequestContext.getCurrentInstance().addCallbackParam( "HC",
                     new Gson().toJson( createHCCallbackParamFail( "Too Many Terms Selected. Maximum 20." ) ) );
             return;
         }
 
-        HashSet<GeneTableValues> filterTerms = new HashSet<>( selectedTerms );
+        HashSet<GeneViewRightPanelRow> filterTerms = new HashSet<>( rightPanelSelectedTerms );
 
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> data = retrieveData( filterTerms )
                 .get( AnnotationType.I );
@@ -602,14 +646,15 @@ public class GeneView implements Serializable {
             categoryPositions.put( cat, i++ );
         }
 
-        ChartValues chart = new ChartValues();
+        ChartValues chart = new ChartValues("Annotation Categories of " + gene.getSymbol() + " vs Time",
+                "", "Date");
 
         List<Edition> allEditions = new ArrayList<>( cache.getAllEditions( this.gene.getSpecies() ) );
         Collections.sort( allEditions );
 
         Map<String, String> termNames = new HashMap<>();
 
-        for ( GeneTableValues tv : filterTerms ) {
+        for ( GeneViewRightPanelRow tv : filterTerms ) {
             GeneOntologyTerm t = tv.getTerm();
             termNames.put( t.getGoId(), t.getName() );
             Series s = new Series( t.getGoId() );
@@ -632,89 +677,19 @@ public class GeneView implements Serializable {
             chart.addSeries( s );
         }
 
-        Map<String, Object> hcGsonMap = createHCCallbackParamMap(
-                "Annotation Categories of " + gene.getSymbol() + " vs Time",
-                "", "Date", null, null, chart );
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
         hcGsonMap.put( "category_positions", categoryPositions );
         hcGsonMap.put( "term_names", termNames );
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
 
     }
 
-    /**
-     * Entry point to view a terms annotations in a specific edition. This is reached by clicking a term in a table of
-     * terms after clicking a data point in the annotation chart.
-     */
-    public void fetchAnnotations() {
-        log.debug( "fetchAnnotations" );
-        //        if ( selectedClickTerms == null || selectedClickTerms.isEmpty() ) {
-        //            return;
-        //        }
-        //viewTerm = selectedClickTerms.iterator().next();
-        log.debug( viewTerm );
-
-        Set<Annotation> data = rawData.get( AnnotationType.D ).get( clickEdition, viewTerm );
-
-        viewAnnotations = new HashSet<>();
-        if ( data != null ) {
-
-            // Add direct annotations
-            for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.D ) );
-            }
-        }
-        data = rawData.get( AnnotationType.I ).get( clickEdition, viewTerm );
-
-        if ( data != null ) {
-
-            // Next add the inferred as they will not overwrite the direct if the direct already exists
-            for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.I ) );
-            }
-        }
-
-        filteredViewAnnotations = null;
+    public Collection<Annotation> fetchTermAnnotations(GeneOntologyTerm term) {
+        log.info( "fetchTermAnnotations" );
+        return rawData.get( AnnotationType.I ).row( rightPanelEdition).get( term );
     }
 
-    /**
-     * Range select event functionality for annotation chart
-     */
-    public void fetchAnnotationRangeData() {
-        log.debug( "fetchAnnotationRangeData" );
-        Integer editionId1;
-        Integer editionId2;
-        try {
 
-            editionId1 = Integer.valueOf(
-                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition1" ) );
-            editionId2 = Integer.valueOf(
-                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition2" ) );
-
-        } catch ( NumberFormatException e ) {
-            log.error( e );
-            return;
-        }
-
-        selectEditionStart = cache.getEdition( this.gene.getSpecies(), editionId1 );
-        if ( selectEditionStart == null ) {
-            log.warn( "selectEditionStart edition id has no corresponding edition object" );
-            return;
-        }
-
-        selectEditionStop = cache.getEdition( this.gene.getSpecies(), editionId2 );
-        if ( selectEditionStop == null ) {
-            log.warn( "selectEditionStop edition id has no corresponding edition object" );
-            return;
-        }
-
-        try {
-            allClickTerms = compareEditions( selectEditionStop, selectEditionStart );
-        } catch ( NullPointerException e ) {
-            log.error( e );
-            return;
-        }
-
-    }
 
     /**
      * Click event functionality for annotation chart
@@ -739,7 +714,13 @@ public class GeneView implements Serializable {
         }
 
         try {
-            allClickTerms = compareEditions( clickEdition );
+            rightPanelTerms = fetchRightPanelRows( clickEdition );
+            rightPanelFilteredTerms = null;
+            rightPanelSelectedTerms = null;
+            rightPanelEdition = clickEdition;
+
+            // Reset comparison fields
+            comparisons = Lists.newArrayList();
         } catch ( NullPointerException e ) {
             log.error( e );
             return;
@@ -748,29 +729,67 @@ public class GeneView implements Serializable {
     }
 
     /**
-     * Click event functionality for annotation chart
+     * Ctrl-Click event functionality for annotation chart
      */
-    public void fetchFilteredAnnotationClickTerms() {
-        if ( termComparisonFilter != null ) {
-            Predicate<CompareTermsTableValues> predicate = new Predicate<CompareTermsTableValues>() {
-                @Override
-                public boolean apply( CompareTermsTableValues input ) {
-                    return input.getComparison().equals( termComparisonFilter );
-                }
-            };
-            clickTerms = Collections2.filter( allClickTerms, predicate );
-        } else {
-            clickTerms = allClickTerms;
+    public void fetchAnnotationComparisonData() {
+        log.debug( "fetchAnnotationComparisonData" );
+        Integer compareEditionId;
+        try {
+            compareEditionId = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "compareEdition" ) );
+        } catch ( NumberFormatException e ) {
+            log.error( e );
+            return;
         }
-        selectedClickTerms = null;
-        filteredClickTerms = null;
 
-        // This prevents datatable filter issues
-        DataTable dataTable = ( DataTable ) FacesContext.getCurrentInstance().getViewRoot()
-                .findComponent( ":clickTermsForm:clickTermsTable" );
-        dataTable.reset();
-        // Resets custom filter inputs
-        RequestContext.getCurrentInstance().reset( "clickTermsForm:clickTermsTable" );
+        Edition compareEdition = cache.getEdition( this.gene.getSpecies(), compareEditionId );
+
+        if ( compareEdition == null ) {
+            log.warn( "Selected compare edition id has no corresponding edition object" );
+            return;
+        }
+
+        try {
+            rightPanelTerms = fetchRightPanelRowsComparison( rightPanelEdition, compareEdition );
+            rightPanelFilteredTerms = null;
+            rightPanelSelectedTerms = null;
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return;
+        }
+
+    }
+
+    /**
+     * Ctrl-Shift-Click event functionality for annotation chart
+     */
+    public void addAnnotationComparisonData() {
+        log.debug( "addAnnotationComparisonData" );
+        Integer compareEditionId;
+        try {
+            compareEditionId = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "compareEdition" ) );
+        } catch ( NumberFormatException e ) {
+            log.error( e );
+            return;
+        }
+
+        Edition compareEdition = cache.getEdition( this.gene.getSpecies(), compareEditionId );
+
+        if ( compareEdition == null ) {
+            log.warn( "Selected compare edition id has no corresponding edition object" );
+            return;
+        }
+
+        try {
+            addRightPanelRowsComparison( compareEdition );
+            rightPanelFilteredTerms = null;
+            rightPanelSelectedTerms = null;
+        } catch ( NullPointerException e ) {
+            log.error( e );
+            return;
+        }
+
     }
 
     /**
@@ -792,87 +811,68 @@ public class GeneView implements Serializable {
 
         viewTerm = cache.getTerm( clickEdition, goId );
 
-        Set<Annotation> data = rawData.get( AnnotationType.D ).get( clickEdition, viewTerm );
-
-        viewAnnotations = new HashSet<>();
-        if ( data != null ) {
-
-            // Add direct annotations
-            for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.D ) );
-            }
-        }
-        data = rawData.get( AnnotationType.I ).get( clickEdition, viewTerm );
-
-        if ( data != null ) {
-
-            // Next add the inferred as they will not overwrite the direct if the direct already exists
-            for ( Annotation annotation : data ) {
-                viewAnnotations.add( new AnnotationValues( annotation, AnnotationType.I ) );
-            }
-        }
-
+        viewAnnotations = rawData.get( AnnotationType.I).get( clickEdition, viewTerm );
         filteredViewAnnotations = null;
+    }
 
+    public void fetchTermGraph( GeneOntologyTerm term) {
+        Graph graph = Graph.fromGO( term );
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
+    }
+
+    public void fetchTermGraphFromSelected() {
+        Collection<GeneOntologyTerm> terms = Collections2.transform( rightPanelSelectedTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
+            @Override
+            public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
+                return row.getTerm();
+            }
+        } );
+        Graph graph = Graph.fromGO( terms );
+        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
+    }
+
+    public void fetchEditionsForSelectedTerms() {
+        List<Long> missingEditionDates = Lists.newArrayList();
+        ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> inferred = rawData.get( AnnotationType.I );
+
+        Collection<GeneOntologyTerm> terms = Collections2.transform( rightPanelSelectedTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
+            @Override
+            public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
+                return row.getTerm();
+            }
+        } );
+
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> editionMapEntry : inferred.rowMap().entrySet() ) {
+            Edition edition = editionMapEntry.getKey();
+            Boolean disjoint = Collections.disjoint( terms, editionMapEntry.getValue().keySet());
+            if (disjoint) {
+                missingEditionDates.add( edition.getDate().getTime() );
+            }
+        }
+        RequestContext.getCurrentInstance().addCallbackParam( "missing_editions", new Gson().toJson( missingEditionDates ) );
     }
 
     /**
-     * Compare the loss and gain of GO Terms and edition and the edition before it.
+     * custom filter function for primefaces data table column, filters by multiple booleans
      */
-    private Collection<CompareTermsTableValues> compareEditions( Edition ed ) {
-        // get previous edition, yes this is ugly. I don't wanna talk about it.
-        Edition previousEdition = null;
-        for ( Edition e : rawData.get( AnnotationType.I ).rowMap().keySet() ) {
-            if ( e.equals( ed ) ) {
-                break;
-            }
-            previousEdition = e;
+    public boolean filterByBitSet( Object value, Object filter, Locale locale ) {
+        Set<String> filterIndices = ( filter == null ) ? null : Sets.newHashSet((String[]) filter);
+        if ( filterIndices == null || filterIndices.isEmpty() ) {
+            return true;
         }
 
-        if ( previousEdition == null ) {
-            log.warn( "Selected Edition on has no previous edition to compare to." );
-            return compareEditions( ed, ed );
+        if ( value == null ) {
+            return false;
         }
-        return compareEditions( ed, previousEdition );
-    }
 
-    /**
-     * Compare the loss and gain of GO Terms between two editions.
-     * Gains : GO Terms present in ed1 but not ed2.
-     * Loss: GO Terms present in ed2 but not ed1.
-     */
-    private Collection<CompareTermsTableValues> compareEditions( Edition ed1, Edition ed2 ) {
-        List<CompareTermsTableValues> results = Lists.newArrayList();
-        totalTerms = 0;
-        gainTerms = 0;
-        lossTerms = 0;
-        try {
-            ImmutableSet<GeneOntologyTerm> set1 = rawData.get( AnnotationType.I ).row( ed1 ).keySet();
+        BitSet enabledBits = (BitSet) value;
 
-            ImmutableSet<GeneOntologyTerm> set2 = rawData.get( AnnotationType.I ).row( ed2 ).keySet();
-            for ( GeneOntologyTerm t : set1 ) {
-                if ( set2.contains( t ) ) {
-                    results.add( new CompareTermsTableValues( t, TermComparison.CONSTANT ) );
-                    totalTerms++;
-                } else {
-                    results.add( new CompareTermsTableValues( t, TermComparison.GAIN ) );
-                    totalTerms++;
-                    gainTerms++;
-                }
-            }
-
-            for ( GeneOntologyTerm t : Sets.difference( set2, set1 ) ) {
-                results.add( new CompareTermsTableValues( t, TermComparison.LOSS ) );
-                lossTerms++;
-            }
-
-            Collections.sort( results );
-
-        } catch ( NullPointerException e ) {
-            log.error( e );
-            return Lists.newArrayList();
+        BitSet filterBits = new BitSet(enabledBits.length());
+        for ( String i : filterIndices ) {
+            filterBits.set( Integer.valueOf( i ) );
         }
-        return results;
+
+        return filterBits.equals( enabledBits );
     }
 
     // Getters & Setters
@@ -893,11 +893,11 @@ public class GeneView implements Serializable {
         this.gene = gene;
     }
 
-    public Collection<AnnotationValues> getViewAnnotations() {
+    public Collection<Annotation> getViewAnnotations() {
         return viewAnnotations;
     }
 
-    public Collection<AnnotationValues> getFilteredViewAnnotations() {
+    public Collection<Annotation> getFilteredViewAnnotations() {
         return filteredViewAnnotations;
     }
 
@@ -913,80 +913,35 @@ public class GeneView implements Serializable {
         return clickEdition;
     }
 
-    public Edition getSelectEditionStart() {
-        return selectEditionStart;
+    public List<GeneViewRightPanelRow> getRightPanelTerms() {
+        return rightPanelTerms;
     }
 
-    public Edition getSelectEditionStop() {
-        return selectEditionStop;
+    public void setRightPanelTerms( List<GeneViewRightPanelRow> rightPanelTerms ) {
+        this.rightPanelTerms = rightPanelTerms;
     }
 
-    public Collection<CompareTermsTableValues> getClickTerms() {
-        return clickTerms;
+    public List<GeneViewRightPanelRow> getRightPanelSelectedTerms() {
+        return rightPanelSelectedTerms;
     }
 
-    public Collection<CompareTermsTableValues> getAllClickTerms() {
-        return allClickTerms;
+    public void setRightPanelSelectedTerms( List<GeneViewRightPanelRow> rightPanelSelectedTerms ) {
+        this.rightPanelSelectedTerms = rightPanelSelectedTerms;
     }
 
-    public List<CompareTermsTableValues> getSelectedClickTerms() {
-        return selectedClickTerms;
+    public Collection<GeneViewRightPanelRow> getRightPanelFilteredTerms() {
+        return rightPanelFilteredTerms;
     }
 
-    public void setSelectedClickTerms( List<CompareTermsTableValues> selectedClickTerms ) {
-        this.selectedClickTerms = selectedClickTerms;
+    public void setRightPanelFilteredTerms( Collection<GeneViewRightPanelRow> rightPanelFilteredTerms ) {
+        this.rightPanelFilteredTerms = rightPanelFilteredTerms;
     }
 
-    public Collection<CompareTermsTableValues> getFilteredClickTerms() {
-        return filteredClickTerms;
+    public Edition getRightPanelEdition() {
+        return rightPanelEdition;
     }
 
-    public void setFilteredClickTerms( Collection<CompareTermsTableValues> filteredClickTerms ) {
-        this.filteredClickTerms = filteredClickTerms;
+    public List<Edition> getComparisons() {
+        return comparisons;
     }
-
-    public Collection<GeneTableValues> getAllTerms() {
-        return allTerms;
-    }
-
-    public List<GeneTableValues> getSelectedTerms() {
-        return selectedTerms;
-    }
-
-    public void setSelectedTerms( List<GeneTableValues> selectedTerms ) {
-        this.selectedTerms = selectedTerms;
-    }
-
-    public Collection<GeneTableValues> getFilteredAllTerms() {
-        return filteredAllTerms;
-    }
-
-    public void setFilteredAllTerms( Collection<GeneTableValues> filteredAllTerms ) {
-        this.filteredAllTerms = filteredAllTerms;
-    }
-
-    public boolean isFiltered() {
-        return filtered;
-    }
-
-    public TermComparison getTermComparisonFilter() {
-        return termComparisonFilter;
-    }
-
-    public void setTermComparisonFilter( TermComparison termComparisonFilter ) {
-        this.termComparisonFilter = termComparisonFilter;
-    }
-
-    public int getTotalTerms() {
-        return totalTerms;
-    }
-
-    public int getGainTerms() {
-        return gainTerms;
-    }
-
-    public int getLossTerms() {
-        return lossTerms;
-    }
-
 }

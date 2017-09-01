@@ -22,10 +22,8 @@ package ubc.pavlab.gotrack.beans;
 import jersey.repackaged.com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.search.GeneMatch;
 
-import javax.annotation.PostConstruct;
 import javax.faces.view.ViewScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
@@ -50,27 +48,16 @@ public class GeneSearchView implements Serializable {
     private static final Logger log = Logger.getLogger( GeneSearchView.class );
     private static final Integer MAX_RESULTS = 15;
 
-    private Species species = null;
     private Gene queryGene;
 
     @Inject
     private Cache cache;
 
+    @Inject
+    private SessionManager session;
+
     public GeneSearchView() {
         log.info( "GeneSearchView created" );
-    }
-
-    @PostConstruct
-    public void init() {
-        species = cache.getSpecies( 7 );
-    }
-
-    public Species getSpecies() {
-        return species;
-    }
-
-    public void setSpecies( Species species ) {
-        this.species = species;
     }
 
     public String go() {
@@ -81,7 +68,7 @@ public class GeneSearchView implements Serializable {
     }
 
     public List<GeneMatch> complete( String query ) {
-        return Lists.newArrayList( this.cache.searchGeneBySymbol( query, species, MAX_RESULTS ) );
+        return Lists.newArrayList( this.cache.searchGeneBySymbol( query, session.getSpecies(), MAX_RESULTS ) );
     }
 
     public void setQueryGene( Gene queryGene ) {

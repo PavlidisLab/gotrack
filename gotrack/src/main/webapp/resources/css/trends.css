@@ -1,0 +1,15 @@
+div.chart-panel {
+    width:600px;
+    height:300px;
+}
+
+div.chart-panel-sm {
+    width:400px;
+    height:200px;
+}
+
+
+div.chart {
+    height: 100%;
+    width: 100%;
+}

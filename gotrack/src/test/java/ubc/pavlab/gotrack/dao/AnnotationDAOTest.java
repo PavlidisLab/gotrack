@@ -26,14 +26,13 @@ import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.hamcrest.Matchers;
 import org.junit.*;
+import org.mockito.Mockito;
 import ubc.pavlab.gotrack.BaseTest;
+import ubc.pavlab.gotrack.model.Accession;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Gene.GeneBuilder;
 import ubc.pavlab.gotrack.model.Species;
-import ubc.pavlab.gotrack.model.dto.AnnotationDTO;
-import ubc.pavlab.gotrack.model.dto.CategoryCountDTO;
-import ubc.pavlab.gotrack.model.dto.DirectAnnotationCountDTO;
-import ubc.pavlab.gotrack.model.dto.EnrichmentDTO;
+import ubc.pavlab.gotrack.model.dto.*;
 import ubc.pavlab.gotrack.utilities.Tuples;
 import ubc.pavlab.gotrack.utilities.Tuples.Tuple3;
 
@@ -42,10 +41,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * TODO Document Me
- * 
+ *
  * @author mjacobson
- * @version $Id$
  */
 public class AnnotationDAOTest extends BaseTest {
 
@@ -72,29 +69,37 @@ public class AnnotationDAOTest extends BaseTest {
         Species s = new Species( 7, "Human", "", 9606, null );
 
         // Human Gene 1
-        GeneBuilder gb = new Gene.GeneBuilder( 242, "LONP1", "", s, null ); //P36776
+        AccessionDTO accMock = Mockito.mock(AccessionDTO.class);
+        Mockito.when( accMock.getId() ).thenReturn( -1 ); // Not being tested, but needs to be initialized
+        Mockito.when( accMock.getSubset() ).thenReturn( "" ); // Not being tested, but needs to be initialized
+        Mockito.when( accMock.getAccession() ).thenReturn( "P36776" );
+        GeneBuilder gb = new Gene.GeneBuilder( 242, "LONP1", "", s, new Accession( accMock ) ); //P36776
         gh1 = gb.build();
 
         // Human Gene 2
-        gb = new Gene.GeneBuilder( 249, "SLC25A33", "", s, null ); //Q9BSK2
+        Mockito.when( accMock.getAccession() ).thenReturn( "Q9BSK2" );
+        gb = new Gene.GeneBuilder( 249, "SLC25A33", "", s, new Accession( accMock ) ); //Q9BSK2
         gh2 = gb.build();
 
         // Mouse
         s = new Species( 8, "Mouse", "", 10090, null );
 
         // Mouse Gene 1
-        gb = new Gene.GeneBuilder( 269, "Mpv17", "", s, null ); //P19258
+        Mockito.when( accMock.getAccession() ).thenReturn( "P19258" );
+        gb = new Gene.GeneBuilder( 269, "Mpv17", "", s, new Accession( accMock ) ); //P19258
         gm1 = gb.build();
 
         // Mouse Gene 2
-        gb = new Gene.GeneBuilder( 273, "Pif1", "", s, null ); //Q80SX8
+        Mockito.when( accMock.getAccession() ).thenReturn( "Q80SX8" );
+        gb = new Gene.GeneBuilder( 273, "Pif1", "", s, new Accession( accMock ) ); //Q80SX8
         gm2 = gb.build();
 
         // Alien
         s = new Species( 123456789, "E.T.", "", 123456789, null );
 
         // Alien Gene 1
-        gb = new Gene.GeneBuilder( 123456789, "ufo", "", s, null );
+        Mockito.when( accMock.getAccession() ).thenReturn( "XXXXXX" );
+        gb = new Gene.GeneBuilder( 123456789, "ufo", "", s, new Accession( accMock ) );
         gfake = gb.build();
 
     }
@@ -232,12 +237,12 @@ public class AnnotationDAOTest extends BaseTest {
 
         Multiset<String> goIds = HashMultiset.create();
         Multiset<Integer> editions = HashMultiset.create();
-        Multiset<Integer> geneIds = HashMultiset.create();
+        Multiset<String> accessions = HashMultiset.create();
 
         for ( EnrichmentDTO dto : res ) {
             goIds.add( dto.getGoId() );
             editions.add( dto.getEdition() );
-            geneIds.add( dto.getGeneId() );
+            accessions.add( dto.getAccession() );
         }
 
         // distinct editions
@@ -302,9 +307,9 @@ public class AnnotationDAOTest extends BaseTest {
         Assert.assertThat( goIds.count( "GO:1990519" ), Matchers.is( 4 ) );
 
         // distinct gene ids
-        Assert.assertThat( geneIds.elementSet().size(), Matchers.is( 2 ) );
-        Assert.assertThat( geneIds.count( gh1.getId() ), Matchers.is( 132 ) );
-        Assert.assertThat( geneIds.count( gh2.getId() ), Matchers.is( 80 ) );
+        Assert.assertThat( accessions.elementSet().size(), Matchers.is( 2 ) );
+        Assert.assertThat( accessions.count( gh1.getAccession().getAccession() ), Matchers.is( 132 ) );
+        Assert.assertThat( accessions.count( gh2.getAccession().getAccession() ), Matchers.is( 80 ) );
     }
 
     @Test

@@ -9,6 +9,8 @@ import sys
 import time
 import warnings
 import functools
+import argparse
+import getpass
 
 COLORS = {'red': '\033[0;31m',
           'green': '\033[0;32m',
@@ -20,6 +22,13 @@ COLORS = {'red': '\033[0;31m',
           'NC': '\033[0m'
           }
 
+
+class Password(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string):
+        if values is None:
+            values = getpass.getpass()
+
+        setattr(namespace, self.dest, values)
 
 def timeit(method):
     def timed(*args, **kw):

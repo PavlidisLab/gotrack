@@ -102,7 +102,7 @@ public class CacheDAOImpl implements CacheDAO {
     // GeneOntology and GeneOntologyTerm
     private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from " + SQL_TERM + " WHERE go_edition_id_fk = ?";
     private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from " + SQL_ADJACENCY + " WHERE go_edition_id_fk = ?";
-    private static final String SQL_GO_ALTERNATE = "select go_edition_id_fk, alt, `primary` from " + SQL_ALTERNATE + " WHERE go_edition_id_fk = ?";
+    private static final String SQL_GO_ALTERNATE = "select go_edition_id_fk, alt, principle from " + SQL_ALTERNATE + " WHERE go_edition_id_fk = ?";
     private static final String SQL_GO_DEFINITION = "select go_id, definition from " + SQL_DEFINITION;
 
     // Evidence
@@ -512,9 +512,9 @@ public class CacheDAOImpl implements CacheDAO {
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                // go_edition_id_fk, alt, primary
+                // go_edition_id_fk, alt, principle
                 results.add( new AdjacencyDTO( resultSet.getInt( "go_edition_id_fk" ), resultSet.getString( "alt" ),
-                        resultSet.getString( "primary" ), null ) );
+                        resultSet.getString( "principle" ), null ) );
 
             }
 

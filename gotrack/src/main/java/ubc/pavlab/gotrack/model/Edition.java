@@ -31,6 +31,7 @@ import java.sql.Date;
  */
 public class Edition implements Comparable<Edition> {
 
+    private final Species species;
     private final Integer edition;
     private final Date date;
     private final GOEdition goEdition;
@@ -39,7 +40,8 @@ public class Edition implements Comparable<Edition> {
     /**
      * 
      */
-    public Edition( EditionDTO dto, GOEdition goEdition ) {
+    public Edition( EditionDTO dto, Species species, GOEdition goEdition ) {
+        this.species = species;
         this.edition = dto.getEdition();
         this.date = dto.getDate();
         this.release = dto.getRelease();
@@ -72,28 +74,31 @@ public class Edition implements Comparable<Edition> {
 
     @Override
     public String toString() {
-        return "Edition [edition=" + edition + ", date=" + date + ", release=" + release + ", goDate=" +
-                goEdition.getDate() + ", goEditionId=" + goEdition.getId() + "]";
+        return "Edition{" +
+                "species=" + species +
+                ", edition=" + edition +
+                ", date=" + date +
+                ", goEdition=" + goEdition +
+                ", release=" + release +
+                '}';
+    }
+
+    @Override
+    public boolean equals( Object o ) {
+        if ( this == o ) return true;
+        if ( o == null || getClass() != o.getClass() ) return false;
+
+        Edition edition1 = (Edition) o;
+
+        if ( !species.equals( edition1.species ) ) return false;
+        return edition.equals( edition1.edition );
     }
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( edition == null ) ? 0 : edition.hashCode() );
+        int result = species.hashCode();
+        result = 31 * result + edition.hashCode();
         return result;
-    }
-
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        Edition other = ( Edition ) obj;
-        if ( edition == null ) {
-            if ( other.edition != null ) return false;
-        } else if ( !edition.equals( other.edition ) ) return false;
-        return true;
     }
 
     @Override

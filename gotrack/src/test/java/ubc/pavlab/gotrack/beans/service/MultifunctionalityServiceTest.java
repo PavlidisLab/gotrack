@@ -67,7 +67,7 @@ public class MultifunctionalityServiceTest {
     private Edition ed1;
     private Edition ed2;
 
-    private Species species = new Species( 1234, "", "", 1234, 12345 );
+    private static final Species human = new Species( 7, "Human", "", 9606, null );
 
     private Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> populationMap;
     private Map<Edition, Map<Gene, Set<GeneOntologyTerm>>> inversePopulationMap;
@@ -135,7 +135,7 @@ public class MultifunctionalityServiceTest {
         }
 
         ed1 = new Edition( new EditionDTO( 7, 1, Date.valueOf( "2016-01-01" ), 1, 1 ),
-                new GOEdition( new GOEditionDTO( 1, Date.valueOf( "2016-01-01" ) ) ) );
+                human, new GOEdition( new GOEditionDTO( 1, Date.valueOf( "2016-01-01" ) ) ) );
 
         populationMap.put( ed1, geneGOMap );
         inversePopulationMap.put( ed1, GOGeneMap );
@@ -156,25 +156,25 @@ public class MultifunctionalityServiceTest {
         }
 
         ed2 = new Edition( new EditionDTO( 7, 2, Date.valueOf( "2016-02-01" ), 2, 2 ),
-                new GOEdition( new GOEditionDTO( 2, Date.valueOf( "2016-02-01" ) ) ) );
+                human, new GOEdition( new GOEditionDTO( 2, Date.valueOf( "2016-02-01" ) ) ) );
 
         populationMap.put( ed2, geneGOMap );
         inversePopulationMap.put( ed2, GOGeneMap );
 
-        Mockito.when( cache.getInferredAnnotationCount( Mockito.any( Species.class ), Mockito.any( Edition.class ),
+        Mockito.when( cache.getInferredAnnotationCount( Mockito.any( Edition.class ),
                 Mockito.any( GeneOntologyTerm.class ) ) ).thenAnswer( new Answer<Integer>() {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {
                         Object[] args = invocation.getArguments();
-                        Map<GeneOntologyTerm, Set<Gene>> m = populationMap.get( args[1] );
+                        Map<GeneOntologyTerm, Set<Gene>> m = populationMap.get( args[0] );
                         if ( m == null ) return null;
-                        Set<Gene> s = m.get( args[2] );
+                        Set<Gene> s = m.get( args[1] );
                         if ( s == null ) return null;
                         return s.size();
                     }
                 } );
 
-        Mockito.when( cache.getGeneCount( Mockito.any( Species.class ), Mockito.any( Edition.class ) ) )
+        Mockito.when( cache.getGeneCount( Mockito.any( Edition.class ) ) )
                 .thenAnswer( new Answer<Integer>() {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {
@@ -191,21 +191,21 @@ public class MultifunctionalityServiceTest {
         // multi should = 1/99
 
         Set<GeneOntologyTerm> terms = inversePopulationMap.get( ed1 ).get( genes.get( 98 ) );
-        Double multi = multifunctionalityService.multifunctionality( terms, species, ed1 );
+        Double multi = multifunctionalityService.multifunctionality( terms, ed1 );
 
         Assert.assertThat( multi, Matchers.is( 1.0 / 99 ) );
 
         // Gene 1 has all terms
         // so multi = SUM_i( 1 / ( i * ( 100 - i) ) ), i=1..99
         terms = inversePopulationMap.get( ed1 ).get( genes.get( 0 ) );
-        multi = multifunctionalityService.multifunctionality( terms, species, ed1 );
+        multi = multifunctionalityService.multifunctionality( terms, ed1 );
 
         Assert.assertThat( multi, Matchers.closeTo( 0.103547550352792, 0.000000000000001 ) );
 
         // Gene 48 has 53 terms, Term 48-100
         // so multi = SUM_i( 1 / ( i * ( 100 - i) ) ), i=48..99
         terms = inversePopulationMap.get( ed1 ).get( genes.get( 47 ) );
-        multi = multifunctionalityService.multifunctionality( terms, species, ed1 );
+        multi = multifunctionalityService.multifunctionality( terms, ed1 );
 
         Assert.assertThat( multi, Matchers.closeTo( 0.052774576266062, 0.000000000000001 ) );
     }

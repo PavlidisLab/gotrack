@@ -7,7 +7,7 @@ import shutil
 from collections import defaultdict
 import MySQLdb.cursors
 
-from utility import query_yes_no, timeit
+from utility import query_yes_no, timeit, Password
 import parsers
 import gotrack as gtdb
 from model import Ontology
@@ -19,14 +19,9 @@ logging.addLevelName(logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevel
 logging.addLevelName(logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 LOG = logging.getLogger()
 
-CREDS = {'host': 'abe',
-         'user': 'gotrack',
-         'passwd': 'XXXXXX',
-         'db': 'gotrack'
-         }
 
 @timeit
-def main(resource_directory=None, cron=False, no_download=False, force_preprocess=False):
+def main(resource_directory=None, cron=False, no_download=False):
     """ Overview:
         Collect resources
         Display info on missing ones
@@ -46,7 +41,7 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
         resource_directory = tempfile.mkdtemp()
         LOG.warn("No resource directory specified. Creating temporary folder at %s", resource_directory)
 
-    check_ftp = not no_download and query_yes_no("Check FTP sites for new data?")
+    check_ftp = not no_download and (cron or query_yes_no("Check FTP sites for new data?"))
     res = Resources(resource_directory, gotrack.fetch_current_state(), check_ftp)
 
     # Display current state of resource directory, database, and ftp site
@@ -57,18 +52,18 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
         missing_cnt = len(res.missing_go)
         if missing_cnt:
             LOG.warn("Missing %s GO Versions from FTP", missing_cnt)
-            if query_yes_no("Download missing GO Versions?"):
+            if cron or query_yes_no("Download missing GO Versions?"):
                 res.download_missing_go_data()
 
         missing_cnt = sum([len(goa_sp) for goa_sp in res.missing_goa.values()])
         if missing_cnt:
             LOG.warn("Missing %s GOA Editions from FTP", missing_cnt)
-            if query_yes_no("Download missing GOA Editions?"):
+            if cron or query_yes_no("Download missing GOA Editions?"):
                 res.download_missing_goa_data()
 
         if not res.sec_ac:
             LOG.warn("Missing secondary accession file (sec_ac.txt)")
-            if query_yes_no("Download missing secondary accession file?"):
+            if cron or query_yes_no("Download missing secondary accession file?"):
                 res.download_accession_history()
 
         LOG.info("Re-checking state of resource directory")
@@ -76,7 +71,7 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
         res.populate_missing_data()
         LOG.info(res)
 
-        if not query_yes_no("Continue with updates?"):
+        if res.missing_data or not (cron or query_yes_no("Continue with updates?")):
             return
 
     # Insert new GO data
@@ -85,7 +80,8 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
         LOG.info("New GO Versions ready to update: %s", len(new_go))
         if cron or query_yes_no("Update GO tables? (Affected tables: '{go_edition}', '{go_term}', "
                                 "'{go_adjacency}', '{go_alternate}')".format(**gotrack.tables)):
-            for go_date, go_file in new_go:
+            for go_date in sorted(new_go.keys()):
+                go_file = new_go[go_date]
                 LOG.info("Begin: %s", go_date.strftime('%Y-%m-%d'))
                 ont = Ontology.from_file_data(go_date, go_file)
                 gotrack.update_go_tables(ont)
@@ -155,14 +151,20 @@ def main(resource_directory=None, cron=False, no_download=False, force_preproces
         data = parsers.process_sec_ac(res.sec_ac)
         gotrack.update_secondary_accession_table(data)
 
-    if cron or query_yes_no("Pre-process database? (Make sure new GO, GOA, and secondary"
-                            "accession data has been imported (Affects tables: '{staging_pre}{pp_current_edition}', "
-                            "'{staging_pre}{pp_accession_history}', '{staging_pre}{pp_edition_aggregates}', "
-                            "'{staging_pre}{pp_go_annotation_counts}')"
-                            .format(**gotrack.tables)):
-        pre_process(gotrack)
+    if gotrack.requires_proprocessing():
+        if cron or query_yes_no("Pre-process required, continue? (Make sure new GO, GOA, and secondary "
+                                "accession data has been imported (Affects tables: '{staging_pre}{pp_current_edition}', "
+                                "'{staging_pre}{pp_accession_history}', '{staging_pre}{pp_edition_aggregates}', "
+                                "'{staging_pre}{pp_go_annotation_counts}')"
+                                .format(**gotrack.tables)):
+            pre_process(gotrack)
+            return True
+        else:
+            LOG.info("Pre-processing skipped")
     else:
-        LOG.info("Pre-processing skipped")
+        LOG.info("Pre-processing not required")
+
+    return False
 
 
 def cleanup(d, cron=False):
@@ -176,7 +178,7 @@ def pre_process(gotrack=None):
     # thus we process to staging tables and swap them with production
     # tables once everything is done
 
-    LOG.info("Preprocessing database...")
+    LOG.info("Pre-processing database...")
 
     gotrack.create_staging_tables()
 
@@ -220,10 +222,14 @@ def stage_aggregates(gotrack=None):
         adjacency_list = gotrack.stream_adjacency_list(go_ed)
         ont = Ontology.from_adjacency("1900-01-01", adjacency_list)  
         for sp_id, ed in eds:
-            LOG.info("Starting Species (%s), Edition (%s)", sp_id, ed)
+            LOG.info("Starting Species (%s), Edition (%s), GO Edition (%s)", sp_id, ed, go_ed)
             annotations = gotrack.stream_staged_annotations(sp_id, ed)
             _, direct_term_set_per_gene_id, term_set_per_gene_id, _, _ = aggregate_annotations(annotations, ont, sp_id, ed)
             current_term_set_cache[sp_id] = [direct_term_set_per_gene_id, term_set_per_gene_id]
+            if len(term_set_per_gene_id) == 0 or len(direct_term_set_per_gene_id) == 0:
+                LOG.error("No data for current edition, pre-process failed.")
+                raise ValueError("No Data")
+            LOG.info("Cached Term Sets: (%s), Direct: (%s)", len(term_set_per_gene_id), len(direct_term_set_per_gene_id))
 
     # Loops through all editions and calculate aggregate stats for each
     i = 0
@@ -275,7 +281,7 @@ def aggregate_annotations(all_annotations_stream, ont, sp_id, ed):
     # Propagation Cache for performance purposes
     annotation_count = 0
 
-    for go_id, gene_id in all_annotations_stream:
+    for gene_id, go_id in all_annotations_stream:
         term = ont.get_term(go_id)
 
         if term is not None:
@@ -378,8 +384,20 @@ def jaccard_similarity(s1, s2):
 if __name__ == '__main__':
     import argparse
 
-    parser = argparse.ArgumentParser(description='Update GOTrack Database')
-    parser.add_argument('--resources', dest='resources', type=str, required=True, default=None,
+    parser = argparse.ArgumentParser(description='Update GOTrack Database', add_help=False)
+
+    parser.add_argument('--help', action='help', help='show this help message and exit')
+
+    parser.add_argument('-h', dest='host', type=str, required=True, help='DB host')
+
+    parser.add_argument('-u', dest='user', type=str, required=True, help='DB user')
+
+    parser.add_argument('-d', dest='db', type=str, required=True, help='DB name')
+
+    parser.add_argument('-p', action=Password, nargs='?', dest='password', required=True,
+                        help='Ask for DB user password')
+
+    parser.add_argument('--resources', dest='resources', type=str, required=True,
                         help='a folder holding resources to use in the update')
 
     group = parser.add_mutually_exclusive_group(required=True)
@@ -403,27 +421,42 @@ if __name__ == '__main__':
                         help='No interactivity mode')
     parser.add_argument('--no-downloads', dest='dl', action='store_true',
                         help='Prevent all downloads')
-    parser.add_argument('--force-pp', dest='force_pp', action='store_true',
-                        help='Force preprocessing of database (regardless of need)')
 
     args = parser.parse_args()
+
+    CREDS = {'host': args.host,
+             'user': args.user,
+             'passwd': args.password,
+             'db': args.db
+             }
+
     if args.meta:
         LOG.info("Host: {host}, db: {db}, user: {user}".format(**CREDS))
         gotrack_db = gtdb.GOTrack(**CREDS)
         LOG.info('Tables: \n%s', "\n".join(sorted([str(table) for table in gotrack_db.tables.iteritems()])))
     elif args.update_push:
         # Update followed by push to production
-        main(args.resources, args.cron, args.dl, args.force_pp)
-        if args.cron or query_yes_no("Push staging to production?"):
-            push_to_production()
+        preprocessed = main(args.resources, args.cron, args.dl)
+        if preprocessed:
+            if args.cron or query_yes_no("Push staging to production?"):
+                push_to_production()
+            else:
+                LOG.info("Push to production skipped")
+        else:
+            LOG.info("Push to production not required: Database was not pre-processed.")
     elif args.push:
         # Push Staging to Production
         push_to_production()
     elif args.process:
         # Update aggregate tables
-        pre_process()
+        gotrack_db = gtdb.GOTrack(**CREDS)
+        if gotrack_db.requires_proprocessing() or \
+                query_yes_no("Database does not require pre-processing, continue anyways?"):
+            pre_process(gotrack_db)
+        else:
+            LOG.info("Pre-processing skipped")
     elif args.update:
         # Update database
-        main(args.resources, args.cron, args.dl, args.force_pp)
+        main(args.resources, args.cron, args.dl)
     else:
         LOG.error("No goal supplied.")

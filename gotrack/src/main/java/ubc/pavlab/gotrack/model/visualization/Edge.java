@@ -17,26 +17,33 @@
  *
  */
 
-package ubc.pavlab.gotrack.model.cytoscape;
+package ubc.pavlab.gotrack.model.visualization;
 
+import com.google.common.collect.Lists;
 import ubc.pavlab.gotrack.model.go.RelationshipType;
+
+import java.util.List;
 
 /**
  * Represents a connection between two nodes using their ids
  * 
  * @author mjacobson
- * @version $Id$
  */
 public class Edge {
     private final int from;
     private final int to;
     private final RelationshipType type;
+    private final List<String> classes;
 
-    public Edge( int from, int to, RelationshipType type ) {
-        super();
+    public Edge( int from, int to, RelationshipType type, List<String> classes ) {
         this.from = from;
         this.to = to;
         this.type = type;
+        this.classes = classes;
+    }
+
+    public Edge ( int from, int to, RelationshipType type) {
+        this( from, to, type, Lists.<String>newArrayList() );
     }
 
     public int getFrom() {
@@ -49,6 +56,14 @@ public class Edge {
 
     public RelationshipType getType() {
         return type;
+    }
+
+    public List<String> getClasses() {
+        return classes;
+    }
+
+    public void addClass(String clazz) {
+        classes.add( clazz );
     }
 
     @Override

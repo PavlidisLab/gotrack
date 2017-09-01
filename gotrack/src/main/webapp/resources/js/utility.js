@@ -1,72 +1,72 @@
 /**
  * @memberOf utility
  */
-(function( utility, $, undefined ) {
+(function (utility, $, undefined) {
 
-   utility.isUndefined = function( variable ) {
-      return ( typeof variable === 'undefined' );
-   }
-   
-   utility.sigFigs = function(num, figs) {
-      try {
-         return num % 1 === 0 ? num : Number(num.toPrecision(figs));
-      } catch (e) {
-         console.log(e);
-         return num;
-      }
-   }
-
-   utility.roundHalf = function(num) {
-      num = Math.round(num*2)/2;
-      return num;
-   }
-   
-   utility.pad = function(n, width, z) {
-      z = z || '0';
-      n = n + '';
-      return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+    utility.isUndefined = function (variable) {
+        return ( typeof variable === 'undefined' );
     }
 
-   utility.wordwrap = function(str, int_width, str_break, cut) {
-      //  discuss at: http://phpjs.org/functions/wordwrap/
-      // original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
-      // improved by: Nick Callen
-      // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
-      // improved by: Sakimori
-      //  revised by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
-      // bugfixed by: Michael Grier
-      // bugfixed by: Feras ALHAEK
-      //   example 1: wordwrap('Kevin van Zonneveld', 6, '|', true);
-      //   returns 1: 'Kevin |van |Zonnev|eld'
-      //   example 2: wordwrap('The quick brown fox jumped over the lazy dog.', 20, '<br />\n');
-      //   returns 2: 'The quick brown fox <br />\njumped over the lazy<br />\n dog.'
-      //   example 3: wordwrap('Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.');
-      //   returns 3: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod \ntempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim \nveniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea \ncommodo consequat.'
+    utility.sigFigs = function (num, figs) {
+        try {
+            return num % 1 === 0 ? num : Number(num.toPrecision(figs));
+        } catch (e) {
+            console.log(e);
+            return num;
+        }
+    }
 
-      var m = ((arguments.length >= 2) ? arguments[1] : 75);
-      var b = ((arguments.length >= 3) ? arguments[2] : '\n');
-      var c = ((arguments.length >= 4) ? arguments[3] : false);
+    utility.roundHalf = function (num) {
+        num = Math.round(num * 2) / 2;
+        return num;
+    }
 
-      var i, j, l, s, r;
+    utility.pad = function (n, width, z) {
+        z = z || '0';
+        n = n + '';
+        return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
+    }
 
-      str += '';
+    utility.wordwrap = function (str, int_width, str_break, cut) {
+        //  discuss at: http://phpjs.org/functions/wordwrap/
+        // original by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
+        // improved by: Nick Callen
+        // improved by: Kevin van Zonneveld (http://kevin.vanzonneveld.net)
+        // improved by: Sakimori
+        //  revised by: Jonas Raoni Soares Silva (http://www.jsfromhell.com)
+        // bugfixed by: Michael Grier
+        // bugfixed by: Feras ALHAEK
+        //   example 1: wordwrap('Kevin van Zonneveld', 6, '|', true);
+        //   returns 1: 'Kevin |van |Zonnev|eld'
+        //   example 2: wordwrap('The quick brown fox jumped over the lazy dog.', 20, '<br />\n');
+        //   returns 2: 'The quick brown fox <br />\njumped over the lazy<br />\n dog.'
+        //   example 3: wordwrap('Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.');
+        //   returns 3: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod \ntempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim \nveniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea \ncommodo consequat.'
 
-      if (m < 1) {
-         return str;
-      }
+        var m = ((arguments.length >= 2) ? arguments[1] : 75);
+        var b = ((arguments.length >= 3) ? arguments[2] : '\n');
+        var c = ((arguments.length >= 4) ? arguments[3] : false);
 
-      for (i = -1, l = (r = str.split(/\r\n|\n|\r/))
-         .length; ++i < l; r[i] += s) {
-         for (s = r[i], r[i] = ''; s.length > m; r[i] += s.slice(0, j) + ((s = s.slice(j))
-            .length ? b : '')) {
-            j = c == 2 || (j = s.slice(0, m + 1)
-               .match(/\S*(\s)?$/))[1] ? m : j.input.length - j[0].length || c == 1 && m || j.input.length + (j = s.slice(
-                  m)
-                  .match(/^\S*/))[0].length;
-         }
-      }
+        var i, j, l, s, r;
 
-      return r.join('\n').replace(/\n\s*\n/g, '\n');
-   }
+        str += '';
 
-}( window.utility = window.utility || {}, jQuery ));
+        if (m < 1) {
+            return str;
+        }
+
+        for (i = -1, l = (r = str.split(/\r\n|\n|\r/))
+            .length; ++i < l; r[i] += s) {
+            for (s = r[i], r[i] = ''; s.length > m; r[i] += s.slice(0, j) + ((s = s.slice(j))
+                    .length ? b : '')) {
+                j = c == 2 || (j = s.slice(0, m + 1)
+                    .match(/\S*(\s)?$/))[1] ? m : j.input.length - j[0].length || c == 1 && m || j.input.length + (j = s.slice(
+                        m)
+                        .match(/^\S*/))[0].length;
+            }
+        }
+
+        return r.join('\n').replace(/\n\s*\n/g, '\n');
+    }
+
+}(window.utility = window.utility || {}, jQuery));

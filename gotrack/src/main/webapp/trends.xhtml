@@ -1,0 +1,151 @@
+<ui:composition template="/WEB-INF/templates/mainLayout.xhtml"
+                xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="http://java.sun.com/jsf/html"
+                xmlns:f="http://java.sun.com/jsf/core"
+                xmlns:ui="http://java.sun.com/jsf/facelets"
+                xmlns:p="http://primefaces.org/ui"
+>
+
+    <ui:define name="pageTitle">GOtrack</ui:define>
+    <ui:define name="css">
+        <h:outputStylesheet library="css" name="tipsy.css"/>
+        <h:outputStylesheet library="css" name="trends.css"/>
+    </ui:define>
+    <ui:define name="js">
+        <script type="text/javascript">
+            googleAnalyticsTrackPageviewIfConfigured("/gotrack/trends");
+        </script>
+        <h:outputScript library="js" name="utility.js"/>
+
+
+        <!-- Highcharts stuff -->
+        <ui:include src="/WEB-INF/includes/highcharts-js.xhtml" />
+
+        <h:outputScript library="js" name="tipsy.js"/>
+
+        <h:outputScript library="js" name="plotting.js"/>
+        <h:outputScript library="js" name="trends.js"/>
+
+        <h:outputScript>
+            $(document).ready(function () {
+            $('.loading').show();
+            fetchCharts();
+            });
+        </h:outputScript>
+
+    </ui:define>
+
+    <ui:define name="left_right_layout">
+
+    </ui:define>
+
+    <ui:define name="center_layout">
+        <p:outputPanel>
+
+            <p:outputPanel style="position:absolute; top:0; right:0; margin:5px;">
+                <h:form prependId="false">
+                    <h:panelGrid columns="2" style="border:none;">
+
+                        <p:outputLabel for="species_select" value="Species:" />
+                        <p:selectOneMenu id="species_select" value="#{sessionManager.species}"
+                                         converter="speciesConverter">
+                            <f:selectItems value="#{cache.speciesList}" var="spec"
+                                           itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
+                            <p:ajax event="change" process="@this" onstart="plotting.removeAllCharts();$('.loading').show();" oncomplete="fetchCharts();"/>
+                        </p:selectOneMenu>
+                    </h:panelGrid>
+                </h:form>
+            </p:outputPanel>
+
+            <div id="page-title">
+                <h1>Global Trends</h1>
+            </div>
+            <p:separator style="max-width:400px; margin-bottom:25px;"/>
+
+
+            <div class="center section-title">
+                <h3>
+                The below graphs provide an overview of the state of both GO and GOA over its history.
+                </h3>
+            </div>
+
+            <h:form id="centerTabViewForm" style="margin:0 25px 0 25px;" prependId="false">
+                <p:remoteCommand name="fetchCharts" async="true"
+                                 oncomplete="handleFetchCharts(xhr, status, args);"
+                                 actionListener="#{trends.loadCharts(sessionManager.species)}"/>
+                <p:outputPanel class="chart-container">
+                    <p:panelGrid columns="2" styleClass="no-border" style="margin: 0 auto;">
+                        <p:outputPanel styleClass=" chart-panel well">
+                            <div id="loading-spinner-geneCount" class="loading"/>
+                            <div id="hc-geneCount" class="chart"/>
+                        </p:outputPanel>
+                        <p:outputPanel id="chart-panel-ontSize" styleClass=" chart-panel well">
+                            <div id="loading-spinner-ontSize" class="loading"/>
+                            <div id="hc-ontSize" class="chart"/>
+                        </p:outputPanel>
+                        <p:panel styleClass="no-border chart-panel center" style="height:50px;">
+                            Count of distinct genes with GO annotations over all GOA editions.
+                        </p:panel>
+                        <p:panel styleClass="no-border chart-panel center" style="height:50px;">
+                            Monthly counts of distinct terms existing in GO.
+                        </p:panel>
+                    </p:panelGrid>
+                </p:outputPanel>
+                <p:separator style="max-width:800px; margin:25px auto 25px auto;"/>
+                <div class="center section-title">
+                    <h3>
+                        The below graphs provide more detailed metrics about how genes have been annotated over the history of GOA.
+                    </h3>
+                    <h4>
+                        Where present the following definitions apply:
+                    </h4>
+                    <p style="margin:0;">Direct: Counts only those terms that are directly annotated to the gene.</p>
+                    <p style="margin:0;">Inferred: Counts both directly annotated terms and those inferred from the transitive properties of GO.</p>
+
+                </div>
+                <p:outputPanel class="chart-container">
+                    <p:panelGrid columns="2" styleClass="no-border" style="margin: 0 auto;">
+                        <p:outputPanel styleClass=" chart-panel-sm well">
+                            <div id="loading-spinner-termsPerGene" class="loading"/>
+                            <div id="hc-termsPerGene" class="chart"/>
+                        </p:outputPanel>
+                        <p:outputPanel styleClass=" chart-panel-sm well">
+                            <div id="loading-spinner-genesPerTerm" class="loading"/>
+                            <div id="hc-genesPerTerm" class="chart"/>
+                        </p:outputPanel>
+                        <p:panel styleClass="no-border chart-panel-sm center" style="height:50px;">
+                            <p>Average size of the set of terms annotated to a gene.</p>
+                        </p:panel>
+                        <p:panel styleClass="no-border chart-panel-sm center" style="height:50px;">
+                            <p>Average size of the set of genes annotated with a specific term.</p>
+                        </p:panel>
+                    </p:panelGrid>
+                    <p:panelGrid columns="2" styleClass="no-border" style="margin: 0 auto;">
+                        <p:outputPanel styleClass=" chart-panel-sm well">
+                            <div id="loading-spinner-multi" class="loading"/>
+                            <div id="hc-multi" class="chart"/>
+                        </p:outputPanel>
+                        <p:outputPanel styleClass=" chart-panel-sm well">
+                            <div id="loading-spinner-similarity" class="loading"/>
+                            <div id="hc-similarity" class="chart"/>
+                        </p:outputPanel>
+                        <p:panel styleClass="no-border chart-panel-sm center" style="height:50px;">
+                            <p>Average multifunctionality of a gene as measured by <a
+                                    href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
+                                    class="underline" target="_blank">Gillis and Pavlidis, 2011</a>.</p>
+                        </p:panel>
+                        <p:panel styleClass="no-border chart-panel-sm center" style="height:50px;">
+                            <p>Average semantic similarity of the set of annotated GO terms for a gene when compared to its GO term set from different editions. Comparisons are made from previous editions to the most current edition.</p>
+                        </p:panel>
+
+                    </p:panelGrid>
+                </p:outputPanel>
+            </h:form>
+        </p:outputPanel>
+
+
+    </ui:define>
+    <ui:define name="dialogs">
+    </ui:define>
+
+</ui:composition>

@@ -111,6 +111,9 @@ public class Cache implements Serializable {
     // Maps gene id to gene
     private Map<String, Gene> accessionToGene = new ConcurrentHashMap<>();
 
+    // Useful derived constants
+    private ImmutableSet<Integer> availableYears;
+
     // These are used for autocompletion
     // *********************************
 
@@ -126,17 +129,17 @@ public class Cache implements Serializable {
     // Most current GO Term definitions
     private Map<String, String> geneOntologyDefinitions = new ConcurrentHashMap<>();
 
-    // Maps species if, edition -> aggregate
+    // Maps edition -> aggregate
     // Holds information about aggregate statistics, such as species averages in an edition, etc
-    private Map<Species, Map<Edition, Aggregate>> aggregates = new ConcurrentHashMap<>();
+    private Map<Edition, Aggregate> aggregates = new ConcurrentHashMap<>();
 
     //private Map<Gene, Map<Edition, Integer>> geneRanksByInferredTermCount = new ConcurrentHashMap<>();
 
-    // Maps species, edition, goId -> count of unique genes annotated this term or any of its children
-    private Map<MultiKey, Integer> inferredAnnotationCount = new ConcurrentHashMap<>();
+    // Maps edition, goId -> count of unique genes annotated this term or any of its children
+    private Map<Edition, Map<GeneOntologyTerm, Integer>> inferredAnnotationCount = new ConcurrentHashMap<>();
 
-    // Maps species, edition, goId -> count of unique genes annotated this term only
-    private Map<MultiKey, Integer> directAnnotationCount = new ConcurrentHashMap<>();
+    // Maps edition, goId -> count of unique genes annotated this term only
+    private Map<Edition, Map<GeneOntologyTerm, Integer>> directAnnotationCount = new ConcurrentHashMap<>();
 
     // Maps GOEdition -> GeneOntology
     // Holds our created ontologies
@@ -215,6 +218,10 @@ public class Cache implements Serializable {
         return AnnotationType.values();
     }
 
+    public ImmutableSet<Integer> getAvailableYears() {
+        return availableYears;
+    }
+
 
     private void createSpecies() {
         Set<Integer> sr = Sets.newHashSet();
@@ -225,7 +232,7 @@ public class Cache implements Serializable {
             }
         }
 
-        List<Species> speciesList = speciesService.list();
+        List<Species> speciesList = speciesService.listWithData();
 
         for ( Species species : speciesList ) {
             if ( sr.isEmpty() || sr.contains( species.getId() ) ) {
@@ -285,6 +292,9 @@ public class Cache implements Serializable {
             currentEditionsTemp.put( dto.getSpecies(), dto.getEdition() );
         }
 
+        // Populate derived constants
+        ImmutableSet.Builder<Integer> availableYearsBuilder = ImmutableSet.builder();
+
         // Create Edition objects
         for ( EditionDTO dto : cacheDAO.getAllEditions( speciesRestrictions ) ) {
 
@@ -303,6 +313,11 @@ public class Cache implements Serializable {
                 continue;
             }
 
+            // Populate derived constants
+            Calendar cal = Calendar.getInstance();
+            cal.setTime( dto.getDate() );
+            availableYearsBuilder.add( cal.get( Calendar.YEAR ) );
+
             Species species = speciesCache.get( dto.getSpecies() );
             Map<Integer, Edition> m = allEditions.get( species );
 
@@ -318,7 +333,7 @@ public class Cache implements Serializable {
                         + dto.getGoEditionId() + ")" );
             }
 
-            Edition ed = new Edition( dto, goEdition );
+            Edition ed = new Edition( dto, species, goEdition );
             m.put( dto.getEdition(), ed );
 
             // This iterates in order, therefore we want the first (oldest) edition for each species as a default
@@ -333,6 +348,8 @@ public class Cache implements Serializable {
                 }
             }
         }
+
+        availableYears = availableYearsBuilder.build();
 
         currentGOEdition = Collections.max( allGOEditions.values() );
 
@@ -428,13 +445,7 @@ public class Cache implements Serializable {
                 continue;
             }
 
-            Map<Edition, Aggregate> m1 = aggregates.get( species );
-            if ( m1 == null ) {
-                m1 = new ConcurrentHashMap<>();
-                aggregates.put( species, m1 );
-            }
-
-            m1.put( ed, new Aggregate( dto ) );
+            aggregates.put( ed, new Aggregate( dto ) );
 
             Integer recentEdition = mostRecentAggregateEditions.get( species );
 
@@ -458,23 +469,35 @@ public class Cache implements Serializable {
             Integer recentEdition = null;
             Integer minEdition = minEditions.get( species.getId() );
             minEdition = minEdition == null ? 0 : minEdition;
+            Map<Integer, Edition> editions = allEditions.get( species );
             for ( AnnotationCountDTO dto : cacheDAO.getGOAnnotationCounts( species.getId(), minEdition ) ) {
                 MultiKey k = new MultiKey( species, dto );
+                Edition ed = editions.get( dto.getEdition() );
+
+                GeneOntologyTerm term = this.getTerm( ed, dto.getGoId() );
+                if ( term == null ) {
+                    // key existed before
+                    log.warn( "Missing Aggregate Term: " + dto.getGoId() );
+                }
+
+                Map<GeneOntologyTerm, Integer> m1 = directAnnotationCount.get( ed );
+                if ( m1 == null ) {
+                    m1 = Maps.newConcurrentMap();
+                    directAnnotationCount.put( ed, m1 );
+                }
 
                 if ( dto.getDirectCount() != null ) {
-                    Integer prev = directAnnotationCount.put( k, dto.getDirectCount() );
-                    if ( prev != null ) {
-                        // key existed before
-                        log.warn( k );
-                    }
+                    m1.put( term, dto.getDirectCount() );
+                }
+
+                m1 = inferredAnnotationCount.get( ed );
+                if ( m1 == null ) {
+                    m1 = Maps.newConcurrentMap();
+                    inferredAnnotationCount.put( ed, m1 );
                 }
 
                 if ( dto.getInferredCount() != null ) {
-                    Integer prev = inferredAnnotationCount.put( k, dto.getInferredCount() );
-                    if ( prev != null ) {
-                        // key existed before
-                        log.warn( k );
-                    }
+                    m1.put( term, dto.getInferredCount() );
                 }
 
                 if ( recentEdition == null || dto.getEdition() > recentEdition ) {
@@ -964,60 +987,40 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param species species id
      * @param ed      edition
      * @param t       term
      * @return count of genes annotated with this term or any of its children
      */
-    public Integer getInferredAnnotationCount( Species species, Edition ed, GeneOntologyTerm t ) {
-        if ( species == null || ed == null || t == null ) return null;
-        return inferredAnnotationCount.get( new MultiKey( species, ed, t ) );
-
+    public Integer getInferredAnnotationCount( Edition ed, GeneOntologyTerm t ) {
+        if ( ed == null || t == null ) return null;
+        Map<GeneOntologyTerm, Integer> tmp = inferredAnnotationCount.get( ed );
+        if (tmp != null) {
+            return tmp.get(t);
+        }
+        return null;
     }
 
     /**
-     * @param species species id
      * @param ed      edition
      * @param t       term
      * @return count of genes annotated with this term
      */
-    public Integer getDirectAnnotationCount( Species species, Edition ed, GeneOntologyTerm t ) {
-        if ( species == null || ed == null || t == null ) return null;
-        return directAnnotationCount.get( new MultiKey( species, ed, t ) );
-
-    }
-
-    /**
-     * @param species species id
-     * @param ed      edition
-     * @return aggregate
-     */
-    public Aggregate getAggregates( Species species, Edition ed ) {
-        if ( species == null || ed == null ) return null;
-        Map<Edition, Aggregate> tmp = aggregates.get( species );
-        if ( tmp != null ) {
-            return tmp.get( ed );
+    public Integer getDirectAnnotationCount( Edition ed, GeneOntologyTerm t ) {
+        if ( ed == null || t == null ) return null;
+        Map<GeneOntologyTerm, Integer> tmp = directAnnotationCount.get( ed );
+        if (tmp != null) {
+            return tmp.get(t);
         }
         return null;
-
     }
 
     /**
-     * @param species species id
-     * @return aggregates
+     * @param ed edition
+     * @return aggregate
      */
-    public Map<Edition, Aggregate> getAggregates( Species species ) {
-        if ( species == null ) return null;
-        return aggregates.get( species );
-
-    }
-
-    /**
-     * @return aggregates
-     */
-    public Map<Species, Map<Edition, Aggregate>> getAggregates() {
-        return aggregates;
-
+    public Aggregate getAggregate( Edition ed ) {
+        if ( ed == null ) return null;
+        return aggregates.get( ed );
     }
 
     /**
@@ -1048,21 +1051,16 @@ public class Cache implements Serializable {
     //    }
 
     /**
-     * @param species species
      * @param edition edition
      * @return Count of unique genes in this edition under this species
      */
-    public Integer getGeneCount( Species species, Edition edition ) {
-        if ( species == null || edition == null ) {
+    public Integer getGeneCount( Edition edition ) {
+        if ( edition == null ) {
             return null;
         }
-        Map<Edition, Aggregate> map2 = aggregates.get( species );
-        if ( map2 != null ) {
-            Aggregate se = map2.get( edition );
-            if ( se != null ) {
-                return se.getGeneCount();
-            }
-
+        Aggregate agg = aggregates.get( edition );
+        if ( agg != null ) {
+            return agg.getGeneCount();
         }
         return null;
     }
@@ -1267,6 +1265,10 @@ public class Cache implements Serializable {
         }
 
         return false;
+    }
+
+    public Collection<GeneOntology> getAllOntologies() {
+        return ontologies.values();
     }
 
     public GOEdition getGOEdition( Integer edId ) {

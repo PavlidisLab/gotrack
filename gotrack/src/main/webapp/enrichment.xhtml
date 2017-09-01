@@ -26,12 +26,14 @@
         <h:outputScript library="js" name="utility.js"/>
 
         <!-- Highcharts stuff -->
+        <ui:include src="/WEB-INF/includes/highcharts-js.xhtml" />
 
-        <h:outputScript library="js" name="highcharts.js"/>
-        <h:outputScript library="js" name="highcharts-more.js"/>
-        <h:outputScript library="js" name="exporting.js"/>
-        <h:outputScript library="js" name="export-csv.js"/>
-        <!-- <h:outputScript library="js" name="broken-axis.js" /> -->
+        <!--Needed for arearange charts-->
+        <script src="https://code.highcharts.com/5.0.14/highcharts-more.js"></script>
+
+        <script type="text/javascript">
+            !window.Highcharts.seriesTypes.arearange &amp;&amp; document.write('&lt;script src="#{resource['js/highcharts-more.js']}"&gt;&lt;\/script&gt;')
+        </script>
 
         <h:outputScript library="js" name="tipsy.js"/>
 

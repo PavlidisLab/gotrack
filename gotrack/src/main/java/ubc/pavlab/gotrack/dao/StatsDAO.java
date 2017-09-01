@@ -22,6 +22,7 @@ package ubc.pavlab.gotrack.dao;
 import ubc.pavlab.gotrack.model.dto.GeneStatsDTO;
 import ubc.pavlab.gotrack.model.dto.TermStatsDTO;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -34,21 +35,62 @@ public interface StatsDAO {
     /**
      * Retrieve all genes which have been stored as having a page hit along with how many times they have been hit.
      */
-    public List<GeneStatsDTO> listGenes() throws DAOException;
+    List<GeneStatsDTO> listGenes() throws DAOException;
 
     /**
      * Increment a specific Gene's (symbol, species) hit count by 1
      */
-    public void incrementGeneHit( Integer id, String accession, String symbol ) throws DAOException;
+    void incrementGeneHit( Integer id, String accession, String symbol ) throws DAOException;
 
     /**
      * Retrieve all terms which have been stored as having a page hit along with how many times they have been hit.
      */
-    public List<TermStatsDTO> listTerms() throws DAOException;
+    List<TermStatsDTO> listTerms() throws DAOException;
 
     /**
      * Increment a specific Term's (GO Id) hit count by 1
      */
-    public void incrementTermHit( String goId ) throws DAOException;
+    void incrementTermHit( String goId ) throws DAOException;
+
+    /**
+     * Estimate number of annotations
+     */
+    Integer annotationCount() throws DAOException;
+
+    /**
+     * Estimate number of GO Terms
+     */
+    Integer goCount() throws DAOException;
+
+    /**
+     * Estimate number of GO Term edges.
+     */
+    Integer adjacencyCount() throws DAOException;
+
+    /**
+     * Count of species with data..
+     */
+    Integer speciesCount() throws DAOException;
+
+    /**
+     * Number of years between the earliest and latest edition available rounded.
+     */
+    Integer yearsAvailable() throws DAOException;
+
+    /**
+     * Count of GO Editions.
+     */
+    Integer goEditionCount() throws DAOException;
+
+    /**
+     * Count of Editions.
+     */
+    Integer editionCount() throws DAOException;
+
+    /**
+     * Return most recent edition date.
+     */
+    Date latestUpdate() throws DAOException;
+
 
 }

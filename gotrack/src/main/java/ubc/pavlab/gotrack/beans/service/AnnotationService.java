@@ -29,6 +29,7 @@ import ubc.pavlab.gotrack.dao.AnnotationDAO;
 import ubc.pavlab.gotrack.model.*;
 import ubc.pavlab.gotrack.model.dto.*;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.utilities.Tuples;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -42,7 +43,7 @@ import java.util.Map.Entry;
 /**
  * Service layer on top of annotation DAO. Contains methods for fetching information related to annotations and counts
  * thereof from the database. This does NOT include methods that are purely for caching.
- * 
+ *
  * @author mjacobson
  * @version $Id$
  */
@@ -51,7 +52,7 @@ import java.util.Map.Entry;
 public class AnnotationService implements Serializable {
 
     /**
-     * 
+     *
      */
     private static final long serialVersionUID = 8586832855128663515L;
 
@@ -66,7 +67,7 @@ public class AnnotationService implements Serializable {
     private AnnotationDAO annotationDAO;
 
     /**
-     * 
+     *
      */
     public AnnotationService() {
         log.info( "AnnotationService created" );
@@ -151,7 +152,7 @@ public class AnnotationService implements Serializable {
      * Method used to fetch data from database related to the EnrichmentView
      *
      * @param species species
-     * @param genes gene
+     * @param genes   gene
      * @return Sets of terms directly annotated to each gene in each edition
      */
     public Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> fetchEnrichmentData( Species species, Collection<Gene> genes ) {
@@ -162,16 +163,16 @@ public class AnnotationService implements Serializable {
      * Method used to fetch data from database related to the EnrichmentView where @minimum <= edition <= @maximum
      *
      * @param species species
-     * @param genes gene
+     * @param genes   gene
      * @return Sets of terms directly annotated to each gene in each edition
      */
     private Map<Gene, Map<Edition, Set<GeneOntologyTerm>>> fetchEnrichmentData( Species species, Collection<Gene> genes, Edition min, Edition max ) {
         Set<Gene> geneSet = new HashSet<>( genes );
 
         // Used to map strings back to genes, small efficiency boost as we don't have to hit gene cache in Cache service
-        Map<Integer, Gene> givenGenes = new HashMap<>();
+        Map<String, Gene> givenGenes = new HashMap<>();
         for ( Gene g : genes ) {
-            givenGenes.put( g.getId(), g );
+            givenGenes.put( g.getAccession().getAccession(), g );
         }
 
         int minEdition = min == null ? cache.getGlobalMinEdition( species ).getEdition() : min.getEdition();
@@ -185,10 +186,10 @@ public class AnnotationService implements Serializable {
 
         for ( EnrichmentDTO enrichmentDTO : resultset ) {
 
-            Integer geneId = enrichmentDTO.getGeneId();
-            Gene g = givenGenes.get( geneId );
+            String geneAccession = enrichmentDTO.getAccession();
+            Gene g = givenGenes.get( geneAccession );
             if ( g == null ) {
-                log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
+                log.warn( "Could not find Accession:" + geneAccession + " in given genes." );
                 // g = new Gene( symbol, species );
             }
 
@@ -260,10 +261,10 @@ public class AnnotationService implements Serializable {
             for ( Entry<EnrichmentDTO, GeneOntologyTerm> entry : mapped.entrySet() ) {
                 EnrichmentDTO enrichmentDTO = entry.getKey();
 
-                Integer geneId = enrichmentDTO.getGeneId();
-                Gene g = givenGenes.get( geneId );
+                String geneAccession = enrichmentDTO.getAccession();
+                Gene g = givenGenes.get( geneAccession );
                 if ( g == null ) {
-                    log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
+                    log.warn( "Could not find Accession:" + geneAccession + " in given genes." );
                     // g = new Gene( symbol, species );
                 }
 
@@ -295,8 +296,8 @@ public class AnnotationService implements Serializable {
 
     /**
      * Method used to fetch data from database related to the Enrichment for a single edition
-     * 
-     * @param ed edition
+     *
+     * @param ed    edition
      * @param genes gene
      * @return Sets of terms directly annotated to each gene in each edition
      */
@@ -304,9 +305,9 @@ public class AnnotationService implements Serializable {
         Set<Gene> geneSet = new HashSet<>( genes );
 
         // Used to map strings back to genes, small efficiency boost as we don't have to hit gene cache in Cache service
-        Map<Integer, Gene> givenGenes = new HashMap<>();
+        Map<String, Gene> givenGenes = new HashMap<>();
         for ( Gene g : genes ) {
-            givenGenes.put( g.getId(), g );
+            givenGenes.put( g.getAccession().getAccession(), g );
         }
 
         List<SimpleAnnotationDTO> resultset = annotationDAO.simpleAnnotationSingleEdition( ed, geneSet );
@@ -317,10 +318,10 @@ public class AnnotationService implements Serializable {
 
         for ( SimpleAnnotationDTO enrichmentDTO : resultset ) {
 
-            Integer geneId = enrichmentDTO.getGeneId();
-            Gene g = givenGenes.get( geneId );
+            String geneAccession = enrichmentDTO.getAccession();
+            Gene g = givenGenes.get( geneAccession );
             if ( g == null ) {
-                log.warn( "Could not find Gene Id:" + geneId + " in given genes." );
+                log.warn( "Could not find Accession:" + geneAccession + " in given genes." );
                 // g = new Gene( symbol, species );
             }
 
@@ -365,7 +366,7 @@ public class AnnotationService implements Serializable {
 
     /**
      * Method used to get annotation count grouped by evidence category for a term between two dates
-     * 
+     *
      * @param t term
      * @return Counts annotations for each evidence category grouped by date
      */
@@ -375,7 +376,7 @@ public class AnnotationService implements Serializable {
 
     /**
      * Method used to get annotation count grouped by evidence category for a term between two dates
-     * 
+     *
      * @param goId term
      * @return Counts annotations for each evidence category grouped by date
      */
@@ -429,5 +430,57 @@ public class AnnotationService implements Serializable {
         }
         return results;
     }
+
+    public Map<Gene, Set<GeneOntologyTerm>> fetchEditionSimple(Species species, Edition edition) {
+
+        List<Tuples.Tuple2<String, String>> resultset = annotationDAO.simpleAnnotationSingleEditionCompleteSpecies( species, edition);
+
+        Multimap<String, Tuples.Tuple2<String, String>> missingTerms = ArrayListMultimap.create();
+
+        Map<Gene, Set<GeneOntologyTerm>> data  = Maps.newHashMap();
+
+        for ( Tuples.Tuple2<String, String> tup : resultset ) {
+
+            Gene g = cache.getCurrentGene( tup.getT1() );
+            if ( g == null ) {
+                log.warn( "Could not find Accession:" + tup.getT1() );
+                continue;
+                //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
+            }
+
+            GeneOntologyTerm go = cache.getTerm( edition, tup.getT2());
+
+            if ( go == null ) {
+                log.debug(
+                        "Could not find (" + tup.getT2() + ") in GO Edition Id: " + edition.getGoEditionId() );
+                missingTerms.put( tup.getT2(), tup );
+                continue;
+            }
+
+            Set<GeneOntologyTerm> goSet = data.get( g );
+            if ( goSet == null ) {
+                goSet = new HashSet<>();
+                data.put( g, goSet );
+            }
+
+            goSet.add( go );
+
+        }
+
+        // Because of reasons (badly annotated / misdated / mismatched annotations to GO editions / missing secondary ids)
+        // We will have terms that are not found in their given GO edition.
+        if ( !missingTerms.isEmpty() ) {
+            log.warn( "Could not find information for (" + missingTerms.size() + ") terms" );
+        }
+
+        // Propagate terms
+        for ( Entry<Gene, Set<GeneOntologyTerm>> geneSetEntry : data.entrySet() ) {
+            geneSetEntry.setValue( cache.propagate(geneSetEntry.getValue(), edition) );
+        }
+
+        return data;
+    }
+
+
 
 }

@@ -15,8 +15,10 @@ CREATE TABLE `annotation` (
   `reference` varchar(255) NOT NULL,
   `evidence` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `acc_go_ev_ref_qual` (`accession_id`, `go_id`, `evidence`, `reference`, `qualifier`),
-  CONSTRAINT `annotation_idfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
+  UNIQUE KEY `acc_go_ev_ref_qual` (`accession_id`,`go_id`,`evidence`,`reference`,`qualifier`),
+  KEY `category_counts_go_ev_acc2` (`go_id`,`evidence`,`accession_id`),
+  KEY `category_counts_go_ev_acc` (`go_id`,`accession_id`,`evidence`),
+  CONSTRAINT `annotation_ibfk_1` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
 )
 
 CREATE TABLE `accession` (
@@ -32,8 +34,7 @@ CREATE TABLE `accession` (
   `subset` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `sp_ed_dbi` (`species_id`,`edition`,`db_object_id`),
-  #CONSTRAINT `accession_edfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`),
-  #CONSTRAINT `accession_spfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`)
+  KEY `doi` (`db_object_id`)
 )
 
 CREATE TABLE `synonyms` (
@@ -49,10 +50,12 @@ CREATE TABLE `edition` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `edition` int(11) NOT NULL,
   `species_id` int(11) NOT NULL,
+  `goa_release` int(11) unsigned DEFAULT NULL,
   `date` date NOT NULL,
-  `go_edition_id_fk` int(10) unsigned NOT NULL,
+  `go_edition_id_fk` int(11) unsigned NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `spec_ed` (`species_id`,`edition`)
+  UNIQUE KEY `spec_ed` (`species_id`,`edition`),
+  KEY `spec_ed_rel` (`species_id`,`edition`,`goa_release`)
 )
 
 CREATE TABLE `sec_ac` (
@@ -60,7 +63,8 @@ CREATE TABLE `sec_ac` (
   `sec` varchar(10) NOT NULL,
   `ac` varchar(10) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `ac` (`ac`,`sec`)
+  UNIQUE KEY `ac` (`ac`,`sec`),
+  UNIQUE KEY `sec` (`sec`,`ac`)
 )
 
 CREATE TABLE `go_adjacency` (
@@ -75,13 +79,13 @@ CREATE TABLE `go_adjacency` (
 
 CREATE TABLE `go_alternate` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `go_edition_id_fk` bigint(20) unsigned NOT NULL,
+  `go_edition_id_fk` int(11) unsigned NOT NULL,
   `alt` varchar(10) NOT NULL,
-  `primary` varchar(10) NOT NULL,
+  `principle` varchar(10) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `ed_alt` (`go_edition_id_fk`,`alt`),
-  KEY `ed_alt_primary` (`go_edition_id_fk`,`alt`,`primary`),
-  KEY `alt_primary` (`alt`,`primary`),
+  KEY `ed_alt_primary` (`go_edition_id_fk`,`alt`,`principle`),
+  KEY `alt_primary` (`alt`,`principle`),
   CONSTRAINT `fk_go_alt_go_edition` FOREIGN KEY (`go_edition_id_fk`) REFERENCES `go_edition` (`id`)
 )
 
@@ -89,12 +93,13 @@ CREATE TABLE `go_definition` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `go_id` varchar(10) NOT NULL,
   `definition` text NOT NULL,
+  `date` date NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `go_id` (`go_id`)
 )
 
 CREATE TABLE `go_edition` (
-  `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `date` date DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `date` (`date`)
@@ -102,7 +107,7 @@ CREATE TABLE `go_edition` (
 
 CREATE TABLE `go_term` (
   `id` bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-  `go_edition_id_fk` bigint(20) unsigned NOT NULL,
+  `go_edition_id_fk` int(11) unsigned NOT NULL,
   `go_id` varchar(10) NOT NULL,
   `name` text NOT NULL,
   `aspect` enum('CC','BP','MF') DEFAULT NULL,
@@ -117,12 +122,11 @@ Pre-processed
 
 CREATE TABLE `pp_accession_history` (
   `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
-  `accession_id` int(11) unsigned NOT NULL,
-  `secondary_accession_id` int(11) unsigned NOT NULL,
+  `sec` varchar(10) NOT NULL,
+  `ac` varchar(10) NOT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `acc_acc` (`accession_id`,`secondary_accession_id`),
-  CONSTRAINT `acc_hist_acfk` FOREIGN KEY (`accession_id`) REFERENCES `accession` (`id`),
-  CONSTRAINT `acc_hist_acfk2` FOREIGN KEY (`secondary_accession_id`) REFERENCES `accession` (`id`)
+  UNIQUE KEY `ac` (`ac`,`sec`),
+  UNIQUE KEY `sec` (`sec`,`ac`)
 )
 
 CREATE TABLE `pp_current_edition` (
@@ -170,6 +174,14 @@ CREATE TABLE `track_popular_genes` (
   UNIQUE KEY `acc` (`accession`)
 )
 
+CREATE TABLE `track_popular_terms` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `go_id` varchar(10) NOT NULL,
+  `count` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `go_id` (`go_id`)
+)
+
 ##################################################################
 """
 
@@ -191,7 +203,7 @@ class GOTrack:
     def __init__(self, tables=None, concurrent_insertions=1000, verbose=False, **kwargs):
         self.creds = kwargs
         self.tables = {'go_edition':    'go_edition',
-                       'edition':       'edition_tmp',
+                       'edition':       'edition',
                        'species':       'species',
                        'go_term':       'go_term',
                        'go_adjacency':  'go_adjacency',
@@ -199,7 +211,7 @@ class GOTrack:
                        'accession':     'accession',
                        'synonyms':      'synonyms',
                        'annotation':    'annotation',
-                       'sec_ac':        'sec_ac_tmp',
+                       'sec_ac':        'sec_ac',
                        'go_definition': 'go_definition',
 
                        'pp_current_edition':       'pp_current_edition',
@@ -384,10 +396,10 @@ class GOTrack:
 
     @stream
     def stream_staged_annotations(self, sp_id, ed, cursor=None):
-        sql = "select distinct annot.go_id, ppah.accession_id from {annotation} annot " \
-              "inner join {staging_pre}{pp_accession_history} ppah on ppah.secondary_accession_id=annot.accession_id " \
-              "inner join {accession} acc on acc.id=ppah.secondary_accession_id " \
-              "where acc.species_id = %s and acc.edition = %s"
+        sql = "select distinct ppah.ac, annot.go_id from {annotation} annot " \
+              "inner join {accession} acc on acc.id=annot.accession_id " \
+              "inner join {staging_pre}{pp_accession_history} ppah on acc.db_object_id = ppah.sec " \
+              "where acc.species_id = %s AND acc.edition = %s"
         cursor.execute(sql.format(**self.tables), [sp_id, ed])
         for row in cursor:
             yield row
@@ -413,7 +425,7 @@ class GOTrack:
 
     def _insert_term_alternates(self, cursor, go_edition_id, ont):
         log.info("Inserting Alternate Table")
-        cols = ["go_edition_id_fk", "alt", "primary"]
+        cols = ["go_edition_id_fk", "alt", "principle"]
         data = ((go_edition_id,) + x for x in ont.alternate_list())
         self.insert_many(self.tables['go_alternate'], cols, data, cursor)
 
@@ -433,9 +445,29 @@ class GOTrack:
 
     @transactional
     def update_current_go_definitions(self, ont, cursor=None):
-        cols = ["go_id", "definition"]
-        data = ont.list_definitions()
-        self.insert_many(self.tables['go_definition'], cols, data, cursor)
+
+        go_date = ont.date.strftime('%Y-%m-%d')
+        data = (x + (go_date,) for x in ont.list_definitions())
+        # Custom SQL for this. We want to insert a definition if it doesn't exist or update it if it has changed
+        # and is newer than the previous.
+
+        # It is actually extremely important that 'values' be lowercase. DO NOT CHANGE.
+        # See http://stackoverflow.com/a/3945860/4907830.
+        sql = "INSERT INTO {table} (go_id, definition, date) values (%s, %s, %s) " \
+              "ON DUPLICATE KEY UPDATE definition = IF(date < VALUES(date), VALUES(definition), definition), " \
+              "date = IF( date < VALUES(date) and definition != VALUES(definition), VALUES(date), date)"
+        sql = sql.format(table=self.tables['go_definition'])
+
+        cnt = 0
+        start = time.time()
+        for row_list in grouper(self.concurrent_insertions, data):
+            cnt += len(row_list)
+            if self.verbose:
+                log.info(cnt)
+            cursor.executemany(sql, row_list)
+
+        if self.verbose:
+            log.info("Row Count: %s, Time: %s", cnt, time.time() - start)
 
     def _fetch_closest_go_edition_for_date(self, cursor, date):
         sql = "select id, date from {go_edition} where date <= %s order by date DESC LIMIT 1".format(**self.tables)
@@ -444,10 +476,24 @@ class GOTrack:
         cursor.nextset()
         return go_edition_id_fk, go_edition_date
 
-    def _insert_new_edition(self, cursor, edition_id, species_id, date, go_edition_id):
+    def _fetch_or_create_goa_release_for_date(self, cursor, date):
+        sql = "select distinct goa_release from {edition} where date between %s - INTERVAL 1 DAY and " \
+              "%s + INTERVAL 1 DAY order by goa_release ASC LIMIT 1;".format(**self.tables)
+        cursor.execute(sql, [date.strftime('%Y-%m-%d'), date.strftime('%Y-%m-%d')])
+        goa_release = cursor.fetchone()
+        cursor.nextset()
+        if not goa_release:
+            sql = "select max(goa_release) + 1 from {edition}".format(**self.tables)
+            cursor.execute(sql)
+            goa_release = cursor.fetchone()
+            cursor.nextset()
+            log.info("Creating new GOA release: %s", goa_release)
+        return goa_release
+
+    def _insert_new_edition(self, cursor, edition_id, species_id, date, goa_release, go_edition_id):
         log.info("Insert new edition")
-        cols = ["edition", "species_id", "date", "go_edition_id_fk"]
-        data = [[edition_id, species_id, date.strftime('%Y-%m-%d'), go_edition_id]]
+        cols = ["edition", "species_id", "date", "goa_release", "go_edition_id_fk"]
+        data = [[edition_id, species_id, date.strftime('%Y-%m-%d'), goa_release, go_edition_id]]
         self.insert_many(self.tables['edition'], cols, data, cursor)
 
     def _insert_gpi_to_accession(self, cursor, data):
@@ -480,7 +526,13 @@ class GOTrack:
         else:
             log.info("Linked date: %s to GO Release: %s", date.strftime('%Y-%m-%d'), go_edition_date)
 
-        self._insert_new_edition(cursor, edition_id, species_id, date, go_edition_id)
+        # See if another edition from this release is in the database.
+        # We determine this by looking for other editions that were released within
+        # one day of this (pick the smallest if more than one). If this release
+        # doesn't yet exist, create a new one by incrementing the highest existing edition.
+        goa_release = self._fetch_or_create_goa_release_for_date(cursor, date)
+
+        self._insert_new_edition(cursor, edition_id, species_id, date, goa_release, go_edition_id)
 
         synonyms = []
 
@@ -521,6 +573,22 @@ class GOTrack:
 
         self._insert_gpa_to_annotation(cursor, map_gpa_data(gpa_data))
 
+    # Pre-process section
+
+    @transactional
+    def requires_proprocessing(self, cursor=None):
+        requires_proprocessing = False
+        cursor.execute("select species_id, max(edition) edition from {edition} "
+                       "group by species_id".format(**self.tables))
+        edition_max = {x[0]: x[1] for x in cursor.fetchall()}
+
+        cursor.execute("select species_id, edition from {pp_current_edition}".format(**self.tables))
+        for r in cursor.fetchall():
+            # If returning early remember to move the cursor to the next set
+            requires_proprocessing = requires_proprocessing or (r[1] != edition_max[r[0]])
+
+        return requires_proprocessing
+
     @transactional
     def update_secondary_accession_table(self, data, cursor=None):
         sql = "DROP TABLE IF EXISTS {staging_pre}{sec_ac}".format(**self.tables)
@@ -547,8 +615,6 @@ class GOTrack:
         sql = "RENAME TABLE {staging_pre}{sec_ac} TO {sec_ac}".format(**self.tables)
         cursor.execute(sql)
 
-    # Pre-process section
-
     @transactional
     def create_staging_tables(self, cursor=None):
         sql_template_drop = "DROP TABLE IF EXISTS {staging_pre}{%s}"
@@ -559,13 +625,27 @@ class GOTrack:
             cursor.execute(sql_drop.format(**self.tables))
             cursor.execute(sql_create.format(**self.tables))
 
+        # Add missing foreign keys
+        sql_fk = "alter table {staging_pre}{pp_current_edition} add foreign key " \
+                 "ppcured_fk (species_id, edition) references {edition}(species_id, edition)"
+        cursor.execute(sql_fk.format(**self.tables))
+
     @transactional
     def push_staging_tables(self, cursor=None):
+        # Check if all staging tables exist
+        log.info("Checking to see if all staging tables exist")
+        sql_template_exist = "SELECT 1 FROM {staging_pre}{%s} LIMIT 1"
+        for table in self.staging_tables:
+            sql_exist = sql_template_exist % table
+            cursor.execute(sql_exist.format(**self.tables))
+            cursor.fetchall()
+
+        log.info("Pushing all staging tables")
         sql_template_drop = "DROP TABLE IF EXISTS {previous_pre}{%s}"
         sql_template_swap = "rename table {%s} TO {previous_pre}{%s}, {staging_pre}{%s} to {%s}"
         for table in self.staging_tables:
             sql_drop = sql_template_drop % table
-            sql_swap = sql_template_swap % (table,) * 4
+            sql_swap = sql_template_swap % ((table,) * 4)
             cursor.execute(sql_drop.format(**self.tables))
             cursor.execute(sql_swap.format(**self.tables))
 
@@ -579,22 +659,15 @@ class GOTrack:
     def stage_accession_history_table(self, cursor=None):
         # Note, keep in mind this uses the staged version of {pp_current_edition}
 
-        sql = "insert into {staging_pre}{pp_accession_history} (accession_id, secondary_accession_id) " \
-              "select acc1.id, acc2.id from {accession} acc1 " \
-              "inner join {staging_pre}{pp_current_edition} using (species_id, edition) " \
-              "inner join {sec_ac} sec_ac on acc1.db_object_id=sec_ac.ac " \
-              "inner join {accession} acc2 on acc2.db_object_id=sec_ac.sec"
-
+        sql = "INSERT INTO {staging_pre}{pp_accession_history} (ac, sec) SELECT ac, sec FROM {sec_ac}"
         cursor.execute(sql.format(**self.tables))
 
         # Missing those accession which have no secondary accessions
-        sql = "insert into {staging_pre}{pp_accession_history} (accession_id, secondary_accession_id) " \
-              "select acc1.id, acc2.id from {accession} acc1 " \
-              "inner join {staging_pre}{pp_current_edition} using (species_id, edition) " \
-              "left join {sec_ac} sec_ac on acc1.db_object_id=sec_ac.ac " \
-              "inner join {accession} acc2 on acc2.db_object_id=acc1.db_object_id " \
-              "where sec_ac.ac is null"
-
+        sql = "INSERT INTO {staging_pre}{pp_accession_history} (ac, sec) " \
+              "SELECT db_object_id, db_object_id FROM {accession} acc " \
+              "INNER JOIN {staging_pre}{pp_current_edition} USING (species_id, edition) " \
+              "LEFT JOIN {sec_ac} sec_ac on db_object_id = ac " \
+              "WHERE ac IS NULL"
         cursor.execute(sql.format(**self.tables))
 
     @transactional

@@ -15,6 +15,7 @@
     <ui:define name="pageTitle">GOtrack</ui:define>
     <ui:define name="css">
         <h:outputStylesheet library="css" name="term.css"/>
+        <h:outputStylesheet library="css" name="gograph.css"/>
         <h:outputStylesheet library="css" name="tipsy.css"/>
     </ui:define>
     <ui:define name="js">
@@ -25,11 +26,7 @@
 
 
         <!-- Highcharts stuff -->
-
-        <h:outputScript library="js" name="highcharts.js"/>
-        <h:outputScript library="js" name="highcharts-more.js"/>
-        <h:outputScript library="js" name="exporting.js"/>
-        <h:outputScript library="js" name="export-csv.js"/>
+        <ui:include src="/WEB-INF/includes/highcharts-js.xhtml" />
 
         <h:outputScript library="js" name="tipsy.js"/>
         <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
@@ -37,6 +34,7 @@
 
 
         <h:outputScript library="js" name="plotting.js"/>
+        <h:outputScript library="js" name="gograph.js"/>
         <h:outputScript library="js" name="term.js"/>
 
         <h:outputScript rendered="#{termView.trackedTerms != null}">

@@ -19,21 +19,20 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import java.io.Serializable;
+import org.apache.log4j.Logger;
+import ubc.pavlab.gotrack.model.Species;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.SessionScoped;
 import javax.inject.Inject;
 import javax.inject.Named;
-
-import org.apache.log4j.Logger;
+import java.io.Serializable;
 
 /**
- * Backing bean for user sessions. Only used to store security authorization at the moment.
+ * Backing bean for user sessions.
  * 
  * @author mjacobson
- * @version $Id$
  */
 @Named
 @SessionScoped
@@ -44,11 +43,16 @@ public class SessionManager implements Serializable {
     private final int MAX_ENTRIES = 5;
     private Boolean authenticated = false;
 
+    private Species species = null;
+
     @Inject
     private Security security;
 
     @Inject
     private SettingsCache settingsCache;
+
+    @Inject
+    private Cache cache;
 
     public SessionManager() {
         log.info( "SessionManager created" );
@@ -58,6 +62,7 @@ public class SessionManager implements Serializable {
     public void init() {
         // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "SessionManager init" );
+        species = cache.getSpecies( 7 );
     }
 
     @PreDestroy
@@ -89,5 +94,17 @@ public class SessionManager implements Serializable {
 
     public Boolean getAuthenticated() {
         return authenticated;
+    }
+
+    public Species getSpecies() {
+        return species;
+    }
+
+    public void setSpecies( Species species ) {
+        if (species == null) {
+            log.warn( "Species cannot be null!" );
+            return;
+        }
+        this.species = species;
     }
 }

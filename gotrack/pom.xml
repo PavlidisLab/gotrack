@@ -4,7 +4,7 @@
 	<groupId>ubc.pavlab</groupId>
 	<artifactId>gotrack</artifactId>
 	<packaging>war</packaging>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>1.0</version>
 	<name>gotrack</name>
 	<url>http://maven.apache.org</url>
 
@@ -52,7 +52,11 @@
 			<artifactId>javax.servlet-api</artifactId>
 			<version>${servlet.version}</version>
 		</dependency>
-
+		<dependency>
+			<groupId>javax.servlet.jsp.jstl</groupId>
+			<artifactId>jstl-api</artifactId>
+			<version>1.2</version>
+		</dependency>
 		<!-- Facelets -->
 
 		<dependency>
@@ -71,7 +75,7 @@
 		<dependency>
 			<groupId>org.primefaces</groupId>
 			<artifactId>primefaces</artifactId>
-			<version>6.0</version>
+			<version>6.1</version>
 		</dependency>
 
 		<dependency>
@@ -79,22 +83,11 @@
 			<artifactId>bluesky</artifactId>
 			<version>1.0.10</version>
 		</dependency>
-		<dependency>
-			<groupId>org.primefaces.themes</groupId>
-			<artifactId>glass-x</artifactId>
-			<version>1.0.10</version>
-		</dependency>
+
 		<dependency>
 			<groupId>org.primefaces.extensions</groupId>
 			<artifactId>primefaces-extensions</artifactId>
 			<version>3.0.0</version>
-		</dependency>
-
-		<!-- Font Awesome -->
-		<dependency>
-			<groupId>org.webjars</groupId>
-			<artifactId>font-awesome</artifactId>
-			<version>4.2.0</version>
 		</dependency>
 
 		<!-- PDF Exporting -->
@@ -325,6 +318,28 @@
             <target>1.7</target>
         </configuration>
     </plugin>
+            <plugin>
+                <groupId>com.amashchenko.maven.plugin</groupId>
+                <artifactId>gitflow-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <!-- Do not push to remote -->
+                    <pushRemote>false</pushRemote>
+                    <verbose>true</verbose>
+                    <!-- Branch naming schemes -->
+                    <gitFlowConfig>
+                        <productionBranch>master</productionBranch>
+                        <developmentBranch>development</developmentBranch>
+                        <releaseBranchPrefix>release-</releaseBranchPrefix>
+                        <versionTagPrefix></versionTagPrefix>
+                        <origin>origin</origin>
+                        <!-- Unused for releasing -->
+                        <featureBranchPrefix>feature-</featureBranchPrefix>
+                        <hotfixBranchPrefix>hotfix-</hotfixBranchPrefix>
+                        <supportBranchPrefix>support-</supportBranchPrefix>
+                    </gitFlowConfig>
+                </configuration>
+            </plugin>
     </plugins>
 </build>
 	<profiles>

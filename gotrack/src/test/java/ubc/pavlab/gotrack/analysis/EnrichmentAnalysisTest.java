@@ -120,7 +120,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
         Set<Integer> geneIds = Sets.newHashSet( 0, 1, 2, 3, 4, 100 );
 
         ed1 = new Edition( new EditionDTO( 7, 1, Date.valueOf( "2016-01-01" ), 1, 1 ),
-                new GOEdition( new GOEditionDTO( 1, Date.valueOf( "2016-01-01" ) ) ) );
+                human, new GOEdition( new GOEditionDTO( 1, Date.valueOf( "2016-01-01" ) ) ) );
 
         populationMap.put( ed1, geneGOMap );
         sampleMap.put( ed1, filterMap( geneGOMap, geneIds ) );
@@ -134,27 +134,27 @@ public class EnrichmentAnalysisTest extends BaseTest {
         }
 
         ed2 = new Edition( new EditionDTO( 7, 2, Date.valueOf( "2016-02-01" ), 2, 2 ),
-                new GOEdition( new GOEditionDTO( 2, Date.valueOf( "2016-02-01" ) ) ) );
+                human, new GOEdition( new GOEditionDTO( 2, Date.valueOf( "2016-02-01" ) ) ) );
 
         populationMap.put( ed2, geneGOMap );
         sampleMap.put( ed2, filterMap( geneGOMap, geneIds ) );
 
         Cache cacheSpy = Mockito.spy( new Cache() );
 
-        Mockito.when( cacheSpy.getInferredAnnotationCount( Mockito.any( Species.class ), Mockito.any( Edition.class ),
+        Mockito.when( cacheSpy.getInferredAnnotationCount( Mockito.any( Edition.class ),
                 Mockito.any( GeneOntologyTerm.class ) ) ).thenAnswer( new Answer<Integer>() {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {
                         Object[] args = invocation.getArguments();
-                        Map<GeneOntologyTerm, Set<Gene>> m = populationMap.get( args[1] );
+                        Map<GeneOntologyTerm, Set<Gene>> m = populationMap.get( args[0] );
                         if ( m == null ) return null;
-                        Set<Gene> s = m.get( args[2] );
+                        Set<Gene> s = m.get( args[1] );
                         if ( s == null ) return null;
                         return s.size();
                     }
                 } );
 
-        Mockito.when( cacheSpy.getGeneCount( Mockito.any( Species.class ), Mockito.any( Edition.class ) ) )
+        Mockito.when( cacheSpy.getGeneCount( Mockito.any( Edition.class ) ) )
                 .thenAnswer( new Answer<Integer>() {
                     @Override
                     public Integer answer( InvocationOnMock invocation ) throws Throwable {
@@ -356,7 +356,7 @@ public class EnrichmentAnalysisTest extends BaseTest {
         Assert.assertThat( actual, Matchers.notNullValue() );
 
         actual = actualMap.get( new Edition( new EditionDTO( 7, 999, Date.valueOf( "2016-01-01" ), 1, 999 ),
-                new GOEdition( new GOEditionDTO( 999, Date.valueOf( "2016-01-01" ) ) ) ) );
+                human, new GOEdition( new GOEditionDTO( 999, Date.valueOf( "2016-01-01" ) ) ) ) );
         Assert.assertThat( actual, Matchers.nullValue() );
 
     }
