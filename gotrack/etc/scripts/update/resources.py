@@ -42,7 +42,6 @@ class Resources:
         self.missing_go = {}
         self.missing_goa = defaultdict(dict)
         self.ftp_checked = False
-        self.missing_data = False
 
         if check_ftp:
             self.populate_missing_data()
@@ -80,7 +79,6 @@ class Resources:
         self.missing_go = {}
         self.missing_goa = defaultdict(dict)
         self.ftp_checked = False
-        self.missing_data = False
 
         go = self.fetch_go_dates()
         self.missing_go = {d: f for d, f in go.iteritems() if d not in self.go and d not in self.db_go}
@@ -91,10 +89,10 @@ class Resources:
             missing = {ed: f for ed, f in goa.iteritems() if ed not in self.goa[sp] and ed not in self.db_goa[sp_id]}
             self.missing_goa[sp] = missing
 
-        if self.missing_go or sum([len(goa_sp) for goa_sp in self.missing_goa.values()]) or not self.sec_ac:
-            self.missing_data = True
-
         self.ftp_checked = True
+
+    def is_missing_data(self):
+        return self.missing_go or sum([len(goa_sp) for goa_sp in self.missing_goa.values()]) or not self.sec_ac
 
     @staticmethod
     def match_file_patterns(files, pattern):
@@ -168,7 +166,7 @@ class Resources:
             if ftp is not None:
                 ftp.close()
 
-    def ftp_files(self, host, directory, files):
+    def ftp_files(self, host, directory, files, skip_if_exists=True):
         ftp = None
         fname_list = []
         if files:
@@ -188,7 +186,7 @@ class Resources:
                         ftp.login()
                         ftp.cwd(directory)
                     full_path = os.path.join(self.directory, fname)
-                    if os.path.isfile(full_path):
+                    if skip_if_exists and os.path.isfile(full_path):
                         log.warn('%s already exists, skipping...', full_path)
                         continue
 
@@ -223,20 +221,23 @@ class Resources:
         files = Resources.ftp_list(Resources.go_ftp_host, Resources.go_ftp_directory)
         return self.search_files_for_go(files)
 
-    def download_missing_goa_data(self):
+    def download_missing_goa_data(self, skip_if_exists=True):
         for sp, goa_eds in self.missing_goa.iteritems():
             files = goa_eds.values()
-            self.ftp_files(Resources.goa_ftp_host, Resources.goa_ftp_directory_template.format(sp.upper()), files)
+            self.ftp_files(Resources.goa_ftp_host, Resources.goa_ftp_directory_template.format(sp.upper()), files,
+                           skip_if_exists)
 
             # GPI Files
             gpi_files = [Resources.goa_gpi_template.format(sp, ed) for ed in goa_eds]
-            self.ftp_files(Resources.goa_ftp_host, Resources.goa_ftp_directory_template.format(sp.upper()), gpi_files)
+            self.ftp_files(Resources.goa_ftp_host, Resources.goa_ftp_directory_template.format(sp.upper()), gpi_files,
+                           skip_if_exists)
 
-    def download_missing_go_data(self):
-        self.ftp_files(Resources.go_ftp_host, Resources.go_ftp_directory, self.missing_go.values())
+    def download_missing_go_data(self, skip_if_exists=True):
+        self.ftp_files(Resources.go_ftp_host, Resources.go_ftp_directory, self.missing_go.values(), skip_if_exists)
 
-    def download_accession_history(self):
-        return self.ftp_files(Resources.uniprot_ftp_host, Resources.uniprot_ftp_directory, ['sec_ac.txt'])
+    def download_accession_history(self, skip_if_exists=True):
+        return self.ftp_files(Resources.uniprot_ftp_host, Resources.uniprot_ftp_directory, ['sec_ac.txt'],
+                              skip_if_exists)
 
     def get_new_go(self):
         return {d: f for d, f in self.go.iteritems() if d not in self.db_go}

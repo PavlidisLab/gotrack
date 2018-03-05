@@ -47,8 +47,11 @@ def main(resource_directory=None, cron=False, no_download=False):
     # Display current state of resource directory, database, and ftp site
     LOG.info(res)
 
+    # if cron, force download of accession history file
+    res.sec_ac = None if cron else res.sec_ac
+
     # Deal with missing data
-    if res.ftp_checked and res.missing_data:
+    if res.ftp_checked and res.is_missing_data():
         missing_cnt = len(res.missing_go)
         if missing_cnt:
             LOG.warn("Missing %s GO Versions from FTP", missing_cnt)
@@ -64,14 +67,14 @@ def main(resource_directory=None, cron=False, no_download=False):
         if not res.sec_ac:
             LOG.warn("Missing secondary accession file (sec_ac.txt)")
             if cron or query_yes_no("Download missing secondary accession file?"):
-                res.download_accession_history()
+                res.download_accession_history(skip_if_exists=not cron)
 
         LOG.info("Re-checking state of resource directory")
         res.populate_existing_files()
         res.populate_missing_data()
         LOG.info(res)
 
-        if res.missing_data or not (cron or query_yes_no("Continue with updates?")):
+        if res.is_missing_data() or not (cron or query_yes_no("Continue with updates?")):
             return
 
     # Insert new GO data
