@@ -27,19 +27,14 @@ import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.*;
 import ubc.pavlab.gotrack.utilities.Tuples;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
-import java.sql.Date;
 import java.util.List;
 import java.util.Set;
 
 import static ubc.pavlab.gotrack.dao.DAOUtil.close;
 
 /**
- * 
  * @author mjacobson
  */
 public class AnnotationDAOImpl implements AnnotationDAO {
@@ -56,25 +51,24 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     // Get information from single gene, should be fast < 0.2s
     // species, symbol,species
-
     private static final String SQL_FULL_ANNOTATION_RANGE_EDITIONS_SINGLE_GENE = "select distinct edition, go_id, qualifier, evidence, reference from " + SQL_ACCESSION + " acc " +
             "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
             "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
-            "where ppah.ac = ? AND edition between ? and ? " +
+            "where ppah.ac = ? AND species_id= ? AND edition between ? and ? " +
             "order by edition";
 
     // Get information from multiple genes for running enrichment, should be quite fast and scale sublinearly
     private static final String SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES = "select distinct edition, go_id, ac from " + SQL_ACCESSION + " acc " +
             "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
             "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
-            "where ppah.ac in (%s) AND edition between ? and ? " +
+            "where ppah.ac in (%s) AND species_id= ? AND edition between ? and ? " +
             "order by NULL";
 
     // Get information from multiple genes for running enrichment in a single edition, should be extremely fast
     private static final String SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES = "select distinct go_id, ac from " + SQL_ACCESSION + " acc " +
             "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
             "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
-            "where ppah.ac in (%s) AND edition = ? " +
+            "where ppah.ac in (%s) AND species_id= ? AND edition = ? " +
             "order by NULL";
 
     // Collect evidence breakdown for a specific term, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
@@ -106,7 +100,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     /**
      * Construct an User DAO for the given DAOFactory. Package private so that it can be constructed inside the DAO
      * package only.
-     * 
+     *
      * @param daoFactory The DAOFactory to construct this User DAO for.
      */
     AnnotationDAOImpl( DAOFactory daoFactory ) {
@@ -121,6 +115,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         List<Object> params = new ArrayList<>();
 
         params.add( g.getAccession().getAccession() );
+        params.add( g.getSpecies().getId() ); // See Issue #32
         params.add( minimum );
         params.add( maximum );
 
@@ -138,7 +133,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             long startTime = System.currentTimeMillis();
             connection = daoFactory.getConnection();
             long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "daoFactory.getConnection(): " + (endTime - startTime) + "ms" );
 
             statement = connection.prepareStatement( sql );
             DAOUtil.setValues( statement, params.toArray() );
@@ -147,16 +142,16 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             startTime = System.currentTimeMillis();
             resultSet = statement.executeQuery();
             endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "statement.executeQuery(): " + (endTime - startTime) + "ms" );
 
             startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
+            while (resultSet.next()) {
                 results.add( new AnnotationDTO( resultSet.getInt( 1 ), resultSet.getString( 2 ),
                         resultSet.getString( 3 ), resultSet.getString( 4 ), resultSet.getString( 5 ) ) );
             }
             endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
+            log.debug( "while ( resultSet.next() ): " + (endTime - startTime) + "ms" );
+        } catch (SQLException e) {
             throw new DAOException( e );
         } finally {
             close( connection, statement, resultSet );
@@ -172,6 +167,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             return Lists.newArrayList();
         }
 
+        Species species = genes.iterator().next().getSpecies();
+
         List<Object> params = Lists.newArrayList();
 
         String sql = String.format( SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
@@ -180,6 +177,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             params.add( g.getAccession().getAccession() );
         }
 
+
+        params.add( species.getId() ); // See Issue #32
         params.add( minEdition );
         params.add( maxEdition );
 
@@ -196,7 +195,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             long startTime = System.currentTimeMillis();
             connection = daoFactory.getConnection();
             long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "daoFactory.getConnection(): " + (endTime - startTime) + "ms" );
 
             statement = connection.prepareStatement( sql );
             DAOUtil.setValues( statement, params.toArray() );
@@ -205,17 +204,17 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             startTime = System.currentTimeMillis();
             resultSet = statement.executeQuery();
             endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "statement.executeQuery(): " + (endTime - startTime) + "ms" );
 
             startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
+            while (resultSet.next()) {
 
                 results.add( enrichmentMap( resultSet ) );
 
             }
             endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
+            log.debug( "while ( resultSet.next() ): " + (endTime - startTime) + "ms" );
+        } catch (SQLException e) {
             throw new DAOException( e );
         } finally {
             close( connection, statement, resultSet );
@@ -231,6 +230,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             return Lists.newArrayList();
         }
 
+        Species species = genes.iterator().next().getSpecies();
+
         List<Object> params = new ArrayList<Object>();
 
         String sql = String.format( SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
@@ -239,6 +240,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             params.add( g.getAccession().getAccession() );
         }
 
+        params.add( species.getId() ); // See Issue #32
         params.add( ed.getEdition() );
 
         Connection connection = null;
@@ -254,7 +256,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             long startTime = System.currentTimeMillis();
             connection = daoFactory.getConnection();
             long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "daoFactory.getConnection(): " + (endTime - startTime) + "ms" );
 
             statement = connection.prepareStatement( sql );
             DAOUtil.setValues( statement, params.toArray() );
@@ -263,17 +265,17 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             startTime = System.currentTimeMillis();
             resultSet = statement.executeQuery();
             endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "statement.executeQuery(): " + (endTime - startTime) + "ms" );
 
             startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
+            while (resultSet.next()) {
 
                 results.add( simpleEnrichmentMap( resultSet ) );
 
             }
             endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
+            log.debug( "while ( resultSet.next() ): " + (endTime - startTime) + "ms" );
+        } catch (SQLException e) {
             throw new DAOException( e );
         } finally {
             close( connection, statement, resultSet );
@@ -283,7 +285,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<CategoryCountDTO> categoryCountsRangeDates( String goId, Date min, Date max  ) throws DAOException {
+    public List<CategoryCountDTO> categoryCountsRangeDates( String goId, Date min, Date max ) throws DAOException {
         // TODO This method of collecting the data is not robust, 
         // If editions across species in the same 'release' are have slightly differing dates, 
         // they will not be grouped appropriately
@@ -313,7 +315,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             long startTime = System.currentTimeMillis();
             connection = daoFactory.getConnection();
             long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "daoFactory.getConnection(): " + (endTime - startTime) + "ms" );
 
             statement = connection.prepareStatement( sql );
             DAOUtil.setValues( statement, params.toArray() );
@@ -322,16 +324,16 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             startTime = System.currentTimeMillis();
             resultSet = statement.executeQuery();
             endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "statement.executeQuery(): " + (endTime - startTime) + "ms" );
 
             startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
+            while (resultSet.next()) {
                 results.add( new CategoryCountDTO( resultSet.getDate( "date" ), resultSet.getString( "category" ),
                         resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
+            log.debug( "while ( resultSet.next() ): " + (endTime - startTime) + "ms" );
+        } catch (SQLException e) {
             throw new DAOException( e );
         } finally {
             close( connection, statement, resultSet );
@@ -366,7 +368,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             long startTime = System.currentTimeMillis();
             connection = daoFactory.getConnection();
             long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "daoFactory.getConnection(): " + (endTime - startTime) + "ms" );
 
             statement = connection.prepareStatement( sql );
             DAOUtil.setValues( statement, params.toArray() );
@@ -375,16 +377,16 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             startTime = System.currentTimeMillis();
             resultSet = statement.executeQuery();
             endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "statement.executeQuery(): " + (endTime - startTime) + "ms" );
 
             startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
+            while (resultSet.next()) {
                 results.add( new DirectAnnotationCountDTO( resultSet.getInt( "species_id" ),
                         resultSet.getInt( "edition" ), "", resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
+            log.debug( "while ( resultSet.next() ): " + (endTime - startTime) + "ms" );
+        } catch (SQLException e) {
             throw new DAOException( e );
         } finally {
             close( connection, statement, resultSet );
@@ -394,7 +396,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<Tuples.Tuple2<String,String>> simpleAnnotationSingleEditionCompleteSpecies( Species species, Edition edition ) throws DAOException {
+    public List<Tuples.Tuple2<String, String>> simpleAnnotationSingleEditionCompleteSpecies( Species species, Edition edition ) throws DAOException {
 
         List<Object> params = new ArrayList<>();
 
@@ -405,7 +407,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        List<Tuples.Tuple2<String,String>> results = new ArrayList<>();
+        List<Tuples.Tuple2<String, String>> results = new ArrayList<>();
         String sql = SQL_SIMPLE_ANNOTATION_SINGLE_EDITION;
 
         log.debug( sql );
@@ -415,7 +417,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             long startTime = System.currentTimeMillis();
             connection = daoFactory.getConnection();
             long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "daoFactory.getConnection(): " + (endTime - startTime) + "ms" );
 
             statement = connection.prepareStatement( sql );
             DAOUtil.setValues( statement, params.toArray() );
@@ -424,15 +426,15 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             startTime = System.currentTimeMillis();
             resultSet = statement.executeQuery();
             endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + ( endTime - startTime ) + "ms" );
+            log.debug( "statement.executeQuery(): " + (endTime - startTime) + "ms" );
 
             startTime = System.currentTimeMillis();
-            while ( resultSet.next() ) {
+            while (resultSet.next()) {
                 results.add( new Tuples.Tuple2<>( resultSet.getString( "ac" ), resultSet.getString( "go_id" ) ) );
             }
             endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + ( endTime - startTime ) + "ms" );
-        } catch ( SQLException e ) {
+            log.debug( "while ( resultSet.next() ): " + (endTime - startTime) + "ms" );
+        } catch (SQLException e) {
             throw new DAOException( e );
         } finally {
             close( connection, statement, resultSet );
