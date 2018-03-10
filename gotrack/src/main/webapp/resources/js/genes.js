@@ -39,7 +39,7 @@ function timelineDlgResize() {
 function afterRowSelection() {
     var cnt = PF('funcTable').getSelectedRowsCount();
     try {
-        if (cnt > 1) {
+        if (cnt >= 1) {
             // enable View Terms button
             PF('viewTermsWdg').enable();
             PF('viewGOGraphWdg').enable();
