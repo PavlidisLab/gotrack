@@ -63,6 +63,9 @@ public class SessionManager implements Serializable {
         // You can do here your initialization thing based on managed properties, if necessary.
         log.info( "SessionManager init" );
         species = cache.getSpecies( 7 );
+        if ( species == null) {
+            species = cache.getSpeciesList().iterator().next();
+        }
     }
 
     @PreDestroy
