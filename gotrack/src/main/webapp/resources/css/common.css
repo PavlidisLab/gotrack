@@ -121,9 +121,7 @@ button.ui-button.no-value > span.ui-button-text {
 }
 
 button.ui-button.fa-fix {
-	top:2px;
-	width: 1.4em;
-	height:14px;
+    vertical-align: middle;
 }
 
 button.ui-button.fa-fix > span.ui-icon {
