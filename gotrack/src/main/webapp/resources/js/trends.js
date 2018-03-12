@@ -22,18 +22,19 @@ function handleFetchCharts(xhr, status, args) {
 
     for (var ckey in args.HC_map) {
         var chart = args.HC_map[ckey];
+
         $('#loading-spinner-' + ckey).hide();
 
         var options = plotting.defaultHCOptions('hc-' + ckey, chart);
 
+        options.subtitle = {
+            text: args.species.scientificName
+        };
+
         if (syncGroups[ckey]) {
             plotting.addSynchronization(options);
         }
-        if (options.series.length === 1) {
-            options.legend = {enabled: false};
-        } else {
-            plotting.addLegend(options);
-        }
+        options.legend = {enabled: false};
         options.xAxis.crosshair = true;
 
         options.tooltip.pointFormatter = function () {
@@ -43,7 +44,7 @@ function handleFetchCharts(xhr, status, args) {
         plotting.createNewChart(ckey);
 
         plotting.charts[ckey].options = options;
-        plotting.charts[ckey].recreate(options, function(c) {
+        plotting.charts[ckey].recreate(options, function (c) {
             c.syncGroup = syncGroups[ckey];
         });
     }

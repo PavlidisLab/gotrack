@@ -62,82 +62,88 @@
 
         <div id="content-wrapper" class="center" style="width:100%; max-width:1600px; min-width:900px;">
             <div id="content" style="position: relative;padding: 25px 0px; width: 100%; max-width:1600px; min-width:900px;">
-                <p:outputPanel style="position:absolute; top:0; right:0; margin:5px;">
-                    <h:form prependId="false">
-                        <h:panelGrid columns="2" style="border:none;">
 
-                            <p:outputLabel for="species_select" value="Species:" />
-                            <p:selectOneMenu id="species_select" value="#{sessionManager.species}"
-                                             converter="speciesConverter">
-                                <f:selectItems value="#{cache.speciesList}" var="spec"
-                                               itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
-                                <p:ajax event="change" process="@this" listener="#{annotationDownloadView.filterEditions}" update=":annotationDownloadForm"/>
-                            </p:selectOneMenu>
-                        </h:panelGrid>
-                    </h:form>
+
+                <p:separator style="width:800px;"/>
+
+                <p:outputPanel styleClass="center fitted" style="white-space: nowrap;padding: 10px 0 7px 0;">
+                    <div style="width: fit-content; margin: 5px auto;">
+                        <h:form prependId="false" >
+                            <h:panelGrid columns="2" style="border:none;">
+
+                                <p:outputLabel for="species_select" value="Species:" />
+                                <p:selectOneMenu id="species_select" value="#{sessionManager.species}"
+                                                 converter="speciesConverter">
+                                    <f:selectItems value="#{cache.speciesList}" var="spec"
+                                                   itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
+                                    <p:ajax event="change" process="@this" listener="#{annotationDownloadView.filterEditions}" update=":annotationDownloadForm"/>
+                                </p:selectOneMenu>
+                            </h:panelGrid>
+                        </h:form>
+                    </div>
+
+                    <div style="width: 700px; margin: 5px auto; clear:both;">
+                        <div style="float: left;">
+
+                            <h:form prependId="false">
+                                <p:outputLabel for="gene_select" value="Gene Symbol:" style="margin-right:6px;"/>
+                                <p:autoComplete id="gene_select" value="#{geneSearchView.queryGene}"
+                                                completeMethod="#{geneSearchView.complete}"
+                                                queryDelay="600"
+                                                minQueryLength="2" forceSelection="true" maxResults="10"
+                                                label="ID"
+                                                emptyMessage="No gene suggestions available, please try again."
+                                                converter="geneConverter"
+                                                var="gene"
+                                                itemLabel="#{gene.selectedGene.symbol}"
+                                                itemValue="#{gene.selectedGene}"
+                                                groupBy="#{gene.level.label}">
+                                    <p:column>
+                                        <h:outputText
+                                                value="#{gene.selectedGene.symbol} - #{gene.selectedGene.name}"/>
+                                    </p:column>
+                                </p:autoComplete>
+                                <p:commandButton value="Track" process="@form" action="#{geneSearchView.go}" style="margin-left:5px;"/>
+                            </h:form>
+                            <div style="margin: 4px 0 0 80px; width: fit-content;">
+                                <h:outputText value="Ex. "/>
+                                <p:link value="GRIN1" outcome="genes">
+                                    <f:param name="accession" value="Q05586"/>
+                                </p:link>
+                            </div>
+                        </div>
+                        <div style="float: right;">
+
+                            <h:form prependId="false">
+                                <p:outputLabel for="term_select" value="GO Term ID or Name:" style="margin-right:6px;"/>
+                                <p:autoComplete id="term_select" value="#{termSearchView.query}"
+                                                completeMethod="#{termSearchView.complete}"
+                                                queryDelay="600"
+                                                minQueryLength="2" forceSelection="true" maxResults="10"
+                                                label="ID" panelStyleClass="autocomplete-largepanel"
+                                                emptyMessage="No term suggestions available, please try again."
+                                                var="term" itemLabel="#{term.goId}"
+                                                itemValue="#{term.goId}">
+                                    <p:column>
+                                        <h:outputText value="#{term.goId} - #{term.name}"/>
+                                    </p:column>
+                                </p:autoComplete>
+                                <p:commandButton value="Track" process="@form" action="#{termSearchView.go}" style="margin-left:5px;"/>
+                            </h:form>
+                            <div style="margin: 4px 0 0 120px; width: fit-content;">
+                                <h:outputText value="Ex. "/>
+                                <p:link value="GO:2000463" outcome="terms">
+                                    <f:param name="query" value="GO:2000463"/>
+                                </p:link>
+                            </div>
+                        </div>
+                        <div style="padding: 10px 4px;">
+                            <p:separator style="width:50px;margin:0 auto;"/>
+                        </div>
+                    </div>
                 </p:outputPanel>
 
-                <p:separator style="width:50%;"/>
-                <p:outputPanel styleClass="center fitted" style="white-space: nowrap;padding: 25px 0 7px 0;">
-
-                    <h:panelGrid columns="5" style="border:none;" cellspacing="10">
-                        <p:outputLabel for="gene_select" value="Gene Symbol:" />
-                        <h:form prependId="false">
-                            <p:autoComplete id="gene_select" value="#{geneSearchView.queryGene}"
-                                            completeMethod="#{geneSearchView.complete}"
-                                            queryDelay="600"
-                                            minQueryLength="2" forceSelection="true" maxResults="10"
-                                            label="ID"
-                                            emptyMessage="No gene suggestions available, please try again."
-                                            converter="geneConverter"
-                                            var="gene"
-                                            itemLabel="#{gene.selectedGene.symbol}"
-                                            itemValue="#{gene.selectedGene}"
-                                            groupBy="#{gene.level.label}">
-                                <p:column>
-                                    <h:outputText
-                                            value="#{gene.selectedGene.symbol} - #{gene.selectedGene.name}"/>
-                                </p:column>
-                            </p:autoComplete>
-                            <p:commandButton value="Track" process="@form" action="#{geneSearchView.go}" style="margin-left:5px;"/>
-                        </h:form>
-                        <p:separator style="width:30px;"/>
-                        <p:outputLabel for="term_select" value="GO Term ID or Name:" />
-                        <h:form prependId="false">
-                            <p:autoComplete id="term_select" value="#{termSearchView.query}"
-                                            completeMethod="#{termSearchView.complete}"
-                                            queryDelay="600"
-                                            minQueryLength="2" forceSelection="true" maxResults="10"
-                                            label="ID" panelStyleClass="autocomplete-largepanel"
-                                            emptyMessage="No term suggestions available, please try again."
-                                            var="term" itemLabel="#{term.goId}"
-                                            itemValue="#{term.goId}">
-                                <p:column>
-                                    <h:outputText value="#{term.goId} - #{term.name}"/>
-                                </p:column>
-                            </p:autoComplete>
-                            <p:commandButton value="Track" process="@form" action="#{termSearchView.go}" style="margin-left:5px;"/>
-                        </h:form>
-                        <h:panelGroup/>
-                        <h:panelGroup>
-                            <h:outputText value="Ex. "/>
-                            <p:link value="GRIN1" outcome="genes">
-                                <f:param name="accession" value="Q05586"/>
-                            </p:link>
-                        </h:panelGroup>
-                        <h:panelGroup/>
-                        <h:panelGroup/>
-                        <h:panelGroup>
-                            <h:outputText value="Ex. "/>
-                            <p:link value="GO:2000463" outcome="terms">
-                                <f:param name="query" value="GO:2000463"/>
-                            </p:link>
-                        </h:panelGroup>
-
-                    </h:panelGrid>
-                </p:outputPanel>
-
-                <p:separator style="width:50%;"/>
+                <p:separator style="width:800px;"/>
 
                 <p:outputPanel style="margin-top:25px;text-align: center;">
                     <!-- <p>The Gene Ontology (GO) and GO annotations (GOA) are among the most heavily used bioinformatics resources, especially for “enrichment” analysis.</p>-->
