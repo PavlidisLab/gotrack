@@ -20,8 +20,8 @@
 package ubc.pavlab.gotrack.model.visualization;
 
 import com.google.common.collect.Maps;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.Relation;
 
@@ -190,9 +190,10 @@ public class Graph {
 
 
     public String getJsonString() {
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.put( "nodes", new JSONArray(this.getNodes()) );
-        jsonObject.put( "edges", new JSONArray(this.getEdges()) );
-        return jsonObject.toString();
+        Gson gson = new Gson();
+        JsonObject obj = new JsonObject();
+        obj.add( "nodes", gson.toJsonTree( this.nodes.values() ) );
+        obj.add( "edges", gson.toJsonTree( this.edges ) );
+        return gson.toJson(obj);
     }
 }
