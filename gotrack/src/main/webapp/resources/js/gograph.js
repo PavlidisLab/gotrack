@@ -291,7 +291,7 @@
         }
 
         var createEdgeOpts = function (e) {
-            return {class: e.classes.join(" "), lineInterpolate: 'basis', minlen: 2};
+            return {class: e.classes.join(" ") + ( e.type ? " " + e.type : "" ), lineInterpolate: 'basis', minlen: 2};
         };
 
         for (var i = 0; i < rawedges.length; i++) {

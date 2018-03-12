@@ -110,6 +110,9 @@ public class EnrichmentView implements Serializable {
     @Inject
     private EnrichmentService enrichmentService;
 
+    @Inject
+    private SessionManager session;
+
     // View parameters
     private Gene queryGene;
     // LEE_LIVER_CANCER
@@ -217,7 +220,7 @@ public class EnrichmentView implements Serializable {
     @PostConstruct
     public void postConstruct() {
         log.info( "postConstruct" );
-        currentSpecies = cache.getSpecies( 7 );
+        currentSpecies = session.getSpecies();
 
         for ( Species species : cache.getSpeciesList() ) {
             speciesToSelectedGenes.put( currentSpecies, Lists.<Gene>newArrayList() );

@@ -39,7 +39,7 @@ function timelineDlgResize() {
 function afterRowSelection() {
     var cnt = PF('funcTable').getSelectedRowsCount();
     try {
-        if (cnt > 1) {
+        if (cnt >= 1) {
             // enable View Terms button
             PF('viewTermsWdg').enable();
             PF('viewGOGraphWdg').enable();
@@ -383,13 +383,13 @@ function setCompareEdition(p, color) {
 
 function addCompareEdition(p, color) {
     var edition = GLOBALS.dateToEdition[p.x];
-    if ( comparisons.length > 2 || comparisons.indexOf(edition) > -1 ) {
+    if (comparisons.length > 2 || comparisons.indexOf(edition) > -1) {
         return false;
     }
 
     comparisons.push(edition);
 
-    if (utility.isUndefined(color) ) {
+    if (utility.isUndefined(color)) {
         color = plotting.comparisonColors[comparisons.length];
     }
 
@@ -452,7 +452,7 @@ function commonOptions(options, config) {
     plotting.addLegend(options);
     plotting.addScaleToggle(options, config);
     options.subtitle = {
-        text: "Click to view annotations at a specific date",
+        text: "<b>&lt;Click&gt;</b> to view annotations at a specific date. <b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> will compare that edition to the currently selected edition.",
         style: {"font-size": "10px"}
     };
     options.legend = {};
@@ -460,7 +460,7 @@ function commonOptions(options, config) {
         return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 3) + '</b><br/>';
     };
 
-    var clickBehaviour = function(event, p) {
+    var clickBehaviour = function (event, p) {
         var compareBehaviour = event.metaKey || event.ctrlKey;
         if (!compareBehaviour) {
             hideTags();
@@ -617,27 +617,27 @@ $(document).ready(function () {
 
     plotting.mainCharts = [];
 
-    plotting.comparisonColors = ['#FF0000','#800080','#80ff1c', '#05feff'];
+    plotting.comparisonColors = ['#FF0000', '#800080', '#80ff1c', '#05feff'];
 
     // This fixes some strange functionality in PrimeFaces Datatable filtering.
     // By default pressing ctrl (among other things) while a filter is focused
     // will activate a table filter. This combined with the fact that clicking
     // on our HighCharts charts does not make the filers lose focus means we
     // needlessly reloading table data on Chart ctrl-clicks.
-    $('div.ui-tabs-panels').on("click", "div.highcharts-container", function() {
+    $('div.ui-tabs-panels').on("click", "div.highcharts-container", function () {
         $('input.ui-column-filter').blur();
     });
 
 // Used for arbitrary numbers of tags
-/*    var n = plotting.MAXIMALLY_DISTINCT_COLORS.length;
-    var style = document.createElement('style');
-    style.type = 'text/css';
-    style.innerHTML = '';
-    for (var i = 0; i < plotting.MAXIMALLY_DISTINCT_COLORS.length; i++) {
-        var color = plotting.MAXIMALLY_DISTINCT_COLORS[n - 1 - i];
-        style.innerHTML += '.tag-' + i + ' { color: ' + color + '; }\n';
-        style.innerHTML += 'div.selectButtonFA > div.ui-button:nth-child(' + (i+1) + ') > span:before { color: ' + color + '; }\n';
-    }
-    document.getElementsByTagName('head')[0].appendChild(style);*/
+    /*    var n = plotting.MAXIMALLY_DISTINCT_COLORS.length;
+     var style = document.createElement('style');
+     style.type = 'text/css';
+     style.innerHTML = '';
+     for (var i = 0; i < plotting.MAXIMALLY_DISTINCT_COLORS.length; i++) {
+     var color = plotting.MAXIMALLY_DISTINCT_COLORS[n - 1 - i];
+     style.innerHTML += '.tag-' + i + ' { color: ' + color + '; }\n';
+     style.innerHTML += 'div.selectButtonFA > div.ui-button:nth-child(' + (i+1) + ') > span:before { color: ' + color + '; }\n';
+     }
+     document.getElementsByTagName('head')[0].appendChild(style);*/
 
 });

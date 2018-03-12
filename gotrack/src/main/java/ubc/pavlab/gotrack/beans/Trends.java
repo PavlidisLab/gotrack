@@ -130,6 +130,7 @@ public class Trends {
     }
 
     public void loadCharts( Species species ) {
+        RequestContext.getCurrentInstance().addCallbackParam( "species", species );
         RequestContext.getCurrentInstance().addCallbackParam( "HC_map", allChartsJSON.get( species ) );
     }
 

@@ -121,9 +121,7 @@ button.ui-button.no-value > span.ui-button-text {
 }
 
 button.ui-button.fa-fix {
-	top:2px;
-	width: 1.4em;
-	height:14px;
+    vertical-align: middle;
 }
 
 button.ui-button.fa-fix > span.ui-icon {
@@ -264,4 +262,28 @@ div.inline {
 	border-radius: 5px;
 	box-shadow: inset 0 0 5px black, 0 0 5px black;
 	padding: 5px;
+}
+
+.overlay-help {
+    padding: 0.5em 0;
+}
+
+.overlay-help p {
+	margin: 0.2em 1em;
+	padding-left: 1.5em;
+	text-indent:-1.5em;
+}
+
+.overlay-help h3 {
+	text-decoration: underline;
+}
+
+.overlay-help span.ui-icon {
+    display: inline-block;
+    vertical-align: text-bottom;
+}
+
+.ui-rowgroup-header.ui-datatable-headerrow.ui-widget-header > td {
+    padding-top: 10px;
+    padding-bottom: 10px;
 }

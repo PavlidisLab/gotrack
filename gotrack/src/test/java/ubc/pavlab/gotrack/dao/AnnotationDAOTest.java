@@ -322,7 +322,7 @@ public class AnnotationDAOTest extends BaseTest {
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         // bad gene
-        res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1, gh2, gfake ), 0, 200 );
+        res = annotationDAO.simpleAnnotationRangeEditions( Sets.newLinkedHashSet( Lists.newArrayList( gh1, gh2, gfake ) ), 0, 200 );
         Assert.assertThat( res.size(), Matchers.is( 212 ) );
 
         // empty gene

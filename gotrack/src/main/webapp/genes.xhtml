@@ -27,10 +27,10 @@
         <h:outputScript library="js" name="utility.js"/>
 
         <!-- Highcharts stuff -->
-        <ui:include src="/WEB-INF/includes/highcharts-js.xhtml" />
+        <ui:include src="/WEB-INF/includes/highcharts-js.xhtml"/>
 
         <h:outputScript library="js" name="tipsy.js"/>
-        <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
         <h:outputScript library="js" name="dagre-d3.min.js"/>
 
         <h:outputScript library="js" name="plotting.js"/>
@@ -80,31 +80,36 @@
                     <f:facet name="header">
                         <p:outputPanel id="headerPanel">
                             <h:outputText value="Edition "/>
-                            <h:outputText value="#{geneView.rightPanelEdition.edition} " styleClass="#{not empty geneView.comparisons ? 'tag-0' : ''}"/>
-                            <h:outputText rendered="#{not empty geneView.comparisons}" value="compared to: " />
+                            <h:outputText value="#{geneView.rightPanelEdition.edition} "
+                                          styleClass="#{not empty geneView.comparisons ? 'tag-0' : ''}"/>
+                            <h:outputText rendered="#{not empty geneView.comparisons}" value="compared to: "/>
                             <p:repeat value="#{geneView.comparisons}" var="compareEdition" varStatus="loopStatus">
-                                <h:outputText value="#{compareEdition.edition} " styleClass="tag-#{loopStatus.index + 1}"/>
+                                <h:outputText value="#{compareEdition.edition} "
+                                              styleClass="tag-#{loopStatus.index + 1}"/>
                             </p:repeat>
                         </p:outputPanel>
-                        <p:commandButton id="toggler" type="button" value="Columns" icon="ui-icon-calculator" style="display:none;"/>
-                        <p:columnToggler widgetVar="colToggler" datasource="funcTable" trigger="toggler" />
+                        <p:commandButton id="toggler" type="button" value="Columns" icon="ui-icon-calculator"
+                                         style="display:none;"/>
+                        <p:columnToggler widgetVar="colToggler" datasource="funcTable" trigger="toggler"/>
                     </f:facet>
                     <p:headerRow>
                         <p:column colspan="5">
-                            <h:outputText value="#{termRow.type.label}" />
+                            <h:outputText value="#{termRow.type.label}"/>
                         </p:column>
                     </p:headerRow>
 
                     <p:column style="width:25px" styleClass="fixed">
-                        <p:rowToggler />
+                        <p:rowToggler/>
                     </p:column>
                     <p:column headerText="Tags" filterBy="#{termRow.inSet}" filterFunction="#{geneView.filterByBitSet}"
                               visible="#{not empty geneView.comparisons}" style="width:80px;" styleClass="fixed">
                         <f:facet name="filter">
-                            <p:selectManyButton id="tagFilter" onchange="PF('funcTable').filter()" style="font-size: #{geneView.comparisons.size() > 1 ? 60 : 75}%" styleClass="selectButtonFA">
+                            <p:selectManyButton id="tagFilter" onchange="PF('funcTable').filter()"
+                                                style="font-size: #{geneView.comparisons.size() > 1 ? 60 : 75}%"
+                                                styleClass="selectButtonFA">
                                 <!-- FA icon added through CSS -->
                                 <c:forEach begin="0" end="#{geneView.comparisons.size()}" var="i">
-                                    <f:selectItem itemLabel="" itemValue="#{i}" />
+                                    <f:selectItem itemLabel="" itemValue="#{i}"/>
                                 </c:forEach>
                             </p:selectManyButton>
                         </f:facet>
@@ -116,7 +121,8 @@
                     </p:column>
                     <p:column filterBy="#{termRow.term.goId}" filterMatchMode="contains"
                               headerText="Id" style="width:120px" styleClass="fixed">
-                        <p:commandLink actionListener="#{geneView.fetchTermGraph(termRow.term)}" oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
+                        <p:commandLink actionListener="#{geneView.fetchTermGraph(termRow.term)}"
+                                       oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
                             <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
                         </p:commandLink>
                         <p:link value="#{termRow.term.goId}" outcome="terms" target="_blank">
@@ -146,12 +152,13 @@
 
                     <f:facet name="footer">
                         <p:commandButton icon="ui-icon-search" widgetVar="viewTermsWdg"
-                                         value="View Terms" oncomplete="fetchTimeline()"/>
-                        <p:commandButton icon="fa fa-sitemap" widgetVar="viewGOGraphWdg" value="View GO Graph" actionListener="#{geneView.fetchTermGraphFromSelected()}"
+                                         value="View Annotation History" oncomplete="fetchTimeline()"/>
+                        <p:commandButton icon="fa fa-sitemap" widgetVar="viewGOGraphWdg" value="View GO Graph"
+                                         actionListener="#{geneView.fetchTermGraphFromSelected()}"
                                          oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"/>
                         <!--<p:commandButton icon="fa fa-filter" widgetVar="filterWdg" value="Highlight Editions"-->
-                                         <!--actionListener="#{geneView.fetchEditionsForSelectedTerms()}"-->
-                                         <!--oncomplete="handleFetchEditionsForSelectedTerms(xhr, status, args);"/>-->
+                        <!--actionListener="#{geneView.fetchEditionsForSelectedTerms()}"-->
+                        <!--oncomplete="handleFetchEditionsForSelectedTerms(xhr, status, args);"/>-->
                     </f:facet>
                 </p:dataTable>
             </h:form>
@@ -323,7 +330,7 @@
                   width="800px;"
                   style="max-width:80%;max-height:80%;"
                   closeOnEscape="true"
-                >
+        >
             <svg id="dagDialog" height="500" width="700"/>
         </p:dialog>
 
@@ -349,40 +356,75 @@
                   widgetVar="viewAnnotationsDlgWdg" modal="false" showEffect="fade"
                   hideEffect="fade" width="900"
                   fitViewport="true" closeOnEscape="true">
-        <h:form id="viewAnnotationsForm">
-            <comps:annotationTable value="#{geneView.viewAnnotations}" id="annotationsDlgTable"/>
-        </h:form>
+            <h:form id="viewAnnotationsForm">
+                <comps:annotationTable value="#{geneView.viewAnnotations}" id="annotationsDlgTable"/>
+            </h:form>
         </p:dialog>
 
         <p:overlayPanel for=":centerTabViewForm:centerTabView:annotationTabHelpBtn" hideEffect="fade"
                         style="width:600px;text-align:left;">
+            <div class="overlay-help">
+            <h3 style="margin-top: 0;">Description:</h3>
             <p>The
-                <b>annotation plot</b> shows distinct counts of both direct and inferred GO annotations connected to this gene.
+                <b>annotation plot</b> shows distinct counts of both direct and inferred GO annotations associated with this gene.
                 A distinct annotation is defined as being both unique in GO Term and Evidence.</p>
-            <p><b>Direct Annotation Count:</b> Distinct count of directly applied annotations.</p>
+            <h3>Legend Descriptions:</h3>
+            <p><span style="color:#2bce48;">Direct Annotation Count</span>: Distinct count of directly applied annotations.</p>
             <p>
-                <b>Inferred Annotation Count:</b> Distinct count of directly applied annotations as well as their GO ancestors.
+                <span style="color:#0075dc;">Inferred Annotation Count</span>: Distinct count of directly applied annotations as well as their GO ancestors.
                 <i>Example: A gene directly annotated with <a target="_blank" class="underline"
                                                               href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0033058">directional locomotion</a> is also implicitly annotated with its parents (<a
                         target="_blank" class="underline"
                         href="http://www.ebi.ac.uk/QuickGO/GTerm?id=GO:0040011">locomotion</a>).</i></p>
-            <p><i>Click</i> on the graph to bring up options to view <b>existing</b>, <b>newly added</b>, or
-                <b>newly removed</b> terms at that timepoint. </p>
+            <h3>Controls:</h3>
+            <p><b>&lt;Click&gt;</b> any edition to view the annotations at that point in time in the right panel.</p>
+            <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> any edition to compare the annotations at that point in time to the currently selected edition.
+                This is done through coloured tags on each GO annotation. If a tag is present it means the annotation existed in some form in the edition that colour represents.</p>
+            <p><b>&lt;Ctrl/Command&gt; + &lt;Shift&gt; + &lt;Click&gt;</b> will let you compare up to four editions at once.</p>
+            <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
+            <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+
+            </div>
         </p:overlayPanel>
         <p:overlayPanel for=":centerTabViewForm:centerTabView:similarityTabHelpBtn" hideEffect="fade"
                         style="width:600px;text-align:left;">
-            <p>The
-                <b>similarity plot</b> shows the semantic similarity of the set of annotated GO terms from previous dates as compared to the most current set.
-                Semantic similarity is measured using the Jaccard Index.</p>
-            <p><b>Direct Similarity:</b> Similarity of directly annotated GO terms.</p>
-            <p><b>Inferred Similarity:</b> Similarity of directly annotated GO terms as well as their ancestors.</p>
+            <div class="overlay-help">
+                <h3 style="margin-top: 0;">Description:</h3>
+                <p>The
+                    <b>similarity plot</b> shows the semantic similarity of the set of annotated GO terms from previous dates as compared to the most current set.
+                    Semantic similarity is measured using the Jaccard Index.</p>
+                <h3>Legend Descriptions:</h3>
+                <p><span style="color:#2bce48;">Direct Similarity</span>: Similarity of directly annotated GO terms.</p>
+                <p><span style="color:#0075dc;">Inferred Similarity</span>: Similarity of directly annotated GO terms as well as their ancestors.</p>
+                <h3>Controls:</h3>
+                <p><b>&lt;Click&gt;</b> any edition to view the annotations at that point in time in the right panel.</p>
+                <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> any edition to compare the annotations at that point in time to the currently selected edition.
+                    This is done through coloured tags on each GO annotation. If a tag is present it means the annotation existed in some form in the edition that colour represents.</p>
+                <p><b>&lt;Ctrl/Command&gt; + &lt;Shift&gt; + &lt;Click&gt;</b> will let you compare up to four editions at once.</p>
+                <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
+                <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+            </div>
         </p:overlayPanel>
         <p:overlayPanel for=":centerTabViewForm:centerTabView:multifunctionalityTabHelpBtn" hideEffect="fade"
                         style="width:600px;text-align:left;">
-            <p>The <b>multifunctionality plot</b> shows the multifunctionality of the selected gene.
-                Gene multifunctionality is measured as per <a
+            <div class="overlay-help">
+                <h3 style="margin-top: 0;">Description:</h3>
+                <p>The <b>multifunctionality plot</b> shows the multifunctionality of the selected gene.
+                    Gene multifunctionality is measured as per <a
+                            href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
+                            class="underline" target="_blank">Gillis J, Pavlidis P (2011) The Impact of Multifunctional Genes on "Guilt by Association" Analysis.</a></p>
+                <h3>Legend Descriptions:</h3>
+                <p><span style="color:#2bce48;">Multifunctionality</span>: A measure of the number of functions a gene is involved in. For a more precise definition, see <a
                         href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
-                        class="underline" target="_blank">Gillis and Pavlidis, 2011</a>.</p>
+                        class="underline" target="_blank">Gillis and Pavlidis, 2011.</a></p>
+                <h3>Controls:</h3>
+                <p><b>&lt;Click&gt;</b> any edition to view the annotations at that point in time in the right panel.</p>
+                <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> any edition to compare the annotations at that point in time to the currently selected edition.
+                    This is done through coloured tags on each GO annotation. If a tag is present it means the annotation existed in some form in the edition that colour represents.</p>
+                <p><b>&lt;Ctrl/Command&gt; + &lt;Shift&gt; + &lt;Click&gt;</b> will let you compare up to four editions at once.</p>
+                <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
+                <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+            </div>
         </p:overlayPanel>
         <!-- 				<p:overlayPanel for=":centerTabViewForm:centerTabView:lossgainTabHelpBtn" hideEffect="fade"
                             style="width:600px;text-align:left;">
@@ -393,8 +435,9 @@
                         </p:overlayPanel> -->
         <p:overlayPanel for="timelineHelpBtn" hideEffect="fade"
                         style="width:600px;text-align:left;">
-            <p>The Following is the <b>Evidence Timeline</b> of the selected GO terms.</p>
-            <p>For each GO term horizontal bars represent the existence of specific types of evidence for a given GO Annotation Edition.</p>
+            <p>The following is the <b>Evidence Timeline</b> of the selected GO terms.</p>
+            <p>Each selected GO term has its own timeline where coloured bars show the existence of the term at that point in time. Different colours
+                represent different evidence code categories.</p>
             <p>See the following for an explanation of Evidence Codes:</p>
             <p:lightBox>
                 <h:outputLink value="/gotrack/javax.faces.resource/diag-evCodeFlowChartGood.png?ln=img"
@@ -405,11 +448,15 @@
         </p:overlayPanel>
         <p:overlayPanel for=":rightLayoutHelpBtn" hideEffect="fade"
                         style="width:600px;text-align:left;">
-            <p>The following table shows all GO Terms that have ever been annotated to this gene.</p>
-            <p>You may select GO terms for use with the following functionalities by clicking on their checkmark in the leftmost column.</p>
-            <p><b>View Terms:</b> View the Evidence Code timeline of selected GO terms.</p>
-            <p><b>Filter Charts:</b> Filter the various plots on this page to use a selected subset of GO terms.</p>
-            <p><b>Reset Charts:</b> Reset your filtered GO term subsets.</p>
+            <div class="overlay-help">
+            <h3 style="margin-top: 0;">Description:</h3>
+                <p>The following table shows all GO Terms that are annotated in the selected edition(s).</p>
+                <h3>Controls:</h3>
+                <p><b>&lt;Click&gt;</b> on leftmost column (<span class="ui-icon ui-icon-circle-triangle-e"></span>) to show the specific annotations associated with this term.</p>
+                <p><b>&lt;Click&gt;</b> or <b>&lt;Ctrl/Command/Shift&gt; + &lt;Click&gt;</b> to select rows.</p>
+                <p><b>&lt;Click&gt;</b> <p:commandButton icon="ui-icon-search" value="View Annotation History" type="button" disabled="true"/> to view the annotation history of the selected GO terms. Shows when these terms were annotated to this gene split by evidence code category.</p>
+                <p><b>&lt;Click&gt;</b> <p:commandButton icon="fa fa-sitemap" value="View GO Graph" type="button" disabled="true"/> to view the ancestors graph of the selected GO terms.</p>
+            </div>
         </p:overlayPanel>
 
 
