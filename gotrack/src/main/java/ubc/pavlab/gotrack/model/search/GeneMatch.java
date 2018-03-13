@@ -31,6 +31,7 @@ public class GeneMatch implements Comparable<GeneMatch> {
 
     public enum Level {
 
+        CURATED( "Curated" ), // Manually chosen by user
         PRIMARY( "Primary Symbol" ), // Gene's symbol is an exact match to the query
         SYNONYM( "Synonym Symbol" ), // Gene's synonym symbol is an exact match to the query
         PREFIX( "Prefix" ), // The query is a prefix to this Gene's symbol
@@ -69,8 +70,8 @@ public class GeneMatch implements Comparable<GeneMatch> {
 
     private final String querySymbol; // The query that was used to search
     private Gene selectedGene; // The current best guess at a gene
-    private final Level level;
-    private final Type type;
+    private Level level;
+    private Type type;
 
     public GeneMatch( String querySymbol, Gene selectedGene, Level level, Type type ) {
         this.querySymbol = querySymbol;
@@ -84,6 +85,10 @@ public class GeneMatch implements Comparable<GeneMatch> {
     }
 
     public void setSelectedGene( Gene selectedGene ) {
+        if ( selectedGene != null ) {
+            this.type = Type.SINGLE;
+            this.level = Level.CURATED;
+        }
         this.selectedGene = selectedGene;
     }
 
