@@ -121,13 +121,7 @@
                     </p:column>
                     <p:column filterBy="#{termRow.term.goId}" filterMatchMode="contains"
                               headerText="Id" style="width:120px" styleClass="fixed">
-                        <p:commandLink actionListener="#{geneView.fetchTermGraph(termRow.term)}"
-                                       oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
-                            <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
-                        </p:commandLink>
-                        <p:link value="#{termRow.term.goId}" outcome="terms" target="_blank">
-                            <f:param name="query" value="#{termRow.term.goId}"/>
-                        </p:link>
+                        <comps:GOIdTableCell value="#{termRow.term}"/>
                     </p:column>
                     <p:column filterBy="#{termRow.term.aspect}" filterMatchMode="in"
                               headerText="Aspect" style="width:155px;" styleClass="fixed">

@@ -129,7 +129,6 @@ function handleFetchEditionsForSelectedTerms(xhr, status, args) {
 }
 
 function handleFetchGraphDialog(xhr, status, args) {
-    console.log(args);
     gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
 }
 

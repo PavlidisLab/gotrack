@@ -17,6 +17,10 @@ var showLoadingSpinner = function () {
 //});
 //});
 
+function handleFetchGraphDialog(xhr, status, args) {
+    gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
+}
+
 function runEnrichmentOnClick() {
     $('#progressBarContainer').removeClass('disabled');
     try {

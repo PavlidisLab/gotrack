@@ -131,10 +131,6 @@ div.timeline-event-selected {
     overflow: auto;
 }
 
-ul.ui-tabs-nav {
-    border-bottom: 1px solid #a8a8a8; 
-}     
-
 body .ui-tabs.ui-tabs-top > .ui-tabs-nav {
 	padding-left:0;
 }

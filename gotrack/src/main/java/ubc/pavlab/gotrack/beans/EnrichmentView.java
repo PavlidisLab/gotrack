@@ -20,6 +20,7 @@
 package ubc.pavlab.gotrack.beans;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import jersey.repackaged.com.google.common.collect.Lists;
@@ -52,7 +53,7 @@ import java.util.Map.Entry;
 
 /**
  * View bean based around the enrichment functionality of GOTrack.
- * 
+ *
  * @author mjacobson
  * @version $Id$
  */
@@ -64,7 +65,7 @@ public class EnrichmentView implements Serializable {
      * Model for a select drop down in front end
      */
     public enum EnrichmentChartType {
-        SELECTED("Selected"), TOP("Top");
+        SELECTED( "Selected" ), TOP( "Top" );
 
         private String label;
 
@@ -81,7 +82,7 @@ public class EnrichmentView implements Serializable {
      * Model for a select drop down in front end
      */
     public enum EnrichmentChartMeasure {
-        RANK("Rank"), PVALUE("P-Value");
+        RANK( "Rank" ), PVALUE( "P-Value" );
 
         private String label;
 
@@ -95,7 +96,7 @@ public class EnrichmentView implements Serializable {
     }
 
     /**
-     * 
+     *
      */
     private static final long serialVersionUID = 166880636358923147L;
 
@@ -212,7 +213,7 @@ public class EnrichmentView implements Serializable {
 
     public EnrichmentView() {
         log.info( "EnrichmentView created" );
-        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
+        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
                 + " MB" );
 
     }
@@ -345,8 +346,8 @@ public class EnrichmentView implements Serializable {
      * Create Term Count chart
      */
     private void createTermCountChart() {
-        ChartValues cv = new ChartValues("GO Term Counts by Edition",
-                "Count of Unique GO Terms", "Date");
+        ChartValues cv = new ChartValues( "GO Term Counts by Edition",
+                "Count of Unique GO Terms", "Date" );
         Series significantTerms = new Series( "Significant Terms" );
         Series allTerms = new Series( "All Tested Terms" );
         Series rejectedTerms = new Series( "Rejected Terms" );
@@ -376,10 +377,10 @@ public class EnrichmentView implements Serializable {
      */
     private void createSimilarityChart() {
         // Create Similarity Chart
-        ChartValues cv = new ChartValues("Enrichment Similarity to "
-                + ( similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current" )
+        ChartValues cv = new ChartValues( "Enrichment Similarity to "
+                + (similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current")
                 + " Edition",
-                "Jaccard Similarity Index", "Date");
+                "Jaccard Similarity Index", "Date" );
         cv.setMin( 0 );
         cv.setMax( 1 );
 
@@ -419,17 +420,14 @@ public class EnrichmentView implements Serializable {
     /**
      * Entry point to ajax request for a graph of a single term with p-value error bands based on stability confidence
      */
-    public void createStabilityChartFromSelected() {
+    public void createStabilityChart( GeneOntologyTerm term ) {
 
-        if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.size() != 1 ) {
+        if ( term == null ) {
             return;
             // return failed
         }
-        EnrichmentTableValues sel = selectedEnrichmentTableValues.iterator().next();
-        Set<GeneOntologyTerm> selectedTerms = new HashSet<>();
-        selectedTerms.add( sel.getTerm() );
 
-        createChart( selectedTerms, null, true );
+        createChart( Sets.newHashSet( term ), null, true );
     }
 
     // Enrichment Charts ---------------------------------------------------------------------------------------
@@ -437,10 +435,10 @@ public class EnrichmentView implements Serializable {
     /**
      * Create chart for comparing terms and seeing how their p-values or ranks change over time. If a single term is
      * selected and the graph is to be based on p-value (not rank) then error bands are also sent.
-     * 
+     *
      * @param selectedTerms Terms to be graphed, if null grap everything
-     * @param topN Cutoff for the 'desired' region in the graph, selectedTerms should already be trimmed down to topN
-     * @param pvalue true if p-value is to be graphed, false if rank
+     * @param topN          Cutoff for the 'desired' region in the graph, selectedTerms should already be trimmed down to topN
+     * @param pvalue        true if p-value is to be graphed, false if rank
      */
     private void createChart( Set<GeneOntologyTerm> selectedTerms, Integer topN, boolean pvalue ) {
         // Get data
@@ -483,7 +481,7 @@ public class EnrichmentView implements Serializable {
             }
             cv = new ChartValues(
                     selectedTerms.size() == 1 ? "Enrichment Stability Results" : "Enrichment Results",
-                    "P-Value", "Date");
+                    "P-Value", "Date" );
 
             for ( Series s : series.values() ) {
                 cv.addSeries( s );
@@ -521,7 +519,7 @@ public class EnrichmentView implements Serializable {
                 Collections.sort( sortedData, new Comparator<Entry<GeneOntologyTerm, EnrichmentResult>>() {
                     @Override
                     public int compare( Entry<GeneOntologyTerm, EnrichmentResult> e1,
-                            Entry<GeneOntologyTerm, EnrichmentResult> e2 ) {
+                                        Entry<GeneOntologyTerm, EnrichmentResult> e2 ) {
                         return Integer.compare( e1.getValue().getRank(), e2.getValue().getRank() );
                     }
                 } );
@@ -558,7 +556,7 @@ public class EnrichmentView implements Serializable {
                     int standardRank = rankEntry.getKey();
                     List<GeneOntologyTerm> termSet = rankEntry.getValue();
                     Collections.sort( termSet );
-                    double newRank = standardRank + ( termSet.size() - 1 ) / 2.0;
+                    double newRank = standardRank + (termSet.size() - 1) / 2.0;
                     double jitter = 0;
                     for ( GeneOntologyTerm term : termSet ) {
                         relativeRanks.put( term, newRank + jitter );
@@ -605,8 +603,8 @@ public class EnrichmentView implements Serializable {
 
             }
 
-            cv = new ChartValues("Enrichment Results by Relative Rank",
-                    "Relative Rank", "Date");
+            cv = new ChartValues( "Enrichment Results by Relative Rank",
+                    "Relative Rank", "Date" );
 
             for ( Series s : series.values() ) {
                 cv.addSeries( s );
@@ -666,7 +664,7 @@ public class EnrichmentView implements Serializable {
 
     /**
      * Entry point to ajax call for creating different charts based on front-end settings such as:
-     * 
+     * <p>
      * by pvalue or rank
      * topN or selected
      */
@@ -696,9 +694,8 @@ public class EnrichmentView implements Serializable {
     }
 
     /**
-     * 
      * Filter enrichmentResults for just those terms in the given set
-     * 
+     *
      * @param terms terms wanted
      * @return filtered enrichment results with just those terms from the given set
      */
@@ -834,8 +831,8 @@ public class EnrichmentView implements Serializable {
                 Double val = sc.getScore();
                 int quantile = 0;
                 if ( !val.isNaN() && !val.isInfinite() ) {
-                    quantile = ( int ) Math
-                            .round( 19 * ( val - stabilityRange[0] ) / ( stabilityRange[1] - stabilityRange[0] ) ) + 1;
+                    quantile = (int) Math
+                            .round( 19 * (val - stabilityRange[0]) / (stabilityRange[1] - stabilityRange[0]) ) + 1;
                 }
 
                 enrichmentTableValues
@@ -861,7 +858,7 @@ public class EnrichmentView implements Serializable {
      * custom filter function for primefaces data table column, filters by arbitrary number in a 'less than' manner
      */
     public boolean filterByNumberLT( Object value, Object filter, Locale locale ) {
-        String filterText = ( filter == null ) ? null : filter.toString().trim();
+        String filterText = (filter == null) ? null : filter.toString().trim();
         if ( filterText == null || filterText.equals( "" ) ) {
             return true;
         }
@@ -870,7 +867,7 @@ public class EnrichmentView implements Serializable {
             return false;
         }
 
-        return Double.compare( ( ( Number ) value ).doubleValue(), Double.valueOf( filterText ) ) < 0;
+        return Double.compare( ((Number) value).doubleValue(), Double.valueOf( filterText ) ) < 0;
     }
 
     // Gene List ---------------------------------------------------------------------------------------

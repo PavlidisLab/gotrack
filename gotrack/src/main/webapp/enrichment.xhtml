@@ -6,6 +6,7 @@
                 xmlns:p="http://primefaces.org/ui"
                 xmlns:fn="http://java.sun.com/jsp/jstl/functions"
                 xmlns:pe="http://primefaces.org/ui/extensions"
+                xmlns:comps="http://java.sun.com/jsf/composite/composites"
 >
     >
 
@@ -17,6 +18,7 @@
     <ui:define name="pageTitle">GOtrack</ui:define>
     <ui:define name="css">
         <h:outputStylesheet library="css" name="enrichment.css"/>
+        <h:outputStylesheet library="css" name="gograph.css"/>
         <h:outputStylesheet library="css" name="tipsy.css"/>
     </ui:define>
     <ui:define name="js">
@@ -36,8 +38,11 @@
         </script>
 
         <h:outputScript library="js" name="tipsy.js"/>
+        <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <h:outputScript library="js" name="dagre-d3.min.js"/>
 
         <h:outputScript library="js" name="plotting.js"/>
+        <h:outputScript library="js" name="gograph.js"/>
         <h:outputScript library="js" name="enrichment.js"/>
         <h:outputScript library="js" name="common.js"/>
 
@@ -300,8 +305,6 @@
                                      scrollRows="25">
                             <p:ajax event="filter"
                                     oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))"/>
-                            <p:ajax event="rowDblselect" listener="#{enrichmentView.createStabilityChartFromSelected()}"
-                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
                             <f:facet name="header">
                                 <p:panelGrid cellpadding="5" style="width: 650px" styleClass="no-border">
                                     <p:row>
@@ -384,15 +387,12 @@
                             </f:facet>
 
                             <p:column style="width:10px;" exportable="false">
-                                <a
-                                        href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.term.goId}"
-                                        target="_blank"><i class="fa fa-external-link fa-sm"
-                                                           style="font-size: 0.7em;"/> </a>
+                                <p:rowToggler/>
                             </p:column>
                             <p:column filterBy="#{entry.term.goId}"
                                       filterMatchMode="contains" sortBy="#{entry.term.goId}"
                                       headerText="Id" style="width:120px;">
-                                <h:outputText value="#{entry.term.goId}"/>
+                                <comps:GOIdTableCell value="#{entry.term}"/>
                             </p:column>
                             <p:column filterBy="#{entry.term.aspect}" filterMatchMode="in"
                                       sortBy="#{entry.term.aspect}" headerText="Aspect"
@@ -451,18 +451,84 @@
                                       filterFunction="#{enrichmentView.filterByNumberLT}"
                                       style="width:120px;"
                                       styleClass="stability-gradient stability-gradient#{entry.stabilityQuantile}">
+                                <p:commandLink actionListener="#{enrichmentView.createStabilityChart(entry.term)}"
+                                               oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);">
+                                    <i class="fa fa-line-chart emphasize-hover" style="margin-right: 5px;"/>
+                                </p:commandLink>
                                 <h:outputText value="#{entry.stability.score}">
                                     <f:convertNumber type="number"/>
                                 </h:outputText>
                             </p:column>
 
+                            <p:rowExpansion>
+                                <p:outputPanel>
+                                    <p:tabView>
+                                        <p:tab title="Details">
+                                            <p:panelGrid columns="2">
+
+                                                <h:outputText value="Population Size"/>
+                                                <h:outputText
+                                                        value="#{entry.result.populationSize}"
+                                                        styleClass="sqlDialogText"/>
+
+                                                <h:outputText value="# Population Annotated"/>
+                                                <h:outputText
+                                                        value="#{entry.result.populationAnnotated}"
+                                                        styleClass="sqlDialogText"/>
+
+                                                <h:outputText value="Hit List Size"/>
+                                                <h:outputText
+                                                        value="#{entry.result.sampleSize}"
+                                                        styleClass="sqlDialogText"/>
+
+                                                <h:outputText value="# Hit List Annotated"/>
+                                                <h:outputText
+                                                        value="#{entry.result.sampleAnnotated}"
+                                                        styleClass="sqlDialogText"/>
+
+                                                <h:outputText value="# Hit List Expected"/>
+                                                <h:outputText
+                                                        value="#{entry.result.expected}"
+                                                        styleClass="sqlDialogText">
+                                                    <f:convertNumber type="number" pattern="#.##E0"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Rank"/>
+                                                <h:outputText
+                                                        value="#{entry.result.fractionalRank}"
+                                                        styleClass="sqlDialogText"/>
+
+                                                <h:outputText value="P-Value"/>
+                                                <h:outputText
+                                                        value="#{entry.result.pvalue}"
+                                                        styleClass="sqlDialogText">
+                                                    <f:convertNumber type="number" pattern="#.##E0"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Stability Score"/>
+                                                <h:outputText
+                                                        value="#{entry.stability.score}"
+                                                        styleClass="sqlDialogText">
+                                                    <f:convertNumber type="number"/>
+                                                </h:outputText>
+
+                                                <h:outputText value="Stability Score Avg"/>
+                                                <h:outputText
+                                                        value="#{entry.stability.averageScore}"
+                                                        styleClass="sqlDialogText">
+                                                    <f:convertNumber type="number"/>
+                                                </h:outputText>
+
+                                            </p:panelGrid>
+                                        </p:tab>
+                                        <p:tab title="Annotated Genes from Hit List">
+                                            <comps:geneTable value="#{enrichmentView.analysis.getGeneSet(entry.edition, entry.term)}"/>
+                                        </p:tab>
+                                    </p:tabView>
+                                </p:outputPanel>
+                            </p:rowExpansion>
+
                         </p:dataTable>
-                        <p:contextMenu for="tableEnrichment">
-                            <p:menuitem value="View" icon="ui-icon-search"
-                                        actionListener="#{enrichmentView.viewEnrichmentTableValue()}"
-                                        update=":enrichmentResultDetailsDlg"
-                                        oncomplete="PF('enrichmentResultDetailsWdg').show()"/>
-                        </p:contextMenu>
                     </p:outputPanel>
                 </p:tab>
 
@@ -519,106 +585,6 @@
 
 
                 </p:panelGrid>
-            </p:outputPanel>
-        </p:dialog>
-
-        <p:dialog id="enrichmentResultDetailsDlg" header="Result Details"
-                  widgetVar="enrichmentResultDetailsWdg" modal="false"
-                  showEffect="fade" hideEffect="fade" resizable="false" dynamic="true"
-                  fitViewport="true" closeOnEscape="true">
-            <p:outputPanel style="text-align:center;">
-                <p:tabView id="enrichmentResultDetailsTabView">
-                    <p:tab title="General">
-                        <p:panelGrid columns="2">
-                            <h:outputText value="Edition"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.edition.edition} : #{enrichmentView.viewEnrichmentRow.edition.date}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="Id"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.term.goId}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="Aspect"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.term.aspect}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="Name"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.term.name}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="Population Size"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.result.populationSize}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="Sample Size"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.result.sampleSize}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="Population Annotated"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.result.populationAnnotated}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="Sample Annotated"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.result.sampleAnnotated}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="Expected Annotations"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.result.expected}"
-                                    styleClass="sqlDialogText">
-                                <f:convertNumber type="number" pattern="#.##E0"/>
-                            </h:outputText>
-
-                            <h:outputText value="Rank"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.result.fractionalRank}"
-                                    styleClass="sqlDialogText"/>
-
-                            <h:outputText value="P-Value"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.result.pvalue}"
-                                    styleClass="sqlDialogText">
-                                <f:convertNumber type="number" pattern="#.##E0"/>
-                            </h:outputText>
-
-                            <h:outputText value="Stability Score"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.stability.score}"
-                                    styleClass="sqlDialogText">
-                                <f:convertNumber type="number"/>
-                            </h:outputText>
-
-                            <h:outputText value="Stability Score Avg"/>
-                            <h:outputText
-                                    value="#{enrichmentView.viewEnrichmentRow.stability.averageScore}"
-                                    styleClass="sqlDialogText">
-                                <f:convertNumber type="number"/>
-                            </h:outputText>
-
-                        </p:panelGrid>
-                    </p:tab>
-                    <p:tab title="Genes">
-                        <p:dataTable var="gene" value="#{enrichmentView.viewEnrichmentRowGeneSet}" style="width:784px;"
-                                     scrollHeight="300" scrollable="true">
-                            <p:column headerText="Symbol" style="width:120px;">
-                                <a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
-                                   target="_blank">#{gene.symbol}</a>
-                            </p:column>
-
-                            <p:column headerText="Description">
-                                <h:outputText value="#{gene.name}"/>
-                            </p:column>
-                        </p:dataTable>
-                    </p:tab>
-                </p:tabView>
             </p:outputPanel>
         </p:dialog>
 
@@ -691,8 +657,26 @@
                              update=":itemSelectSimilarityDlg"
                              oncomplete="PF('itemSelectSimilarityWdg').show()"
                              actionListener="#{enrichmentView.fetchSimilarityInformation}"/>
+            <p:remoteCommand name="fetchGraph"
+                             oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
+                             actionListener="#{geneView.fetchTermGraph}"/>
 
         </h:form>
+
+        <p:dialog id="graphDlg"
+                  header="Ancestor Chart"
+                  widgetVar="graphDlgWdg"
+                  modal="false"
+                  showEffect="fade"
+                  hideEffect="fade"
+                  resizable="false"
+                  height="600px;"
+                  width="800px;"
+                  style="max-width:80%;max-height:80%;"
+                  closeOnEscape="true"
+        >
+            <svg id="dagDialog" height="500" width="700"/>
+        </p:dialog>
 
         <p:dialog id="itemSelectEnrichmentDlg" header="Data Point Information"
                   widgetVar="itemSelectEnrichmentWdg" modal="false" showEffect="fade"
