@@ -83,20 +83,18 @@
 
                     <p:commandLink update=":geneDetail"
                                    oncomplete="PF('geneDialog').show()" title="View Detail"
-                                   styleClass="ui-icon ui-icon-search"
-                                   style="float:left;margin-right:10px">
+                                   styleClass="ui-icon ui-icon-search">
                         <f:setPropertyActionListener value="#{gene}"
                                                      target="#{enrichmentView.viewGene}"/>
                     </p:commandLink>
                     <p:commandLink update=":globalGrowl, :formSelect:geneList"
                                    title="Remove" action="#{enrichmentView.removeGene}"
-                                   styleClass="ui-icon ui-icon-trash"
-                                   style="float:left;margin-right:10px">
+                                   styleClass="ui-icon ui-icon-trash">
                         <f:setPropertyActionListener value="#{gene}"
                                                      target="#{enrichmentView.geneToRemove}"/>
                     </p:commandLink>
-                    <h:outputText value="#{gene.symbol}" style="display:inline-block;margin-right:10px"/>
-                    <h:outputText style="float:right;"
+                    <h:outputText value="#{gene.symbol}" style="margin-right:10px;width:80px;"/>
+                    <h:outputText style="width:175px;"
                                   value="${gene.name.length() > 30 ? ''.concat(fn:substring(gene.name, 0, 30)).concat('...') : gene.name}"
                                   title="#{gene.name.length() > 30 ? gene.name : ''}"/>
                     <f:facet name="footer">

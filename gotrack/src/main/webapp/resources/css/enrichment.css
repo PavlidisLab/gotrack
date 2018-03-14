@@ -11,8 +11,18 @@ table.no-border, table.no-border tr, table.no-border td {
   border-style: none !important;
  }
  
-li.ui-datalist-item {
-	margin-bottom:5px;
+#left li.ui-datalist-item {
+	line-height: 16px;
+}
+
+#left li.ui-datalist-item > span {
+	display:inline-block;
+	vertical-align: middle;
+}
+#left li.ui-datalist-item > a {
+	display: inline-block;
+	vertical-align: sub;
+	margin-right:10px;
 }
 
 div.geneList {
