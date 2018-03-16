@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.beans.service;
 
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.analysis.*;
 import ubc.pavlab.gotrack.beans.Cache;
@@ -39,7 +40,7 @@ import java.util.Set;
 
 /**
  * TODO Document Me
- * 
+ *
  * @author mjacobson
  * @version $Id$
  */
@@ -76,24 +77,26 @@ public class EnrichmentService implements Serializable {
 
     /**
      * Runs enrichment/similarity/stability analyses given input settings.
-     * 
-     * @param genes hitlist
-     * @param species species id
-     * @param mtc method of multiple tests correction
-     * @param thresh Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
-     * @param min minimum geneset size a specific term must have to be included in results
-     * @param max maximum geneset size a specific term must have to be included in results
-     * @param aspects only add these aspects, ignore filter if null or empty
-     * @param scm method for similarity comparison
-     * @param topN number of top terms to use for top N series
-     * @param statusPoller poller for live status updates
+     *
+     * @param genes             hitlist
+     * @param species           species id
+     * @param enrichmentOptions Enrichment options
+     * @param scm               method for similarity comparison
+     * @param topN              number of top terms to use for top N series
+     * @param statusPoller      poller for live status updates
      * @return Container class holding the enrichment and stability/similarity analyses
      */
-    public CombinedAnalysis combinedAnalysis( Set<Gene> genes, Species species, MultipleTestCorrection mtc, double thresh,
-                                              int min, int max, Set<Aspect> aspects, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
+    public CombinedAnalysis combinedAnalysis( Set<Gene> genes, Species species, EnrichmentAnalysisOptions enrichmentOptions, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
 
         statusPoller.newStatus( "Starting Enrichment Analysis", 0 );
-        EnrichmentAnalysis analysis = enrichment( genes, species, mtc, thresh, min, max, aspects, statusPoller );
+        EnrichmentAnalysis analysis = enrichment( genes,
+                species,
+                enrichmentOptions.getMultipleTestCorrection(),
+                enrichmentOptions.getThreshold(),
+                enrichmentOptions.getMinAnnotatedPopulation(),
+                enrichmentOptions.getMaxAnnotatedPopulation(),
+                Sets.newHashSet( enrichmentOptions.getAspects() ),
+                statusPoller );
 
         if ( analysis == null ) {
             statusPoller.newStatus( "Failed", 100 );
@@ -120,14 +123,14 @@ public class EnrichmentService implements Serializable {
 
     /**
      * Runs enrichment/similarity/stability analyses given input settings.
-     * 
-     * @param genes hitlist
-     * @param species species id
-     * @param mtc method of multiple tests correction
-     * @param thresh Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
-     * @param min minimum geneset size a specific term must have to be included in results
-     * @param max maximum geneset size a specific term must have to be included in results
-     * @param aspects only add these aspects, ignore filter if null or empty
+     *
+     * @param genes        hitlist
+     * @param species      species id
+     * @param mtc          method of multiple tests correction
+     * @param thresh       Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
+     * @param min          minimum geneset size a specific term must have to be included in results
+     * @param max          maximum geneset size a specific term must have to be included in results
+     * @param aspects      only add these aspects, ignore filter if null or empty
      * @param statusPoller poller for live status updates
      * @return Container class holding the enrichment and stability/similarity analyses
      */
@@ -160,9 +163,9 @@ public class EnrichmentService implements Serializable {
     /**
      * Retrieves data from cache and/or from database for given hit list, writing live status udpates to the
      * StatusPoller.
-     * 
-     * @param genes set of genes to either retrieve
-     * @param species species id of genes
+     *
+     * @param genes        set of genes to either retrieve
+     * @param species      species id of genes
      * @param filterAspect keep only terms of these aspects, if null or empty the filter is not applied
      * @param statusPoller poller for live status updates
      * @return data necessary for enrichment of given hitlist
@@ -221,7 +224,7 @@ public class EnrichmentService implements Serializable {
                 statusPoller.completeStatus();
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
-                        + ( genes.size() - genesToLoad.size() ) + ") from cache" );
+                        + (genes.size() - genesToLoad.size()) + ") from cache" );
             } else {
                 log.info( "Retrieved all (" + genes.size() + ") genes from cache" );
 
@@ -243,17 +246,17 @@ public class EnrichmentService implements Serializable {
 
     /**
      * Add a new gene/data pair to the data of previously retrieved genes.
-     * 
-     * @param g gene we are adding data for
+     *
+     * @param g              gene we are adding data for
      * @param cachedGeneData cached data for given gene that will be added to enrichment data
-     * @param filterAspect only add these aspects, ignore filter if null or empty
-     * @param data enrichment data for previously retrieved genes
+     * @param filterAspect   only add these aspects, ignore filter if null or empty
+     * @param data           enrichment data for previously retrieved genes
      */
     private void addGeneData( Gene g, Map<Edition, Set<GeneOntologyTerm>> cachedGeneData, Set<Aspect> filterAspect,
-            Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data ) {
+                              Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> data ) {
 
-        boolean bypassFilter = ( filterAspect == null || filterAspect.size() == 0
-                || filterAspect.size() == Aspect.values().length );
+        boolean bypassFilter = (filterAspect == null || filterAspect.size() == 0
+                || filterAspect.size() == Aspect.values().length);
 
         for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : cachedGeneData.entrySet() ) {
             Edition ed = editionEntry.getKey();
@@ -285,7 +288,7 @@ public class EnrichmentService implements Serializable {
 
     /**
      * Propagates the term sets in data retrieved from database
-     * 
+     *
      * @param geneGOMapFromDB unpropagated data retrieved straight from database
      * @return Map adding the propagated terms into the term sets
      */
@@ -315,12 +318,11 @@ public class EnrichmentService implements Serializable {
     }
 
     /**
-     * 
      * Calculate total number of genes existing in each edition from the hitlist
-     * 
+     *
      * @param geneGOMap enrichment data
      * @return Map of Edition -> Number of genes from hit list that existed in that edition (existence meaning had any
-     *         annotations)
+     * annotations)
      */
     private Map<Edition, Integer> calculateSampleSizes( Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap ) {
         log.info( "Retrieving sample sizes" );
@@ -348,14 +350,14 @@ public class EnrichmentService implements Serializable {
 
     /**
      * Runs enrichment/similarity/stability analyses given input settings.
-     * 
-     * @param eds set of editions to run the analysis on
-     * @param genes hitlist
+     *
+     * @param eds     set of editions to run the analysis on
+     * @param genes   hitlist
      * @param species species id
-     * @param mtc method of multiple tests correction
-     * @param thresh Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
-     * @param min minimum geneset size a specific term must have to be included in results
-     * @param max maximum geneset size a specific term must have to be included in results
+     * @param mtc     method of multiple tests correction
+     * @param thresh  Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
+     * @param min     minimum geneset size a specific term must have to be included in results
+     * @param max     maximum geneset size a specific term must have to be included in results
      * @param aspects only add these aspects, ignore filter if null or empty
      * @return Enrichment Results
      */
@@ -377,14 +379,14 @@ public class EnrichmentService implements Serializable {
 
     /**
      * Runs enrichment/similarity/stability analyses given input settings.
-     * 
-     * @param ed edition
-     * @param genes hitlist
+     *
+     * @param ed      edition
+     * @param genes   hitlist
      * @param species species id
-     * @param mtc method of multiple tests correction
-     * @param thresh Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
-     * @param min minimum geneset size a specific term must have to be included in results
-     * @param max maximum geneset size a specific term must have to be included in results
+     * @param mtc     method of multiple tests correction
+     * @param thresh  Either p-value cutoff if using Bonferroni or FDR level if using BH step-up
+     * @param min     minimum geneset size a specific term must have to be included in results
+     * @param max     maximum geneset size a specific term must have to be included in results
      * @param aspects only add these aspects, ignore filter if null or empty
      * @return Enrichment Results
      */
@@ -411,10 +413,10 @@ public class EnrichmentService implements Serializable {
     /**
      * Retrieves data from cache/database for given hit list in given edition.
      *
-     * @param ed Edition to retrieve data from
-     * @param genes set of genes to either retrieve
+     * @param ed             Edition to retrieve data from
+     * @param genes          set of genes to either retrieve
      * @param currentSpecies species id of genes
-     * @param filterAspect keep only terms of these aspects, if null or empty the filter is not applied
+     * @param filterAspect   keep only terms of these aspects, if null or empty the filter is not applied
      * @return data necessary for enrichment of given hitlist
      */
     private Map<GeneOntologyTerm, Set<Gene>> retrieveData( Edition ed, Set<Gene> genes, Species currentSpecies,
@@ -460,7 +462,7 @@ public class EnrichmentService implements Serializable {
                 }
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
-                        + ( genes.size() - genesToLoad.size() ) + ") from cache" );
+                        + (genes.size() - genesToLoad.size()) + ") from cache" );
             } else {
                 log.info( "Retrieved all (" + genes.size() + ") genes from cache" );
 
@@ -485,9 +487,9 @@ public class EnrichmentService implements Serializable {
     }
 
     private void addGeneData( Gene gene, Set<GeneOntologyTerm> goSet, Set<Aspect> filterAspect,
-            Map<GeneOntologyTerm, Set<Gene>> geneGOMap ) {
-        boolean bypassFilter = ( filterAspect == null || filterAspect.size() == 0
-                || filterAspect.size() == Aspect.values().length );
+                              Map<GeneOntologyTerm, Set<Gene>> geneGOMap ) {
+        boolean bypassFilter = (filterAspect == null || filterAspect.size() == 0
+                || filterAspect.size() == Aspect.values().length);
 
         for ( GeneOntologyTerm term : goSet ) {
             if ( bypassFilter || filterAspect.contains( term.getAspect() ) ) {
