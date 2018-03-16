@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+        PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"
+      xmlns:h="http://java.sun.com/jsf/html"
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:of="http://omnifaces.org/functions"
+      xmlns:composite="http://java.sun.com/jsf/composite"
+      xmlns:comps="http://java.sun.com/jsf/composite/composites"
+>
+<composite:interface>
+
+    <composite:attribute name="value"/>
+    <composite:attribute name="filteredValue"/>
+    <composite:attribute name="selection"/>
+    <composite:attribute name="header"/>
+
+</composite:interface>
+
+<composite:implementation>
+    <p:dataTable id="enrichmentTable" widgetVar="tableEnrichmentWdg"
+                 var="entry" value="#{cc.attrs.value}"
+                 sortMode="multiple" style="margin-bottom:0"
+                 emptyMessage="No enrichment data found for selected edition"
+                 filteredValue="#{cc.attrs.filteredValue}"
+                 rowStyleClass="#{entry.significant == true ? 'significant' : 'not-significant'}"
+                 styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
+                 scrollable="true" scrollHeight="300"
+                 selectionMode="multiple"
+                 selection="#{cc.attrs.selection}"
+                 rowKey="#{entry.term.goId}"
+                 liveScroll="true"
+                 scrollRows="25">
+        <p:ajax event="filter"
+                oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))"/>
+
+        <f:facet name="header">
+            <p:outputPanel id="headerPanel" rendered="#{cc.attrs.header != null}">
+                <h:outputText value="#{cc.attrs.header}"/>
+            </p:outputPanel>
+        </f:facet>
+
+        <f:facet name="footer">
+            <!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
+            &#8203;
+            <h:commandLink>
+                <h:graphicImage library="img" name="excel.png" width="24"/>
+                <p:dataExporter type="xls" target="enrichmentTable"
+                                fileName="enrichment"/>
+            </h:commandLink>
+
+            <h:commandLink>
+                <h:graphicImage library="img" name="pdf.png" width="24"/>
+                <p:dataExporter type="pdf" target="enrichmentTable"
+                                fileName="enrichment"/>
+            </h:commandLink>
+
+            <h:commandLink>
+                <h:graphicImage library="img" name="csv.png" width="24"/>
+                <p:dataExporter type="csv" target="enrichmentTable"
+                                fileName="enrichment"/>
+            </h:commandLink>
+
+            <h:commandLink>
+                <h:graphicImage library="img" name="xml.png" width="24"/>
+                <p:dataExporter type="xml" target="enrichmentTable"
+                                fileName="enrichment"/>
+            </h:commandLink>
+        </f:facet>
+
+        <p:column style="width:10px;" exportable="false">
+            <p:rowToggler/>
+        </p:column>
+        <p:column filterBy="#{entry.term.goId}"
+                  filterMatchMode="contains" sortBy="#{entry.term.goId}"
+                  headerText="Id" style="width:120px;" exportable="false">
+            <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.term.goId}"
+               target="_blank" style="text-decoration: none;">
+                <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
+            </a>
+            <p:commandLink actionListener="#{geneView.fetchTermGraph(entry.term)}"
+                           oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
+                <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
+            </p:commandLink>
+            <p:link value="#{entry.term.goId}" outcome="terms" target="_blank">
+                <f:param name="query" value="#{entry.term.goId}"/>
+            </p:link>
+        </p:column>
+        <p:column headerText="Id" style="display: none;">
+            <h:outputText value="#{entry.term.goId}"/>
+        </p:column>
+        <p:column filterBy="#{entry.term.aspect}" filterMatchMode="in"
+                  sortBy="#{entry.term.aspect}" headerText="Aspect"
+                  style="width:150px;">
+            <f:facet name="filter">
+                <p:selectManyButton
+                        onchange="PF('tableEnrichmentWdg').filter()"
+                        style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
+                    <f:selectItems value="#{cache.aspects}"
+                                   var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}"/>
+                </p:selectManyButton>
+            </f:facet>
+            <h:outputText value="#{entry.term.aspect.label}"/>
+        </p:column>
+        <p:column filterBy="#{entry.term.name}"
+                  filterMatchMode="contains" sortBy="#{entry.term.name}"
+                  headerText="Name" style="width:500px;">
+            <h:outputText value="#{entry.term.name}"/>
+        </p:column>
+
+        <p:column filterBy="#{entry.result.populationAnnotated}"
+                  headerText="Set Size"
+                  sortBy="#{entry.result.populationAnnotated}"
+                  filterFunction="#{enrichmentView.filterByNumberLT}"
+                  style="width:70px;">
+            <h:outputText value="#{entry.result.populationAnnotated}">
+                <f:convertNumber type="number"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column filterBy="#{entry.result.sampleAnnotated}"
+                  headerText="Hits" sortBy="#{entry.result.sampleAnnotated}"
+                  filterFunction="#{enrichmentView.filterByNumberLT}"
+                  style="width:60px;">
+            <h:outputText value="#{entry.result.sampleAnnotated}">
+                <f:convertNumber type="number"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column filterBy="#{entry.result.pvalue}" headerText="P-Value"
+                  sortBy="#{entry.result.pvalue}"
+                  filterFunction="#{enrichmentView.filterByNumberLT}"
+                  style="width:120px;">
+            <h:outputText value="#{entry.result.pvalue}"
+                          rendered="#{entry.result.pvalue lt 0.0001}">
+                <f:convertNumber type="number" pattern="#.##E0"/>
+            </h:outputText>
+            <h:outputText value="#{entry.result.pvalue}"
+                          rendered="#{entry.result.pvalue ge 0.0001}">
+                <f:convertNumber type="number" pattern="0.######"/>
+            </h:outputText>
+        </p:column>
+
+        <p:column filterBy="#{entry.stability.score}" headerText="Recent Stability"
+                  sortBy="#{entry.stability.score}"
+                  filterFunction="#{enrichmentView.filterByNumberLT}"
+                  style="width:120px;"
+                  styleClass="stability-gradient stability-gradient#{entry.stabilityQuantile}">
+            <p:commandLink actionListener="#{enrichmentView.createStabilityChart(entry.term)}"
+                           oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);">
+                <i class="fa fa-line-chart emphasize-hover" style="margin-right: 5px;"/>
+            </p:commandLink>
+            <h:outputText value="#{entry.stability.score}">
+                <f:convertNumber type="number"/>
+            </h:outputText>
+        </p:column>
+
+        <p:rowExpansion>
+            <p:outputPanel>
+                <p:tabView>
+                    <p:tab title="Details">
+                        <p:panelGrid columns="2">
+
+                            <h:outputText value="Population Size"/>
+                            <h:outputText
+                                    value="#{entry.result.populationSize}"
+                                    styleClass="sqlDialogText"/>
+
+                            <h:outputText value="# Population Annotated"/>
+                            <h:outputText
+                                    value="#{entry.result.populationAnnotated}"
+                                    styleClass="sqlDialogText"/>
+
+                            <h:outputText value="Hit List Size"/>
+                            <h:outputText
+                                    value="#{entry.result.sampleSize}"
+                                    styleClass="sqlDialogText"/>
+
+                            <h:outputText value="# Hit List Annotated"/>
+                            <h:outputText
+                                    value="#{entry.result.sampleAnnotated}"
+                                    styleClass="sqlDialogText"/>
+
+                            <h:outputText value="# Hit List Expected"/>
+                            <h:outputText
+                                    value="#{entry.result.expected}"
+                                    styleClass="sqlDialogText">
+                                <f:convertNumber type="number" pattern="#.##E0"/>
+                            </h:outputText>
+
+                            <h:outputText value="Rank"/>
+                            <h:outputText
+                                    value="#{entry.result.fractionalRank}"
+                                    styleClass="sqlDialogText"/>
+
+                            <h:outputText value="P-Value"/>
+                            <h:outputText
+                                    value="#{entry.result.pvalue}"
+                                    styleClass="sqlDialogText">
+                                <f:convertNumber type="number" pattern="#.##E0"/>
+                            </h:outputText>
+
+                            <h:outputText value="Stability Score"/>
+                            <h:outputText
+                                    value="#{entry.stability.score}"
+                                    styleClass="sqlDialogText">
+                                <f:convertNumber type="number"/>
+                            </h:outputText>
+
+                            <h:outputText value="Stability Score Avg"/>
+                            <h:outputText
+                                    value="#{entry.stability.averageScore}"
+                                    styleClass="sqlDialogText">
+                                <f:convertNumber type="number"/>
+                            </h:outputText>
+
+                        </p:panelGrid>
+                    </p:tab>
+                    <p:tab title="Annotated Genes from Hit List">
+                        <comps:geneTable value="#{enrichmentView.combinedAnalysis.enrichmentAnalysis.getGeneSet(entry.edition, entry.term)}"/>
+                    </p:tab>
+                </p:tabView>
+            </p:outputPanel>
+        </p:rowExpansion>
+
+    </p:dataTable>
+
+
+
+</composite:implementation>
+</html>

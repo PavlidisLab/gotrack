@@ -17,6 +17,10 @@ var showLoadingSpinner = function () {
 //});
 //});
 
+function handleFetchGraphDialog(xhr, status, args) {
+    gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
+}
+
 function runEnrichmentOnClick() {
     $('#progressBarContainer').removeClass('disabled');
     try {
@@ -79,19 +83,13 @@ function runEnrichmentComplete(xhr, status, args) {
 
         createSimilarityChart(xhr, status, args);
 
-        var wdg = PF('tabEnrichWdg');
-        for (var j = 0; j < wdg.getLength(); j++) {
-            wdg.enable(j);
-        }
-
     } catch (e) {
         console.log(e);
     }
 }
 
 function centerResize() {
-    var activeTabIndex = PF('tabEnrichWdg').getActiveIndex();
-    tabShowed(activeTabIndex);
+    onresize();
 }
 
 function escDialog() {
@@ -133,40 +131,48 @@ function postAjaxSortTable(datatable) {
     datatable.sort(selectedColumn, sortorder, datatable.cfg.multiSort);
 }
 
-function tabChanged(index) {
-    alert("Tab Changed:" + index);
-}
-function tabShowed(index) {
-    if (index == 0) {
-        plotting.charts.terms.resize();
-    } else if (index == 1) {
-        // plotting.charts.similarity.create();
-        plotting.charts.similarity.resize();
-    }
 
-}
 function enrichmentChartHide() {
     plotting.charts.enrichment.destroy();
     plotting.charts.enrichmentMaster.destroy();
 }
 
 function createTermsChart(xhr, status, args) {
-    console.log(xhr, status, args);
+    // console.log(xhr, status, args);
 
     var options = plotting.defaultHCOptions('hc_terms_container', args.HC_terms.chart);
-    plotting.addLegend(options);
+    commonOptions(options, args.HC);
+
+    options.xAxis.crosshair = {
+        width: 1,
+        color: 'red',
+        dashStyle: 'shortdot'
+    };
+
+    options.subtitle = {
+        text: "<b>&lt;Click&gt;</b> to view enrichment results at a specific date.",
+        style: {"font-size": "10px"}
+    };
 
     plotting.charts.terms.options = options;
-    plotting.charts.terms.recreate(options);
+    plotting.charts.terms.recreate(options, function (c) {
+        redrawSelectedEditionPlotLine(c, c.series[0].points[c.series[0].points.length - 1]);
+        plotting.mainCharts.push(c);
+    });
 }
 
 function createSimilarityChart(xhr, status, args) {
-    console.log(xhr, status, args);
+    // console.log(xhr, status, args);
 
     var options = plotting.defaultHCOptions('hc_similarity_container', args.HC_similarity.chart);
-    plotting.addLegend(options);
+    commonOptions(options, args.HC);
 
-    options.yAxis.minorTickInterval = 0.05;
+    options.subtitle = {
+        text: "<b>&lt;Click&gt;</b> to view similarity details at a specific date.",
+        style: {"font-size": "10px"}
+    };
+
+    // options.yAxis.minorTickInterval = 0.05;
 
     options.chart.events = {
         click: function (event) {
@@ -188,8 +194,61 @@ function createSimilarityChart(xhr, status, args) {
 
 
     plotting.charts.similarity.options = options;
-    plotting.charts.similarity.recreate(options);
+    plotting.charts.similarity.recreate(options, function (c) {
+        redrawSelectedEditionPlotLine(c, c.series[0].points[c.series[0].points.length - 1]);
+        plotting.mainCharts.push(c);
+    });
 
+}
+
+function destroySelectedEdition(c) {
+    c.xAxis[0].removePlotLine('plot-line-selected');
+}
+
+function redrawSelectedEditionPlotLine(c, p) {
+    var chart = c;
+
+    destroySelectedEdition(chart);
+
+    chart.xAxis[0].addPlotLine({
+        value: p.x,
+        color: '#FF0000',
+        width: 1,
+        id: 'plot-line-selected'
+    });
+}
+
+function commonOptions(options, config) {
+    plotting.addLegend(options);
+    options.legend.layout = 'horizontal';
+    options.legend.align = 'center';
+    options.legend.verticalAlign = 'bottom';
+    options.legend.margin = 0;
+
+    options.credits = {enabled:false};
+
+    var clickBehaviour = function (event, p) {
+        fetchPointData([{name: 'edition', value: GLOBALS.dateToEdition[p.x]}]);
+        plotting.mainCharts.forEach(function (c) {
+            redrawSelectedEditionPlotLine(c, p);
+        });
+    };
+
+    options.plotOptions.series.point = {
+        events: {
+            click: function (event) {
+                var p = this;
+                clickBehaviour(event, p);
+            }
+        }
+    };
+
+    options.chart.events = {
+        click: function (event) {
+            var p = this.hoverPoint;
+            clickBehaviour(event, p);
+        }
+    };
 }
 
 function handleGraphSelected(xhr, status, args) {
@@ -646,6 +705,7 @@ function enrichmentChartDlgResize() {
 function reInitializeCharts() {
     try {
         GLOBALS = {};
+        plotting.mainCharts = [];
         plotting.removeAllCharts();
         plotting.createNewChart('terms');
         plotting.createNewChart('similarity');
@@ -699,9 +759,9 @@ $(document).ready(function () {
 
     // Resize plots on window resize
     window.onresize = function (event) {
-        var activeTabIndex = PF('tabEnrichWdg').getActiveIndex();
-        tabShowed(activeTabIndex);
-    }
+        plotting.charts.terms.resize();
+        plotting.charts.similarity.resize();
+    };
 
     /**
      * Extend the Axis.getLinePath method in order to visualize breaks with two parallel

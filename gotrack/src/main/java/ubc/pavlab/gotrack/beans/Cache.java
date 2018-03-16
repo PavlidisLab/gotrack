@@ -817,24 +817,22 @@ public class Cache implements Serializable {
         if ( query == null || species == null || fuzzyLimit < 1 ) return results;
         worstMatchLevel = worstMatchLevel == null ? GeneMatch.Level.NO_MATCH : worstMatchLevel;
 
-        String queryUpper = query.toUpperCase();
-
         RadixTree<ImmutableSet<Gene>> primaryRadix = speciesToPrimaryRadixGenes.get( species );
         RadixTree<ImmutableSet<Gene>> secondaryRadix = speciesToSecondaryRadixGenes.get( species );
 
 
-        results.addAll( searchGeneByExactMatch( queryUpper, primaryRadix ) );
+        results.addAll( searchGeneByExactMatch( query, primaryRadix ) );
         if ( worstMatchLevel.equals( GeneMatch.Level.PRIMARY ) || results.size() >= fuzzyLimit ) return results;
 
-        results.addAll( searchGeneByExactMatch( queryUpper, secondaryRadix ) );
+        results.addAll( searchGeneByExactMatch( query, secondaryRadix ) );
         if ( worstMatchLevel.equals( GeneMatch.Level.SYNONYM ) || results.size() >= fuzzyLimit ) return results;
 
-        Set<GeneMatch> prefix = searchGeneByPrefixMatch( queryUpper, primaryRadix );
+        Set<GeneMatch> prefix = searchGeneByPrefixMatch( query, primaryRadix );
         results.addAll( prefix );
         if ( worstMatchLevel.equals( GeneMatch.Level.PREFIX ) || results.size() >= fuzzyLimit ) return results;
 
         if ( prefix.isEmpty() ) {
-            results.addAll( searchGeneBySimilarMatch( queryUpper, primaryRadix ) );
+            results.addAll( searchGeneBySimilarMatch( query, primaryRadix ) );
         }
 
         return results;
@@ -863,7 +861,7 @@ public class Cache implements Serializable {
             return results;
         }
 
-        ImmutableSet<Gene> genes = radix.getValueForExactKey( query );
+        ImmutableSet<Gene> genes = radix.getValueForExactKey( query.toUpperCase() );
         if ( genes != null ) {
             GeneMatch.Type type = genes.size() > 1 ? GeneMatch.Type.MULTIPLE : GeneMatch.Type.SINGLE;
 
@@ -880,7 +878,7 @@ public class Cache implements Serializable {
             return results;
         }
 
-        List<ImmutableSet<Gene>> geneSets = Lists.newArrayList( radix.getValuesForKeysStartingWith( query ) );
+        List<ImmutableSet<Gene>> geneSets = Lists.newArrayList( radix.getValuesForKeysStartingWith( query.toUpperCase() ) );
         GeneMatch.Type type = geneSets.size() > 1 ? GeneMatch.Type.MULTIPLE : GeneMatch.Type.SINGLE;
 
         for ( ImmutableSet<Gene> genes : geneSets ) {
@@ -900,7 +898,7 @@ public class Cache implements Serializable {
             return results;
         }
 
-        List<ImmutableSet<Gene>> geneSets = Lists.newArrayList( radix.getValuesForClosestKeys( query ) );
+        List<ImmutableSet<Gene>> geneSets = Lists.newArrayList( radix.getValuesForClosestKeys( query.toUpperCase() ) );
         GeneMatch.Type type = geneSets.size() > 1 ? GeneMatch.Type.MULTIPLE : GeneMatch.Type.SINGLE;
 
         for ( ImmutableSet<Gene> genes : geneSets ) {

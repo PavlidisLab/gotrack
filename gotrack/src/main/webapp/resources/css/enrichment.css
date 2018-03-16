@@ -1,87 +1,97 @@
 #formSelect input.ui-inputfield {
-	width:50px;
+    width: 50px;
 }
 
 #formSelect input.ui-spinner-input {
-	width:50px;
+    width: 50px;
 }
 
 table.no-border, table.no-border tr, table.no-border td {
- border:none !important;
-  border-style: none !important;
- }
- 
-li.ui-datalist-item {
-	margin-bottom:5px;
+    border: none !important;
+    border-style: none !important;
+}
+
+#left li.ui-datalist-item {
+    line-height: 16px;
+}
+
+#left li.ui-datalist-item > span {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#left li.ui-datalist-item > a {
+    display: inline-block;
+    vertical-align: sub;
+    margin-right: 10px;
 }
 
 div.geneList {
-	/* width:500px */
+    /* width:500px */
 }
 
 div.geneList .ui-datalist-content {
-	height: 135px;
-  	overflow-y: auto;
+    height: 135px;
+    overflow-y: auto;
 }
 
 div.forceRight > a {
-	float:right;
+    float: right;
 }
 
-
 div.ui-table-footer-align-right > div.ui-datatable-footer {
-	text-align:right;
+    text-align: right;
 }
 
 div.ui-table-graph-float-left > div.ui-datatable-footer {
-	height:26px;
+    height: 26px;
 }
 
 div.ui-table-exporter-align-right > div.ui-datatable-footer > a {
-	float:right;
+    float: right;
 }
 
 div.ui-table-graph-align-left > div.ui-datatable-footer > button {
-	left: 50px;
-  	position: absolute;
-  	height: 26px;
+    left: 50px;
+    position: absolute;
+    height: 26px;
 }
 
 /* Footer Graph Left Align */
 
 div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph > button {
-	float:left;
-	height: 26px;
-	margin-left:10px;
+    float: left;
+    height: 26px;
+    margin-left: 10px;
 }
 
 div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph > div.ui-selectonemenu {
-	float:left;
-/* 	height: 26px; */
-	width: 90px;
+    float: left;
+    /* 	height: 26px; */
+    width: 90px;
 }
 
-div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph  span.ui-spinner {
-	float:left;
-	height: 26px;
+div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph span.ui-spinner {
+    float: left;
+    height: 26px;
 }
 
-div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph span.ui-spinner > input.ui-spinner-input{
-	width:30px;
+div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph span.ui-spinner > input.ui-spinner-input {
+    width: 30px;
 }
 
 div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph > span.text {
-	float:left;
-	line-height:26px;
-	margin-left:5px;
-	margin-right:5px;
+    float: left;
+    line-height: 26px;
+    margin-left: 5px;
+    margin-right: 5px;
 }
 
 div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph > span.text-separator {
-	float:left;
-	line-height:26px;
-	margin-left:15px;
-	margin-right:15px;
+    float: left;
+    line-height: 26px;
+    margin-left: 15px;
+    margin-right: 15px;
 }
 
 /* ************************ */
@@ -91,16 +101,16 @@ div.ui-table-graph-float-left > div.ui-datatable-footer > span.footer-graph > sp
 } */
 
 i.fa.fa-external-link.fa-sm:hover {
-	color:blue;
+    color: blue;
 }
 
 span.filter-spinner input {
-	width:75px;
+    width: 75px;
 }
 
 div.data-grid-height-restricted > div.ui-datagrid-content {
-  height: 300px;
-  overflow-y: auto;
+    height: 300px;
+    overflow-y: auto;
 }
 
 /* button.smallBtn {
@@ -112,7 +122,7 @@ button.smallBtn > span.fa {
 } */
 
 tr.ui-widget-content.significant td:nth-last-child(2) {
-	background:#DCF9D4;
+    background: #DCF9D4;
 }
 
 /* tr.ui-widget-content.not-significant td:last-child, tr.ui-widget-content.not-significant td:nth-last-child(2) {
@@ -121,106 +131,142 @@ tr.ui-widget-content.significant td:nth-last-child(2) {
 
 /** Color Gradient **/
 .stability-gradient.stability-gradient0 {
-	background: #FFFFFF
+    background: #FFFFFF
 }
+
 .stability-gradient.stability-gradient1 {
-	background: #70CD70;
+    background: #70CD70;
 }
+
 .stability-gradient.stability-gradient2 {
-	background: #7ACE70;
+    background: #7ACE70;
 }
+
 .stability-gradient.stability-gradient3 {
-	background: #85CF71;
+    background: #85CF71;
 }
+
 .stability-gradient.stability-gradient4 {
-	background: #90D071;
+    background: #90D071;
 }
+
 .stability-gradient.stability-gradient5 {
-	background: #9CD172;
+    background: #9CD172;
 }
+
 .stability-gradient.stability-gradient6 {
-	background: #A7D373;
+    background: #A7D373;
 }
+
 .stability-gradient.stability-gradient7 {
-	background: #B3D473;
+    background: #B3D473;
 }
+
 .stability-gradient.stability-gradient8 {
-	background: #BED574;
+    background: #BED574;
 }
+
 .stability-gradient.stability-gradient9 {
-	background: #CAD675;
+    background: #CAD675;
 }
+
 .stability-gradient.stability-gradient10 {
-	background: #D6D775;
+    background: #D6D775;
 }
+
 .stability-gradient.stability-gradient11 {
-	background: #D9CF76;
+    background: #D9CF76;
 }
+
 .stability-gradient.stability-gradient12 {
-	background: #DAC676;
+    background: #DAC676;
 }
+
 .stability-gradient.stability-gradient13 {
-	background: #DBBC77;
+    background: #DBBC77;
 }
+
 .stability-gradient.stability-gradient14 {
-	background: #DCB278;
+    background: #DCB278;
 }
+
 .stability-gradient.stability-gradient15 {
-	background: #DDA878;
+    background: #DDA878;
 }
+
 .stability-gradient.stability-gradient16 {
-	background: #DF9E79;
+    background: #DF9E79;
 }
+
 .stability-gradient.stability-gradient17 {
-	background: #E0937A;
+    background: #E0937A;
 }
+
 .stability-gradient.stability-gradient18 {
-	background: #E1897A;
+    background: #E1897A;
 }
+
 .stability-gradient.stability-gradient19 {
-	background: #E27E7B;
+    background: #E27E7B;
 }
+
 .stability-gradient.stability-gradient20 {
-	background: #E47C84;
+    background: #E47C84;
 }
 
 div.ui-overlaypanel-content {
-	width:600px;
-	text-align:left;
+    width: 600px;
+    text-align: left;
 }
 
 div.options-overlay > div.ui-overlaypanel-content {
-	width:400px;
+    width: 400px;
 }
 
 div.options-overlay > div.ui-overlaypanel-content > p {
-	margin:0.5em;
+    margin: 0.5em;
 }
 
 div#hc_enrichment_container g.highcharts-legend g.highcharts-legend-item > path {
-	stroke-width: 2 !important;
+    stroke-width: 2 !important;
 }
 
 /* Fixes white background display issue for tables embedded within other table headers */
 div.ui-datatable-header table > tbody > tr.ui-widget-content {
-	background: inherit;
+    background: inherit;
 }
 
 /* For HTML tooltips on Highcharts plot where GOTerm names make svg tooltips overly wide */
 .highcharts-tooltip > span {
-	height:auto;
-	width:250px;
-	overflow:auto;
-	white-space:normal !important;
+    height: auto;
+    width: 250px;
+    overflow: auto;
+    white-space: normal !important;
 }
-    
+
 .highcharts-tooltip > span > p {
-	margin:0 15px;
+    margin: 0 15px;
     text-indent: -15px;
-    line-height:1.2;
-    margin-top:3px;
+    line-height: 1.2;
+    margin-top: 3px;
 }
 
 #formSelect > div.ui-datalist ul {
     padding-left: 5px;
+}
+
+.chart-container {
+    width: 49%;
+    display: inline-block;
+    padding-bottom: 15px;
+}
+
+button.ui-button.absoluteBtn {
+    position: absolute;
+}
+
+button.ui-button.absoluteBtn > span {
+    left: 5px;
+    top: 5px;
+    z-index: 99999;
 }

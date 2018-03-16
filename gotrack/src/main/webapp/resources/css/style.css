@@ -185,6 +185,9 @@ div.fitted {
     border-bottom: 1px solid #3366CC;
     color: #5ea1ec;
 }
+.navigation a.nav-item.active {
+    border-bottom: 1px solid #3366CC;
+}
 
 .left-header {
     position: absolute;
