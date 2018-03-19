@@ -95,8 +95,11 @@
                                         <h:outputText value="ID"/>
                                     </p:column>
                                     <p:column>
-                                        <h:outputText value="#{termView.currentTerm.goId}"
-                                                      styleClass="sqlDialogText"/>
+                                        <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{termView.currentTerm.goId}"
+                                           target="_blank" style="text-decoration: none;">
+                                            <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
+                                        </a>
+                                        <h:outputText value="#{termView.currentTerm.goId}"/>
                                     </p:column>
                                 </p:row>
                                 <p:row>
@@ -104,8 +107,7 @@
                                         <h:outputText value="Aspect"/>
                                     </p:column>
                                     <p:column>
-                                        <h:outputText value="#{termView.currentTerm.aspect.label}"
-                                                      styleClass="sqlDialogText"/>
+                                        <h:outputText value="#{termView.currentTerm.aspect.label}"/>
                                     </p:column>
                                 </p:row>
                                 <p:row>
@@ -113,8 +115,7 @@
                                         <h:outputText value="Name"/>
                                     </p:column>
                                     <p:column>
-                                        <h:outputText value="#{termView.currentTerm.name}"
-                                                      styleClass="sqlDialogText"/>
+                                        <h:outputText value="#{termView.currentTerm.name}"/>
                                     </p:column>
                                 </p:row>
                                 <p:row>
@@ -122,8 +123,7 @@
                                         <h:outputText value="Definition"/>
                                     </p:column>
                                     <p:column>
-                                        <h:outputText value="#{termView.definition}"
-                                                      styleClass="sqlDialogText"/>
+                                        <h:outputText value="#{termView.definition}"/>
                                     </p:column>
                                 </p:row>
                             </p:panelGrid>
@@ -254,7 +254,9 @@
                         style="width:600px;text-align:left;">
             <p>The <b>Term Information</b> tab shows the most current information for the selected GO term.</p>
             <p>
-                <b>Ancestry Chart:</b> The most current ancestry chart for the selected GO term. The figure is interactive:
+                <b>Ancestry Chart:</b> The most current ancestry chart for the selected GO term.</p>
+            <p> <b>Note: Unlike QuickGO, we do not propagate across aspects.</b></p>
+            <p> The figure is interactive:
                 <i>select</i> a term to open its individual page,
                 <i>hover</i> a term to view more information and highlight its direct relations, <i>zoom</i>, and
                 <i>pan</i>.</p>
