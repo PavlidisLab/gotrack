@@ -229,8 +229,9 @@
 
                 <p:outputPanel styleClass="center fitted" style="margin-top:25px;text-align: center;white-space: nowrap;">
 
-                    <p style="font-size:1.4em;">Compare and/or download monthly annotations from #{statsService.latestSpeciesCnt} species over the last #{statsService.latestYearsAvailable} years.</p>
+                    <p style="font-size:1.4em;">Compare and/or download monthly annotations from #{cache.speciesList.size()} species over the last #{cache.availableYears} years.</p>
                     <div class="inline-middle">
+                        <h3>Database</h3>
                         <h:panelGrid columns="2" style="margin: 10px auto;" cellspacing="10">
                             <h:outputText value="Date last updated:"/>
                             <h:outputText value="#{statsService.latestUpdate}"/>
@@ -251,8 +252,8 @@
                             </h:outputText>
                         </h:panelGrid>
                     </div>
-                    <div class="inline-middle">
-
+                    <div class="inline-middle" style="vertical-align: top;">
+                        <h3>Download Annotations</h3>
                         <h:form id="annotationDownloadForm" style="margin-top:10px;">
                             <comps:annotationDownload id="annotationDownload1" />
                         </h:form>

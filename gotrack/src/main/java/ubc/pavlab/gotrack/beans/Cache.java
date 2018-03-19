@@ -112,7 +112,8 @@ public class Cache implements Serializable {
     private Map<String, Gene> accessionToGene = new ConcurrentHashMap<>();
 
     // Useful derived constants
-    private ImmutableList<Integer> availableYears;
+    private Map<Species, ImmutableList<Integer>> speciesYears = new ConcurrentHashMap<>();
+    private int availableYears;
 
     // These are used for autocompletion
     // *********************************
@@ -218,8 +219,12 @@ public class Cache implements Serializable {
         return AnnotationType.values();
     }
 
-    public ImmutableList<Integer> getAvailableYears() {
+    public int getAvailableYears() {
         return availableYears;
+    }
+
+    public ImmutableList<Integer> getSpeciesYears( Species species ) {
+        return speciesYears.get( species );
     }
 
 
@@ -293,7 +298,8 @@ public class Cache implements Serializable {
         }
 
         // Populate derived constants
-        Set<Integer> availableYearsBuilder = Sets.newHashSet();
+        Map<Species, Set<Integer>> availableYearsBuilder = Maps.newHashMap();
+        Calendar cal = Calendar.getInstance();
 
         // Create Edition objects
         for ( EditionDTO dto : cacheDAO.getAllEditions( speciesRestrictions ) ) {
@@ -313,12 +319,16 @@ public class Cache implements Serializable {
                 continue;
             }
 
-            // Populate derived constants
-            Calendar cal = Calendar.getInstance();
-            cal.setTime( dto.getDate() );
-            availableYearsBuilder.add( cal.get( Calendar.YEAR ) );
-
             Species species = speciesCache.get( dto.getSpecies() );
+
+            Set<Integer> years = availableYearsBuilder.get( species );
+            if ( years == null ) {
+                years = Sets.newHashSet();
+                availableYearsBuilder.put( species, years );
+            }
+            cal.setTime( dto.getDate() );
+            years.add( cal.get( Calendar.YEAR ) );
+
             Map<Integer, Edition> m = allEditions.get( species );
 
             if ( m == null ) {
@@ -349,12 +359,14 @@ public class Cache implements Serializable {
             }
         }
 
-        List<Integer> sortedYears = Lists.newArrayList(availableYearsBuilder);
-        Collections.sort(sortedYears);
-
-        availableYears = ImmutableList.copyOf( sortedYears );
-
-        //  ImmutableSet.Builder<Integer> availableYearsBuilder = ImmutableSet.builder();
+        Set<Integer> allYears = Sets.newHashSet();
+        for ( Entry<Species, Set<Integer>> speciesSetEntry : availableYearsBuilder.entrySet() ) {
+            List<Integer> sortedYears = Lists.newArrayList( speciesSetEntry.getValue() );
+            Collections.sort( sortedYears );
+            speciesYears.put( speciesSetEntry.getKey(), ImmutableList.copyOf( sortedYears ) );
+            allYears.addAll( speciesSetEntry.getValue() );
+        }
+        availableYears = allYears.size();
 
         currentGOEdition = Collections.max( allGOEditions.values() );
 
@@ -927,6 +939,10 @@ public class Cache implements Serializable {
         return currentEditions.get( species );
     }
 
+    public Collection<Edition> getCurrentEditions() {
+        return currentEditions.values();
+    }
+
     /**
      * @param species
      * @return UNORDERED collection of all editions for this species
@@ -990,29 +1006,29 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param ed      edition
-     * @param t       term
+     * @param ed edition
+     * @param t  term
      * @return count of genes annotated with this term or any of its children
      */
     public Integer getInferredAnnotationCount( Edition ed, GeneOntologyTerm t ) {
         if ( ed == null || t == null ) return null;
         Map<GeneOntologyTerm, Integer> tmp = inferredAnnotationCount.get( ed );
-        if (tmp != null) {
-            return tmp.get(t);
+        if ( tmp != null ) {
+            return tmp.get( t );
         }
         return null;
     }
 
     /**
-     * @param ed      edition
-     * @param t       term
+     * @param ed edition
+     * @param t  term
      * @return count of genes annotated with this term
      */
     public Integer getDirectAnnotationCount( Edition ed, GeneOntologyTerm t ) {
         if ( ed == null || t == null ) return null;
         Map<GeneOntologyTerm, Integer> tmp = directAnnotationCount.get( ed );
-        if (tmp != null) {
-            return tmp.get(t);
+        if ( tmp != null ) {
+            return tmp.get( t );
         }
         return null;
     }
@@ -1277,6 +1293,10 @@ public class Cache implements Serializable {
     public GOEdition getGOEdition( Integer edId ) {
         if ( edId == null ) return null;
         return allGOEditions.get( edId );
+    }
+
+    public Collection<GOEdition> getAllGOEditions() {
+        return allGOEditions.values();
     }
 
     // Application Level Caching get/set

@@ -36,7 +36,7 @@
 
             <p:outputLabel for="year_select" value="Year:" />
             <p:selectOneMenu id="year_select" value="#{annotationDownloadView.year}">
-                <f:selectItems value="#{cache.availableYears}"/>
+                <f:selectItems value="#{annotationDownloadView.allYears}"/>
                 <p:ajax event="change" process="@this" update="edition_select"
                         listener="#{annotationDownloadView.filterEditions}"/>
             </p:selectOneMenu>

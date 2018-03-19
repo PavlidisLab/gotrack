@@ -21,6 +21,7 @@ package ubc.pavlab.gotrack.beans.component;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
@@ -83,6 +84,10 @@ public class AnnotationDownloadView implements Serializable {
         cal.setTime( edition.getDate() );
         year = cal.get( Calendar.YEAR );
         filterEditions();
+    }
+
+    public ImmutableList<Integer> getAllYears() {
+        return cache.getSpeciesYears( session.getSpecies() );
     }
 
     public Integer getYear() {
