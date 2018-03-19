@@ -27,9 +27,11 @@ function handleFetchCharts(xhr, status, args) {
 
         var options = plotting.defaultHCOptions('hc-' + ckey, chart);
 
-        options.subtitle = {
-            text: args.species.scientificName
-        };
+        if (ckey !== 'ontSize' ) {
+            options.subtitle = {
+                text: args.species.scientificName
+            };
+        }
 
         if (syncGroups[ckey]) {
             plotting.addSynchronization(options);
