@@ -59,6 +59,12 @@ function runEnrichmentComplete(xhr, status, args) {
     }
 
     try {
+        PF('tableEnrichmentWdg').filter();
+    } catch (e) {
+
+    }
+
+    try {
         reInitializeCharts();
 
         if (!utility.isUndefined(args.dateToEdition)) {
