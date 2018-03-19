@@ -97,7 +97,7 @@
                                                  converter="speciesConverter">
                                     <f:selectItems value="#{cache.speciesList}" var="spec"
                                                    itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
-                                    <p:ajax event="change" process="@this" listener="#{annotationDownloadView.filterEditions}" oncomplete="fetchCharts();"/>
+                                    <p:ajax event="change" process="@this" onstart="plotting.removeAllCharts();$('.loading').show();" oncomplete="fetchCharts();"/>
                                 </p:selectOneMenu>
                             </h:panelGrid>
                         </h:form>
