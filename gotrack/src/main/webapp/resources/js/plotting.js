@@ -292,6 +292,9 @@
                 if (!isUndefined(series.extra) && !isUndefined(series.extra.title)) {
                     seriesOptions.title = series.extra.title;
                 }
+                if (!isUndefined(series.extra) && !isUndefined(series.extra.visible)) {
+                    seriesOptions.visible = series.extra.visible;
+                }
                 options.series.push(seriesOptions)
 
             }

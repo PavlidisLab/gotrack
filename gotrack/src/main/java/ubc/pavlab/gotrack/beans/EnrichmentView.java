@@ -364,8 +364,11 @@ public class EnrichmentView implements Serializable {
         ChartValues cv = new ChartValues( "GO Term Counts by Edition",
                 "Count of Unique GO Terms", "Date" );
         Series significantTerms = new Series( "Significant Terms" );
-        Series allTerms = new Series( "All Tested Terms" );
-        Series rejectedTerms = new Series( "Rejected Terms" );
+
+        SeriesExtra allTerms = new SeriesExtra( "All Tested Terms" );
+        allTerms.putExtra( "visible", false );
+        SeriesExtra rejectedTerms = new SeriesExtra( "Rejected Terms" );
+        rejectedTerms.putExtra( "visible", false );
 
         for ( Entry<Edition, Enrichment<GeneOntologyTerm, Gene>> rawResultsEntry : combinedAnalysis.getEnrichmentAnalysis().getRawResults()
                 .entrySet() ) {
