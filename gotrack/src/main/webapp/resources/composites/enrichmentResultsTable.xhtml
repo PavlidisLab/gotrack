@@ -32,7 +32,8 @@
                  selection="#{cc.attrs.selection}"
                  rowKey="#{entry.term.goId}"
                  liveScroll="true"
-                 scrollRows="25">
+                 scrollRows="25"
+                 resizableColumns="true">
         <p:ajax event="filter"
                 oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))"/>
 
@@ -106,7 +107,7 @@
         </p:column>
         <p:column filterBy="#{entry.term.name}"
                   filterMatchMode="contains" sortBy="#{entry.term.name}"
-                  headerText="Name" style="width:500px;">
+                  headerText="Name">
             <h:outputText value="#{entry.term.name}"/>
         </p:column>
 
