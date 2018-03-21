@@ -95,8 +95,8 @@ button.ui-button.icon-only span {
 
 button.ui-button.no-value {
 	height: 12px;
-	width: 2.2em;
-	outline:none;
+	width: 1.5em;
+	outline: none;
 }
 
 button.ui-button.no-background {
@@ -114,6 +114,8 @@ button.ui-button.no-background:hover {
 button.ui-button.no-value > span.ui-icon {
 	margin-left: -8px;
 	margin-top: -8px;
+    height: 100%;
+    width: 100%;
 }
 
 button.ui-button.no-value > span.ui-button-text {
@@ -264,9 +266,9 @@ div.inline {
 	padding: 5px;
 }
 
-.overlay-help {
-    padding: 0.5em 0;
-}
+/*.overlay-help {*/
+    /*padding: 0.5em 0;*/
+/*}*/
 
 .overlay-help p {
 	margin: 0.2em 1em;

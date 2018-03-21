@@ -215,7 +215,7 @@ tr.ui-widget-content.significant td:nth-last-child(2) {
 }
 
 div.ui-overlaypanel-content {
-    width: 600px;
+    max-width: 600px;
     text-align: left;
 }
 
@@ -266,7 +266,5 @@ button.ui-button.absoluteBtn {
 }
 
 button.ui-button.absoluteBtn > span {
-    left: 5px;
-    top: 5px;
     z-index: 99999;
 }
