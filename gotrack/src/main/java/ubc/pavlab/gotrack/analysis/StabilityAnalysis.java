@@ -106,6 +106,10 @@ public class StabilityAnalysis {
 
             // iterate over editions in order
             for ( Edition ed : orderedEditions ) {
+
+                // P-Value cutoff for significance
+                Double cutoff = analysis.getCutoff( ed );
+
                 EnrichmentResult er = data.get( ed );
                 if ( er != null ) {
                     if ( previousResult != null ) {
@@ -166,12 +170,12 @@ public class StabilityAnalysis {
                         }
 
                         // calculate scores (very similar to a coefficient of variation)
-                        double score = ( maxp - minp ) / er.getPvalue();
+                        double score = ( maxp - minp ) / cutoff;
                         runningScore += score;
                         runningScoreCnt++;
 
-                        scores.put( ed, new StabilityScore( b[0], b[1], minp, maxp, Math.log( score ),
-                                Math.log( runningScore / runningScoreCnt ) ) );
+                        scores.put( ed, new StabilityScore( b[0], b[1], minp, maxp, -Math.log( score ),
+                                -Math.log( runningScore / runningScoreCnt ) ) );
 
                         //                        if ( er.getPvalue() > maxp || er.getPvalue() < minp ) {
                         //                            log.debug( t.getGoId() );

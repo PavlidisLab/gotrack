@@ -185,10 +185,6 @@ public class EnrichmentView implements Serializable {
 
     // ********************************************************
 
-
-    // Stability Data
-    private Map<Edition, double[]> stabilityRangeCache = Maps.newConcurrentMap();
-
     // Enrichment Chart
     @Getter
     @Setter
@@ -298,7 +294,6 @@ public class EnrichmentView implements Serializable {
                 statusPoller );
 
         enrichmentResults = combinedAnalysis.getEnrichmentAnalysis().getResults();
-        stabilityRangeCache = Maps.newConcurrentMap();
 
         statusPoller.newStatus( "Creating tables and charts...", 90 );
 
@@ -797,38 +792,6 @@ public class EnrichmentView implements Serializable {
         selectedValueName = null;
     }
 
-    // Stability ---------------------------------------------------------------------------------------
-
-    private double[] stabilityRange( Edition ed ) {
-        if ( ed == null ) {
-            return null;
-        }
-
-        double[] range = stabilityRangeCache.get( ed );
-        if ( range == null ) {
-            // Figure out range of values for Stability scores
-
-            Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
-
-            double minStability = Double.POSITIVE_INFINITY;
-            double maxStability = Double.NEGATIVE_INFINITY;
-            for ( GeneOntologyTerm term : editionData.keySet() ) {
-                StabilityScore sc = combinedAnalysis.getStabilityAnalysis().getStabilityScores( term, ed );
-                Double v = sc.getScore();
-                if ( !v.isInfinite() && !v.isNaN() ) {
-                    if ( v > maxStability ) maxStability = v;
-                    if ( v < minStability ) minStability = v;
-                }
-            }
-            range = new double[2];
-            range[0] = minStability;
-            range[1] = maxStability;
-            stabilityRangeCache.put( ed, range );
-        }
-
-        return range;
-    }
-
     // Enrichment Table ---------------------------------------------------------------------------------------
 
     public void loadEnrichmentTableData() {
@@ -848,7 +811,6 @@ public class EnrichmentView implements Serializable {
         enrichmentTableEdition = ed;
 
         if ( ed != null ) {
-            double[] stabilityRange = stabilityRange( ed );
             Set<GeneOntologyTerm> sigTerms = combinedAnalysis.getEnrichmentAnalysis().getTermsSignificant( ed );
             Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
             for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
@@ -857,9 +819,9 @@ public class EnrichmentView implements Serializable {
                 StabilityScore sc = combinedAnalysis.getStabilityAnalysis().getStabilityScores( term, ed );
                 Double val = sc.getScore();
                 int quantile = 0;
-                if ( !val.isNaN() && !val.isInfinite() ) {
-                    quantile = (int) Math
-                            .round( 19 * (val - stabilityRange[0]) / (stabilityRange[1] - stabilityRange[0]) ) + 1;
+                if ( !val.isNaN() ) {
+                    // Scale from -8 -> 10
+                    quantile = (int) Math.max(1, Math.min(20, 20 - (Math.ceil( val ) + 8 ) ));
                 }
 
                 enrichmentTableValues

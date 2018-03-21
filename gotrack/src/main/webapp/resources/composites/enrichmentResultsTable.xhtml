@@ -153,9 +153,11 @@
                            oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);">
                 <i class="fa fa-line-chart emphasize-hover" style="margin-right: 5px;"/>
             </p:commandLink>
-            <h:outputText value="#{entry.stability.score}">
+            <h:outputText value="#{entry.stability.score}" rendered="#{entry.stability.score != 'NaN' and entry.stability.score != 'Infinity'}">
                 <f:convertNumber type="number"/>
             </h:outputText>
+            <h:outputText value="No Data" rendered="#{entry.stability.score == 'NaN'}"/>
+            <h:outputText value="No Change" rendered="#{entry.stability.score == 'Infinity'}"/>
         </p:column>
 
         <p:rowExpansion>
