@@ -289,3 +289,10 @@ div.inline {
     padding-top: 10px;
     padding-bottom: 10px;
 }
+/* Easier to see when button is selected */
+div.ui-selectmanybutton > div.ui-button.ui-widget.ui-state-default.ui-button-text-only {
+    color: rgba(0, 0, 0, 0.4);
+}
+div.ui-selectmanybutton > div.ui-button.ui-widget.ui-state-default.ui-button-text-only.ui-state-active {
+    color: inherit;
+}

@@ -22,12 +22,12 @@
 <composite:implementation>
     <p:dataTable id="enrichmentTable" widgetVar="tableEnrichmentWdg"
                  var="entry" value="#{cc.attrs.value}"
-                 sortMode="multiple" style="margin-bottom:0"
+                 sortMode="multiple" style="margin-bottom:0;max-height: 225px;"
                  emptyMessage="No enrichment data found for selected edition"
                  filteredValue="#{cc.attrs.filteredValue}"
                  rowStyleClass="#{entry.significant == true ? 'significant' : 'not-significant'}"
                  styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
-                 scrollable="true" scrollHeight="300"
+                 scrollable="true"
                  selectionMode="multiple"
                  selection="#{cc.attrs.selection}"
                  rowKey="#{entry.term.goId}"
@@ -37,23 +37,6 @@
         <p:ajax event="filter"
                 oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))"/>
 
-        <f:facet name="header">
-            <p:overlayPanel for="tableHelpBtn" hideEffect="fade" appendToBody="true">
-                <div class="overlay-help">
-                    <p>This table shows enrichment data for those terms that were significantly enriched in this edition as well as those that were significant at some point in their history.</p>
-                    <p>
-                        This means that not every term in the table is significant at the currently chosen edition, but it was necessarily significant as some point.
-                    </p>
-                </div>
-            </p:overlayPanel>
-            <p:commandButton  id="tableHelpBtn" value=""
-                              styleClass="no-value no-background fa-fix noupdate"
-                              icon="fa fa-question-circle" type="button"
-                              style="vertical-align: text-top;float: left;"/>
-            <p:outputPanel id="headerPanel" rendered="#{cc.attrs.header != null}">
-                <h:outputText value="#{cc.attrs.header}"/>
-            </p:outputPanel>
-        </f:facet>
 
         <f:facet name="footer">
             <!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->

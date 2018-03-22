@@ -15,12 +15,12 @@ table.no-border, table.no-border tr, table.no-border td {
     line-height: 16px;
 }
 
-#left li.ui-datalist-item > span {
+#left li.ui-datalist-item > span, #left li.ui-datalist-item > a {
     display: inline-block;
     vertical-align: middle;
 }
 
-#left li.ui-datalist-item > a {
+#left li.ui-datalist-item > a.ui-icon {
     display: inline-block;
     vertical-align: sub;
     margin-right: 10px;

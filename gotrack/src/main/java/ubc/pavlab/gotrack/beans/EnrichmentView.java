@@ -736,15 +736,6 @@ public class EnrichmentView implements Serializable {
 
     }
 
-    /**
-     * Entry point for retrieving data on click of similarity chart
-     */
-    public void fetchSimilarityInformation() {
-        Integer edition = Integer.valueOf(
-                FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
-        Edition ed = cache.getEdition( selectedSpecies, edition );
-        selectedSimilarityScore = combinedAnalysis.getSimilarityAnalysis().getSimilarityScores( ed );
-    }
 
     /**
      * Used for clicks on data points in enrichment/stability chart
@@ -792,14 +783,19 @@ public class EnrichmentView implements Serializable {
         selectedValueName = null;
     }
 
-    // Enrichment Table ---------------------------------------------------------------------------------------
 
-    public void loadEnrichmentTableData() {
+    /**
+     * Used for clicks on data points in term/similarity charts
+     */
+    public void loadTableData() {
         Integer edition = Integer.valueOf(
                 FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         Edition ed = cache.getEdition( selectedSpecies, edition );
         loadEnrichmentTableData( ed );
+        selectedSimilarityScore = combinedAnalysis.getSimilarityAnalysis().getSimilarityScore( ed );
     }
+
+    // Enrichment Table ---------------------------------------------------------------------------------------
 
     /**
      * Prepares data for enrichment table

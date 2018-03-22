@@ -149,12 +149,6 @@ function createTermsChart(xhr, status, args) {
     var options = plotting.defaultHCOptions('hc_terms_container', args.HC_terms.chart);
     commonOptions(options, args.HC);
 
-    options.xAxis.crosshair = {
-        width: 1,
-        color: 'red',
-        dashStyle: 'shortdot'
-    };
-
     options.subtitle = {
         text: "<b>&lt;Click&gt;</b> to view enrichment results at a specific date.",
         style: {"font-size": "10px"}
@@ -179,20 +173,6 @@ function createSimilarityChart(xhr, status, args) {
     };
 
     // options.yAxis.minorTickInterval = 0.05;
-
-    options.chart.events = {
-        click: function (event) {
-            fetchSimilarityInformation([{name: 'edition', value: GLOBALS.dateToEdition[this.hoverPoint.x]}]);
-        }
-    };
-
-    options.plotOptions.series.point = {
-        events: {
-            click: function () {
-                fetchSimilarityInformation([{name: 'edition', value: GLOBALS.dateToEdition[this.x]}]);
-            }
-        }
-    };
 
     options.tooltip.pointFormatter = function () {
         return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 2) + '</b><br/>';
@@ -254,6 +234,12 @@ function commonOptions(options, config) {
             var p = this.hoverPoint;
             clickBehaviour(event, p);
         }
+    };
+
+    options.xAxis.crosshair = {
+        width: 1,
+        color: 'red',
+        dashStyle: 'shortdot'
     };
 }
 
@@ -584,7 +570,15 @@ function handleGraphSelected(xhr, status, args) {
         // We bypass this via a string type adaptor for Infinity and NaN
         for (var key in dateToStabilityScore) {
             if (dateToStabilityScore.hasOwnProperty(key)) {
-                dateToStabilityScore[key] = Number(dateToStabilityScore[key]);
+                var stabilityScore = dateToStabilityScore[key];
+                if (stabilityScore === 'Infinity') {
+                    stabilityScore = 'No Change';
+                } else if (stabilityScore === 'NaN') {
+                    stabilityScore = 'No Data';
+                } else {
+                    stabilityScore = utility.sigFigs(stabilityScore, 3)
+                }
+                dateToStabilityScore[key] = stabilityScore;
             }
         }
 
@@ -598,7 +592,7 @@ function handleGraphSelected(xhr, status, args) {
                     '</p><p>Date: ' + new Date(this.x).toLocaleDateString() +
                     "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] +
                     "</p><p>P-value: " + utility.sigFigs(this.y, 3) +
-                    "</p><p>Stability Score: " + utility.sigFigs(dateToStabilityScore[this.x], 3) +
+                    "</p><p>Stability Score: " + dateToStabilityScore[this.x] +
                     "</p>";
             }
         }

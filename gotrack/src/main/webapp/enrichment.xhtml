@@ -98,7 +98,9 @@
                     <p:commandLink update=":globalGrowl, :formSelect:geneList"
                                    title="Remove" action="#{enrichmentView.removeGene(gene)}"
                                    styleClass="ui-icon ui-icon-trash"/>
-                    <h:outputText value="#{gene.symbol}" style="margin-right:10px;width:80px;"/>
+                    <p:link value="#{gene.symbol}" outcome="genes" target="_blank" style="margin-right:10px;width:80px;">
+                        <f:param name="accession" value="#{gene.accession.accession}"/>
+                    </p:link>
                     <h:outputText style="width:160px;"
                                   value="${gene.name.length() > 25 ? ''.concat(fn:substring(gene.name, 0, 25)).concat('...') : gene.name}"
                                   title="#{gene.name.length() > 25 ? gene.name : ''}"/>
@@ -278,6 +280,10 @@
 
             <div id="page-title">
                 <h1>Enrichment Results</h1>
+                <p:outputPanel id="headerPanel">
+                    <h3>Edition #{enrichmentView.enrichmentTableEdition.edition} : #{enrichmentView.enrichmentTableEdition.date} (Total Significant: #{enrichmentView.combinedAnalysis.enrichmentAnalysis.getTermsSignificant( enrichmentView.enrichmentTableEdition ).size()})</h3>
+                </p:outputPanel>
+
             </div>
 
             <div style="white-space: nowrap; min-width: 1000px;">
@@ -348,13 +354,7 @@
                                      style="vertical-align: text-top;"/>
                     <p:outputPanel id="main-buttons" style="display: inline-block;">
                     <span>
-                            <span style="font-size: 1.17em;font-weight:bold;">Graph Top Terms Of All Editions:</span>
-                        <!--<p:commandButton-->
-                        <!--value="By Rank"-->
-                        <!--style="margin-left:5px;"-->
-                        <!--actionListener="#{enrichmentView.getAllEnrichmentDataMatrix(false)}"-->
-                        <!--icon="fa fa-line-chart"-->
-                        <!--oncomplete="PF('bumpChartDlgWdg').show();handleFetchBumpChart(xhr, status, args);"/>-->
+                        <span style="font-size: 1.17em;font-weight:bold;">Graph Top Terms Of All Editions:</span>
                         <p:commandButton
                                 disabled="#{not enrichmentView.combinedAnalysis.success}"
                                 value="By Rank"
@@ -392,14 +392,53 @@
                         </span>
                     </p:outputPanel>
                 </div>
-                <p:outputPanel id="main-area" style="padding: 10px 20px">
-                    <comps:enrichmentResultsTable
-                            id="enrichmentTableContainer"
-                            value="#{enrichmentView.enrichmentTableValues}"
-                            filteredValue="#{enrichmentView.filteredEnrichmentTableValues}"
-                            selection="#{enrichmentView.selectedEnrichmentTableValues}"
-                            header="Edition #{enrichmentView.enrichmentTableEdition.edition} : #{enrichmentView.enrichmentTableEdition.date} (Total Significant: #{enrichmentView.combinedAnalysis.enrichmentAnalysis.getTermsSignificant( enrichmentView.enrichmentTableEdition ).size()})"/>
-                </p:outputPanel>
+                <p:accordionPanel id="main-area" activeIndex="1">
+                    <p:tab>
+                        <f:facet name="title">
+                            <p:overlayPanel for="genesbackingHelpBtn" hideEffect="fade" appendToBody="true">
+                                <div class="overlay-help">
+                                    <p>This table shows thgenes that are responsible for the top 5 terms in this edition.</p>
+                                </div>
+                            </p:overlayPanel>
+                            <p:commandButton  id="genesbackingHelpBtn"
+                                              value=""
+                                              styleClass="no-value no-background fa-fix noupdate"
+                                              icon="fa fa-question-circle"
+                                              type="button"
+                                              onclick="event.stopPropagation();"
+                                              style="vertical-align: text-top;float: left;"/>
+                            <h:outputText value="Genes Backing Top Terms"/>
+                        </f:facet>
+                        <p:outputPanel id="genesBackingTable">
+                            <comps:geneTable value="#{enrichmentView.combinedAnalysis.similarityAnalysis.getSimilarityScore(enrichmentView.enrichmentTableEdition).topGenes}"/>
+                        </p:outputPanel>
+                    </p:tab>
+                    <p:tab>
+                        <f:facet name="title">
+                            <p:overlayPanel for="tableHelpBtn" hideEffect="fade" appendToBody="true">
+                                <div class="overlay-help">
+                                    <p>This table shows enrichment data for those terms that were significantly enriched in this edition as well as those that were significant at some point in their history.</p>
+                                    <p>
+                                        This means that not every term in the table is significant at the currently chosen edition, but it was necessarily significant as some point.
+                                    </p>
+                                </div>
+                            </p:overlayPanel>
+                            <p:commandButton  id="tableHelpBtn"
+                                              value=""
+                                              styleClass="no-value no-background fa-fix noupdate"
+                                              icon="fa fa-question-circle"
+                                              type="button"
+                                              onclick="event.stopPropagation();"
+                                              style="vertical-align: text-top;float: left;"/>
+                            <h:outputText value="Enrichment Results"/>
+                        </f:facet>
+                        <comps:enrichmentResultsTable
+                                id="enrichmentTableContainer"
+                                value="#{enrichmentView.enrichmentTableValues}"
+                                filteredValue="#{enrichmentView.filteredEnrichmentTableValues}"
+                                selection="#{enrichmentView.selectedEnrichmentTableValues}"/>
+                    </p:tab>
+                </p:accordionPanel>
             </div>
 
 
@@ -416,18 +455,13 @@
 
             <p:remoteCommand name="fetchPointData"
                              process="@this"
-                             update=":formEnrich:enrichmentTableContainer:enrichmentTable:headerPanel"
+                             update=":formEnrich:headerPanel, :formEnrich:main-area:genesBackingTable"
                              oncomplete="PF('tableEnrichmentWdg').filter()"
-                             actionListener="#{enrichmentView.loadEnrichmentTableData}"/>
+                             actionListener="#{enrichmentView.loadTableData}"/>
 
-            <p:remoteCommand name="fetchEnrichmentResults"
-                             process="@this"
-                             oncomplete="handleFetchEnrichmentResults(xhr, status, args);"
-                             actionListener="#{enrichmentView.getAllEnrichmentDataMatrix}"/>
-
-            <p:remoteCommand name="fetchBumpChart"
-                             oncomplete="PF('bumpChartDlgWdg').show();handleFetchBumpChart(xhr, status, args);"
-                             actionListener="#{enrichmentView.getAllEnrichmentDataMatrix}"/>
+            <p:remoteCommand name="fetchGraph"
+                             oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
+                             actionListener="#{enrichmentView.fetchTermGraph}"/>
         </h:form>
         <p:dialog header="Gene Info" widgetVar="geneDialog" modal="false"
                   showEffect="fade" hideEffect="fade" resizable="false">
@@ -438,8 +472,13 @@
                             <h:outputText value="Symbol"/>
                         </p:column>
                         <p:column>
-                            <h:outputText value="#{enrichmentView.viewGene.symbol}"
-                                          styleClass="sqlDialogText"/>
+                            <a href="http://www.uniprot.org/uniprot/#{enrichmentView.viewGene.accession.accession}"
+                               target="_blank" style="margin-right: 5px; text-decoration: none;">
+                                <h:graphicImage library="img" width="18" height="12" name="uniprot_logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
+                            </a>
+                            <p:link value="#{enrichmentView.viewGene.symbol}" outcome="genes" target="_blank">
+                                <f:param name="accession" value="#{enrichmentView.viewGene.accession.accession}"/>
+                            </p:link>
                         </p:column>
                     </p:row>
                     <p:row>
@@ -481,81 +520,6 @@
             </p:outputPanel>
         </p:dialog>
 
-        <p:dialog id="itemSelectSimilarityDlg" header="Data Point Information"
-                  widgetVar="itemSelectSimilarityWdg" modal="false" showEffect="fade"
-                  hideEffect="fade" resizable="false" dynamic="true" height="500px;">
-            <h:form>
-                <p:outputPanel>
-                    <p:tabView id="enrichmentResultDetailsTabView">
-                        <p:tab title="Top N Terms">
-                            <p:dataTable var="term" value="#{enrichmentView.selectedSimilarityScore.topTerms}"
-                                         style="width:800px;" scrollHeight="350" scrollable="true">
-                                <p:column style="width:10px;">
-                                    <a
-                                            href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
-                                            target="_blank"><i class="fa fa-external-link fa-sm"
-                                                               style="font-size: 0.7em;"/> </a>
-                                </p:column>
-                                <p:column headerText="Id" style="width:120px;">
-                                    <h:outputText value="#{term.goId}"/>
-                                </p:column>
-                                <p:column headerText="Aspect" style="width:80px;">
-                                    <h:outputText value="#{term.aspect}"/>
-                                </p:column>
-                                <p:column headerText="Name">
-                                    <h:outputText value="#{term.name}"/>
-                                </p:column>
-                            </p:dataTable>
-                        </p:tab>
-                        <p:tab title="Parents of Top Terms">
-                            <p:dataTable var="term" value="#{enrichmentView.selectedSimilarityScore.topParents}"
-                                         style="width:800px;" scrollHeight="350" scrollable="true">
-                                <p:column style="width:10px;">
-                                    <a
-                                            href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{term.goId}"
-                                            target="_blank"><i class="fa fa-external-link fa-sm"
-                                                               style="font-size: 0.7em;"/> </a>
-                                </p:column>
-                                <p:column headerText="Id" style="width:120px;">
-                                    <h:outputText value="#{term.goId}"/>
-                                </p:column>
-                                <p:column headerText="Aspect" style="width:80px;">
-                                    <h:outputText value="#{term.aspect}"/>
-                                </p:column>
-                                <p:column headerText="Name">
-                                    <h:outputText value="#{term.name}"/>
-                                </p:column>
-                            </p:dataTable>
-                        </p:tab>
-                        <p:tab title="Genes Backing Top Terms">
-                            <p:dataTable var="gene" value="#{enrichmentView.selectedSimilarityScore.topGenes}"
-                                         style="width:800px;" scrollHeight="350" scrollable="true">
-                                <p:column headerText="Symbol" style="width:120px;">
-                                    <a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
-                                       target="_blank">#{gene.symbol}</a>
-                                </p:column>
-
-                                <p:column headerText="Description">
-                                    <h:outputText value="#{gene.name}"/>
-                                </p:column>
-                            </p:dataTable>
-                        </p:tab>
-                    </p:tabView>
-                </p:outputPanel>
-            </h:form>
-        </p:dialog>
-
-        <h:form>
-            <p:remoteCommand name="fetchSimilarityInformation"
-                             update=":itemSelectSimilarityDlg"
-                             oncomplete="PF('itemSelectSimilarityWdg').show()"
-                             actionListener="#{enrichmentView.fetchSimilarityInformation}"/>
-            <p:remoteCommand name="fetchGraph"
-                             oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
-                             actionListener="#{enrichmentView.fetchTermGraph}"/>
-
-        </h:form>
-
         <p:dialog id="graphDlg"
                   header="Ancestor Chart"
                   widgetVar="graphDlgWdg"
@@ -577,32 +541,37 @@
             <p:outputPanel id="termDetail" style="text-align:center;">
                 <p:panelGrid columns="2">
 
-                    <h:outputText value="Edition"/>
+                    <h:outputText value="Edition" title="Edition for the selected time-point."/>
                     <h:outputText value="#{enrichmentView.selectedEdition.edition}"
                                   styleClass="sqlDialogText"/>
 
-                    <h:outputText value="Date"/>
+                    <h:outputText value="Date" title="Date for the selected time-point."/>
                     <h:outputText value="#{enrichmentView.selectedEdition.date}"
                                   styleClass="sqlDialogText"/>
 
-                    <h:outputText value="GOID"/>
+                    <h:outputText value="GOID" title="Gene Ontology Id of the selected term."/>
                     <h:outputText value="#{enrichmentView.selectedTerm.goId}"
                                   styleClass="sqlDialogText"/>
 
-                    <h:outputText value="Aspect"/>
+                    <h:outputText value="Aspect" title="One of Biological Process, Cellular Component, or Molecular Function."/>
                     <h:outputText value="#{enrichmentView.selectedTerm.aspect}"
                                   styleClass="sqlDialogText"/>
 
-                    <h:outputText value="Name"/>
+                    <h:outputText value="Name" title="Short description of the selected term."/>
                     <h:outputText value="#{enrichmentView.selectedTerm.name}"
                                   styleClass="sqlDialogText"/>
 
-                    <h:outputText value="P-Value"/>
-                    <h:outputText
-                            value="#{enrichmentView.selectedEnrichmentResult.pvalue}"
-                            styleClass="sqlDialogText"/>
+                    <h:outputText value="P-Value" title="P-value (after correction if Bonferroni)."/>
+                    <h:outputText value="#{enrichmentView.selectedEnrichmentResult.pvalue}"
+                                  rendered="#{enrichmentView.selectedEnrichmentResult.pvalue lt 0.0001}">
+                        <f:convertNumber type="number" pattern="#.##E0"/>
+                    </h:outputText>
+                    <h:outputText value="#{enrichmentView.selectedEnrichmentResult.pvalue}"
+                                  rendered="#{enrichmentView.selectedEnrichmentResult.pvalue ge 0.0001}">
+                        <f:convertNumber type="number" pattern="0.######"/>
+                    </h:outputText>
 
-                    <h:outputText value="Absolute Rank"/>
+                    <h:outputText value="Absolute Rank" title="Fractional rank of this terms p-value in this edition."/>
                     <h:outputText
                             value="#{enrichmentView.selectedEnrichmentResult.fractionalRank}"
                             styleClass="sqlDialogText"/>
@@ -613,15 +582,31 @@
                                   styleClass="sqlDialogText"
                                   rendered="#{enrichmentView.selectedValueName != null}"/>
 
-                    <h:outputText value="Stability Score"/>
-                    <h:outputText
-                            value="#{enrichmentView.selectedStabilityScore.score}"
-                            styleClass="sqlDialogText"/>
+                    <h:outputText value="Stability Score" title="Recent stability score."/>
+                    <h:outputText value="#{enrichmentView.selectedStabilityScore.score}"
+                                  styleClass="sqlDialogText"
+                                  rendered="#{enrichmentView.selectedStabilityScore.score != 'NaN' and enrichmentView.selectedStabilityScore.score != 'Infinity'}">
+                        <f:convertNumber type="number"/>
+                    </h:outputText>
+                    <h:outputText value="No Data"
+                                  styleClass="sqlDialogText"
+                                  rendered="#{enrichmentView.selectedStabilityScore.score == 'NaN'}"/>
+                    <h:outputText value="No Change"
+                                  styleClass="sqlDialogText"
+                                  rendered="#{enrichmentView.selectedStabilityScore.score == 'Infinity'}"/>
 
-                    <h:outputText value="Stability Score Avg"/>
-                    <h:outputText
-                            value="#{enrichmentView.selectedStabilityScore.averageScore}"
-                            styleClass="sqlDialogText"/>
+                    <h:outputText value="Stability Score Avg" title="Mean stability score up to this edition."/>
+                    <h:outputText value="#{enrichmentView.selectedStabilityScore.averageScore}"
+                                  styleClass="sqlDialogText"
+                                  rendered="#{enrichmentView.selectedStabilityScore.averageScore != 'NaN' and enrichmentView.selectedStabilityScore.averageScore != 'Infinity'}">
+                        <f:convertNumber type="number"/>
+                    </h:outputText>
+                    <h:outputText value="No Data"
+                                  styleClass="sqlDialogText"
+                                  rendered="#{enrichmentView.selectedStabilityScore.averageScore == 'NaN'}"/>
+                    <h:outputText value="No Change"
+                                  styleClass="sqlDialogText"
+                                  rendered="#{enrichmentView.selectedStabilityScore.averageScore == 'Infinity'}"/>
 
                 </p:panelGrid>
             </p:outputPanel>

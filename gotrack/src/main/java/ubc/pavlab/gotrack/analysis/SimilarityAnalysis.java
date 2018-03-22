@@ -19,24 +19,16 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
-
 import com.google.common.collect.Iterables;
-
+import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 import ubc.pavlab.gotrack.utilities.Tversky;
+
+import java.util.*;
 
 /**
  * Calculates scores which attempt to explore the impact that annotation similarity has on the performance of
@@ -185,7 +177,7 @@ public class SimilarityAnalysis {
         return similarityScores;
     }
 
-    public SimilarityScore getSimilarityScores( Edition ed ) {
+    public SimilarityScore getSimilarityScore( Edition ed ) {
         if ( ed == null ) return null;
         return similarityScores.get( ed );
     }
