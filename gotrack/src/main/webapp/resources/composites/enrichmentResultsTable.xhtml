@@ -245,6 +245,28 @@
             </h:outputText>
         </p:column>
 
+        <p:column filterBy="#{entry.stability.pastSignificancePercentage}"
+                  sortBy="#{entry.stability.pastSignificancePercentage}"
+                  filterFunction="#{enrichmentView.filterByNumberLT}"
+                  style="width:120px;">
+            <f:facet name="header">
+                <p:overlayPanel for="recentsignificanceHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>Percentage of the past 24 editions that this term was significant.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="recentsignificanceHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Past Significance"/>
+            </f:facet>
+            <h:outputText value="#{entry.stability.pastSignificancePercentage}" rendered="#{entry.stability.pastSignificancePercentage != 'NaN'}">
+                <f:convertNumber type="percent"/>
+            </h:outputText>
+            <h:outputText value="No Data" rendered="#{entry.stability.pastSignificancePercentage == 'NaN'}"/>
+        </p:column>
+
         <p:column filterBy="#{entry.stability.score}"
                   sortBy="#{entry.stability.score}"
                   filterFunction="#{enrichmentView.filterByNumberLT}"
