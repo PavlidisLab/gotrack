@@ -84,7 +84,7 @@
         <p:column filterBy="#{entry.term.goId}"
                   filterMatchMode="contains"
                   sortBy="#{entry.term.goId}"
-                  style="width:120px;"
+                  style="width:100px;"
                   exportable="false">
             <f:facet name="header">
                 <p:overlayPanel for="goidHelpBtn" hideEffect="fade" appendToBody="true">
@@ -124,7 +124,7 @@
         <p:column filterBy="#{entry.term.aspect}"
                   filterMatchMode="in"
                   sortBy="#{entry.term.aspect}"
-                  style="width:150px;">
+                  style="width:120px;">
             <f:facet name="header">
                 <p:overlayPanel for="aspectHelpBtn" hideEffect="fade" appendToBody="true">
                     <div class="overlay-help">
@@ -220,7 +220,7 @@
         <p:column filterBy="#{entry.result.pvalue}"
                   sortBy="#{entry.result.pvalue}"
                   filterFunction="#{enrichmentView.filterByNumberLT}"
-                  style="width:120px;">
+                  style="width:80px;">
             <f:facet name="header">
                 <p:overlayPanel for="pvalueHelpBtn" hideEffect="fade" appendToBody="true">
                     <div class="overlay-help">
