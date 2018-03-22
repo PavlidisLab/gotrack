@@ -341,6 +341,8 @@ public class EnrichmentView implements Serializable {
 
         loadEnrichmentTableData( enrichmentTableEdition );
 
+        selectedSimilarityScore = combinedAnalysis.getSimilarityAnalysis().getSimilarityScore( enrichmentTableEdition );
+
     }
 
     private Map<String, Object> createHCCallbackParamMap( ChartValues chart ) {
@@ -379,6 +381,7 @@ public class EnrichmentView implements Serializable {
         cv.addSeries( rejectedTerms );
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( cv );
+        hcGsonMap.put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_terms", new Gson().toJson( hcGsonMap ) );
     }
@@ -425,6 +428,7 @@ public class EnrichmentView implements Serializable {
         }
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( cv );
+        hcGsonMap.put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_similarity", new Gson().toJson( hcGsonMap ) );
 

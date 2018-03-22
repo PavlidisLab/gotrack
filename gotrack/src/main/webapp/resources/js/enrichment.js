@@ -156,7 +156,7 @@ function createTermsChart(xhr, status, args) {
 
     plotting.charts.terms.options = options;
     plotting.charts.terms.recreate(options, function (c) {
-        redrawSelectedEditionPlotLine(c, c.series[0].points[c.series[0].points.length - 1]);
+        redrawSelectedEditionPlotLine(c, {x:args.HC_terms.selectedEdition});
         plotting.mainCharts.push(c);
     });
 }
@@ -176,12 +176,11 @@ function createSimilarityChart(xhr, status, args) {
 
     options.tooltip.pointFormatter = function () {
         return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 2) + '</b><br/>';
-    }
-
+    };
 
     plotting.charts.similarity.options = options;
     plotting.charts.similarity.recreate(options, function (c) {
-        redrawSelectedEditionPlotLine(c, c.series[0].points[c.series[0].points.length - 1]);
+        redrawSelectedEditionPlotLine(c, {x:args.HC_similarity.selectedEdition});
         plotting.mainCharts.push(c);
     });
 
