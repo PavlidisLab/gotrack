@@ -19,24 +19,16 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
-
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import gnu.trove.map.hash.TObjectDoubleHashMap;
+import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.model.hashkey.HyperUCFKey;
+
+import java.util.*;
+import java.util.Map.Entry;
 
 /**
  * Runs over-representation analysis (enrichment) on given sample and population data.
@@ -223,6 +215,12 @@ public class Enrichment<T, G> {
             previousResult = er;
         }
 
+        // Set significance
+        for ( T t : sig ) {
+            EnrichmentResult er = results.get( t );
+            er.setSignificant( true );
+        }
+
         // Compute fractional Ranks
 
         for ( Entry<Integer, List<T>> rankEntry : standardRanks.entrySet() ) {
@@ -300,7 +298,6 @@ public class Enrichment<T, G> {
     }
 
     /**
-     * @param specificTerm
      * @return Enrichment Result for specific term else null if doesn't exist
      */
     public EnrichmentResult getResult( T t ) {

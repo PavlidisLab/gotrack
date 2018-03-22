@@ -811,7 +811,6 @@ public class EnrichmentView implements Serializable {
         enrichmentTableEdition = ed;
 
         if ( ed != null ) {
-            Set<GeneOntologyTerm> sigTerms = combinedAnalysis.getEnrichmentAnalysis().getTermsSignificant( ed );
             Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
             for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
@@ -825,7 +824,7 @@ public class EnrichmentView implements Serializable {
                 }
 
                 enrichmentTableValues
-                        .add( new EnrichmentTableValues( ed, term, er, sc, quantile, sigTerms.contains( term ) ) );
+                        .add( new EnrichmentTableValues( ed, term, er, sc, quantile ) );
             }
             Collections.sort( enrichmentTableValues );
 

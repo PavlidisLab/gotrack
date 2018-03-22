@@ -25,7 +25,7 @@
                  sortMode="multiple" style="margin-bottom:0;max-height: 225px;"
                  emptyMessage="No enrichment data found for selected edition"
                  filteredValue="#{cc.attrs.filteredValue}"
-                 rowStyleClass="#{entry.significant == true ? 'significant' : 'not-significant'}"
+                 rowStyleClass="#{entry.result.significant == true ? 'significant' : 'not-significant'}"
                  styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
                  scrollable="true"
                  selectionMode="multiple"
