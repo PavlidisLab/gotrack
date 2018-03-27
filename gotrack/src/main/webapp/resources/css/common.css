@@ -296,3 +296,22 @@ div.ui-selectmanybutton > div.ui-button.ui-widget.ui-state-default.ui-button-tex
 div.ui-selectmanybutton > div.ui-button.ui-widget.ui-state-default.ui-button-text-only.ui-state-active {
     color: inherit;
 }
+
+.chart-container {
+    width: 49%;
+    display: inline-block;
+    padding-bottom: 15px;
+}
+
+button.ui-button.absoluteBtn {
+    position: absolute;
+}
+
+button.ui-button.absoluteBtn > span {
+    z-index: 99999;
+}
+
+div.ui-overlaypanel-content {
+    max-width: 600px;
+    text-align: left;
+}

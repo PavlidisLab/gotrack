@@ -79,6 +79,14 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             "where go_id=? AND DATE BETWEEN ? AND ? group by date, evcat.category " +
             "order by date";
 
+    // Collect evidence breakdown for a specific term in a specific species, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
+    private static final String SQL_CATEGORY_BREAKDOWN_RANGE_EDITIONS_SINGLE_SPECIES_SINGLE_TERM = "select edition, evcat.category , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
+            "inner join " + SQL_EVIDENCE + " evcat on evcat.evidence = ann.evidence " +
+            "inner join " + SQL_ACCESSION + " acc on acc.id=ann.accession_id  " +
+            "inner join " + SQL_EDITION + " ed using(species_id, edition) " +
+            "where go_id=? AND species_id=? AND edition between ? and ? group by edition, evcat.category " +
+            "order by edition";
+
     // Collect unique, directly annotated gene counts for a term, not used at the moment (pretty slow)
     private static final String SQL_DIRECT_GENE_CNT_ALL_EDITIONS_SINGLE_TERM = "select species_id, edition, COUNT(distinct accession_id) count from annotation ann " +
             "inner join accession acc on acc.id=ann.accession_id " +
@@ -286,9 +294,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
     @Override
     public List<CategoryCountDTO> categoryCountsRangeDates( String goId, Date min, Date max ) throws DAOException {
-        // TODO This method of collecting the data is not robust, 
-        // If editions across species in the same 'release' are have slightly differing dates, 
-        // they will not be grouped appropriately
+        // TODO pretty slow...
 
         if ( goId == null || goId.equals( "" ) ) {
             return Lists.newArrayList();
@@ -329,6 +335,62 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             startTime = System.currentTimeMillis();
             while (resultSet.next()) {
                 results.add( new CategoryCountDTO( resultSet.getDate( "date" ), resultSet.getString( "category" ),
+                        resultSet.getInt( "count" ) ) );
+            }
+            endTime = System.currentTimeMillis();
+            log.debug( "while ( resultSet.next() ): " + (endTime - startTime) + "ms" );
+        } catch (SQLException e) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
+
+    @Override
+    public List<EditionCategoryCountDTO> categoryCountsSingleSpeciesRangeEditions( String goId, Species species, Integer minEdition, Integer maxEdition ) throws DAOException {
+
+        if ( goId == null || goId.equals( "" ) || species == null ) {
+            return Lists.newArrayList();
+        }
+
+        List<Object> params = new ArrayList<>();
+
+        params.add( goId );
+        params.add( species.getId() );
+        params.add( minEdition );
+        params.add( maxEdition );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<EditionCategoryCountDTO> results = new ArrayList<>();
+        String sql = SQL_CATEGORY_BREAKDOWN_RANGE_EDITIONS_SINGLE_SPECIES_SINGLE_TERM;
+
+        log.debug( sql );
+
+        try {
+
+            long startTime = System.currentTimeMillis();
+            connection = daoFactory.getConnection();
+            long endTime = System.currentTimeMillis();
+            log.debug( "daoFactory.getConnection(): " + (endTime - startTime) + "ms" );
+
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            log.debug( statement );
+
+            startTime = System.currentTimeMillis();
+            resultSet = statement.executeQuery();
+            endTime = System.currentTimeMillis();
+            log.debug( "statement.executeQuery(): " + (endTime - startTime) + "ms" );
+
+            startTime = System.currentTimeMillis();
+            while (resultSet.next()) {
+                results.add( new EditionCategoryCountDTO( resultSet.getInt( "edition" ), resultSet.getString( "category" ),
                         resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();

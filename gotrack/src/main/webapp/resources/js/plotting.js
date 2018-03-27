@@ -24,7 +24,7 @@
                     console.log(e);
                 }
             } else {
-                console.log('Chart not yet created');
+                // console.log('Chart not yet created');
             }
             this._exists = false;
 
@@ -37,7 +37,7 @@
             if (!this.exists()) {
                 this.chart = new Highcharts.Chart(this.options, callback);
                 this._exists = true;
-                console.log("Chart created");
+                // console.log("Chart created");
             }
         }
         this.reset = function () {
@@ -139,6 +139,10 @@
                 text: chart.title
             },
 
+            subtitle: {
+                text: chart.subtitle
+            },
+
             xAxis: {
                 type: 'datetime',
                 title: {
@@ -219,6 +223,10 @@
             },
             title: {
                 text: chart.title
+            },
+
+            subtitle: {
+                text: chart.subtitle
             },
 
             xAxis: {

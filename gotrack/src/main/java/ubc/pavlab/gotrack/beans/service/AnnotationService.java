@@ -399,6 +399,44 @@ public class AnnotationService implements Serializable {
     }
 
     /**
+     * Method used to get annotation count in a species grouped by evidence category for a term
+     *
+     * @param term term
+     * @param species species
+     * @return Counts annotations for each evidence category grouped by date
+     */
+    public Map<String, Map<Date, Integer>> fetchCategoryCountsInSpecies( GeneOntologyTerm term, Species species ) {
+        return fetchCategoryCountsInSpecies( term.getGoId(), species, null, null );
+    }
+
+    /**
+     * Method used to get annotation count in a species grouped by evidence category for a term between two editions
+     *
+     * @param goId term
+     * @param species species
+     * @return Counts annotations for each evidence category grouped by date
+     */
+    private Map<String, Map<Date, Integer>> fetchCategoryCountsInSpecies( String goId, Species species, Edition min, Edition max ) {
+        Map<String, Map<Date, Integer>> results = new LinkedHashMap<>();
+
+        int minEdition = min == null ? cache.getGlobalMinEdition( species ).getEdition() : min.getEdition();
+        int maxEdition = max == null ? cache.getCurrentEditions( species ).getEdition() : max.getEdition();
+
+        for ( EditionCategoryCountDTO dto : annotationDAO.categoryCountsSingleSpeciesRangeEditions( goId, species, minEdition, maxEdition ) ) {
+
+            Edition ed = cache.getEdition( species, dto.getEdition() ); //TODO: current-edition-refactor
+
+            if ( ed == null ) {
+                log.warn( "Edition (" + dto.getEdition() + ") not found!" );
+                continue;
+            }
+
+            results.computeIfAbsent( dto.getCategory(), k -> new HashMap<>() ).put( ed.getDate(), dto.getCount() );
+        }
+        return results;
+    }
+
+    /**
      * This is not used as we are currently doing this with cached data.
      *
      * @param t term
