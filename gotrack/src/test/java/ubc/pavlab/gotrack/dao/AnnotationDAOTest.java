@@ -39,6 +39,7 @@ import ubc.pavlab.gotrack.utilities.Tuples.Tuple3;
 import java.sql.Date;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -393,6 +394,65 @@ public class AnnotationDAOTest extends BaseTest {
                 java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) );
 
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
+
+    }
+
+    @Test
+    public void testSingleSpeciesCategoryCounts() {
+        Species human = new Species( 7, "Human", "", 9606, null );
+        Species mouse = new Species( 8, "Mouse", "", 10090, null );
+
+        List<Tuple3<Integer, String, Integer>> records = annotationDAO.categoryCountsSingleSpeciesRangeEditions( "GO:0007005", human,
+                144, 147 ).stream()
+                .map( dto -> Tuples.tuple3( dto.getEdition(), dto.getCategory(), dto.getCount() ) )
+                .collect( Collectors.toList() );
+
+        Assert.assertThat( records,
+                Matchers.containsInAnyOrder( Tuples.tuple3(144, "Author", 1 ),
+                        Tuples.tuple3( 144, "Experimental", 5 ),
+                        Tuples.tuple3( 145, "Author", 1 ),
+                        Tuples.tuple3( 145, "Experimental", 5 ),
+                        Tuples.tuple3( 146, "Author", 1 ),
+                        Tuples.tuple3( 146, "Experimental", 5 ),
+                        Tuples.tuple3( 147, "Author", 1 ),
+                        Tuples.tuple3( 147, "Experimental", 5 ) ) );
+
+        records = annotationDAO.categoryCountsSingleSpeciesRangeEditions( "GO:0007005", mouse,
+                130, 133 ).stream()
+                .map( dto -> Tuples.tuple3( dto.getEdition(), dto.getCategory(), dto.getCount() ) )
+                .collect( Collectors.toList() );
+
+        Assert.assertThat( records,
+                Matchers.containsInAnyOrder( Tuples.tuple3( 130, "Author", 1 ),
+                        Tuples.tuple3( 130, "Computational", 11 ),
+                        Tuples.tuple3( 130, "Experimental", 4 ),
+                        Tuples.tuple3( 131, "Author", 1 ),
+                        Tuples.tuple3( 131, "Computational", 11 ),
+                        Tuples.tuple3( 131, "Experimental", 4 ),
+                        Tuples.tuple3( 132, "Author", 1 ),
+                        Tuples.tuple3( 132, "Computational", 11 ),
+                        Tuples.tuple3( 132, "Experimental", 4 ),
+                        Tuples.tuple3( 133, "Author", 1 ),
+                        Tuples.tuple3( 133, "Computational", 11 ),
+                        Tuples.tuple3( 133, "Experimental", 4) ) );
+
+        Assert.assertThat( annotationDAO.categoryCountsSingleSpeciesRangeEditions( "GO:0008150", human,
+                144,  145 ).size(), Matchers.is( 0 ) );
+
+        records = annotationDAO.categoryCountsSingleSpeciesRangeEditions( "GO:0003674", human,
+                144, 145 ).stream()
+                .map( dto -> Tuples.tuple3( dto.getEdition(), dto.getCategory(), dto.getCount() ) )
+                .collect( Collectors.toList() );
+
+        Assert.assertThat( records,
+                Matchers.containsInAnyOrder( Tuples.tuple3( 144, "Curatorial", 1 ),
+                        Tuples.tuple3( 145, "Curatorial", 1 ) ) );
+
+        Assert.assertThat( annotationDAO.categoryCountsSingleSpeciesRangeEditions( "", human,
+                144,  147 ).size(), Matchers.is( 0 ) );
+
+        Assert.assertThat( annotationDAO.categoryCountsSingleSpeciesRangeEditions( null, human,
+                144, 147 ).size(), Matchers.is( 0 ) );
 
     }
 
