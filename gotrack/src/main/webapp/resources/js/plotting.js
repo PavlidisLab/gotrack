@@ -127,11 +127,28 @@
                 type: 'xrange',
                 zoomType: 'x',
                 resetZoomButton: {
+                    theme: {
+                        fill: 'white',
+                        stroke: 'silver',
+                        r: 5,
+                        style: {
+                            fontSize: '10px'
+                        },
+                        states: {
+                            hover: {
+                                fill: '#41739D',
+                                style: {
+                                    color: 'white'
+                                }
+                            }
+                        }
+                    },
+                    relativeTo: 'chart',
                     position: {
-                        align: 'left',
+                        align: 'right',
                         // verticalAlign: 'top', // by default
-                        x: 0,
-                        y: -35,
+                        x: -50,
+                        y: 10
                     }
                 }
             },
@@ -212,11 +229,27 @@
                 renderTo: renderTo,
                 zoomType: 'x',
                 resetZoomButton: {
+                    theme: {
+                        fill: 'white',
+                        stroke: 'silver',
+                        r: 5,
+                        style: {
+                            fontSize: '10px'
+                        },
+                        states: {
+                            hover: {
+                                fill: '#41739D',
+                                style: {
+                                    color: 'white'
+                                }
+                            }
+                        }
+                    },
                     relativeTo: 'chart',
                     position: {
-                        align: 'left',
+                        align: 'right',
                         // verticalAlign: 'top', // by default
-                        x: 30,
+                        x: -50,
                         y: 10
                     }
                 }
@@ -398,11 +431,27 @@
     };
 
     plotting.addScaleToggle = function (options, config) {
-        options.chart.resetZoomButton.position.x = 105;
+        // options.chart.resetZoomButton.position.x = 105;
         options.exporting = options.exporting || {};
         options.exporting.buttons = options.exporting.buttons || {};
         $.extend(options.exporting.buttons, {
             scaleToggle: {
+                theme: {
+                    fill: 'white',
+                    stroke: 'silver',
+                    r: 5,
+                    style: {
+                        fontSize: '10px'
+                    },
+                    states: {
+                        hover: {
+                            fill: '#41739D',
+                            style: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                },
                 align: 'left',
                 //verticalAlign:'middle',
                 x: 20,
@@ -421,6 +470,7 @@
                 symbolFill: '#bada55',
                 symbolStroke: '#330033',
                 symbolStrokeWidth: 1,
+                symbolSize: 10,
                 _titleKey: 'axis_toggle',
                 text: 'Linear'
             }
@@ -428,6 +478,84 @@
         options.lang = options.lang || {};
         $.extend(options.lang, {
             axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
+        });
+    };
+
+    plotting.addAreaStreamGraphToggle = function (options, config) {
+        // options.chart.resetZoomButton.position.x = 105;
+        options.exporting = options.exporting || {};
+        options.exporting.buttons = options.exporting.buttons || {};
+        $.extend(options.exporting.buttons, {
+            areaStreamGraphToggle: {
+                theme: {
+                    fill: 'white',
+                    stroke: 'silver',
+                    r: 5,
+                    style: {
+                        fontSize: '10px'
+                    },
+                    states: {
+                        hover: {
+                            fill: '#41739D',
+                            style: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                },
+                align: 'left',
+                //verticalAlign:'middle',
+                x: 20,
+                onclick: function () {
+                    // The toggling of the text is not using an official API, can break with version update!
+                    if (this.series[0].type === 'area') {
+                        this.exportSVGElements[3].element.nextSibling.innerHTML = "Streamgraph";
+                        for (var i = 0; i < this.series.length; i++) {
+                            var s = this.series[i];
+                            s.update({
+                                type: 'streamgraph'
+                            });
+                        }
+
+                        this.yAxis[0].update({
+                            gridLineColor: 'transparent',
+                            labels: {enabled:false},
+                            startOnTick: false,
+                            endOnTick: false
+                        });
+                    } else {
+                        this.exportSVGElements[3].element.nextSibling.innerHTML = "Area";
+
+
+                        for (var i = 0; i < this.series.length; i++) {
+                            var s = this.series[i];
+                            s.update({
+                                type: 'area'
+                            });
+                        }
+
+                        this.yAxis[0].update({
+                            gridLineColor: null,
+                            labels: {enabled:true},
+                            startOnTick: null,
+                            endOnTick: null
+                        });
+
+                    }
+
+                },
+                symbol: 'circle',
+                symbolFill: '#bada55',
+                symbolStroke: '#330033',
+                symbolStrokeWidth: 1,
+                symbolSize: 10,
+                _titleKey: 'type_toggle',
+                text: 'Area    '
+            }
+        });
+        options.lang = options.lang || {};
+        $.extend(options.lang, {
+            type_toggle: 'Toggle Chart Type: Area/Streamgraph'
         });
     };
 

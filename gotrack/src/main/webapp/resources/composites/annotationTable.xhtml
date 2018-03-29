@@ -17,29 +17,90 @@
 
 <composite:implementation>
 
-    <p:dataTable id="annotaationTable-#{cc.id}"  var="annot" value="#{cc.attrs.value}" emptyMessage="No annotations found with given criteria">
+    <p:dataTable var="annot" value="#{cc.attrs.value}" emptyMessage="No annotations found with given criteria">
         <p:column headerText="Qualifier">
+            <f:facet name="header">
+                <p:overlayPanel for="qualifierHelpBtn" hideEffect="fade" appendToBody="true" dynamic="true">
+                    <div class="overlay-help">
+                        <p>Flags that modify the interpretation of an annotation.</p>
+                        <p>See <a href="http://geneontology.org/page/go-qualifiers" style="color: -webkit-link;">http://geneontology.org/page/go-qualifiers</a></p>
+
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="qualifierHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Qualifier"/>
+            </f:facet>
             <h:outputText value="#{annot.qualifier}"/>
         </p:column>
         <p:column headerText="Evidence">
+            <f:facet name="header">
+                <p:overlayPanel for="evidenceHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
+                    <div class="overlay-help">
+                        <p>Evidence code to indicate how the annotation to a particular term is supported. Note: Out of all the evidence codes available, only Inferred from Electronic Annotation (IEA) is not assigned by a curator.</p>
+                        <p>See <a href="http://geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="evidenceHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Evidence"/>
+            </f:facet>
             <h:outputText value="#{annot.evidence.evidence}"/>
         </p:column>
         <p:column>
             <f:facet name="header">
+                <p:overlayPanel for="categoryHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
+                    <div class="overlay-help">
+                        <p><b>Author</b>: Annotation was made on the basis of a statement made by the author(s).</p>
+                        <p><b>Automatic</b>: Assigned by automated methods, not assigned by curators.</p>
+                        <p><b>Computational</b>: Annotation is based on an in silico analysis of the gene sequence and/or other data.</p>
+                        <p><b>Curatorial</b>: Annotation made on the basis of a curatorial judgement that does not fit into one of the other evidence code classifications.</p>
+                        <p><b>Experimental</b>: Results from a physical characterization of a gene or gene product that has supported the association of a GO term.</p>
+                        <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="categoryHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
                 <h:outputText value="Category"/>
-                <p:commandButton id="categoryHelpBtn-#{cc.id}" value=""
-                                 styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                 title="Help"
-                                 type="button"/>
-
             </f:facet>
 
             <h:outputText value="#{annot.evidence.category}"/>
         </p:column>
         <p:column headerText="Description">
+            <f:facet name="header">
+                <p:overlayPanel for="descriptionHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
+                    <div class="overlay-help">
+                        <p>Short description of the Evidence code.</p>
+                        <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="descriptionHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Description"/>
+            </f:facet>
             <h:outputText value="#{annot.evidence.description}"/>
         </p:column>
         <p:column headerText="Reference">
+            <f:facet name="header">
+                <p:overlayPanel for="referenceHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
+                    <div class="overlay-help">
+                        <p>Cited reference which supports the GO term to gene product association.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="referenceHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Reference"/>
+            </f:facet>
             <h:outputText value="#{annot.reference}"/>
         </p:column>
         <f:facet name="footer">
@@ -47,21 +108,6 @@
             &#8203;
         </f:facet>
     </p:dataTable>
-    <p:overlayPanel for="annotaationTable-#{cc.id}:categoryHelpBtn-#{cc.id}" hideEffect="fade"
-                    style="width:400px;text-align:left;" appendToBody="true">
-        <p>Manually-assigned evidence codes fall into four general
-            categories: experimental, computational analysis, author
-            statements, and curatorial statements. Out of all the evidence codes available, only Inferred
-            from Electronic Annotation (IEA) is not assigned by a curator.</p>
-        <p:lightBox>
-            <h:outputLink
-                    value="/gotrack/javax.faces.resource/diag-evCodeFlowChartGood.png?ln=img"
-                    title="Evidence Code Flow Chart">
-                <h:graphicImage library="img" width="100" height="56"
-                                name="diag-evCodeFlowChartGood.png"/>
-            </h:outputLink>
-        </p:lightBox>
-    </p:overlayPanel>
 
 </composite:implementation>
 </html>
