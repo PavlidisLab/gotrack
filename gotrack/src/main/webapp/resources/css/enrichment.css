@@ -121,7 +121,7 @@ button.smallBtn > span.fa {
 	margin-top:-6px;
 } */
 
-tr.ui-widget-content.significant td:nth-last-child(2) {
+tr.ui-widget-content.significant td:nth-last-child(3) {
     background: #DCF9D4;
 }
 
