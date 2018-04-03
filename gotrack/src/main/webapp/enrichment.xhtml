@@ -110,7 +110,7 @@
                         <p:commandButton icon="fa fa-plus" value="Add Multiple"
                                          oncomplete="PF('addMultipleGenesDlg').show()"/>
                         <p:commandButton icon="fa fa-trash" value="Clear"
-                                         actionListener="#{enrichmentView.removeAllGenes}"
+                                         action="#{enrichmentView.removeAllGenes()}"
                                          update=":formSelect:geneList :formSelect:runEnrichmentBtn"/>
                     </f:facet>
                 </p:dataList>
@@ -247,7 +247,7 @@
                 <div align="center" style="margin-top: 20px;">
                     <p:commandButton id="runEnrichmentBtn" value="Run Enrichment"
                                      widgetVar="runEnrichmentBtnWdg"
-                                     actionListener="#{enrichmentView.enrich}" icon="fa fa-bar-chart"
+                                     action="#{enrichmentView.enrich()}" icon="fa fa-bar-chart"
                                      update=":formSelect:geneList :formSelect:runEnrichmentBtn :formSelect:enrichmentProgressBar :formEnrich:main-area :formEnrich:main-buttons"
                                      onclick="runEnrichmentOnClick();"
                                      oncomplete="runEnrichmentComplete(xhr, status, args);"
@@ -359,14 +359,14 @@
                                 disabled="#{not enrichmentView.combinedAnalysis.success}"
                                 value="By Rank"
                                 style="margin-left:5px;"
-                                actionListener="#{enrichmentView.createChart(true, false)}"
+                                action="#{enrichmentView.createChart(true, false)}"
                                 icon="fa fa-line-chart"
                                 oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
                             <p:commandButton
                                     disabled="#{not enrichmentView.combinedAnalysis.success}"
                                     value="By P-Value"
                                     style="margin-left:5px;"
-                                    actionListener="#{enrichmentView.createChart(false, false)}"
+                                    action="#{enrichmentView.createChart(false, false)}"
                                     icon="fa fa-line-chart"
                                     oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
                         </span>
@@ -379,14 +379,14 @@
                                     disabled="#{not enrichmentView.combinedAnalysis.success}"
                                     value="By Rank"
                                     style="margin-left:5px;"
-                                    actionListener="#{enrichmentView.createChart(true, true)}"
+                                    action="#{enrichmentView.createChart(true, true)}"
                                     icon="fa fa-line-chart"
                                     oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
                             <p:commandButton
                                     disabled="#{not enrichmentView.combinedAnalysis.success}"
                                     value="By P-Value"
                                     style="margin-left:5px;"
-                                    actionListener="#{enrichmentView.createChart(false, true)}"
+                                    action="#{enrichmentView.createChart(false, true)}"
                                     icon="fa fa-line-chart"
                                     oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
                         </span>
@@ -451,17 +451,14 @@
             <p:remoteCommand name="loadPreviousEnrichment"
                              update=":formEnrich:main-area"
                              oncomplete="loadPreviousEnrichmentComplete(xhr, status, args);"
-                             actionListener="#{enrichmentView.loadPreviousEnrichment}"/>
+                             action="#{enrichmentView.loadPreviousEnrichment()}"/>
 
             <p:remoteCommand name="fetchPointData"
                              process="@this"
                              update=":formEnrich:headerPanel, :formEnrich:main-area:genesBackingTable"
                              oncomplete="PF('tableEnrichmentWdg').filter()"
-                             actionListener="#{enrichmentView.loadTableData}"/>
+                             action="#{enrichmentView.loadTableData()}"/>
 
-            <p:remoteCommand name="fetchGraph"
-                             oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
-                             actionListener="#{enrichmentView.fetchTermGraph}"/>
         </h:form>
         <p:dialog header="Gene Info" widgetVar="geneDialog" modal="false"
                   showEffect="fade" hideEffect="fade" resizable="false">
@@ -630,7 +627,7 @@
                 <p:remoteCommand name="fetchTermInformation"
                                  update=":itemSelectEnrichmentDlg"
                                  oncomplete="PF('itemSelectEnrichmentWdg').show()"
-                                 actionListener="#{enrichmentView.fetchTermInformation}"/>
+                                 action="#{enrichmentView.fetchTermInformation()}"/>
 
             </h:form>
 
@@ -667,7 +664,7 @@
 
                 <f:facet name="footer">
                     <p:commandButton value="&#160; Add"
-                                     actionListener="#{enrichmentView.addGene}" icon="fa fa-plus"
+                                     action="#{enrichmentView.addGene()}" icon="fa fa-plus"
                                      update=":formSelect:geneList, :globalGrowl, :formSelect:runEnrichmentBtn"
                                      oncomplete="PF('addGenesDlg').hide();"/>
                 </f:facet>
@@ -690,7 +687,7 @@
 
                 <f:facet name="footer">
                     <p:commandButton value="&#160; Add All"
-                                     actionListener="#{enrichmentView.searchMultipleGenes}"
+                                     action="#{enrichmentView.searchMultipleGenes()}"
                                      icon="fa fa-plus-circle"
                                      update=":globalGrowl, :formAddGenes:tableConfirmGenes"
                                      oncomplete="PF('addMultipleGenesDlg').hide();PF('confirmGenesDlg').show()"/>
@@ -756,7 +753,7 @@
 
                 <f:facet name="footer">
                     <p:commandButton value="&#160; Confirm"
-                                     actionListener="#{enrichmentView.confirmMatches}"
+                                     action="#{enrichmentView.confirmMatches()}"
                                      icon="fa fa-plus-circle"
                                      update=":globalGrowl, :formSelect:geneList, :formSelect:runEnrichmentBtn"
                                      oncomplete="PF('confirmGenesDlg').hide();"/>

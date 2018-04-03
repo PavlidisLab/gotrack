@@ -49,7 +49,6 @@ import javax.enterprise.context.SessionScoped;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
 import javax.faces.context.FacesContext;
-import javax.faces.event.ActionEvent;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.Serializable;
@@ -852,7 +851,7 @@ public class EnrichmentView implements Serializable {
     /**
      * Remove all genes from selected species' hit list
      */
-    public void removeAllGenes( ActionEvent actionEvent ) {
+    public void removeAllGenes() {
         List<Gene> selectGenes = speciesToSelectedGenes.get( selectedSpecies );
         if ( selectGenes != null ) {
             selectGenes.clear();
@@ -862,7 +861,7 @@ public class EnrichmentView implements Serializable {
     /**
      * Add gene to to hit list
      */
-    public void addGene( ActionEvent actionEvent ) {
+    public void addGene() {
         List<Gene> selectGenes = speciesToSelectedGenes.get( selectedSpecies );
         if ( selectGenes == null ) {
             selectGenes = new ArrayList<>();
@@ -887,7 +886,7 @@ public class EnrichmentView implements Serializable {
      * Add multiple genes based on input to the 'Add Multiple' modal field, this string is then split
      * and turned into GeneMatch to then be confirmed or altered by the user
      */
-    public void searchMultipleGenes( ActionEvent actionEvent ) {
+    public void searchMultipleGenes() {
         Set<String> inputSet = new HashSet<>( Arrays.asList( bulkQuery.split( "\\s*(,|\\s)\\s*" ) ) );
         geneMatches = new ArrayList<>();
         Map<GeneMatch.Level, Integer> cntMap = new HashMap<>();

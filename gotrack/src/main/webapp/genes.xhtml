@@ -178,7 +178,7 @@
                            target="_blank" style="text-decoration: none;">
                             <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
                         </a>
-                        <p:commandLink actionListener="#{geneView.fetchTermGraph(termRow.term)}"
+                        <p:commandLink action="#{geneView.fetchTermGraph(termRow.term)}"
                                        oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
                             <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
                         </p:commandLink>
@@ -250,11 +250,8 @@
                         <p:commandButton icon="ui-icon-search" widgetVar="viewTermsWdg"
                                          value="View Annotation History" oncomplete="fetchTimeline()"/>
                         <p:commandButton icon="fa fa-sitemap" widgetVar="viewGOGraphWdg" value="View GO Graph"
-                                         actionListener="#{geneView.fetchTermGraphFromSelected()}"
+                                         action="#{geneView.fetchTermGraphFromSelected()}"
                                          oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"/>
-                        <!--<p:commandButton icon="fa fa-filter" widgetVar="filterWdg" value="Highlight Editions"-->
-                        <!--actionListener="#{geneView.fetchEditionsForSelectedTerms()}"-->
-                        <!--oncomplete="handleFetchEditionsForSelectedTerms(xhr, status, args);"/>-->
                     </f:facet>
                 </p:dataTable>
             </h:form>
@@ -430,45 +427,41 @@
             <p:remoteCommand name="fetchData"
                              oncomplete="handleFetchData(xhr, status, args);fetchCharts();"
                              update=":rightForm"
-                             actionListener="#{geneView.fetchData()}"/>
+                             action="#{geneView.fetchData()}"/>
             <p:remoteCommand name="fetchAnnotationChart" async="true"
                              oncomplete="handleFetchAnnotationChart(xhr, status, args);"
-                             actionListener="#{geneView.fetchAnnotationChart()}"/>
+                             action="#{geneView.fetchAnnotationChart()}"/>
             <p:remoteCommand name="fetchSimilarityChart" async="true"
                              oncomplete="handleFetchSimilarityChart(xhr, status, args);"
-                             actionListener="#{geneView.fetchJaccardChart()}"/>
+                             action="#{geneView.fetchJaccardChart()}"/>
             <p:remoteCommand name="fetchMultiChart" async="true"
                              oncomplete="handleFetchMultiChart(xhr, status, args);"
-                             actionListener="#{geneView.fetchMultifunctionalityChart()}"/>
+                             action="#{geneView.fetchMultifunctionalityChart()}"/>
 
             <p:remoteCommand name="fetchTimeline"
                              oncomplete="PF('timelineDlgWdg').show();handleFetchTimeline(xhr, status, args);"
-                             actionListener="#{geneView.fetchTimeline()}"/>
+                             action="#{geneView.fetchTimeline()}"/>
 
             <p:remoteCommand name="fetchAnnotationPointData"
                              process="@this"
                              update=":rightForm:funcTable:headerPanel"
                              oncomplete="PF('funcTable').filter()"
-                             actionListener="#{geneView.fetchAnnotationPointData}"/>
+                             action="#{geneView.fetchAnnotationPointData}"/>
             <p:remoteCommand name="fetchAnnotationComparisonData"
                              process="@this"
                              update=":rightForm:funcTable:tagFilter, :rightForm:funcTable:headerPanel"
                              oncomplete="PF('funcTable').filter()"
-                             actionListener="#{geneView.fetchAnnotationComparisonData()}"/>
+                             action="#{geneView.fetchAnnotationComparisonData()}"/>
             <p:remoteCommand name="addAnnotationComparisonData"
                              process="@this"
                              update=":rightForm:funcTable:tagFilter, :rightForm:funcTable:headerPanel"
                              oncomplete="PF('funcTable').filter()"
-                             actionListener="#{geneView.addAnnotationComparisonData()}"/>
+                             action="#{geneView.addAnnotationComparisonData()}"/>
 
             <p:remoteCommand name="fetchTimelinePointData"
                              update=":viewAnnotationsDlg"
                              oncomplete="showViewAnnotationsDlg();"
                              action="#{geneView.fetchTimelinePointData()}"/>
-
-            <p:remoteCommand name="fetchGraph"
-                             oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
-                             actionListener="#{geneView.fetchTermGraph}"/>
 
 
         </h:form>

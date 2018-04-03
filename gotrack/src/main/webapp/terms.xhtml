@@ -98,19 +98,19 @@
             <h:form id="centerTabViewForm" style="margin:0 25px 0 25px;">
                 <p:remoteCommand name="fetchDAGData" async="true"
                                  oncomplete="handleFetchDAGData(xhr, status, args);"
-                                 actionListener="#{termView.fetchDAGData()}"/>
+                                 action="#{termView.fetchDAGData()}"/>
                 <p:remoteCommand name="fetchOverviewChart" async="true"
                                  oncomplete="handleFetchOverviewChart(xhr, status, args);"
-                                 actionListener="#{termView.fetchOverviewChart()}"/>
+                                 action="#{termView.fetchOverviewChart()}"/>
                 <p:remoteCommand name="fetchGeneChart" async="true"
                                  oncomplete="handleFetchGeneChart(xhr, status, args);"
-                                 actionListener="#{termView.fetchGeneChart()}"/>
+                                 action="#{termView.fetchGeneChart()}"/>
                 <p:remoteCommand name="fetchEvidenceChart" async="true"
                                  oncomplete="handleFetchEvidenceChart(xhr, status, args);"
-                                 actionListener="#{termView.fetchEvidenceChart()}"/>
+                                 action="#{termView.fetchEvidenceChart()}"/>
                 <p:remoteCommand name="fetchGraph"
                                  oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
-                                 actionListener="#{termView.fetchGraph()}"/>
+                                 action="#{termView.fetchGraph()}"/>
 
                 <div style="white-space: nowrap; min-width: 1000px;">
                     <div style="padding: 10px 30px 10px 30px; ">
@@ -225,7 +225,7 @@
                                    target="_blank" style="text-decoration: none;">
                                     <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
                                 </a>
-                                <p:commandLink actionListener="#{geneView.fetchTermGraph(child.relation)}"
+                                <p:commandLink action="#{geneView.fetchTermGraph(child.relation)}"
                                                oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
                                     <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
                                 </p:commandLink>

@@ -115,7 +115,7 @@
                     <h:form id="centerTabViewForm" style="margin:0 25px 0 25px;" prependId="false">
                         <p:remoteCommand name="fetchCharts" async="true"
                                          oncomplete="handleFetchCharts(xhr, status, args);"
-                                         actionListener="#{trends.loadCharts(sessionManager.species)}"/>
+                                         action="#{trends.loadCharts(sessionManager.species)}"/>
                         <p:outputPanel class="chart-container">
                             <p:panelGrid columns="2" styleClass="no-border" style="margin: 0 auto;">
                                 <p:outputPanel styleClass=" chart-panel well">
