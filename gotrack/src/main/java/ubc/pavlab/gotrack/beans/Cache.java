@@ -1192,6 +1192,17 @@ public class Cache implements Serializable {
         return null;
     }
 
+    public GeneOntologyTerm getTerm( GOEdition ed, String goId ) {
+        if ( goId == null || ed == null ) {
+            return null;
+        }
+        GeneOntology o = ontologies.get( ed );
+        if ( o != null ) {
+            return o.getTerm( goId );
+        }
+        return null;
+    }
+
     /**
      * Will always contain ever GO Edition in keyset as editions where the term did not exist will have null values
      *

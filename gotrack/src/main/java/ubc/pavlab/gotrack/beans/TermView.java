@@ -261,6 +261,7 @@ public class TermView implements Serializable {
 
         hcGsonMap.put( "dateToGOEditionId", dateToGOEditionId );
         hcGsonMap.put( "dateToNameChange", dateToNameChange );
+        hcGsonMap.put( "goId", currentTerm.getGoId() );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_overview", new Gson().toJson( hcGsonMap ) );
 
@@ -384,49 +385,6 @@ public class TermView implements Serializable {
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( evidenceChart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_evidence", new Gson().toJson( hcGsonMap ) );
-    }
-
-    /**
-     * Fetch data necessary to create a ancestry DAG for a given edition (and possibly overlay changes from previous
-     * edition)
-     */
-    public void fetchGraph() {
-
-        Integer goEditionId = Integer.valueOf(
-                FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
-
-        Boolean showDiff = Boolean.valueOf(
-                FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "showDiff" ) );
-
-        GOEdition selectedEdition = cache.getGOEdition( goEditionId );
-
-        GeneOntologyTerm selectedTerm = trackedTerms.get( selectedEdition );
-
-        Graph graph = null;
-
-        if ( showDiff ) {
-
-            GOEdition compareEdition = null;
-
-            for ( GOEdition goEdition : trackedTerms.keySet() ) {
-                if ( goEdition.equals( selectedEdition ) ) {
-                    break;
-                }
-
-                compareEdition = goEdition;
-
-            }
-
-            if ( compareEdition != null ) {
-                graph = Graph.fromGODiff( trackedTerms.get( compareEdition ), selectedTerm );
-            }
-        }
-
-        if ( graph == null ) {
-            graph = Graph.fromGO( selectedTerm );
-        }
-
-        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
     }
 
 }

@@ -178,7 +178,7 @@
                            target="_blank" style="text-decoration: none;">
                             <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
                         </a>
-                        <p:commandLink action="#{geneView.fetchTermGraph(termRow.term)}"
+                        <p:commandLink action="#{graphFactory.fetchGraph(termRow.term)}"
                                        oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
                             <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
                         </p:commandLink>
@@ -250,7 +250,7 @@
                         <p:commandButton icon="ui-icon-search" widgetVar="viewTermsWdg"
                                          value="View Annotation History" oncomplete="fetchTimeline()"/>
                         <p:commandButton icon="fa fa-sitemap" widgetVar="viewGOGraphWdg" value="View GO Graph"
-                                         action="#{geneView.fetchTermGraphFromSelected()}"
+                                         action="#{graphFactory.fetchGraph(geneView.rightPanelSelectedGeneOntologyTerms)}"
                                          oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"/>
                     </f:facet>
                 </p:dataTable>

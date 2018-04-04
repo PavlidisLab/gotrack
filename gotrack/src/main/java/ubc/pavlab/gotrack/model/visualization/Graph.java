@@ -98,6 +98,9 @@ public class Graph {
     }
 
     public static Graph fromGODiff( GeneOntologyTerm term1, GeneOntologyTerm term2 ) {
+        if (term1 == null || term2 == null) {
+            return null;
+        }
         return Graph.fromGODiff( Collections.singleton( term1 ), Collections.singleton( term2 ) );
     }
 

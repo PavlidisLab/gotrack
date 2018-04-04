@@ -109,7 +109,9 @@ function handleFetchEvidenceChart(xhr, status, args) {
 
 function handleFetchGraphDialog(xhr, status, args) {
     // console.log(args);
-    CS.dialogGraph = gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
+    if (!$.isEmptyObject(args)) {
+        CS.dialogGraph = gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
+    }
     // CS.dialogGraph = createVisGraph(args, "#dagDialog");
 }
 
@@ -131,12 +133,16 @@ function createOverviewChart(args) {
             grouping: false,
             point: {
                 events: {
-                    click: function () {
-                        if (this.y !== 0) {
-                            fetchGraph([{name: 'edition', value: dateToGOEditionId[this.x]}, {
-                                name: 'showDiff',
-                                value: this.y === 1
-                            }]);
+                    click: function (e) {
+                        if (this.y === 1) {
+                            var indexAmongAllEditions = this.series.chart.series[2].xData.indexOf(this.x);
+                            var previousX = this.series.chart.series[2].xData[indexAmongAllEditions-1];
+                            fetchGraphDiff([{name: 'goId', value: args.HC_overview.goId},
+                                {name: 'edition', value: dateToGOEditionId[this.x]},
+                                {name: 'compareEdition', value: dateToGOEditionId[previousX]}]);
+                        } else if (this.y === 2) {
+                            fetchGraph([{name: 'goId', value: args.HC_overview.goId},
+                                {name: 'edition', value: dateToGOEditionId[this.x]}]);
                         }
                     }
                 }

@@ -110,7 +110,7 @@
                target="_blank" style="text-decoration: none;">
                 <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
             </a>
-            <p:commandLink action="#{geneView.fetchTermGraph(entry.term)}"
+            <p:commandLink action="#{graphFactory.fetchGraph(entry.term)}"
                            oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
                 <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
             </p:commandLink>

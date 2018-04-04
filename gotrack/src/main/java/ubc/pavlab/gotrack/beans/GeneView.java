@@ -35,7 +35,6 @@ import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.table.GeneViewRightPanelRow;
-import ubc.pavlab.gotrack.model.visualization.Graph;
 import ubc.pavlab.gotrack.utilities.Jaccard;
 
 import javax.annotation.PostConstruct;
@@ -804,32 +803,11 @@ public class GeneView implements Serializable {
         filteredViewAnnotations = null;
     }
 
-    public void fetchTermGraph( GeneOntologyTerm term ) {
-        Graph graph = Graph.fromGO( term );
-        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
-    }
-
-    public void fetchTermGraphFromSelected() {
-        Collection<GeneOntologyTerm> terms = Collections2.transform( rightPanelSelectedTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
-            @Override
-            public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
-                return row.getTerm();
-            }
-        } );
-        Graph graph = Graph.fromGO( terms );
-        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
-    }
-
     public void fetchEditionsForSelectedTerms() {
         List<Long> missingEditionDates = Lists.newArrayList();
         ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>> inferred = rawData.get( AnnotationType.I );
 
-        Collection<GeneOntologyTerm> terms = Collections2.transform( rightPanelSelectedTerms, new Function<GeneViewRightPanelRow, GeneOntologyTerm>() {
-            @Override
-            public GeneOntologyTerm apply( GeneViewRightPanelRow row ) {
-                return row.getTerm();
-            }
-        } );
+        Collection<GeneOntologyTerm> terms = rightPanelSelectedTerms.stream().map( GeneViewRightPanelRow::getTerm ).collect( Collectors.toSet() );
 
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> editionMapEntry : inferred.rowMap().entrySet() ) {
             Edition edition = editionMapEntry.getKey();
@@ -910,6 +888,9 @@ public class GeneView implements Serializable {
         this.rightPanelTerms = rightPanelTerms;
     }
 
+    public List<GeneOntologyTerm> getRightPanelSelectedGeneOntologyTerms() {
+        return rightPanelSelectedTerms.stream().map( GeneViewRightPanelRow::getTerm ).collect( Collectors.toList() );
+    }
     public List<GeneViewRightPanelRow> getRightPanelSelectedTerms() {
         return rightPanelSelectedTerms;
     }
