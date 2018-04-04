@@ -28,7 +28,6 @@ import lombok.Setter;
 import lombok.extern.java.Log;
 import org.primefaces.context.RequestContext;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
-import ubc.pavlab.gotrack.beans.service.StatsService;
 import ubc.pavlab.gotrack.exception.TermNotFoundException;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GOEdition;
@@ -47,8 +46,11 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.Serializable;
 import java.sql.Date;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -68,9 +70,6 @@ public class TermView implements Serializable {
     private Cache cache;
 
     @Inject
-    private StatsService statsService;
-
-    @Inject
     private AnnotationService annotationService;
 
     @Inject
@@ -86,16 +85,6 @@ public class TermView implements Serializable {
 
     @Getter
     private GeneOntologyTerm currentTerm;
-
-    @Getter
-    private String definition;
-
-    @Getter
-    private List<GOEdition> allGOEditions;
-
-    // Data
-    @Getter
-    private Map<GOEdition, GeneOntologyTerm> trackedTerms = null;
 
     public TermView() {
         log.info( "TermView created" );
@@ -115,15 +104,9 @@ public class TermView implements Serializable {
      * This is kept lightweight so that the page loads quickly and lazy loads the data using remote commands
      */
     public String init() throws TermNotFoundException {
-        if ( FacesContext.getCurrentInstance().getPartialViewContext().isAjaxRequest() ) {
-            return null; // Skip ajax requests.
-        }
         log.info( "TermView init" );
 
-        GOEdition currentGOEdition = cache.getCurrentGOEdition();
-
         if ( query == null ) {
-            trackedTerms = null;
             return null;
         }
 
@@ -133,34 +116,11 @@ public class TermView implements Serializable {
 
         }
 
-        // Get ordered map
+        currentTerm = cache.getCurrentTerm( query );
 
-        Map<GOEdition, GeneOntologyTerm> temp = cache.getTerm( query );
-
-        if ( temp == null || temp.isEmpty() ) {
-            // gene symbol not found
+        if ( currentTerm == null ) {
+            // not found
             throw new TermNotFoundException();
-            /*
-             * FacesContext facesContext = FacesContext.getCurrentInstance(); NavigationHandler navigationHandler =
-             * facesContext.getApplication().getNavigationHandler(); navigationHandler.handleNavigation( facesContext,
-             * null, "error400?faces-redirect=true" );
-             */
-        } else {
-
-            trackedTerms = temp.entrySet().stream().sorted( Entry.comparingByKey() )
-                    .collect( LinkedHashMap::new, ( m, e ) -> m.put( e.getKey(), e.getValue() ), LinkedHashMap::putAll );
-
-            currentTerm = trackedTerms.get( currentGOEdition );
-
-            allGOEditions = trackedTerms.entrySet().stream()
-                    .filter( ( e ) -> e.getValue() != null )
-                    .map( Entry::getKey )
-                    .sorted()
-                    .collect( Collectors.toList() );
-
-            definition = cache.getCurrentDefinition( currentTerm );
-
-            statsService.countTermHit( currentTerm );
 
         }
 
@@ -216,39 +176,44 @@ public class TermView implements Serializable {
         Series nameChange = new Series( "Name Change" );
         Graph prevEles = null;
         String prevName = null;
-        for ( Entry<GOEdition, GeneOntologyTerm> entry : trackedTerms.entrySet() ) {
-            GeneOntologyTerm t = entry.getValue();
-            existSeries.addDataPoint( entry.getKey().getDate().getTime(), t != null ? 1 : 0 );
-            dateToGOEditionId.put( entry.getKey().getDate().getTime(), entry.getKey().getId() );
+
+        Collection<GOEdition> sortedGOEditions = cache.getAllGOEditions().stream().sorted().collect( Collectors.toList() );
+
+        for ( GOEdition goEdition : sortedGOEditions ) {
+            GeneOntologyTerm t = cache.getTerm( goEdition, currentTerm.getGoId() );
+            long time = goEdition.getDate().getTime();
+
+            existSeries.addDataPoint( time, t != null ? 1 : 0 );
+            dateToGOEditionId.put( time, goEdition.getId() );
             if ( t != null ) {
 
                 Graph eles = Graph.fromGO( t );
 
                 if ( prevEles != null ) {
                     Graph diff = Graph.fromGraphDiff( prevEles, eles );
-                    structureSeries.addDataPoint( entry.getKey().getDate().getTime(), diff != null ? 1 : 0 );
+                    structureSeries.addDataPoint( time, diff != null ? 1 : 0 );
                 } else {
-                    structureSeries.addDataPoint( entry.getKey().getDate().getTime(), -1 );
+                    structureSeries.addDataPoint( time, -1 );
                 }
 
                 if ( prevName != null ) {
                     int changed = t.getName().equals( prevName ) ? 0 : 1;
-                    nameChange.addDataPoint( entry.getKey().getDate().getTime(), changed );
+                    nameChange.addDataPoint( time, changed );
                     if ( changed == 1 ) {
-                        dateToNameChange.put( entry.getKey().getDate().getTime(),
+                        dateToNameChange.put( time,
                                 new String[]{prevName, t.getName()} );
                     }
 
                 } else {
-                    nameChange.addDataPoint( entry.getKey().getDate().getTime(), -1 );
+                    nameChange.addDataPoint( time, -1 );
                 }
 
                 prevEles = eles;
                 prevName = t.getName();
 
             } else {
-                structureSeries.addDataPoint( entry.getKey().getDate().getTime(), -1 );
-                nameChange.addDataPoint( entry.getKey().getDate().getTime(), -1 );
+                structureSeries.addDataPoint( time, -1 );
+                nameChange.addDataPoint( time, -1 );
             }
         }
 
@@ -291,7 +256,8 @@ public class TermView implements Serializable {
                 series.put( sp, s );
                 directSeries.put( sp, s2 );
                 for ( Edition ed : eds ) {
-                    GeneOntologyTerm t = trackedTerms.get( ed.getGoEdition() );
+                    GeneOntologyTerm t = cache.getTerm( ed.getGoEdition(), currentTerm.getGoId() );
+
                     if ( t != null ) {
                         // If term existed
                         if ( cache.getAggregate( ed ) != null ) {

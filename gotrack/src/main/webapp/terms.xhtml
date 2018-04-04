@@ -10,7 +10,7 @@
         <f:metadata>
             <f:viewParam id="query" name="query" value="#{termView.query}"/>
             <f:viewParam id="allSpecies" name="allSpecies" value="#{termView.allSpecies}" required="false"/>
-            <f:event type="preRenderView" listener="#{termView.init}"/>
+            <f:viewAction action="#{termView.init}" />
         </f:metadata>
     </ui:define>
     <ui:define name="pageTitle">GOtrack</ui:define>
@@ -41,7 +41,7 @@
         <h:outputScript library="js" name="gograph.js"/>
         <h:outputScript library="js" name="term.js"/>
 
-        <h:outputScript rendered="#{termView.trackedTerms != null}">
+        <h:outputScript rendered="#{termView.currentTerm != null}">
             $(document).ready(function () {
                 fetchCharts();
             });
@@ -53,7 +53,7 @@
     </ui:define>
 
     <ui:define name="center_layout">
-        <p:outputPanel rendered="#{termView.trackedTerms != null}">
+        <p:outputPanel rendered="#{termView.currentTerm != null}">
             <div id="page-title" style="position:relative;max-width:800px;margin:0 auto;width: fit-content;">
                 <h1>                                   <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{termView.currentTerm.goId}"
                                                           target="_blank" style="text-decoration: none;">
@@ -61,7 +61,7 @@
                 </a>
                     #{termView.currentTerm.goId} - #{termView.currentTerm.name}</h1>
                 <h3>#{termView.currentTerm.aspect.label}</h3>
-                <p>#{termView.definition}</p>
+                <p>#{cache.getCurrentDefinition( termView.currentTerm )}</p>
 
                 <div style="width:75px;height:100%;position:absolute;top:0;right:-95px;" >
                     <p:overlayPanel for="currentancestryHelpBtn" appendToBody="true" hideEffect="fade">
@@ -251,7 +251,7 @@
             </h:form>
         </p:outputPanel>
 
-        <p:outputPanel rendered="#{termView.trackedTerms == null}">
+        <p:outputPanel rendered="#{termView.currentTerm == null}">
             <h:form>
                 <h3 style="text-align: center;">Track a Term</h3>
                 <p:panelGrid style="margin-bottom:10px" cellpadding="5"
