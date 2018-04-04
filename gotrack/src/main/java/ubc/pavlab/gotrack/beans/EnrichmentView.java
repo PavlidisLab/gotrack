@@ -260,7 +260,7 @@ public class EnrichmentView implements Serializable {
         log.info( "EnrichmentView init" );
         if ( FacesContext.getCurrentInstance().getApplication().getProjectStage() == ProjectStage.Development ) {
             FacesContext.getCurrentInstance().addMessage( "betaMessage", new FacesMessage( FacesMessage.SEVERITY_WARN,
-                    "This is the DEVELOPMENT version of GOTrack!", null ) );
+                    "This is the DEVELOPMENT version of GOTrack!", "" ) );
         }
         if ( combinedAnalysis != null && combinedAnalysis.isSuccess() ) {
             // When loading a previous analysis, we want to show the gene hit list that is associated with it, 

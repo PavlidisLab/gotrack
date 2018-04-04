@@ -129,7 +129,7 @@ public class TermView implements Serializable {
 
         if ( FacesContext.getCurrentInstance().getApplication().getProjectStage() == ProjectStage.Development ) {
             FacesContext.getCurrentInstance().addMessage( "betaMessage", new FacesMessage( FacesMessage.SEVERITY_WARN,
-                    "This is the DEVELOPMENT version of GOTrack!", null ) );
+                    "This is the DEVELOPMENT version of GOTrack!", "" ) );
 
         }
 

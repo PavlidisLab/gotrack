@@ -5,6 +5,7 @@
       xmlns:f="http://java.sun.com/jsf/core"
       xmlns:ui="http://java.sun.com/jsf/facelets"
       xmlns:p="http://primefaces.org/ui"
+      xmlns:o="http://omnifaces.org/ui"
 >
 
 <f:view contentType="text/html">
@@ -37,6 +38,7 @@
     <h:body id="body" onload="onLoad()">
         <p:layout fullPage="true" onResize="centerResize()">
             <p:growl id="globalGrowl" globalOnly="true" autoUpdate="true" life="5000" escape="false"/>
+            <p:growl widgetVar="stickyGrowl" escape="false" sticky="true" showDetail="true" for="betaMessage"/>
             <p:layoutUnit id="top" position="north" size="50">
                 <h:form id="topForm">
                     <p:menubar toggleEvent="click" style="border: 1px solid transparent">
@@ -70,13 +72,25 @@
             <ui:insert name="left_right_layout"/>
 
             <p:layoutUnit id="center" position="center">
-                <p:messages for="betaMessage" closable="true"/>
+                <!--<p:messages for="betaMessage" closable="true"/>-->
 
                 <ui:insert name="center_layout"/>
 
             </p:layoutUnit>
 
         </p:layout>
+
+        <o:socket channel="sessionTimeout" scope="session" onclose="sessionScopedSocketCloseListener" onmessage="socketListener" />
+        <script type="text/javascript">
+            function sessionScopedSocketCloseListener(code) {
+                if (code == 1000) {
+                    PF("stickyGrowl").renderMessage({severity: "warn", summary: "Session has expired!", detail: "Please refresh the page." });
+                }
+            }
+            function socketListener(message, channel, event) {
+                console.log(message);
+            }
+        </script>
 
         <ui:insert name="dialogs"/>
 
