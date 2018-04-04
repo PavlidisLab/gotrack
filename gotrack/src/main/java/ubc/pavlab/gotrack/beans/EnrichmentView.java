@@ -19,11 +19,11 @@
 
 package ubc.pavlab.gotrack.beans;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import jersey.repackaged.com.google.common.collect.Lists;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.java.Log;

@@ -22,7 +22,6 @@ package ubc.pavlab.gotrack.converter;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.beans.SessionManager;
 import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.Species;
 
 import javax.faces.application.FacesMessage;
 import javax.faces.component.UIComponent;
@@ -37,7 +36,7 @@ import javax.inject.Inject;
  * 
  * @author mjacobson
  */
-@FacesConverter("editionConverter")
+@FacesConverter(value="editionConverter", managed = true)
 public class EditionConverter implements Converter {
 
     @Inject
@@ -45,6 +44,9 @@ public class EditionConverter implements Converter {
 
     @Inject
     private SessionManager session;
+
+    public EditionConverter() {
+    }
 
     @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {

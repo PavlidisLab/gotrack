@@ -38,11 +38,14 @@ import javax.inject.Inject;
  * @author mjacobson
  * @version $Id$
  */
-@FacesConverter("geneMatchConverter")
+@FacesConverter(value="geneMatchConverter", managed = true)
 public class GeneMatchConverter implements Converter {
 
     @Inject
     private Cache cache;
+
+    public GeneMatchConverter() {
+    }
 
     @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String accession ) {

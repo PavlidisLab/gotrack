@@ -21,8 +21,8 @@ package ubc.pavlab.gotrack.rest;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableTable;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import jersey.repackaged.com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;

@@ -19,8 +19,8 @@
 
 package ubc.pavlab.gotrack.rest;
 
-import jersey.repackaged.com.google.common.collect.Maps;
-import jersey.repackaged.com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;

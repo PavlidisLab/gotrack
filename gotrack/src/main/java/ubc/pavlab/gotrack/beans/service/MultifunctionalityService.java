@@ -19,8 +19,9 @@
 
 package ubc.pavlab.gotrack.beans.service;
 
-import jersey.repackaged.com.google.common.collect.Lists;
-import jersey.repackaged.com.google.common.collect.Maps;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;

@@ -1,6 +1,6 @@
 package ubc.pavlab.gotrack.analysis;
 
-import jersey.repackaged.com.google.common.collect.Lists;
+import com.google.common.collect.Lists;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
