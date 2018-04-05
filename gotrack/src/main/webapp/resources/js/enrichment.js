@@ -242,6 +242,84 @@ function commonOptions(options, config) {
     };
 }
 
+function handleGraphHistogram(xhr, status, args) {
+    try {
+        args.HC_histo = JSON.parse(args.HC_histo);
+        args.edition = JSON.parse(args.edition);
+    } catch (e) {
+        console.log(e);
+        return;
+    }
+
+    console.log(args);
+    args.HC_histo.sort(function(a, b) {
+        return a - b;
+    });
+
+    var chart = {
+        title:"P-Value Distribution",
+        subtitle: 'Edition ' + args.edition.edition + ' : ' + args.edition.date,
+        series:[]
+    };
+
+    var options = plotting.defaultHCOptions('hc_chart_dlg_container', chart);
+
+    options.xAxis = [{
+        title: { text: 'P-Value' },
+        alignTicks: false
+    },{
+        title: { text: 'Rank (Scatter)' },
+        alignTicks: false,
+        opposite: true
+    }];
+
+    options.yAxis = [{
+        title: { text: 'Number of Terms' }
+    },{
+        title: { text: 'P-Value (Scatter)' },
+        opposite: true
+        // type: 'logarithmic'
+    }];
+
+    options.series = [{
+        name: 'Histogram',
+        type: 'histogram',
+        baseSeries: 's1',
+        zIndex: -1,
+        tooltip: {
+            pointFormatter: function () {
+                return '<span style="font-size:10px">' + utility.sigFigs(this.x, 2) + ' - ' + utility.sigFigs(this.x2, 2) + '</span><br/><span style="color:' + this.color + '">\u25CF</span> Number of Terms: <b>' + this.y + '</b><br/>';
+            }
+        }
+    }, {
+        name: 'Data',
+        type: 'scatter',
+        xAxis: 1,
+        yAxis: 1,
+        data: args.HC_histo,
+        id: 's1',
+        marker: {
+            radius: 1.5
+        },
+        tooltip: {
+            pointFormatter: function () {
+                return '<br/>Rank: <b>' + this.x + '</b>'
+                    + '<br/>P-Value: <b>' + utility.sigFigs(this.y, 2) + '</b><br/>';
+            }
+        }
+    }];
+    delete options.colors;
+
+    plotting.addLegend(options);
+    options.legend = {
+        align: 'center',
+        verticalAlign: 'bottom',
+        layout: 'horizontal'
+    };
+
+    Highcharts.chart('hc_chart_dlg_container', options);
+}
+
 function handleGraphSelected(xhr, status, args) {
     try {
         args.HC_enrichment = JSON.parse(args.HC_enrichment);

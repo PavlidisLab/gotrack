@@ -55,6 +55,7 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * View bean based around the enrichment functionality of GOTrack.
@@ -431,6 +432,19 @@ public class EnrichmentView implements Serializable {
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_similarity", new Gson().toJson( hcGsonMap ) );
 
+    }
+
+    /**
+     * Create P-value Histogram
+     */
+    public void createPValueHistogram() {
+        // Create P-value Histogram
+        List<Double> pvalues = combinedAnalysis.getEnrichmentAnalysis().getRawResults().get( enrichmentTableEdition ).getResults().values()
+                .stream()
+                .map( EnrichmentResult::getPvalue )
+                .collect( Collectors.toList() );
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_histo", new Gson().toJson( pvalues ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "edition", new Gson().toJson( enrichmentTableEdition ) );
     }
 
     /**
