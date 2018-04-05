@@ -41,6 +41,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import java.util.*;
@@ -81,7 +82,7 @@ public class GeneEP {
     @GET
     @Path("/complete/species/{speciesId}/symbol/{symbols}")
     public Response complete( @PathParam("speciesId") Integer speciesId, @PathParam("symbols") String symbolsString,
-            @QueryParam("year") Integer year, @QueryParam("month") Integer month,
+            @QueryParam("year") Integer year, @QueryParam("month") Integer month, @QueryParam("directOnly") Boolean directOnly,
             @QueryParam("minimal") Boolean minimal ) {
         log.info( symbolsString );
         List<String> symbols = Arrays.asList( symbolsString.split( "," ) );
@@ -92,22 +93,23 @@ public class GeneEP {
             Species species = cache.getSpecies( speciesId );
 
             if ( species == null ) {
-                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).build();
+                return Response.status( 400 ).entity( fail( "Unknown Species ID" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             Edition closestEdition = null;
 
             minimal = minimal == null ? true : minimal;
+            directOnly = directOnly == null ? false : directOnly;
 
             if ( month != null && year != null ) {
                 Calendar c = Calendar.getInstance();
 
                 // Get date
                 if ( month < 1 || month > 12 ) {
-                    return Response.status( 400 ).entity( fail( 400, "Invalid month." ).toString() ).build();
+                    return Response.status( 400 ).entity( fail( "Invalid month." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
                 }
                 if ( year < 1990 || year > c.get( Calendar.YEAR ) ) {
-                    return Response.status( 400 ).entity( fail( 400, "Invalid year." ).toString() ).build();
+                    return Response.status( 400 ).entity( fail( "Invalid year." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
                 }
 
                 c.set( year, month - 1, 1, 0, 0 );
@@ -118,8 +120,8 @@ public class GeneEP {
             } else {
                 if ( month != null || year != null ) {
                     return Response.status( 400 )
-                            .entity( fail( 400, "Malformed Date, requires year={int}&month={int}" ).toString() )
-                            .build();
+                            .entity( fail( "Malformed Date, requires year={int}&month={int}" ).toString() )
+                            .type( MediaType.APPLICATION_JSON ).build();
                 }
             }
 
@@ -150,7 +152,7 @@ public class GeneEP {
                     }
 
                     for ( Edition ed : editionsToIterate ) {
-                        Map<GeneOntologyTerm, Set<Annotation>> termsMap = data.get( AnnotationType.I ).rowMap()
+                        Map<GeneOntologyTerm, Set<Annotation>> termsMap = data.get( directOnly ? AnnotationType.D : AnnotationType.I ).rowMap()
                                 .get( ed );
                         Set<GeneOntologyTerm> directTerms = directSets.get( ed ).keySet();
                         JSONObject editionResults = new JSONObject();
@@ -177,16 +179,15 @@ public class GeneEP {
             // Attach Species
             response.put( "species", new JSONObject( species ) );
 
-            response.put( "httpstatus", 202 );
             response.put( "success", true );
         } catch ( JSONException e1 ) {
             log.error( "Malformed JSON", e1 );
-            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).build();
+            return Response.status( 400 ).entity( fail( "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         } catch ( Exception e1 ) {
             log.error( "Something went wrong!", e1 );
-            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).build();
+            return Response.status( 500 ).entity( fail( e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
-        return Response.status( 202 ).entity( response.toString() ).build();
+        return Response.ok( response.toString(), MediaType.APPLICATION_JSON ).build();
 
     }
 
@@ -207,7 +208,7 @@ public class GeneEP {
             Species species = cache.getSpecies( speciesId );
 
             if ( species == null ) {
-                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).build();
+                return Response.status( 400 ).entity( fail( "Unknown Species ID" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             Edition closestEdition = null;
@@ -219,10 +220,10 @@ public class GeneEP {
 
                 // Get date
                 if ( month < 1 || month > 12 ) {
-                    return Response.status( 400 ).entity( fail( 400, "Invalid month." ).toString() ).build();
+                    return Response.status( 400 ).entity( fail( "Invalid month." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
                 }
                 if ( year < 1990 || year > c.get( Calendar.YEAR ) ) {
-                    return Response.status( 400 ).entity( fail( 400, "Invalid year." ).toString() ).build();
+                    return Response.status( 400 ).entity( fail( "Invalid year." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
                 }
 
                 c.set( year, month - 1, 1, 0, 0 );
@@ -233,8 +234,8 @@ public class GeneEP {
             } else {
                 if ( month != null || year != null ) {
                     return Response.status( 400 )
-                            .entity( fail( 400, "Malformed Date, requires year={int}&month={int}" ).toString() )
-                            .build();
+                            .entity( fail( "Malformed Date, requires year={int}&month={int}" ).toString() )
+                            .type( MediaType.APPLICATION_JSON ).build();
                 }
             }
 
@@ -279,23 +280,21 @@ public class GeneEP {
             // Attach Species
             response.put( "species", new JSONObject( species ) );
 
-            response.put( "httpstatus", 202 );
             response.put( "success", true );
         } catch ( JSONException e1 ) {
             log.error( "Malformed JSON", e1 );
-            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).build();
+            return Response.status( 400 ).entity( fail( "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         } catch ( Exception e1 ) {
             log.error( "Something went wrong!", e1 );
-            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).build();
+            return Response.status( 500 ).entity( fail( e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
-        return Response.status( 202 ).entity( response.toString() ).build();
+        return Response.ok( response.toString(), MediaType.APPLICATION_JSON ).build();
 
     }
 
-    private static JSONObject fail( int httpStatus, String message ) {
+    private static JSONObject fail( String message ) {
         JSONObject response = new JSONObject();
         try {
-            response.put( "httpstatus", httpStatus );
             response.put( "success", false );
             response.put( "message", message );
         } catch ( JSONException e1 ) {
@@ -447,7 +446,7 @@ public class GeneEP {
         }
 
         if ( direct ) {
-            entryJSON.put( "direct", "Y" );
+            entryJSON.put( "direct", true );
         }
 
         return entryJSON;
