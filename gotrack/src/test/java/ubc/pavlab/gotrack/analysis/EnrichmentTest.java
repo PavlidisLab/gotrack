@@ -48,8 +48,8 @@ public class EnrichmentTest extends BaseTest {
     private List<GeneOntologyTerm> terms;
     private List<Gene> genes;
 
-    private StandardPopulation<GeneOntologyTerm, Gene> sample;
-    private StandardPopulation<GeneOntologyTerm, Gene> population;
+    private StandardCompletePopulation<GeneOntologyTerm, Gene> sample;
+    private StandardCompletePopulation<GeneOntologyTerm, Gene> population;
 
     @BeforeClass
     public static void classSetup() {
@@ -104,9 +104,9 @@ public class EnrichmentTest extends BaseTest {
         Map<GeneOntologyTerm, Set<Gene>> sampleMap = filterMap( geneGOMap, geneIds );
         //        log.info( sampleMap.size() );
         //        log.info( sampleMap.get( new GeneOntologyTerm( "GO:0000001" ) ) );
-        sample = Population.standardPopulation( sampleMap );
+        sample = CompletePopulation.standardCompletePopulation( sampleMap );
 
-        population = Population.standardPopulation( geneGOMap );
+        population = CompletePopulation.standardCompletePopulation( geneGOMap );
 
     }
 
@@ -367,10 +367,10 @@ public class EnrichmentTest extends BaseTest {
         GeneOntologyTerm t4 = new GeneOntologyTerm( "GO:0000004" );
 
         // Let's make t2 = t3 by mocking population counts, in other words I'm annotating Gene 3 with Term 2
-        StandardPopulation<GeneOntologyTerm, Gene> sampleSpy = Mockito.spy( sample );
+        StandardCompletePopulation<GeneOntologyTerm, Gene> sampleSpy = Mockito.spy( sample );
         Mockito.when( sampleSpy.countProperty( t2 ) ).thenReturn( 3 );
 
-        StandardPopulation<GeneOntologyTerm, Gene> populationSpy = Mockito.spy( population );
+        StandardCompletePopulation<GeneOntologyTerm, Gene> populationSpy = Mockito.spy( population );
         Mockito.when( populationSpy.countProperty( t2 ) ).thenReturn( 3 );
 
         e.runAnalysis( sampleSpy, populationSpy, Sets.newHashSet( t, t2, t3, t4 ) );
@@ -540,10 +540,10 @@ public class EnrichmentTest extends BaseTest {
         GeneOntologyTerm t4 = new GeneOntologyTerm( "GO:0000004" ); // Rejected
 
         // Let's make t2 = t3 by mocking population counts, in other words I'm annotating Gene 3 with Term 2
-        StandardPopulation<GeneOntologyTerm, Gene> sampleSpy = Mockito.spy( sample );
+        StandardCompletePopulation<GeneOntologyTerm, Gene> sampleSpy = Mockito.spy( sample );
         Mockito.when( sampleSpy.countProperty( t2 ) ).thenReturn( 3 );
 
-        StandardPopulation<GeneOntologyTerm, Gene> populationSpy = Mockito.spy( population );
+        StandardCompletePopulation<GeneOntologyTerm, Gene> populationSpy = Mockito.spy( population );
         Mockito.when( populationSpy.countProperty( t2 ) ).thenReturn( 3 );
 
         e.runAnalysis( sampleSpy, populationSpy, Sets.newHashSet( t, t2, t3, t4 ) );
@@ -748,9 +748,9 @@ public class EnrichmentTest extends BaseTest {
         Map<GeneOntologyTerm, Set<Gene>> sampleMap = filterMap( geneGOMap, geneIds );
         //        log.info( sampleMap.size() );
         //        log.info( sampleMap.get( new GeneOntologyTerm( "GO:0000001" ) ) );
-        sample = Population.standardPopulation( sampleMap );
+        sample = CompletePopulation.standardCompletePopulation( sampleMap );
 
-        population = Population.standardPopulation( geneGOMap );
+        population = CompletePopulation.standardCompletePopulation( geneGOMap );
 
         // run analysis X times, get average time
         long start = System.currentTimeMillis();

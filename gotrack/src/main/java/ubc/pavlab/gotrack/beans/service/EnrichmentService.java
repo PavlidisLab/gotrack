@@ -401,11 +401,11 @@ public class EnrichmentService implements Serializable {
 
         max = max < 1 ? Integer.MAX_VALUE : max;
 
-        Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, ed );
+        Population<GeneOntologyTerm> population = Population.cachedGOPopulation( cache, ed );
 
         Enrichment<GeneOntologyTerm, Gene> enrichment = new Enrichment<>( mtc, thresh, min, max );
 
-        enrichment.runAnalysis( Population.standardPopulation( data ), population );
+        enrichment.runAnalysis( CompletePopulation.standardCompletePopulation( data ), population );
 
         return enrichment;
     }
