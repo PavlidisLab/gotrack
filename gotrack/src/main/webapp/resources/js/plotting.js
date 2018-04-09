@@ -582,7 +582,8 @@
         });
     };
 
-    plotting.addSynchronization = function(options) {
+    plotting.addSynchronization = function(options, syncGroup) {
+        options.syncGroup = syncGroup;
         var that = this;
         $.extend(options.plotOptions.series, {
             point: {
