@@ -267,6 +267,7 @@
                 title: {
                     text: chart.xLabel
                 },
+                minTickInterval:  360 * 24 * 3600000,
                 minRange: 60 * 24 * 3600000 // fourteen days
             },
 
@@ -308,6 +309,69 @@
                 sourceHeight: 900,
                 csv: {
                     dateFormat: '%Y-%m-%d'
+                },
+                chartOptions: {
+                    chart: {
+                        events: {
+                            load: function () {
+                                var ids_to_remove = [];
+                                for (var i = 0; i < this.xAxis[0].plotLinesAndBands.length; i++) {
+                                    var pl = this.xAxis[0].plotLinesAndBands[i];
+                                    if (!ids_to_remove.includes(pl.id)) {
+                                        ids_to_remove.push(pl.id);
+                                    }
+                                }
+                                for (i = 0; i < ids_to_remove.length; i++) {
+                                    this.xAxis[0].removePlotLine(ids_to_remove[i]);
+                                }
+                            }
+                        }
+                    },
+                    title: {
+                        style: {
+                            fontSize: '3em'
+                        }
+                    },
+                    subtitle: {
+                        style: {
+                            fontSize: '2em'
+                        }
+                    },
+                    legend: {
+                        itemStyle: {
+                            fontSize: '2em'
+                        },
+                        symbolPadding: 10,
+                        itemDistance: 50
+                    },
+                    xAxis: {
+                        tickPixelInterval: 150,
+                        title: {
+                            style: {
+                                fontSize: '3em'
+                            }
+                        },
+                        labels: {
+                            style: {
+                                fontSize: '3em'
+                            }
+                        }
+
+                    },
+                    yAxis: {
+                        title: {
+                            style: {
+                                fontSize: '3em'
+                            },
+                            margin: 30
+                        },
+                        labels: {
+                            style: {
+                                fontSize: '3em'
+                            }
+                        }
+
+                    }
                 }
             }
         };
@@ -459,10 +523,10 @@
                     // The toggling of the text is not using an official API, can break with version update!
                     if (this.yAxis[0].isLog) {
                         this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
-                        this.yAxis[0].update({type: 'linear', min: config.chart.min, max: config.chart.max});
+                        this.yAxis[0].update({type: 'linear', min: config.chart.min, max: config.chart.max, tickInterval: undefined});
                     } else {
                         this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
-                        this.yAxis[0].update({type: 'logarithmic', min: null, max: config.chart.max});
+                        this.yAxis[0].update({type: 'logarithmic', min: null, max: config.chart.max, tickInterval: 1});
                     }
 
                 },

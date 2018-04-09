@@ -153,6 +153,9 @@ function createTermsChart(xhr, status, args) {
         text: "<b>&lt;Click&gt;</b> to view enrichment results at a specific date.",
         style: {"font-size": "10px"}
     };
+    options.exporting.chartOptions.subtitle.text = ""; // Remove subtitle
+    options.exporting.chartOptions.legend.margin = 12;
+    options.exporting.chartOptions.legend.y = 0;
 
     plotting.charts.terms.options = options;
     plotting.charts.terms.recreate(options, function (c) {
@@ -171,6 +174,9 @@ function createSimilarityChart(xhr, status, args) {
         text: "<b>&lt;Click&gt;</b> to view similarity details at a specific date.",
         style: {"font-size": "10px"}
     };
+    options.exporting.chartOptions.subtitle.text = ""; // Remove subtitle
+    options.exporting.chartOptions.legend.margin = 12;
+    options.exporting.chartOptions.legend.y = 0;
 
     // options.yAxis.minorTickInterval = 0.05;
 
@@ -205,12 +211,16 @@ function redrawSelectedEditionPlotLine(c, p) {
 
 function commonOptions(options, config) {
     plotting.addLegend(options);
-    options.legend.layout = 'horizontal';
-    options.legend.align = 'center';
-    options.legend.verticalAlign = 'bottom';
-    options.legend.margin = 0;
+    options.legend = {
+        margin: 0,
+        verticalAlign: 'bottom',
+        y: 17
+    };
+    // options.legend.layout = 'horizontal';
+    // options.legend.align = 'center';
+    // options.legend.verticalAlign = 'bottom';
+    // options.legend.margin = 0;
 
-    options.credits = {enabled:false};
 
     var clickBehaviour = function (event, p) {
         fetchPointData([{name: 'edition', value: GLOBALS.dateToEdition[p.x]}]);
@@ -259,10 +269,27 @@ function handleGraphHistogram(xhr, status, args) {
     var chart = {
         title:"P-Value Distribution",
         subtitle: 'Edition ' + args.edition.edition + ' : ' + args.edition.date,
-        series:[]
+        series:[],
     };
 
     var options = plotting.defaultHCOptions('hc_chart_dlg_container', chart);
+    options.exporting.chartOptions.xAxis.labels.rotation = -45;
+    options.exporting.chartOptions.legend.enabled = false;
+
+    // Multiple axis does not merge additional export axis options. This is a workaround.
+    // See https://github.com/highcharts/highcharts/issues/2022
+    options.exporting.chartOptions.chart.events.load = function() {
+        // for (var i = 0; i < this.xAxis.length; i++) {
+        //     this.xAxis[i].update(options.exporting.chartOptions.xAxis);
+        // }
+        // for (i = 0; i < this.yAxis.length; i++) {
+        //     this.yAxis[i].update(options.exporting.chartOptions.yAxis);
+        // }
+        this.xAxis[1].update({visible: false});
+        this.yAxis[1].update({visible: false});
+        this.series[1].update({visible: false});
+
+    };
 
     options.xAxis = [{
         title: { text: 'P-Value' },
@@ -338,6 +365,7 @@ function handleGraphSelected(xhr, status, args) {
     options.subtitle = {
         text: 'Select an area by dragging across the lower chart'
     };
+    options.exporting.chartOptions.subtitle.text = ""; // Remove subtitle
     options.plotOptions.series.states = {
         hover: {
             lineWidth: 2

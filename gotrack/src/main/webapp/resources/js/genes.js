@@ -126,6 +126,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
     console.log('handleFetchAnnotationChart', args);
 
     var options = plotting.defaultHCOptions('hc_annotation_container', args.HC.chart);
+    options.exporting.chartOptions.subtitle.text = ""; // Remove subtitle
     commonOptions(options, args.HC);
 
     options.subtitle = {

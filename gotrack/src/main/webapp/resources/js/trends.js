@@ -34,6 +34,7 @@ function createOntSizeChart(chart) {
 
 function createTermsPerGeneChart(chart) {
     var options = plotting.defaultHCOptions('hc-termsPerGene', chart);
+    options.exporting.chartOptions.legend.enabled = true;
     plotting.addSynchronization(options, 2);
     commonOptions(options);
     createChart(options, 'termsPerGene');
@@ -55,6 +56,7 @@ function createMultiChart(chart) {
 
 function createSimilarityChart(chart) {
     var options = plotting.defaultHCOptions('hc-similarity', chart);
+    options.exporting.chartOptions.legend.enabled = true;
     plotting.addSynchronization(options, 3);
     commonOptions(options);
     createChart(options, 'similarity');
