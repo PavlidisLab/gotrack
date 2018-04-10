@@ -7,6 +7,7 @@
                 xmlns:fn="http://xmlns.jcp.org/jsp/jstl/functions"
                 xmlns:pe="http://primefaces.org/ui/extensions"
                 xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites"
+                xmlns:of="http://omnifaces.org/functions"
 >
     >
 
@@ -71,8 +72,8 @@
                         <p:column>
                             <p:selectOneMenu id="selectspecies"
                                              value="#{enrichmentView.selectedSpecies}" converter="speciesConverter">
-                                <p:ajax event="change" process="@this"
-                                        update=":formSelect:geneList"/>
+                                <p:ajax event="change" process="@this" listener="#{enrichmentView.filterSimilarityReferenceEditions()}"
+                                        update=":formSelect:geneList :formSelect:similarityDateSelector"/>
                                 <f:selectItems value="#{cache.speciesList}" var="spec"
                                                itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
                             </p:selectOneMenu>
@@ -220,20 +221,35 @@
                     <p:row>
                         <p:column>
                             <p:overlayPanel for="similarityOptionHelpBtn" appendToBody="true" hideEffect="fade" styleClass="options-overlay">
-                                <p>The analysis will generate a similarity plot. This plot can compare subsequent editions to each-other (<b>PROXIMAL</b>) or compare each edition to the most current (<b>CURRENT</b>).
+                                <p>The analysis will generate a plot comparing the semantic similarity of the
+                                    enrichment results between releases of GO/GOA. Select the version of GO/GOA that
+                                    you would like to use as the reference edition.
                                 </p>
                             </p:overlayPanel>
                             <p:commandButton id="similarityOptionHelpBtn" value=""
                                              styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
                                              type="button"/>
-                            <h:outputText value="Similarity:"/>
+                            <h:outputText value="Similarity Reference:"/>
                         </p:column>
                         <p:column>
-                            <p:selectOneMenu
-                                    value="#{enrichmentView.similarityCompareMethod}">
-                                <f:selectItems value="#{cache.similarityCompareMethods}"
-                                               var="method" itemValue="#{method}" itemLabel="#{method.label}"/>
-                            </p:selectOneMenu>
+                            <!--<p:calendar value="#{enrichmentView.similarityReferenceDate}" showButtonPanel="true" navigator="true" mask="true" required="true" beforeShowDay="enableAllTheseDays" maxdate="new Date();" pages="3"/>-->
+                            <h:panelGrid id="similarityDateSelector" columns="2" style="border:none;">
+
+                                <h:outputText value="Year" />
+                                <h:outputText value="Release" />
+                                <p:selectOneMenu id="year_select" value="#{enrichmentView.similarityReferenceYear}">
+                                    <f:selectItems value="#{cache.getSpeciesYears( enrichmentView.selectedSpecies )}"/>
+                                    <p:ajax event="change" process="@this" update="edition_select"
+                                            listener="#{enrichmentView.filterSimilarityReferenceEditions}"/>
+                                </p:selectOneMenu>
+
+                                <p:selectOneMenu id="edition_select" value="#{enrichmentView.similarityReferenceEdition}"
+                                                 converter="editionConverter">
+                                    <f:selectItems value="#{enrichmentView.filteredSimilarityReferenceEditions}" var="ed"
+                                                   itemLabel="#{of:formatDate(ed.date, 'MMM dd')}"
+                                                   itemValue="#{ed}"/>
+                                </p:selectOneMenu>
+                            </h:panelGrid>
                         </p:column>
                     </p:row>
 

@@ -151,9 +151,20 @@ public class EnrichmentView implements Serializable {
     @Getter
     EnrichmentAnalysisOptions enrichmentOptions = new EnrichmentAnalysisOptions();
 
+    // Date selection properties ***************
+
     @Getter
     @Setter
-    private SimilarityCompareMethod similarityCompareMethod = SimilarityCompareMethod.CURRENT; // Method to use in the similarity analysis
+    private Integer similarityReferenceYear = null;
+
+    @Getter
+    private List<Edition> filteredSimilarityReferenceEditions = Lists.newArrayList();
+
+    @Getter
+    @Setter
+    private Edition similarityReferenceEdition = null;
+
+    // *****************************************
 
     // Enrichment Feedback
     @Getter
@@ -243,9 +254,9 @@ public class EnrichmentView implements Serializable {
     public void postConstruct() {
         log.info( "postConstruct" );
         selectedSpecies = session.getSpecies();
-
+        resetSimilarityDateSelector();
         for ( Species species : cache.getSpeciesList() ) {
-            speciesToSelectedGenes.put( species, Lists.<Gene>newArrayList() );
+            speciesToSelectedGenes.put( species, Lists.newArrayList() );
         }
     }
 
@@ -267,6 +278,10 @@ public class EnrichmentView implements Serializable {
             // When loading a previous analysis, we want to show the gene hit list that is associated with it, 
             // not the most recently viewed one.
             selectedSpecies = combinedAnalysis.getEnrichmentAnalysis().getCurrentSpecies();
+            if ( !similarityReferenceEdition.getSpecies().equals( selectedSpecies ) ) {
+                resetSimilarityDateSelector();
+            }
+
         } else {
             enrichmentTableEdition = cache.getCurrentEditions( selectedSpecies );
 
@@ -289,7 +304,7 @@ public class EnrichmentView implements Serializable {
                 new HashSet<>( speciesToSelectedGenes.get( selectedSpecies ) ),
                 selectedSpecies,
                 enrichmentOptions,
-                similarityCompareMethod,
+                similarityReferenceEdition,
                 TOP_N_JACCARD,
                 statusPoller );
 
@@ -306,6 +321,14 @@ public class EnrichmentView implements Serializable {
         timer.stop();
         statusPoller.newStatus( "Finished in: " + timer.getTime() / 1000.0 + " seconds", 100 );
 
+    }
+
+    private void resetSimilarityDateSelector() {
+        similarityReferenceEdition = cache.getCurrentEditions( selectedSpecies );
+        Calendar cal = Calendar.getInstance();
+        cal.setTime( similarityReferenceEdition.getDate() );
+        similarityReferenceYear = cal.get( Calendar.YEAR );
+        filterSimilarityReferenceEditions();
     }
 
     /**
@@ -393,9 +416,7 @@ public class EnrichmentView implements Serializable {
      */
     private void createSimilarityChart() {
         // Create Similarity Chart
-        ChartValues cv = new ChartValues( "Enrichment Similarity to "
-                + (similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current")
-                + " Edition",
+        ChartValues cv = new ChartValues( "Enrichment Similarity to " + combinedAnalysis.getSimilarityAnalysis().getReferenceEdition().getDate(),
                 "Jaccard Similarity Index", "Date" );
         cv.setMin( 0 );
         cv.setMax( 1 );
@@ -980,6 +1001,17 @@ public class EnrichmentView implements Serializable {
     public List<GeneMatch> complete( String query ) {
         if ( StringUtils.isEmpty( query.trim() ) || selectedSpecies == null ) return Lists.newArrayList();
         return Lists.newArrayList( this.cache.searchGeneBySymbol( query.trim(), selectedSpecies, MAX_RESULTS ) );
+    }
+
+    public void filterSimilarityReferenceEditions() {
+        Calendar calendar = Calendar.getInstance();
+        filteredSimilarityReferenceEditions = cache.getAllEditions( selectedSpecies ).stream().filter( ed -> {
+            calendar.setTime( ed.getDate() );
+            return calendar.get( Calendar.YEAR ) == similarityReferenceYear;
+        } ).sorted().collect( Collectors.toList() );
+        if (!filteredSimilarityReferenceEditions.isEmpty()) {
+            similarityReferenceEdition = filteredSimilarityReferenceEditions.get( 0 );
+        }
     }
 
     // Getters / Setters ---------------------------------------------------------------------------------------

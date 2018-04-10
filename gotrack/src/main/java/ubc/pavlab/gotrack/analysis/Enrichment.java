@@ -30,6 +30,7 @@ import ubc.pavlab.gotrack.model.hashkey.HyperUCFKey;
 
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * Runs over-representation analysis (enrichment) on given sample and population data.
@@ -280,14 +281,7 @@ public class Enrichment<T, G> {
      * @return Top N terms
      */
     public Set<T> getTopNTerms( int n ) {
-        Set<T> top = Sets.newHashSet();
-        for ( T t : significantTerms ) {
-            EnrichmentResult er = getResult( t );
-            if ( er.getRank() < n ) {
-                top.add( t );
-            }
-        }
-        return top;
+        return significantTerms.stream().filter( t -> getResult( t ).getRank() < n ).collect( Collectors.toSet() );
     }
 
     public static <T> LinkedHashSet<T> getSortedKeySetByValue(

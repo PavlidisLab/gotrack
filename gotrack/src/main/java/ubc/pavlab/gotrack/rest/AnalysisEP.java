@@ -422,7 +422,6 @@ public class AnalysisEP {
             int max = 200;
             Set<Aspect> aspectsFilter = null;
             int topN = 5;
-            SimilarityCompareMethod scm = SimilarityCompareMethod.CURRENT;
             SimilarityMethod sm = SimilarityMethod.TVERSKY;
 
             Set<Gene> hitList = Sets.newHashSet();
@@ -467,9 +466,6 @@ public class AnalysisEP {
             response.put( "min_go_geneset", min );
             response.put( "max_go_geneset", max );
             response.put( "aspect_filter", aspectsFilter );
-            response.put( "similarity_compare_method", new JSONObject( scm ).put( "key", scm ) );
-            response.put( "similarity_method", new JSONObject( sm ).put( "key", sm ) );
-            response.put( "topN", topN );
 
             if ( hitList.isEmpty() ) {
                 return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
@@ -483,7 +479,10 @@ public class AnalysisEP {
                     Sets.newHashSet( closestEdition, currentEdition ), hitList,
                     species, mulTestCor, threshold, min, max, aspectsFilter );
 
-            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, sm, cache );
+            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, sm, cache );
+            response.put( "similarity_compare_edition", new JSONObject( similarityAnalysis.getReferenceEdition() ) );
+            response.put( "similarity_method", new JSONObject( similarityAnalysis.getSimilarityMethod() ).put( "key", similarityAnalysis.getSimilarityMethod() ) );
+            response.put( "topN", similarityAnalysis.getTopN() );
 
             JSONArray dataJSON = new JSONArray();
 

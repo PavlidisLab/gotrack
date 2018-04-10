@@ -199,7 +199,7 @@ public class AnnotationService implements Serializable {
 
             if ( go == null ) {
                 log.debug(
-                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEditionId() );
+                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEdition().getId() );
                 missingTerms.put( enrichmentDTO.getGoId(), enrichmentDTO );
                 continue;
             }
@@ -329,7 +329,7 @@ public class AnnotationService implements Serializable {
 
             if ( go == null ) {
                 log.debug(
-                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEditionId() );
+                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEdition().getId() );
                 missingTerms.put( enrichmentDTO.getGoId(), enrichmentDTO );
                 continue;
             }
@@ -490,7 +490,7 @@ public class AnnotationService implements Serializable {
 
             if ( go == null ) {
                 log.debug(
-                        "Could not find (" + tup.getT2() + ") in GO Edition Id: " + edition.getGoEditionId() );
+                        "Could not find (" + tup.getT2() + ") in GO Edition Id: " + edition.getGoEdition().getId() );
                 missingTerms.put( tup.getT2(), tup );
                 continue;
             }

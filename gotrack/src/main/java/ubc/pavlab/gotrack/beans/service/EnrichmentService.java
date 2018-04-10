@@ -81,12 +81,11 @@ public class EnrichmentService implements Serializable {
      * @param genes             hitlist
      * @param species           species id
      * @param enrichmentOptions Enrichment options
-     * @param scm               method for similarity comparison
      * @param topN              number of top terms to use for top N series
      * @param statusPoller      poller for live status updates
      * @return Container class holding the enrichment and stability/similarity analyses
      */
-    public CombinedAnalysis combinedAnalysis( Set<Gene> genes, Species species, EnrichmentAnalysisOptions enrichmentOptions, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
+    public CombinedAnalysis combinedAnalysis( Set<Gene> genes, Species species, EnrichmentAnalysisOptions enrichmentOptions, Edition similarityReferenceEdition, int topN, StatusPoller statusPoller ) {
 
         statusPoller.newStatus( "Starting Enrichment Analysis", 0 );
         EnrichmentAnalysis analysis = enrichment( genes,
@@ -107,7 +106,7 @@ public class EnrichmentService implements Serializable {
 
         statusPoller.newStatus( "Running Similarity Analyses on all editions...", 75 );
 
-        SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, cache );
+        SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, similarityReferenceEdition, SimilarityMethod.JACCARD, cache );
         statusPoller.completeStatus();
         log.info( "Running stability analysis" );
 

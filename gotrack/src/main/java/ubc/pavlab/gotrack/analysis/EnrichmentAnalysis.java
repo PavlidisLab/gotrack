@@ -262,10 +262,17 @@ public class EnrichmentAnalysis {
     }
 
     /**
-     * @return raw enrichment results, both significant and not, which passed all rejection tests.
+     * @return raw enrichment results, both significant and not.
      */
     public Map<Edition, Enrichment<GeneOntologyTerm, Gene>> getRawResults() {
         return rawResults;
+    }
+
+    /**
+     * @return raw enrichment results, both significant and not.
+     */
+    public Enrichment<GeneOntologyTerm, Gene> getRawResults(Edition edition) {
+        return rawResults.get( edition );
     }
 
     //    /**

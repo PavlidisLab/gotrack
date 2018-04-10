@@ -27,7 +27,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.omnifaces.cdi.Eager;
 import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
-import ubc.pavlab.gotrack.analysis.SimilarityCompareMethod;
 import ubc.pavlab.gotrack.beans.service.SpeciesService;
 import ubc.pavlab.gotrack.dao.CacheDAO;
 import ubc.pavlab.gotrack.model.*;
@@ -205,10 +204,6 @@ public class Cache implements Serializable {
 
     public MultipleTestCorrection[] getMultipleTestCorrections() {
         return MultipleTestCorrection.values();
-    }
-
-    public SimilarityCompareMethod[] getSimilarityCompareMethods() {
-        return SimilarityCompareMethod.values();
     }
 
     public Aspect[] getAspects() {
