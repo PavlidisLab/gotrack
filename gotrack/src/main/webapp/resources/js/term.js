@@ -332,8 +332,12 @@ function createEvidenceCountChart(args) {
 
 function commonOptions(options) {
     plotting.addLegend(options);
-
-    options.credits = {enabled:false};
+    options.legend = {
+        margin: 0,
+        verticalAlign: 'bottom',
+        y: 17
+    };
+    // options.credits = {enabled:false};
 
     options.subtitle.style= {
         fontSize: "0.9em"

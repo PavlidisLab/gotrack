@@ -318,7 +318,11 @@ function commonOptions(options, config) {
     plotting.addLegend(options);
     plotting.addScaleToggle(options, config);
 
-    options.legend = {};
+    options.legend = {
+        margin: 0,
+        verticalAlign: 'bottom',
+        y: 17
+    };
     options.tooltip.pointFormatter = function () {
         return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 3) + '</b><br/>';
     };
