@@ -147,7 +147,7 @@ function createTermsChart(xhr, status, args) {
     // console.log(xhr, status, args);
 
     var options = plotting.defaultHCOptions('hc_terms_container', args.HC_terms.chart);
-    commonOptions(options, args.HC);
+    commonOptions(options, args.HC_terms);
 
     options.subtitle = {
         text: "<b>&lt;Click&gt;</b> to view enrichment results at a specific date.",
@@ -168,7 +168,7 @@ function createSimilarityChart(xhr, status, args) {
     // console.log(xhr, status, args);
 
     var options = plotting.defaultHCOptions('hc_similarity_container', args.HC_similarity.chart);
-    commonOptions(options, args.HC);
+    commonOptions(options, args.HC_similarity);
 
     options.subtitle = {
         text: "<b>&lt;Click&gt;</b> to view similarity details at a specific date.",
@@ -205,7 +205,18 @@ function redrawSelectedEditionPlotLine(c, p) {
         value: p.x,
         color: '#FF0000',
         width: 1,
-        id: 'plot-line-selected'
+        id: 'plot-line-selected',
+        zIndex: 3,
+        label: {
+            text: 'Selected',
+            verticalAlign: 'top',
+            textAlign: 'center',
+            y: 30,
+            style: {
+                color: '#5a0000',
+                fontSize: '12px'
+            }
+        }
     });
 }
 
@@ -216,6 +227,25 @@ function commonOptions(options, config) {
         verticalAlign: 'bottom',
         y: 17
     };
+
+    options.xAxis.plotLines = [{
+        value: config.referenceEdition,
+        color: '#a9a9a9',
+        width: 1,
+        dashStyle: 'Dot',
+        id: 'plot-line-reference',
+        className: 'export',
+        zIndex: 3,
+        label: {
+            text: 'Reference',
+            verticalAlign: 'bottom',
+            textAlign: 'center',
+            y: -30,
+            style: {
+                fontSize: '12px'
+            }
+        }
+    }];
     // options.legend.layout = 'horizontal';
     // options.legend.align = 'center';
     // options.legend.verticalAlign = 'bottom';

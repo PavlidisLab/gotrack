@@ -405,6 +405,7 @@ public class EnrichmentView implements Serializable {
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( cv );
         hcGsonMap.put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
+        hcGsonMap.put( "referenceEdition", similarityReferenceEdition.getDate().getTime() );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_terms", new Gson().toJson( hcGsonMap ) );
     }
@@ -450,6 +451,7 @@ public class EnrichmentView implements Serializable {
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( cv );
         hcGsonMap.put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
+        hcGsonMap.put( "referenceEdition", similarityReferenceEdition.getDate().getTime() );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_similarity", new Gson().toJson( hcGsonMap ) );
 

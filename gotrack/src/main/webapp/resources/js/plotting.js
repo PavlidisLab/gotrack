@@ -317,7 +317,7 @@
                                 var ids_to_remove = [];
                                 for (var i = 0; i < this.xAxis[0].plotLinesAndBands.length; i++) {
                                     var pl = this.xAxis[0].plotLinesAndBands[i];
-                                    if (!ids_to_remove.includes(pl.id)) {
+                                    if (pl.options.className !== "export" && !ids_to_remove.includes(pl.id)) {
                                         ids_to_remove.push(pl.id);
                                     }
                                 }

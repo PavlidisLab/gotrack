@@ -295,7 +295,18 @@ function redrawSelectedEditionPlotLine(c, p) {
         value: p.x,
         color: plotting.comparisonColors[0],
         width: 1,
-        id: 'plot-line-selected'
+        id: 'plot-line-selected',
+        zIndex: 3,
+        label: {
+            text: 'Selected',
+            verticalAlign: 'top',
+            textAlign: 'center',
+            y: 30,
+            style: {
+                color: '#5a0000',
+                fontSize: '12px'
+            }
+        }
     });
 }
 
@@ -384,9 +395,9 @@ function commonOptions(options, config) {
             width: 1,
             color: 'red',
             dashStyle: 'shortdot'
-        },
-        min: utility.isUndefined(GLOBALS.xMin) ? null : GLOBALS.xMin,
-        max: utility.isUndefined(GLOBALS.xMax) ? null : GLOBALS.xMax
+        }
+        // min: utility.isUndefined(GLOBALS.xMin) ? null : GLOBALS.xMin,
+        // max: utility.isUndefined(GLOBALS.xMax) ? null : GLOBALS.xMax
     });
 }
 
