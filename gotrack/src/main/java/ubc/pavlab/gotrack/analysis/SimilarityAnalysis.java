@@ -81,11 +81,11 @@ public class SimilarityAnalysis {
         // Container
         Map<Edition, SimilarityScore> similarityScores = new LinkedHashMap<>();
 
-        SimilarityEnrichmentWrapper reference = new SimilarityEnrichmentWrapper( analysis.getRawResults( referenceEdition ), referenceEdition, topN, cache );
+        SimilarityEnrichmentWrapper reference = new SimilarityEnrichmentWrapper( analysis.getRawResults( referenceEdition ), referenceEdition, topN );
 
         for ( Edition testingEdition : analysis.getEditions() ) {
 
-            SimilarityEnrichmentWrapper test = new SimilarityEnrichmentWrapper( analysis.getRawResults( testingEdition ), testingEdition, topN, cache );
+            SimilarityEnrichmentWrapper test = new SimilarityEnrichmentWrapper( analysis.getRawResults( testingEdition ), testingEdition, topN );
 
             similarityScores.put( testingEdition, compareEnrichments( reference, test, sm, cache ) );
 
@@ -152,7 +152,7 @@ class SimilarityEnrichmentWrapper {
     // Parents of top N terms of the compare Edition
     private final Set<GeneOntologyTerm> topParents;
 
-    SimilarityEnrichmentWrapper( Enrichment<GeneOntologyTerm, Gene> enrichment, Edition edition, int topN, Cache cache ) {
+    SimilarityEnrichmentWrapper( Enrichment<GeneOntologyTerm, Gene> enrichment, Edition edition, int topN ) {
         this.enrichment = enrichment;
         this.edition = edition;
 
@@ -164,7 +164,7 @@ class SimilarityEnrichmentWrapper {
                 .collect( Collectors.toSet() );
 
         // Parents of top N terms of the compare Edition
-        this.topParents = cache.propagate( topTerms, edition );
+        this.topParents = GeneOntologyTerm.propagate( topTerms.stream() ).collect( Collectors.toSet() );
     }
 
 }

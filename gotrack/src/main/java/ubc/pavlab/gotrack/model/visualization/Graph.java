@@ -71,20 +71,12 @@ public class Graph {
                 nodes.put(node.getId(), node );
 
                 // Sort for consistent graph layouts in the front-end
-                List<Relation<GeneOntologyTerm>> sortedParents = new ArrayList<>( term.getParents() );
-                Collections.sort( sortedParents, new Comparator<Relation<GeneOntologyTerm>>() {
-                    @Override
-                    public int compare( Relation<GeneOntologyTerm> o1, Relation<GeneOntologyTerm> o2 ) {
-                        return o1.getRelation().compareTo( o2.getRelation() );
-                    }
-                } );
-
-                for ( Relation<GeneOntologyTerm> p : sortedParents ) {
+                term.streamParents().sorted( Comparator.comparing( Relation::getRelation ) ).forEach( p -> {
                     edges.add( new Edge( term.getId(), p.getRelation().getId(), p.getType() ) );
                     if ( !nodes.containsKey( p.getRelation().getId() ) ) {
                         termQ.add( p.getRelation() );
                     }
-                }
+                } );
 
             }
         }

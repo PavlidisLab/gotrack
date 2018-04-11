@@ -19,27 +19,22 @@
 
 package ubc.pavlab.gotrack.model.go;
 
-import java.sql.Date;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
+import org.apache.log4j.Logger;
+import org.hamcrest.Matchers;
+import org.junit.*;
 import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.Evidence;
 import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
+
+import java.sql.Date;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * TODO Document Me
@@ -248,63 +243,63 @@ public class GeneOntologyTest {
     @Test
     public void testPropagate() {
         // Default propagate through part_of
-        Set<GeneOntologyTerm> res = go.propagate( Sets.newHashSet( go9 ) );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( Sets.newHashSet( go9 ).stream() ).collect( Collectors.toSet());
         Assert.assertThat( res.size(), Matchers.is( 6 ) );
         Assert.assertThat( res, Matchers.containsInAnyOrder( go9, go8, go4, go1, go2, go0 ) );
     }
 
     @Test
     public void testPropagatePartOf() {
-        Set<GeneOntologyTerm> res = go.propagate( Sets.newHashSet( go9 ), true );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( Sets.newHashSet( go9 ).stream(), true ).collect( Collectors.toSet());
         Assert.assertThat( res.size(), Matchers.is( 6 ) );
         Assert.assertThat( res, Matchers.containsInAnyOrder( go9, go8, go4, go1, go2, go0 ) );
     }
 
     @Test
     public void testPropagateNoPartOf() {
-        Set<GeneOntologyTerm> res = go.propagate( Sets.newHashSet( go9 ), false );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( Sets.newHashSet( go9 ).stream(), false ).collect( Collectors.toSet());
         Assert.assertThat( res.size(), Matchers.is( 5 ) );
         Assert.assertThat( res, Matchers.containsInAnyOrder( go9, go4, go1, go2, go0 ) );
     }
 
     @Test
     public void testPropagateEmpty() {
-        Set<GeneOntologyTerm> res = go.propagate( Sets.<GeneOntologyTerm> newHashSet() );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( Sets.<GeneOntologyTerm>newHashSet().stream() ).collect( Collectors.toSet());
         Assert.assertThat( res, Matchers.notNullValue() );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
     }
 
     @Test
     public void testPropagateRoot() {
-        Set<GeneOntologyTerm> res = go.propagate( Sets.newHashSet( go0 ) );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( Sets.newHashSet( go0 ).stream() ).collect( Collectors.toSet());
         Assert.assertThat( res.size(), Matchers.is( 1 ) );
         Assert.assertThat( res, Matchers.containsInAnyOrder( go0 ) );
     }
 
     @Test
     public void testPropagateMultiple() {
-        Set<GeneOntologyTerm> res = go.propagate( Sets.newHashSet( go9, go6 ) );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( Sets.newHashSet( go9, go6 ).stream() ).collect( Collectors.toSet());
         Assert.assertThat( res.size(), Matchers.is( 8 ) );
         Assert.assertThat( res, Matchers.containsInAnyOrder( go9, go8, go4, go1, go2, go0, go6, go3 ) );
     }
 
     @Test
     public void testPropagateMultipleNoPartOf() {
-        Set<GeneOntologyTerm> res = go.propagate( Sets.newHashSet( go9, go6 ), false );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( Sets.newHashSet( go9, go6 ).stream(), false ).collect( Collectors.toSet());
         Assert.assertThat( res.size(), Matchers.is( 7 ) );
         Assert.assertThat( res, Matchers.containsInAnyOrder( go9, go4, go1, go2, go0, go6, go3 ) );
     }
 
     @Test
     public void testPropagateMultipleNoPartOf2() {
-        Set<GeneOntologyTerm> res = go.propagate( Sets.newHashSet( go9, go8 ), false );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( Sets.newHashSet( go9, go8 ).stream(), false ).collect( Collectors.toSet());
         Assert.assertThat( res.size(), Matchers.is( 6 ) );
         Assert.assertThat( res, Matchers.containsInAnyOrder( go9, go8, go4, go1, go2, go0 ) );
     }
 
     @Test
     public void testPropagateMultipleAll() {
-        Set<GeneOntologyTerm> res = go.propagate( allTerms );
+        Set<GeneOntologyTerm> res = GeneOntologyTerm.propagate( allTerms.stream() ).collect( Collectors.toSet());
         Assert.assertThat( res.size(), Matchers.is( allTerms.size() ) );
         Assert.assertThat( res, Matchers.is( allTerms ) );
     }
@@ -314,7 +309,7 @@ public class GeneOntologyTest {
     @Test
     public void testPropagateAnnotationsOverview() {
         // Default propagate through part_of
-        Map<GeneOntologyTerm, Set<Annotation>> res = go.propagateAnnotations( annotationMap );
+        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
         Assert.assertThat( res.size(), Matchers.is( allTerms.size() ) );
         Assert.assertThat( res.keySet(),
                 Matchers.containsInAnyOrder( allTerms.toArray( new GeneOntologyTerm[allTerms.size()] ) ) );
@@ -323,27 +318,27 @@ public class GeneOntologyTest {
 
     @Test
     public void testPropagateAnnotationsBasic() {
-        Map<GeneOntologyTerm, Set<Annotation>> res = go.propagateAnnotations( annotationMap );
+        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
         Assert.assertThat( res.get( go9 ), Matchers.equalTo( go9Annotations ) );
         Assert.assertThat( res.get( go7 ), Matchers.equalTo( go7Annotations ) );
     }
 
     @Test
     public void testPropagateAnnotationsParentsNoOverlap() {
-        Map<GeneOntologyTerm, Set<Annotation>> res = go.propagateAnnotations( annotationMap );
+        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
         Assert.assertThat( res.get( go3 ), Matchers.equalTo( go7Annotations ) );
         Assert.assertThat( res.get( go8 ), Matchers.equalTo( go9Annotations ) );
     }
 
     @Test
     public void testPropagateAnnotationsParentsNoOverlapNoPartOf() {
-        Map<GeneOntologyTerm, Set<Annotation>> res = go.propagateAnnotations( annotationMap, false );
+        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream(), false );
         Assert.assertThat( res.get( go8 ), Matchers.nullValue() );
     }
 
     @Test
     public void testPropagateAnnotationsParentsOverlap() {
-        Map<GeneOntologyTerm, Set<Annotation>> res = go.propagateAnnotations( annotationMap );
+        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
         Assert.assertThat( res.get( go2 ).size(), Matchers.is( Sets.union( go7Annotations, go9Annotations ).size() ) );
         Assert.assertThat( res.get( go2 ),
                 Matchers.hasItems( go7Annotations.toArray( new Annotation[go7Annotations.size()] ) ) );
@@ -355,113 +350,62 @@ public class GeneOntologyTest {
     // getAncestors
 
     @Test
-    public void testGetAncestorsString() {
-        Set<GeneOntologyTerm> res = go.getAncestors( go9.getGoId(), true,
-                Maps.<GeneOntologyTerm, Set<GeneOntologyTerm>> newHashMap() );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( go8, go4, go1, go2, go0 ) );
-    }
-
-    @Test
-    public void testGetAncestorsInteger() {
-        Set<GeneOntologyTerm> res = go.getAncestors( 22607, true,
-                Maps.<GeneOntologyTerm, Set<GeneOntologyTerm>> newHashMap() );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( go8, go4, go1, go2, go0 ) );
-    }
-
-    @Test
     public void testGetAncestors() {
-        Set<GeneOntologyTerm> res = go.getAncestors( go7, true,
-                Maps.<GeneOntologyTerm, Set<GeneOntologyTerm>> newHashMap() );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( go5, go6, go4, go1, go2, go3, go0 ) );
+        Assert.assertThat( go7.streamAncestors().collect( Collectors.toSet() ), Matchers.containsInAnyOrder( go5, go6, go4, go1, go2, go3, go0 ) );
     }
 
     @Test
     public void testGetAncestorsPartOf() {
-        Set<GeneOntologyTerm> res = go.getAncestors( go9, true,
-                Maps.<GeneOntologyTerm, Set<GeneOntologyTerm>> newHashMap() );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( go8, go4, go1, go2, go0 ) );
+        Assert.assertThat(  go9.streamAncestors().collect( Collectors.toSet() ), Matchers.containsInAnyOrder( go8, go4, go1, go2, go0 ) );
     }
 
     @Test
     public void testGetAncestorsNoPartOf() {
-        Set<GeneOntologyTerm> res = go.getAncestors( go9, false,
-                Maps.<GeneOntologyTerm, Set<GeneOntologyTerm>> newHashMap() );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( go4, go1, go2, go0 ) );
+        Assert.assertThat( go9.streamAncestors(false).collect( Collectors.toSet() ), Matchers.containsInAnyOrder( go4, go1, go2, go0 ) );
     }
 
-    @Test
-    public void testGetAncestorsCacheless() {
-        Set<GeneOntologyTerm> res = go.getAncestors( go9, false, null );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( go4, go1, go2, go0 ) );
-    }
-
-    @Test
-    public void testGetAncestorsNull() {
-        GeneOntologyTerm g = null;
-        try {
-            Set<GeneOntologyTerm> res = go.getAncestors( g, false, null );
-            Assert.fail( "Should error with null term" );
-        } catch ( NullPointerException e ) {
-            // Expected
-        }
-
-    }
+//    @Test
+//    public void testGetAncestorsCacheless() {
+//        Assert.assertThat( go9.streamAncestors(false).collect( Collectors.toSet() ), Matchers.containsInAnyOrder( go4, go1, go2, go0 ) );
+//    }
 
     @Test
     public void testGetAncestorsRoot() {
-        Set<GeneOntologyTerm> res = go.getAncestors( go0, false, null );
-        Assert.assertThat( res.size(), Matchers.is( 0 ) );
+        Assert.assertThat( go0.streamAncestors(false).count(), Matchers.is( 0L ) );
     }
 
     // getParents
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testGetParentsString() {
-        Set<Relation<GeneOntologyTerm>> res = go.getParents( go9.getGoId(), true );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation<>( go8, RelationshipType.PART_OF ),
-                new Relation<>( go4, RelationshipType.IS_A ) ) );
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
-    public void testGetParentsInteger() {
-        Set<Relation<GeneOntologyTerm>> res = go.getParents( 22607, true );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation<>( go8, RelationshipType.PART_OF ),
-                new Relation<>( go4, RelationshipType.IS_A ) ) );
-    }
-
-    @SuppressWarnings("unchecked")
-    @Test
     public void testGetParentsNoPartOf() {
-        Set<Relation<GeneOntologyTerm>> res = go.getParents( go9.getGoId(), false );
-        Assert.assertThat( res, Matchers.containsInAnyOrder( new Relation<>( go4, RelationshipType.IS_A ) ) );
+        GeneOntologyTerm term = go.getTerm( go9.getGoId() );
+        Assert.assertNotNull( term );
+        Assert.assertThat( term.streamParents( false ).collect( Collectors.toSet()),
+                Matchers.containsInAnyOrder( new Relation<>( go4, RelationshipType.IS_A ) ) );
     }
 
     @SuppressWarnings("unchecked")
     @Test
     public void testGetParents() {
-        Set<Relation<GeneOntologyTerm>> res = go.getParents( go7.getGoId(), true );
-        Assert.assertThat( res,
+        GeneOntologyTerm term = go.getTerm( go7.getGoId() );
+        Assert.assertNotNull( term );
+        Assert.assertThat( term.getParents(),
                 Matchers.containsInAnyOrder( new Relation<>( go5, RelationshipType.IS_A ),
                         new Relation<>( go6, RelationshipType.IS_A ) ) );
     }
 
     @Test
-    public void testGetParentsNull() {
-        String g = null;
-        try {
-            Set<Relation<GeneOntologyTerm>> res = go.getParents( g, true );
-            Assert.fail( "Should error with null term" );
-        } catch ( NullPointerException e ) {
-            // Expected
-        }
+    public void testGetNull() {
+        GeneOntologyTerm term = go.getTerm(null );
+        Assert.assertNull( term );
     }
 
     @Test
     public void testGetParentsRoot() {
-        Set<Relation<GeneOntologyTerm>> res = go.getParents( go0.getGoId(), false );
-        Assert.assertThat( res.size(), Matchers.is( 0 ) );
+        GeneOntologyTerm term = go.getTerm( go0.getGoId() );
+        Assert.assertNotNull( term );
+        Assert.assertThat( term.streamParents(false ).count(), Matchers.is( 0L ) );
     }
 
     // getEdition

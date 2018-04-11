@@ -47,6 +47,7 @@ import javax.ws.rs.core.UriInfo;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * TODO Document Me
@@ -319,7 +320,11 @@ public class GeneEP {
         }
 
         Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> directRawData = annotationService.fetchTrackData( gene );
-        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> inferredRawData = propagate( directRawData );
+        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> inferredRawData = directRawData.entrySet().stream()
+                .collect( Collectors.toMap(
+                        Entry::getKey,
+                        e -> GeneOntologyTerm.propagateAnnotations( e.getValue().entrySet().stream() )
+                ) );
 
         // Convert to ImmutableTable
 
@@ -362,20 +367,6 @@ public class GeneEP {
 
         return rawData;
 
-    }
-
-    /**
-     * Propagates the annotations from the retrieved data to ancestor terms.
-     */
-    private Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> propagate(
-            Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> map ) {
-        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> propagatedData = new HashMap<>();
-
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : map.entrySet() ) {
-            Edition ed = entry.getKey();
-            propagatedData.put( ed, cache.propagateAnnotations( entry.getValue(), ed ) );
-        }
-        return propagatedData;
     }
 
     /**

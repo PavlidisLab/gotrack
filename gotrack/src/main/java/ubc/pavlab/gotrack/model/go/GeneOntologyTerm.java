@@ -19,22 +19,31 @@
 
 package ubc.pavlab.gotrack.model.go;
 
-import java.util.Set;
-
 import com.google.common.collect.ImmutableSet;
-
 import gnu.trove.set.hash.THashSet;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 import ubc.pavlab.gotrack.model.Aspect;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
+
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Represents a node in a Gene Ontology. The instances of this class may be shared between threads (sessions).
  * Two instances of this class with the same ID will be equal but may not both represent the same instance in time and
  * thus might have different metadata.
- * 
+ * <p>
+ * This essentially means that Terms represent the same ontological node but may not represent the same instance in
+ * time.
+ *
  * @author mjacobson
- * @version $Id$
  */
+@Getter
+@EqualsAndHashCode(of = "id")
+@ToString(of = {"goId", "name", "aspect"})
 public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
 
     private final int id;
@@ -42,33 +51,16 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
     private final String name;
     private final Aspect aspect;
     private final boolean obsolete = false;
-    private Set<Relation<GeneOntologyTerm>> relations = new THashSet<>();
+    private Set<Relation<GeneOntologyTerm>> parents = new THashSet<>();
+    private Set<GeneOntologyTerm> ancestors = null;
     private Set<Relation<GeneOntologyTerm>> children = new THashSet<>();
 
     /**
      * Make child/parent sets immutable
      */
     public void freeze() {
-        this.relations = ImmutableSet.copyOf( this.relations );
+        this.parents = ImmutableSet.copyOf( this.parents );
         this.children = ImmutableSet.copyOf( this.children );
-    }
-
-    /**
-     * @param goid GO id (ex. 'GO:0000001')
-     * @return id portion of the GO Id (ex. 1)
-     */
-    private int convertGOId( String goId ) {
-        if ( goId.startsWith( "GO:" ) ) {
-            int id;
-            try {
-                id = Integer.parseInt( goId.substring( goId.length() - 7 ) );
-            } catch ( IndexOutOfBoundsException | NumberFormatException e ) {
-                throw new IllegalArgumentException( "Gene Ontology ID (" + goId + ") not in correct format." );
-            }
-            return id;
-        } else {
-            throw new IllegalArgumentException( "Gene Ontology ID (" + goId + ") not in correct format." );
-        }
     }
 
     /**
@@ -86,10 +78,8 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
      * Used for when an edition has been wrongly connected with a go_edition. In this situation an annotated term may
      * not be found within the given Ontology edition. What we do in this case is create a solitary term to represent it
      * in any analysis this term however will have no relationships to others (ie no parents/children)
-     * 
-     * @param goId
-     * @param name
-     * @param aspect
+     *
+     * @param t Term
      */
     public GeneOntologyTerm( GeneOntologyTerm t ) {
 
@@ -111,62 +101,64 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         this.aspect = null;
     }
 
-    public int getId() {
-        return id;
+    public Stream<Relation<GeneOntologyTerm>> streamParents() {
+        return streamParents( true );
     }
 
-    public String getGoId() {
-        return goId;
+    public Stream<GeneOntologyTerm> streamAncestors() {
+        return streamAncestors( true );
     }
 
-    public String getName() {
-        return name;
+    public Stream<Relation<GeneOntologyTerm>> streamChildren() {
+        return streamChildren( true );
     }
 
-    public Aspect getAspect() {
-        return aspect;
+    public Stream<Relation<GeneOntologyTerm>> streamDescendants() {
+        return streamDescendants( true );
     }
 
-    public boolean isObsolete() {
-        return obsolete;
+    Stream<Relation<GeneOntologyTerm>> streamParents( boolean includePartOf ) {
+        if ( includePartOf ) {
+            // Short Circuit
+            return parents.stream();
+        } else {
+            return parents.stream().filter( r -> r.getType().equals( RelationshipType.IS_A ) );
+        }
     }
 
-    public Set<Relation<GeneOntologyTerm>> getParents() {
-        return relations;
+    Stream<GeneOntologyTerm> streamAncestors( boolean includePartOf ) {
+        if ( includePartOf && ancestors != null ) {
+            return ancestors.stream();
+        }
+
+        Stream<GeneOntologyTerm> ancestorStream = streamParents( includePartOf ).flatMap( r -> r.getRelation().propagate( includePartOf ) );
+
+        if ( includePartOf ) {
+            // Only cache complete ancestors, incomplete will always be computed.
+            ancestors = ancestorStream.collect( Collectors.toCollection( THashSet :: new ) );
+            return ancestors.stream();
+        } else {
+            return ancestorStream;
+        }
+
     }
 
-    public Set<Relation<GeneOntologyTerm>> getChildren() {
-        return children;
+    Stream<GeneOntologyTerm> propagate( boolean includePartOf ) {
+        return Stream.concat( Stream.of( this ), streamAncestors( includePartOf ) );
     }
 
-    @Override
-    public String toString() {
-        return "GeneOntologyTerm [goId=" + goId + ", name=" + name + ", aspect=" + aspect + "]"; //", parents=" + relations + ", children=" + children + "]";
+    Stream<Relation<GeneOntologyTerm>> streamChildren( boolean includePartOf ) {
+        if ( includePartOf ) {
+            // Short Circuit
+            return children.stream();
+        } else {
+            return children.stream().filter( r -> r.getType().equals( RelationshipType.IS_A ) );
+        }
+
     }
 
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + id;
-        return result;
-    }
-
-    /*
-     * Keep in mind that terms can be equal to each other across edition (as long as they have the same ID).
-     * These terms, however, will most likely not have equivalent information.
-     * 
-     * This essentially means that Terms represent the same ontological node but may not represent the same instance in
-     * time.
-     */
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        GeneOntologyTerm other = ( GeneOntologyTerm ) obj;
-        if ( id != other.id ) return false;
-        return true;
+    Stream<Relation<GeneOntologyTerm>> streamDescendants( boolean includePartOf ) {
+        return streamChildren( includePartOf ).flatMap( r -> Stream.concat( Stream.of( r ), r.getRelation().streamDescendants( includePartOf ) ) );
     }
 
     @Override
@@ -174,5 +166,50 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         // TODO Auto-generated method stub
         return this.getGoId().compareTo( o.getGoId() );
     }
+
+    public static Stream<GeneOntologyTerm> propagate( Stream<GeneOntologyTerm> terms ) {
+        return propagate( terms, true );
+    }
+
+    static Stream<GeneOntologyTerm> propagate( Stream<GeneOntologyTerm> terms, boolean includePartOf ) {
+        return terms.flatMap( t -> t.propagate( includePartOf ) );
+    }
+
+    public static <A> Map<GeneOntologyTerm, Set<A>> propagateAnnotations( Stream<Map.Entry<GeneOntologyTerm, Set<A>>> termEntries ) {
+        return propagateAnnotations( termEntries, true );
+    }
+
+    /**
+     * Propagates terms and their annotations to parents terms
+     *
+     * @return Map of all propagated terms to their propagated annotations
+     */
+    static <A> Map<GeneOntologyTerm, Set<A>> propagateAnnotations( Stream<Map.Entry<GeneOntologyTerm, Set<A>>> termEntries, boolean includePartOf ) {
+        Map<GeneOntologyTerm, Set<A>> propagatedAnnotations = new HashMap<>();
+        termEntries.forEach( entry -> entry.getKey().propagate(includePartOf)
+                .forEach( p -> propagatedAnnotations.computeIfAbsent( p, k -> new HashSet<>() ).addAll( entry.getValue() ) ) );
+
+        return propagatedAnnotations;
+    }
+
+
+    /**
+     * @param goId GO id (ex. 'GO:0000001')
+     * @return id portion of the GO Id (ex. 1)
+     */
+    static int convertGOId( String goId ) {
+        if ( goId.startsWith( "GO:" ) ) {
+            int id;
+            try {
+                id = Integer.parseInt( goId.substring( goId.length() - 7 ) );
+            } catch (IndexOutOfBoundsException | NumberFormatException e) {
+                throw new IllegalArgumentException( "Gene Ontology ID (" + goId + ") not in correct format." );
+            }
+            return id;
+        } else {
+            throw new IllegalArgumentException( "Gene Ontology ID (" + goId + ") not in correct format." );
+        }
+    }
+
 
 }

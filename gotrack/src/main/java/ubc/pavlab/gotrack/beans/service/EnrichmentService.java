@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * TODO Document Me
@@ -301,7 +302,7 @@ public class EnrichmentService implements Serializable {
             Map<Edition, Set<GeneOntologyTerm>> series = geneEntry.getValue();
             for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
                 Edition ed = editionEntry.getKey();
-                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed );
+                Set<GeneOntologyTerm> propagatedTerms = GeneOntologyTerm.propagate( editionEntry.getValue().stream() ).collect( Collectors.toSet() );
 
                 if ( propagatedTerms == null ) {
                     // No ontology exists for this edition
@@ -456,8 +457,7 @@ public class EnrichmentService implements Serializable {
                 geneGOMapFromDB = annotationService.fetchSingleEnrichmentData( ed, genesToLoad );
 
                 for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : geneGOMapFromDB.entrySet() ) {
-
-                    addGeneData( geneEntry.getKey(), propagate( ed, geneEntry.getValue() ), filterAspect, geneGOMap );
+                    addGeneData( geneEntry.getKey(), GeneOntologyTerm.propagate( geneEntry.getValue().stream() ).collect( Collectors.toSet() ), filterAspect, geneGOMap );
                 }
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
@@ -479,10 +479,6 @@ public class EnrichmentService implements Serializable {
             log.info( "Empty geneset" );
             return null;
         }
-    }
-
-    private Set<GeneOntologyTerm> propagate( Edition ed, Set<GeneOntologyTerm> goSet ) {
-        return cache.propagate( goSet, ed );
     }
 
     private void addGeneData( Gene gene, Set<GeneOntologyTerm> goSet, Set<Aspect> filterAspect,

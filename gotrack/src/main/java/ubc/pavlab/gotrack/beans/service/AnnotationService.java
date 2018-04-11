@@ -39,6 +39,7 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * Service layer on top of annotation DAO. Contains methods for fetching information related to annotations and counts
@@ -513,7 +514,7 @@ public class AnnotationService implements Serializable {
 
         // Propagate terms
         for ( Entry<Gene, Set<GeneOntologyTerm>> geneSetEntry : data.entrySet() ) {
-            geneSetEntry.setValue( cache.propagate(geneSetEntry.getValue(), edition) );
+            geneSetEntry.setValue( GeneOntologyTerm.propagate( geneSetEntry.getValue().stream() ).collect( Collectors.toSet() ) );
         }
 
         return data;

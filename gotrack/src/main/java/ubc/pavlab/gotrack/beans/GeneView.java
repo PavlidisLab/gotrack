@@ -203,7 +203,11 @@ public class GeneView implements Serializable {
         // Get unfiltered data
         if ( cachedData == null ) {
             directRawData = annotationService.fetchTrackData( gene );
-            inferredRawData = propagate( directRawData );
+            inferredRawData = directRawData.entrySet().stream()
+                    .collect( Collectors.toMap(
+                            Entry::getKey,
+                            e -> GeneOntologyTerm.propagateAnnotations( e.getValue().entrySet().stream() )
+                    ) );
         } else {
             directRawData = cachedData.get( AnnotationType.D ).rowMap();
             inferredRawData = cachedData.get( AnnotationType.I ).rowMap();
@@ -389,20 +393,6 @@ public class GeneView implements Serializable {
         rightPanelTerms = fetchRightPanelRows( rightPanelEdition );
 //        Collections.sort( rightPanelTerms );
 
-    }
-
-    /**
-     * Propagates the annotations from the retrieved data to ancestor terms.
-     */
-    private Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> propagate(
-            Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> map ) {
-        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> propagatedData = new HashMap<>();
-
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : map.entrySet() ) {
-            Edition ed = entry.getKey();
-            propagatedData.put( ed, cache.propagateAnnotations( entry.getValue(), ed ) );
-        }
-        return propagatedData;
     }
 
     private Map<String, Object> createHCCallbackParamFail( String info ) {

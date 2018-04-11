@@ -1079,61 +1079,6 @@ public class Cache implements Serializable {
         return null;
     }
 
-    /**
-     * Propagates terms and their annotations to parents terms
-     *
-     * @param map map of term to a set of annotation for that term
-     * @param ed  edition
-     * @return Map of all propagated terms to their propagated annotations
-     */
-    public Map<GeneOntologyTerm, Set<Annotation>> propagateAnnotations( Map<GeneOntologyTerm, Set<Annotation>> map,
-                                                                        Edition ed ) {
-        if ( map == null || ed == null ) {
-            return null;
-        }
-        GeneOntology o = ontologies.get( ed.getGoEdition() );
-        if ( o != null ) {
-            return o.propagateAnnotations( map );
-        }
-        return null;
-    }
-
-    /**
-     * Propagates terms up the ontology
-     *
-     * @param terms set of terms to propagate
-     * @param ed    edition
-     * @return set of propagated terms
-     */
-    public Set<GeneOntologyTerm> propagate( Set<GeneOntologyTerm> terms, Edition ed ) {
-        if ( terms == null || ed == null ) {
-            return null;
-        }
-        GeneOntology o = ontologies.get( ed.getGoEdition() );
-        if ( o != null ) {
-            return o.propagate( terms );
-        }
-        return null;
-    }
-
-    /**
-     * Propagates a single term up the ontology
-     *
-     * @param term term to propagate
-     * @param goEd GO edition
-     * @return set of propagated terms
-     */
-    public Set<GeneOntologyTerm> propagate( GeneOntologyTerm term, GOEdition goEd ) {
-        if ( term == null || goEd == null ) {
-            return null;
-        }
-        GeneOntology o = ontologies.get( goEd );
-        if ( o != null ) {
-            return o.getAncestors( term, true, null );
-        }
-        return null;
-    }
-
     // public void ontologyStats() {
     // for ( GeneOntology o : ontologies.values() ) {
     // o.getCacheStats();
