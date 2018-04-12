@@ -30,7 +30,7 @@ import java.util.Set;
  * @author mjacobson
  * @version $Id$
  */
-public final class Gene {
+public final class Gene implements Comparable<Gene> {
     private final int id;
     private final String symbol;
     private final String name;
@@ -90,6 +90,11 @@ public final class Gene {
     @Override
     public int hashCode() {
         return id;
+    }
+
+    @Override
+    public int compareTo( Gene o ) {
+        return this.getSymbol().compareTo( o.getSymbol() );
     }
 
     public static class GeneBuilder {

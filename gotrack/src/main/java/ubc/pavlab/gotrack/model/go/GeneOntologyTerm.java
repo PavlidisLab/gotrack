@@ -113,7 +113,7 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         return streamChildren( true );
     }
 
-    public Stream<Relation<GeneOntologyTerm>> streamDescendants() {
+    public Stream<GeneOntologyTerm> streamDescendants() {
         return streamDescendants( true );
     }
 
@@ -157,8 +157,12 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
 
     }
 
-    Stream<Relation<GeneOntologyTerm>> streamDescendants( boolean includePartOf ) {
-        return streamChildren( includePartOf ).flatMap( r -> Stream.concat( Stream.of( r ), r.getRelation().streamDescendants( includePartOf ) ) );
+    Stream<GeneOntologyTerm> streamDescendants( boolean includePartOf ) {
+        return streamChildren( includePartOf ).flatMap( r -> r.getRelation().propagateDown( includePartOf ) );
+    }
+
+    Stream<GeneOntologyTerm> propagateDown( boolean includePartOf ) {
+        return Stream.concat( Stream.of( this ), streamDescendants( includePartOf ) );
     }
 
     @Override

@@ -40,6 +40,7 @@ import java.sql.Date;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Service layer on top of annotation DAO. Contains methods for fetching information related to annotations and counts
@@ -437,37 +438,60 @@ public class AnnotationService implements Serializable {
         return results;
     }
 
-    /**
-     * This is not used as we are currently doing this with cached data.
-     *
-     * @param t term
-     * @return Counts of genes that are directly annotated with this term grouped by species and edition.
-     */
-    public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( GeneOntologyTerm t ) {
-        return fetchDirectGeneCounts( t.getGoId() );
+    public Map<Edition, Map<Gene, Boolean>> fetchInferredGenes( GeneOntologyTerm term, Species species ) {
+        return fetchInferredGenes( term, species, null, null );
     }
 
-    /**
-     * This is not used as we are currently doing this with cached data.
-     *
-     * @param goId term
-     * @return Counts of genes that are directly annotated with this term grouped by species and edition.
-     */
-    public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( String goId ) {
-        Map<Integer, Map<Edition, Integer>> results = new HashMap<>();
-        List<DirectAnnotationCountDTO> resultset = annotationDAO.directGeneCountsAllEditions( goId );
-        for ( DirectAnnotationCountDTO dto : resultset ) {
-            Map<Edition, Integer> m2 = results.get( dto.getSpecies() );
-            if ( m2 == null ) {
-                m2 = new HashMap<>();
-                results.put( dto.getSpecies(), m2 );
+    private Map<Edition, Map<Gene, Boolean>> fetchInferredGenes( GeneOntologyTerm term, Species species, Edition min, Edition max ) {
+        int minEdition = min == null ? cache.getGlobalMinEdition( species ).getEdition() : min.getEdition();
+        int maxEdition = max == null ? cache.getCurrentEditions( species ).getEdition() : max.getEdition();
+
+        Map<Edition, Map<Gene, Boolean>> results = new HashMap<>();
+
+        for ( Tuples.Tuple3<Integer, String, Boolean> tuple : annotationDAO.inferredGenesRangeEditions( term, species, minEdition, maxEdition ) ) {
+            Edition ed = cache.getEdition( species, tuple.getT1() );
+
+            Gene g = cache.getCurrentGene( tuple.getT2() );
+            if ( g == null ) {
+                log.warn( "Could not find Accession:" + tuple.getT2() );
+                continue;
+                //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
             }
 
-            Edition ed = cache.getEdition( dto.getSpecies(), dto.getEdition() );
-
-            m2.put( ed, dto.getCount() );
+            results.computeIfAbsent( ed, k -> new HashMap<>() ).put( g, tuple.getT3() );
         }
         return results;
+    }
+
+    public Map<Gene, Boolean> fetchInferredGenes( GeneOntologyTerm term, Edition edition ) {
+
+        Map<Gene, Boolean> results = new HashMap<>();
+
+        for ( Tuples.Tuple2<String, Boolean> tuple : annotationDAO.inferredGenesSingleEdition( term, edition ) ) {
+
+            Gene g = cache.getCurrentGene( tuple.getT1() );
+            if ( g == null ) {
+                log.warn( "Could not find Accession:" + tuple.getT1() );
+                continue;
+                //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
+            }
+
+            results.put( g, tuple.getT2() );
+        }
+        return results;
+    }
+
+    public Stream<Gene> fetchDirectGenes( GeneOntologyTerm term, Edition edition ) {
+
+        return annotationDAO.directGenesSingleEdition( term, edition ).stream().map( accession -> {
+            Gene g = cache.getCurrentGene( accession );
+            if ( g == null ) {
+                log.warn( "Could not find Accession:" + accession );
+                //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
+            }
+            return g;
+
+        } ).filter( Objects::nonNull );
     }
 
     public Map<Gene, Set<GeneOntologyTerm>> fetchEditionSimple(Species species, Edition edition) {

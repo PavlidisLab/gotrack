@@ -29,10 +29,12 @@ import org.junit.*;
 import org.mockito.Mockito;
 import ubc.pavlab.gotrack.BaseTest;
 import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Gene.GeneBuilder;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.*;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Tuples;
 import ubc.pavlab.gotrack.utilities.Tuples.Tuple3;
 
@@ -456,48 +458,46 @@ public class AnnotationDAOTest extends BaseTest {
 
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void testDirectGeneCounts() {
-        List<DirectAnnotationCountDTO> res = annotationDAO.directGeneCountsAllEditions( "GO:0007005" );
+        Species human = new Species( 7, "Human", "", 9606, null );
+        Species mouse = new Species( 8, "Mouse", "", 10090, null );
 
-        List<Tuple3<Integer, Integer, Integer>> records = Lists.newArrayList();
+        Edition edMock1 = Mockito.mock(Edition.class);
+        Mockito.when( edMock1.getEdition() ).thenReturn( 145 );
+        Mockito.when( edMock1.getSpecies() ).thenReturn( human );
+        Edition edMock2 = Mockito.mock(Edition.class);
+        Mockito.when( edMock2.getEdition() ).thenReturn( 131 );
+        Mockito.when( edMock2.getSpecies() ).thenReturn( mouse );
 
-        for ( DirectAnnotationCountDTO dto : res ) {
-            records.add( Tuples.tuple3( dto.getSpecies(), dto.getEdition(), dto.getCount() ) );
-        }
+        List<String> res = annotationDAO.directGenesSingleEdition( new GeneOntologyTerm( "GO:0007005" ), edMock1 );
 
-        Assert.assertThat( records,
-                Matchers.containsInAnyOrder( Tuples.tuple3( 7, 144, 4 ),
-                        Tuples.tuple3( 7, 145, 4 ),
-                        Tuples.tuple3( 7, 146, 4 ),
-                        Tuples.tuple3( 7, 147, 4 ),
-                        Tuples.tuple3( 8, 130, 9 ),
-                        Tuples.tuple3( 8, 131, 9 ),
-                        Tuples.tuple3( 8, 132, 9 ),
-                        Tuples.tuple3( 8, 133, 9 ) ) );
+        Assert.assertThat( res.size(), Matchers.is( 4 ) );
+        Assert.assertThat( res, Matchers.containsInAnyOrder( "O60313", "P36776", "Q96CQ1", "Q9BSK2" ) );
 
-        res = annotationDAO.directGeneCountsAllEditions( "GO:0007568" );
+        res = annotationDAO.directGenesSingleEdition( new GeneOntologyTerm( "GO:0007005" ), edMock2 );
 
-        records = Lists.newArrayList();
+        Assert.assertThat( res.size(), Matchers.is( 9 ) );
+        Assert.assertThat( res, Matchers.containsInAnyOrder(
+                "D6RH79",
+                "E0CXD1",
+                "F6R114",
+                "F6U775",
+                "H7BX01",
+                "P58281",
+                "Q3TZX3",
+                "Q8BZJ4",
+                "Q922G0"
+        ) );
 
-        for ( DirectAnnotationCountDTO dto : res ) {
-            records.add( Tuples.tuple3( dto.getSpecies(), dto.getEdition(), dto.getCount() ) );
-        }
+        res = annotationDAO.directGenesSingleEdition( new GeneOntologyTerm( "GO:0007568" ), edMock1 );
 
-        Assert.assertThat( records,
-                Matchers.containsInAnyOrder( Tuples.tuple3( 7, 144, 1 ),
-                        Tuples.tuple3( 7, 145, 1 ),
-                        Tuples.tuple3( 7, 146, 1 ),
-                        Tuples.tuple3( 7, 147, 1 ) ) );
+        Assert.assertThat( res.size(), Matchers.is( 1 ) );
+        Assert.assertThat( res, Matchers.containsInAnyOrder( "P36776" ) );
 
-        res = annotationDAO.directGeneCountsAllEditions( "" );
-
+        res = annotationDAO.directGenesSingleEdition( null, edMock1 );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.directGeneCountsAllEditions( null );
-
-        Assert.assertThat( res.size(), Matchers.is( 0 ) );
     }
 
 }

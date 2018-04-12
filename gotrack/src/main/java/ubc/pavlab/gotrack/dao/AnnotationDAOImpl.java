@@ -25,12 +25,14 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.*;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Tuples;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static ubc.pavlab.gotrack.dao.DAOUtil.close;
 
@@ -87,11 +89,28 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             "where go_id=? AND species_id=? AND edition between ? and ? group by edition, evcat.category " +
             "order by edition";
 
-    // Collect unique, directly annotated gene counts for a term, not used at the moment (pretty slow)
-    private static final String SQL_DIRECT_GENE_CNT_ALL_EDITIONS_SINGLE_TERM = "select species_id, edition, COUNT(distinct accession_id) count from annotation ann " +
-            "inner join accession acc on acc.id=ann.accession_id " +
-            "where go_id = ? " +
-            "group by species_id, edition";
+    // Collect unique, directly annotated genes for multiple terms in a single species. Meant to be used on a term and
+    // all of its descendants where the 'direct' boolean corresponds to the main term being queried.
+    // Not used at the moment.
+    private static final String SQL_DIRECT_GENES_RANGE_EDITIONS_SINGLE_SPECIES_MULTIPLE_TERMS = "select distinct edition, ppah.ac, max(go_id=?) as direct from " + SQL_ACCESSION + " acc " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
+            "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
+            "where acc.species_id = ? and acc.edition between ? and ? and go_id in (%s) " +
+            "group by edition, ac";
+
+    // Collect unique, directly annotated genes for multiple terms in a single species. Meant to be used on a term and
+    // all of its descendants where the 'direct' boolean corresponds to the main term being queried.
+    private static final String SQL_DIRECT_GENES_SINGLE_EDITION_SINGLE_SPECIES_MULTIPLE_TERMS = "select distinct ppah.ac, max(go_id=?) as direct from " + SQL_ACCESSION + " acc " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
+            "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
+            "where acc.species_id = ? and acc.edition=? and go_id in (%s) " +
+            "group by ac";
+
+    // Collect unique, directly annotated genes for single term in a single species.
+    private static final String SQL_DIRECT_GENES_SINGLE_EDITION_SINGLE_SPECIES_SINGLE_TERM = "select distinct ppah.ac from " + SQL_ACCESSION + " acc " +
+            "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
+            "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
+            "where acc.species_id = ? and acc.edition=? and go_id = ?";
 
     private static final String SQL_SIMPLE_ANNOTATION_SINGLE_EDITION = "select distinct ac, go_id from " + SQL_ACCESSION + " acc " +
             "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
@@ -405,49 +424,129 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<DirectAnnotationCountDTO> directGeneCountsAllEditions( String goId ) throws DAOException {
-
-        if ( goId == null || goId.equals( "" ) ) {
+    public List<Tuples.Tuple3<Integer, String, Boolean>> inferredGenesRangeEditions( GeneOntologyTerm term, Species species, Integer minEdition, Integer maxEdition ) throws DAOException {
+        if ( term == null ) {
             return Lists.newArrayList();
         }
 
-        List<Object> params = new ArrayList<Object>();
+        List<Object> params = Lists.newArrayList();
 
-        // species, symbol,species
-        params.add( goId );
+        params.add( term.getGoId() );
+        params.add( species.getId() );
+        params.add( minEdition );
+        params.add( maxEdition );
+
+        List<GeneOntologyTerm> descendants = term.streamDescendants().collect( Collectors.toList() );
+        descendants.add( term );
+
+        String sql = String.format( SQL_DIRECT_GENES_RANGE_EDITIONS_SINGLE_SPECIES_MULTIPLE_TERMS, DAOUtil.preparePlaceHolders( descendants.size() ) );
+
+        for ( GeneOntologyTerm t : descendants ) {
+            params.add( t.getGoId() );
+        }
 
         Connection connection = null;
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        List<DirectAnnotationCountDTO> results = new ArrayList<>();
-        String sql = SQL_DIRECT_GENE_CNT_ALL_EDITIONS_SINGLE_TERM;
+        List<Tuples.Tuple3<Integer, String, Boolean>> results = new ArrayList<>();
 
         log.debug( sql );
 
         try {
-
-            long startTime = System.currentTimeMillis();
             connection = daoFactory.getConnection();
-            long endTime = System.currentTimeMillis();
-            log.debug( "daoFactory.getConnection(): " + (endTime - startTime) + "ms" );
-
             statement = connection.prepareStatement( sql );
             DAOUtil.setValues( statement, params.toArray() );
-            log.debug( statement );
-
-            startTime = System.currentTimeMillis();
             resultSet = statement.executeQuery();
-            endTime = System.currentTimeMillis();
-            log.debug( "statement.executeQuery(): " + (endTime - startTime) + "ms" );
-
-            startTime = System.currentTimeMillis();
             while (resultSet.next()) {
-                results.add( new DirectAnnotationCountDTO( resultSet.getInt( "species_id" ),
-                        resultSet.getInt( "edition" ), "", resultSet.getInt( "count" ) ) );
+                results.add( new Tuples.Tuple3<>( resultSet.getInt( "edition" ),
+                        resultSet.getString( "ac" ),
+                        resultSet.getBoolean( "direct" ) ) );
             }
-            endTime = System.currentTimeMillis();
-            log.debug( "while ( resultSet.next() ): " + (endTime - startTime) + "ms" );
+        } catch (SQLException e) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
+    public List<Tuples.Tuple2<String, Boolean>> inferredGenesSingleEdition( GeneOntologyTerm term, Edition edition ) throws DAOException {
+        if ( term == null ) {
+            return Lists.newArrayList();
+        }
+
+        List<Object> params = Lists.newArrayList();
+
+        params.add( term.getGoId() );
+        params.add( edition.getSpecies().getId() );
+        params.add( edition.getEdition() );
+
+        List<GeneOntologyTerm> descendants = term.streamDescendants().collect( Collectors.toList() );
+        descendants.add( term );
+
+        String sql = String.format( SQL_DIRECT_GENES_SINGLE_EDITION_SINGLE_SPECIES_MULTIPLE_TERMS, DAOUtil.preparePlaceHolders( descendants.size() ) );
+
+        for ( GeneOntologyTerm t : descendants ) {
+            params.add( t.getGoId() );
+        }
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<Tuples.Tuple2<String, Boolean>> results = new ArrayList<>();
+
+        log.debug( sql );
+
+        try {
+            connection = daoFactory.getConnection();
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                results.add( new Tuples.Tuple2<>( resultSet.getString( "ac" ), resultSet.getBoolean( "direct" ) ) );
+            }
+        } catch (SQLException e) {
+            throw new DAOException( e );
+        } finally {
+            close( connection, statement, resultSet );
+        }
+
+        return results;
+    }
+
+    @Override
+    public List<String> directGenesSingleEdition( GeneOntologyTerm term, Edition edition ) throws DAOException {
+        if ( term == null ) {
+            return Lists.newArrayList();
+        }
+
+        List<Object> params = Lists.newArrayList();
+
+        params.add( edition.getSpecies().getId() );
+        params.add( edition.getEdition() );
+        params.add( term.getGoId() );
+
+        Connection connection = null;
+        PreparedStatement statement = null;
+        ResultSet resultSet = null;
+
+        List<String> results = new ArrayList<>();
+        String sql = SQL_DIRECT_GENES_SINGLE_EDITION_SINGLE_SPECIES_SINGLE_TERM;
+
+        log.debug( sql );
+
+        try {
+            connection = daoFactory.getConnection();
+            statement = connection.prepareStatement( sql );
+            DAOUtil.setValues( statement, params.toArray() );
+            resultSet = statement.executeQuery();
+            while (resultSet.next()) {
+                results.add( resultSet.getString( "ac" ) );
+            }
         } catch (SQLException e) {
             throw new DAOException( e );
         } finally {

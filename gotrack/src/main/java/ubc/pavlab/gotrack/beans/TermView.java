@@ -31,6 +31,7 @@ import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.exception.TermNotFoundException;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.GOEdition;
+import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
@@ -46,11 +47,8 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.Serializable;
 import java.sql.Date;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -65,6 +63,8 @@ import java.util.stream.Collectors;
 public class TermView implements Serializable {
 
     private static final long serialVersionUID = 3768269202724289260L;
+
+    private static final int MAX_INFERRED_GENES_DISPLAY_COUNT = 100;
 
     @Inject
     private Cache cache;
@@ -125,6 +125,20 @@ public class TermView implements Serializable {
         }
 
         return null;
+    }
+
+    public boolean displayInferred() {
+        return cache.getInferredAnnotationCount( cache.getCurrentEditions( session.getSpecies() ), currentTerm ) <= MAX_INFERRED_GENES_DISPLAY_COUNT;
+    }
+
+    public Map<Gene, Boolean> fetchCurrentGenesMap() {
+        Edition ed = cache.getCurrentEditions( session.getSpecies() );
+        if ( displayInferred() ) {
+            return annotationService.fetchInferredGenes( currentTerm, ed );
+        } else {
+            return annotationService.fetchDirectGenes( currentTerm, ed ).collect( Collectors.toMap( g -> g, g -> true ) );
+        }
+
     }
 
     /**
