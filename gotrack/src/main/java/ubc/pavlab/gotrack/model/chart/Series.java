@@ -42,7 +42,7 @@ public class Series {
         this.name = name;
     }
 
-    public boolean addDataPoint( long x, Number y ) {
+    public boolean addDataPoint( Number x, Number y ) {
         this.sorted = false;
         return this.data.add( new CartesianPoint( x, y ) );
     }

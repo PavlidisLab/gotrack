@@ -27,8 +27,8 @@ import java.sql.Date;
  * @author mjacobson
  * @version $Id$
  */
-public class RangePoint implements Point {
-    private final long x;
+public class RangePoint implements Point<Long, Range> {
+    private final Long x;
     private final Range y;
 
     public RangePoint( long x, Number left, Number right ) {
@@ -43,7 +43,7 @@ public class RangePoint implements Point {
     }
 
     @Override
-    public long getX() {
+    public Long getX() {
         return x;
     }
 
@@ -53,7 +53,7 @@ public class RangePoint implements Point {
     }
 
     @Override
-    public int compareTo( Point o ) {
-        return Long.compare( this.getX(), o.getX() );
+    public int compareTo( Point<Long, Range> o ) {
+        return this.x.compareTo( o.getX() );
     }
 }
