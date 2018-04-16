@@ -36,6 +36,8 @@ import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.go.Relation;
+import ubc.pavlab.gotrack.model.go.RelationshipType;
 import ubc.pavlab.gotrack.model.visualization.Graph;
 
 import javax.annotation.PostConstruct;
@@ -49,6 +51,7 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -64,7 +67,7 @@ public class TermView implements Serializable {
 
     private static final long serialVersionUID = 3768269202724289260L;
 
-    private static final int MAX_INFERRED_GENES_DISPLAY_COUNT = 100;
+    private static final int MAX_INFERRED_GENES_DISPLAY_COUNT = 500;
 
     @Inject
     private Cache cache;
@@ -134,11 +137,26 @@ public class TermView implements Serializable {
     public Map<Gene, Boolean> fetchCurrentGenesMap() {
         Edition ed = cache.getCurrentEditions( session.getSpecies() );
         if ( displayInferred() ) {
-            return annotationService.fetchInferredGenes( currentTerm, ed );
+            return annotationService.fetchInferredGenes( currentTerm, ed ).entrySet().stream()
+                    .sorted( Map.Entry.<Gene, Boolean>comparingByValue().reversed().thenComparing( Map.Entry.comparingByKey() ) )
+                    .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue,
+                            ( e1, e2 ) -> e1, LinkedHashMap::new ) );
         } else {
-            return annotationService.fetchDirectGenes( currentTerm, ed ).collect( Collectors.toMap( g -> g, g -> true ) );
+            return annotationService.fetchDirectGenes( currentTerm, ed ).collect(
+                    Collectors.toMap( Function.identity(),
+                            g -> true,
+                            ( u, v ) -> v,
+                            LinkedHashMap::new
+                    ) );
         }
 
+    }
+
+    public List<Relation<GeneOntologyTerm>> getChildTerms( GeneOntologyTerm term ) {
+        return term.getChildren().stream()
+                .sorted( Comparator.comparing( (Function<Relation<GeneOntologyTerm>, RelationshipType>) Relation::getType )
+                        .thenComparing( Relation::getRelation ) )
+                .collect( Collectors.toList() );
     }
 
     /**

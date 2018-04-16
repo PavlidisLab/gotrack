@@ -148,7 +148,7 @@
                             <p:overlayPanel for="countHelpBtn" appendToBody="true" hideEffect="fade">
                                 <div class="overlay-help">
                                     <h3 style="margin-top: 0;">Description:</h3>
-                                    <p><b>Annotation Category Counts</b> shows per evidence category counts of annotations made with this term.
+                                    <p><b>Annotation Category Counts</b> shows per evidence category counts of direct annotations made with this term.
                                     </p>
 
                                     <h3>Legend Descriptions:</h3>
@@ -281,7 +281,7 @@
                                              type="button"/>
                             <h:outputText value="Child Terms "/>
                         </f:facet>
-                        <p:dataTable var="child" value="#{termView.currentTerm.children}"
+                        <p:dataTable var="child" value="#{termView.getChildTerms(termView.currentTerm)}"
                                      emptyMessage="No child terms found."
                                      style="width:100%;"
                                      scrollHeight="150"

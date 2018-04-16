@@ -85,7 +85,6 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     private static final String SQL_CATEGORY_BREAKDOWN_RANGE_EDITIONS_SINGLE_SPECIES_SINGLE_TERM = "select edition, evcat.category , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
             "inner join " + SQL_EVIDENCE + " evcat on evcat.evidence = ann.evidence " +
             "inner join " + SQL_ACCESSION + " acc on acc.id=ann.accession_id  " +
-            "inner join " + SQL_EDITION + " ed using(species_id, edition) " +
             "where go_id=? AND species_id=? AND edition between ? and ? group by edition, evcat.category " +
             "order by edition";
 
