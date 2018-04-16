@@ -391,14 +391,9 @@
                     name: name,
                     data: data
                 };
-                if (!isUndefined(series.extra) && !isUndefined(series.extra.color)) {
-                    seriesOptions.color = series.extra.color;
-                }
-                if (!isUndefined(series.extra) && !isUndefined(series.extra.title)) {
-                    seriesOptions.title = series.extra.title;
-                }
-                if (!isUndefined(series.extra) && !isUndefined(series.extra.visible)) {
-                    seriesOptions.visible = series.extra.visible;
+
+                if (!isUndefined(series.extra)) {
+                    seriesOptions = Highcharts.merge(seriesOptions, series.extra);
                 }
                 options.series.push(seriesOptions)
 

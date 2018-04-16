@@ -436,9 +436,14 @@ public class GeneView implements Serializable {
         //Create series for direct annotations count
         Series directCountSeries = new Series( "Direct" );
         SeriesExtra aggregateSeries = new SeriesExtra( "Direct Species Mean" );
-        aggregateSeries.putExtra( "color", "#939393" );
+        aggregateSeries.putExtra( "dashStyle", "Dash" );
+        aggregateSeries.putExtra( "color", "#24A93B" );
+        aggregateSeries.putExtra( "marker", ImmutableMap.of("enabled", false) );
         SeriesExtra aggregateInferredSeries = new SeriesExtra( "Inferred Species Mean" );
-        aggregateInferredSeries.putExtra( "color", "#939393" );
+        aggregateInferredSeries.putExtra( "visible", false );
+        aggregateInferredSeries.putExtra( "dashStyle", "Dash" );
+        aggregateInferredSeries.putExtra( "color", "#0060B5" );
+        aggregateInferredSeries.putExtra( "marker", ImmutableMap.of("enabled", false) );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.D )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
@@ -448,7 +453,8 @@ public class GeneView implements Serializable {
         }
 
         // Create series for inferred annotations count
-        Series inferredCountSeries = new Series( "Inferred" );
+        SeriesExtra inferredCountSeries = new SeriesExtra( "Inferred" );
+        inferredCountSeries.putExtra( "visible", false );
 
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
@@ -507,7 +513,9 @@ public class GeneView implements Serializable {
         // For direct annotations
         Series directSeries = new Series( "Direct" );
         SeriesExtra averageDirectSeries = new SeriesExtra( "Direct Species Mean" );
-        averageDirectSeries.putExtra( "color", "#939393" );
+        averageDirectSeries.putExtra( "color", "#24A93B" );
+        averageDirectSeries.putExtra( "dashStyle", "Dash" );
+        averageDirectSeries.putExtra( "marker", ImmutableMap.of("enabled", false) );
 
         Set<GeneOntologyTerm> currentGOSet = directData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : directData.rowMap().entrySet() ) {
@@ -517,9 +525,13 @@ public class GeneView implements Serializable {
         }
 
         // For Inferred annotations
-        Series inferredSeries = new Series( "Inferred" );
+        SeriesExtra inferredSeries = new SeriesExtra( "Inferred" );
+        inferredSeries.putExtra( "visible", false );
         SeriesExtra averageInferredSeries = new SeriesExtra( "Inferred Species Mean" );
-        averageInferredSeries.putExtra( "color", "#939393" );
+        averageInferredSeries.putExtra( "visible", false );
+        averageInferredSeries.putExtra( "dashStyle", "Dash" );
+        averageInferredSeries.putExtra( "color", "#0060B5" );
+        averageInferredSeries.putExtra( "marker", ImmutableMap.of("enabled", false) );
 
         currentGOSet = inferredData.row( currentEdition ).keySet();
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : inferredData.rowMap().entrySet() ) {
@@ -571,7 +583,9 @@ public class GeneView implements Serializable {
         // Calculate multifunctionality of the gene in each edition
         Series multiSeries = new Series( "Multifunctionality" );
         SeriesExtra averageSeries = new SeriesExtra( "Species Mean" );
-        averageSeries.putExtra( "color", "#939393" );
+        averageSeries.putExtra( "color", "#24A93B" );
+        averageSeries.putExtra( "dashStyle", "Dash" );
+        averageSeries.putExtra( "marker", ImmutableMap.of("enabled", false) );
         for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : rawData.get( AnnotationType.I )
                 .rowMap().entrySet() ) {
             Edition ed = entry.getKey();
