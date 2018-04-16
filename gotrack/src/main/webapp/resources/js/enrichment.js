@@ -291,41 +291,36 @@ function handleGraphHistogram(xhr, status, args) {
         return;
     }
 
-    console.log(args);
-    args.HC_histo.sort(function(a, b) {
-        return a - b;
-    });
+    // console.log(args);
+    // args.HC_histo.sort(function(a, b) {
+    //     return a - b;
+    // });
 
     var chart = {
         title:"P-Value Distribution",
         subtitle: 'Edition ' + args.edition.edition + ' : ' + args.edition.date,
-        series:[],
+        series:[]
     };
 
     var options = plotting.defaultHCOptions('hc_chart_dlg_container', chart);
     options.exporting.chartOptions.xAxis.labels.rotation = -45;
-    options.exporting.chartOptions.legend.enabled = false;
+    // options.exporting.chartOptions.legend.enabled = false;
 
-    // Multiple axis does not merge additional export axis options. This is a workaround.
-    // See https://github.com/highcharts/highcharts/issues/2022
-    options.exporting.chartOptions.chart.events.load = function() {
-        // for (var i = 0; i < this.xAxis.length; i++) {
-        //     this.xAxis[i].update(options.exporting.chartOptions.xAxis);
-        // }
-        // for (i = 0; i < this.yAxis.length; i++) {
-        //     this.yAxis[i].update(options.exporting.chartOptions.yAxis);
-        // }
-        this.xAxis[1].update({visible: false});
-        this.yAxis[1].update({visible: false});
-        this.series[1].update({visible: false});
-
-    };
+    // // Multiple axis does not merge additional export axis options. This is a workaround.
+    // // See https://github.com/highcharts/highcharts/issues/2022
+    // options.exporting.chartOptions.chart.events.load = function() {
+    //     this.xAxis[1].update({visible: false});
+    //     this.yAxis[1].update({visible: false});
+    //     this.series[1].update({visible: false});
+    //
+    // };
 
     options.xAxis = [{
         title: { text: 'P-Value' },
         alignTicks: false
     },{
-        title: { text: 'Rank (Scatter)' },
+        visible: false,
+        title: { text: '' },
         alignTicks: false,
         opposite: true
     }];
@@ -333,7 +328,8 @@ function handleGraphHistogram(xhr, status, args) {
     options.yAxis = [{
         title: { text: 'Number of Terms' }
     },{
-        title: { text: 'P-Value (Scatter)' },
+        visible: false,
+        title: { text: '' },
         opposite: true
         // type: 'logarithmic'
     }];
@@ -349,6 +345,8 @@ function handleGraphHistogram(xhr, status, args) {
             }
         }
     }, {
+        visible: false,
+        showInLegend: false,
         name: 'Data',
         type: 'scatter',
         xAxis: 1,
@@ -369,9 +367,10 @@ function handleGraphHistogram(xhr, status, args) {
 
     plotting.addLegend(options);
     options.legend = {
-        align: 'center',
-        verticalAlign: 'bottom',
-        layout: 'horizontal'
+        enabled: false
+        // align: 'center',
+        // verticalAlign: 'bottom',
+        // layout: 'horizontal'
     };
 
     Highcharts.chart('hc_chart_dlg_container', options);
