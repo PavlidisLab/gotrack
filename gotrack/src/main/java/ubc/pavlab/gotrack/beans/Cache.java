@@ -1030,6 +1030,25 @@ public class Cache implements Serializable {
 
     /**
      * @param ed edition
+     * @return count of genes annotated with this term or any of its children
+     */
+    public Map<GeneOntologyTerm, Integer> getInferredAnnotationCount( Edition ed ) {
+        if ( ed == null ) return null;
+        return inferredAnnotationCount.get( ed );
+
+    }
+
+    /**
+     * @param ed edition
+     * @return count of genes annotated with this term
+     */
+    public Map<GeneOntologyTerm, Integer> getDirectAnnotationCount( Edition ed ) {
+        if ( ed == null ) return null;
+        return directAnnotationCount.get( ed );
+    }
+
+    /**
+     * @param ed edition
      * @return aggregate
      */
     public Aggregate getAggregate( Edition ed ) {

@@ -39,7 +39,6 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -506,9 +505,15 @@ public class AnnotationService implements Serializable {
 
             Gene g = cache.getCurrentGene( tup.getT1() );
             if ( g == null ) {
-                log.warn( "Could not find Accession:" + tup.getT1() );
+                log.debug( "Could not find Accession:" + tup.getT1() );
                 continue;
                 //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
+            }
+
+            if ( !g.getSpecies().equals( species ) ) {
+                // These annotations used to be of species but are now something else (usually because of a split).
+                // leave these out of the results
+                continue;
             }
 
             GeneOntologyTerm go = cache.getTerm( edition, tup.getT2());
@@ -537,9 +542,9 @@ public class AnnotationService implements Serializable {
         }
 
         // Propagate terms
-        for ( Entry<Gene, Set<GeneOntologyTerm>> geneSetEntry : data.entrySet() ) {
-            geneSetEntry.setValue( GeneOntologyTerm.propagate( geneSetEntry.getValue().stream() ).collect( Collectors.toSet() ) );
-        }
+//        for ( Entry<Gene, Set<GeneOntologyTerm>> geneSetEntry : data.entrySet() ) {
+//            geneSetEntry.setValue( GeneOntologyTerm.propagate( geneSetEntry.getValue().stream() ).collect( Collectors.toSet() ) );
+//        }
 
         return data;
     }
