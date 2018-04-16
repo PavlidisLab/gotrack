@@ -1016,6 +1016,12 @@ public class EnrichmentView implements Serializable {
         }
     }
 
+    public List<Gene> getGenesBackingTopTermsForEdition( Edition edition ) {
+        if (combinedAnalysis == null || edition == null) return Lists.newArrayList();
+        return combinedAnalysis.getSimilarityAnalysis().getSimilarityScore( edition ).getTopGenes().stream()
+                .sorted().collect( Collectors.toList() );
+    }
+
     // Getters / Setters ---------------------------------------------------------------------------------------
 
     public List<Gene> getSelectedGenes() {

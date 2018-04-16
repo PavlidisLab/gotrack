@@ -432,7 +432,7 @@
                             <h:outputText value="Genes Backing Top Terms"/>
                         </f:facet>
                         <p:outputPanel id="genesBackingTable">
-                            <comps:geneTable value="#{enrichmentView.combinedAnalysis.similarityAnalysis.getSimilarityScore(enrichmentView.enrichmentTableEdition).topGenes}"/>
+                            <comps:geneTable value="#{enrichmentView.getGenesBackingTopTermsForEdition(enrichmentView.enrichmentTableEdition)}"/>
                         </p:outputPanel>
                     </p:tab>
                     <p:tab>
