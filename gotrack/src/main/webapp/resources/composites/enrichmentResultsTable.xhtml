@@ -306,7 +306,7 @@
                 <h:outputText value="Recent Stability"/>
             </f:facet>
             <p:commandLink action="#{enrichmentView.createStabilityChart(entry.term)}"
-                           oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);">
+                           oncomplete="PF('stabilityChartWdg').show();handleGraphStabilityChart(args);">
                 <i class="fa fa-line-chart emphasize-hover" style="margin-right: 5px;"/>
             </p:commandLink>
             <h:outputText value="#{entry.stability.score}" rendered="#{entry.stability.score != 'NaN' and entry.stability.score != 'Infinity'}">

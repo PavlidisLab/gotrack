@@ -362,7 +362,7 @@
                     <p:overlayPanel for="mainButtonsHelpBtn" appendToBody="true" hideEffect="fade" >
                         <div class="overlay-help">
                             <p>These buttons provide a means to visualize the changes in enrichment results over the
-                                history of this hitlist. You may choose from plotting either the top 5 terms in every
+                                history of this hitlist. You may choose from plotting either the top terms in every
                                 edition or your selected terms <b>By Rank</b> or <b>By P-Value</b>.</p>
                             <p>If <b>By Rank</b> is chosen, you will be shown a Bump Chart of the corresponding terms
                                 and their relative ranks over time. Areas of heavy change will have lots of crossing
@@ -381,16 +381,16 @@
                                 disabled="#{not enrichmentView.combinedAnalysis.success}"
                                 value="By Rank"
                                 style="margin-left:5px;"
-                                action="#{enrichmentView.createChart(true, false)}"
+                                action="#{enrichmentView.createRankChartByTopN()}"
                                 icon="fa fa-line-chart"
-                                oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
+                                oncomplete="PF('enrichmentChartWdg').show();handleGraphRankChart(args);"/>
                             <p:commandButton
                                     disabled="#{not enrichmentView.combinedAnalysis.success}"
                                     value="By P-Value"
                                     style="margin-left:5px;"
-                                    action="#{enrichmentView.createChart(false, false)}"
+                                    action="#{enrichmentView.createPValueChartByTopN()}"
                                     icon="fa fa-line-chart"
-                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
+                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphPValueChart(args);"/>
                         </span>
                     <div style="padding: 0 4px;vertical-align: middle;display: inline-block;">
                         <p:separator style="width:50px;margin:0 auto;"/>
@@ -401,16 +401,16 @@
                                     disabled="#{not enrichmentView.combinedAnalysis.success}"
                                     value="By Rank"
                                     style="margin-left:5px;"
-                                    action="#{enrichmentView.createChart(true, true)}"
+                                    action="#{enrichmentView.createRankChartBySelected()}"
                                     icon="fa fa-line-chart"
-                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
+                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphRankChart(args);"/>
                             <p:commandButton
                                     disabled="#{not enrichmentView.combinedAnalysis.success}"
                                     value="By P-Value"
                                     style="margin-left:5px;"
-                                    action="#{enrichmentView.createChart(false, true)}"
+                                    action="#{enrichmentView.createPValueChartBySelected()}"
                                     icon="fa fa-line-chart"
-                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);"/>
+                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphPValueChart(args);"/>
                         </span>
                     </p:outputPanel>
                 </div>
@@ -419,7 +419,7 @@
                         <f:facet name="title">
                             <p:overlayPanel for="genesbackingHelpBtn" hideEffect="fade" appendToBody="true">
                                 <div class="overlay-help">
-                                    <p>This table shows thgenes that are responsible for the top 5 terms in this edition.</p>
+                                    <p>This table shows the genes that are responsible for the top 5 terms in this edition.</p>
                                 </div>
                             </p:overlayPanel>
                             <p:commandButton  id="genesbackingHelpBtn"
@@ -480,6 +480,11 @@
                              update=":formEnrich:headerPanel, :formEnrich:main-area:genesBackingTable"
                              oncomplete="PF('tableEnrichmentWdg').filter()"
                              action="#{enrichmentView.loadTableData()}"/>
+
+            <p:remoteCommand name="fetchTermInformation"
+                             update=":itemSelectEnrichmentDlg"
+                             oncomplete="PF('itemSelectEnrichmentWdg').show()"
+                             action="#{enrichmentView.fetchTermInformation()}"/>
 
         </h:form>
         <p:dialog header="Gene Info" widgetVar="geneDialog" modal="false"
@@ -651,13 +656,43 @@
                      style="width: 100%; height: 15%; border: solid; border-width: thin; margin-top: 10px;"></div>
             </div>
 
-            <h:form>
-                <p:remoteCommand name="fetchTermInformation"
-                                 update=":itemSelectEnrichmentDlg"
-                                 oncomplete="PF('itemSelectEnrichmentWdg').show()"
-                                 action="#{enrichmentView.fetchTermInformation()}"/>
+        </p:dialog>
 
-            </h:form>
+        <p:dialog id="stabilityChartDlg" widgetVar="stabilityChartWdg" modal="true" showEffect="fade"
+                  hideEffect="fade" resizable="false" height="800" width="1200"
+                  fitViewport="true" closeOnEscape="true" maximizable="false">
+            <f:facet name="header">
+                <p:overlayPanel for="stabilityDlgHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>Plot of the selected term's p-value and 95% confidence interval over its history.</p>
+                        <p>
+                            This is calculated using <i>six month rolling regressions</i> on the historical changes in
+                            'Pop. Hits' and 'Hits'. Given the results of these regressions we use their 95% confidence
+                            intervals to calculate a 95% confidence interval around the p-value. This range is then used
+                            to calculate the negative log of the coefficient of variation with respect to that edition's
+                            significance cutoff to get the stability score.
+                        </p>
+                        <p>
+                            The stability score typically ranges between -10 and 10 with 10 being more
+                            stable than -10.
+                        </p>
+                        <p>
+                            A score of <b>No Change</b> means we saw no significant variation in both
+                            Pop. Hits and Hits over its recent past (keep in mind this does <b>not</b> mean the p-value
+                            is constant).
+                        </p>
+                        <p>A score of <b>No Data</b> means there was not enough available.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="stabilityDlgHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Stability"/>
+            </f:facet>
+            <div style="width: 100%; height: 100%;">
+                <div id="hc_stability_container" style="width: 100%; height: 100%;"></div>
+            </div>
 
         </p:dialog>
 

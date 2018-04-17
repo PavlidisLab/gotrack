@@ -159,7 +159,7 @@ function createTermsChart(xhr, status, args) {
 
     plotting.charts.terms.options = options;
     plotting.charts.terms.recreate(options, function (c) {
-        redrawSelectedEditionPlotLine(c, {x:args.HC_terms.selectedEdition});
+        redrawSelectedEditionPlotLine(c, {x: args.HC_terms.selectedEdition});
         plotting.mainCharts.push(c);
     });
 }
@@ -186,7 +186,7 @@ function createSimilarityChart(xhr, status, args) {
 
     plotting.charts.similarity.options = options;
     plotting.charts.similarity.recreate(options, function (c) {
-        redrawSelectedEditionPlotLine(c, {x:args.HC_similarity.selectedEdition});
+        redrawSelectedEditionPlotLine(c, {x: args.HC_similarity.selectedEdition});
         plotting.mainCharts.push(c);
     });
 
@@ -297,9 +297,9 @@ function handleGraphHistogram(xhr, status, args) {
     // });
 
     var chart = {
-        title:"P-Value Distribution",
+        title: "P-Value Distribution",
         subtitle: 'Edition ' + args.edition.edition + ' : ' + args.edition.date,
-        series:[]
+        series: []
     };
 
     var options = plotting.defaultHCOptions('hc_chart_dlg_container', chart);
@@ -316,20 +316,20 @@ function handleGraphHistogram(xhr, status, args) {
     // };
 
     options.xAxis = [{
-        title: { text: 'P-Value' },
+        title: {text: 'P-Value'},
         alignTicks: false
-    },{
+    }, {
         visible: false,
-        title: { text: '' },
+        title: {text: ''},
         alignTicks: false,
         opposite: true
     }];
 
     options.yAxis = [{
-        title: { text: 'Number of Terms' }
-    },{
+        title: {text: 'Number of Terms'}
+    }, {
         visible: false,
-        title: { text: '' },
+        title: {text: ''},
         opposite: true
         // type: 'logarithmic'
     }];
@@ -376,9 +376,78 @@ function handleGraphHistogram(xhr, status, args) {
     Highcharts.chart('hc_chart_dlg_container', options);
 }
 
-function handleGraphSelected(xhr, status, args) {
+function commonEnrichmentChartOptions(options) {
+    plotting.addLegend(options);
+    plotting.addLegendTooltips(options);
+
+    options.chart.zoomType = 'xy';
+
+    options.plotOptions.series.states = {
+        hover: {
+            lineWidth: 2
+        }
+    };
+
+    options.plotOptions.series.point = {
+        events: {
+            click: function () {
+                fetchTermInformation([{name: 'termId', value: this.series.name}, {
+                    name: 'edition',
+                    value: GLOBALS.dateToEdition[this.x]
+                }]);
+            }
+        }
+    };
+}
+
+function handleGraphPValueChart(args) {
     try {
-        args.HC_enrichment = JSON.parse(args.HC_enrichment);
+        args.HC_pvalue = JSON.parse(args.HC_pvalue);
+    } catch (e) {
+        console.log(e);
+        return;
+    }
+
+    var options = createPValueChartOptions('hc_enrichment_container', args.HC_pvalue);
+    options.plotOptions.series.events.mouseOver = function () {
+        var item = this.legendItem;
+        Highcharts.each(this.chart.series, function (series, i) {
+            if (series.legendItem !== item && series.legendItem !== null && series.visible) {
+                series.legendItem.css({
+                    color: 'grey'
+                });
+            }
+        });
+
+    };
+    options.plotOptions.series.events.mouseOut = function () {
+        Highcharts.each(this.chart.series, function (series, i) {
+            if (series.legendItem !== null && series.visible) {
+                series.legendItem.css({
+                    color: 'black'
+                });
+            }
+        });
+    };
+
+
+
+
+    var masterOptions = addMasterChart('hc_enrichmentMaster_container', options);
+
+    // create the detail chart
+    plotting.charts.enrichment.options = options;
+    plotting.charts.enrichment.recreate(options);
+
+    // create the master chart
+    plotting.charts.enrichmentMaster.options = masterOptions;
+    plotting.charts.enrichmentMaster.recreate(masterOptions);
+}
+
+function handleGraphStabilityChart(args) {
+
+    try {
+        args.HC_stability = JSON.parse(args.HC_stability);
     } catch (e) {
         console.log(e);
         return;
@@ -386,147 +455,256 @@ function handleGraphSelected(xhr, status, args) {
 
     console.log(args);
 
-    var options = plotting.defaultHCOptions('hc_enrichment_container', args.HC_enrichment.chart);
-    plotting.addLegend(options);
-    plotting.addLegendTooltips(options);
-    options.chart.zoomType = 'xy';
+    var options = createPValueChartOptions('hc_stability_container', args.HC_stability);
+
+    // Overwrite some options
+
+    options.legend = {
+        align: 'center',
+        verticalAlign: 'bottom',
+        layout: 'horizontal'
+    };
+
+    // console.log("Errors", args.HC_enrichment.errors);
+    var series = args.HC_stability.errors.series[0];
+    var name = series.name;
+    var data = [];
+
+    for (var j = 0; j < series.data.length; j++) {
+        var point = series.data[j];
+        data.push([point.x, point.y.left, point.y.right]);
+    }
+
+    options.series.push({
+        name: name,
+        data: data,
+        type: 'arearange',
+        lineWidth: 0,
+        linkedTo: ':previous',
+        fillOpacity: 0.3,
+        zIndex: -1,
+        enableMouseTracking: false
+
+    });
+
+    var dateToStabilityScore = args.HC_stability.dateToStabilityScore;
+
+    // This is necessary as special double types are not allowed in the JSON spec
+    // We bypass this via a string type adaptor for Infinity and NaN
+    for (var key in dateToStabilityScore) {
+        if (dateToStabilityScore.hasOwnProperty(key)) {
+            var stabilityScore = dateToStabilityScore[key];
+            if (stabilityScore === 'Infinity') {
+                stabilityScore = 'No Change';
+            } else if (stabilityScore === 'NaN') {
+                stabilityScore = 'No Data';
+            } else {
+                stabilityScore = utility.sigFigs(stabilityScore, 3)
+            }
+            dateToStabilityScore[key] = stabilityScore;
+        }
+    }
+
+    options.tooltip = {
+        useHTML: true,
+        formatter: function () {
+            return '<span style="color:' + this.series.color + '">\u25CF</span> <b>' + this.series.name +
+                '</b><br/><p>Name: ' + this.series.options.title +
+                '</p><p>Date: ' + new Date(this.x).toLocaleDateString() +
+                "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] +
+                "</p><p>P-value: " + utility.sigFigs(this.y, 3) +
+                "</p><p>Stability Score: " + dateToStabilityScore[this.x] +
+                "</p>";
+        }
+    };
+
+    // create the detail chart
+    plotting.charts.stability.options = options;
+    plotting.charts.stability.recreate(options);
+}
+
+function createPValueChartOptions(renderTo, chartValues) {
+
+    var options = plotting.defaultHCOptions(renderTo, chartValues.chart);
+    commonEnrichmentChartOptions(options);
+
+    options.yAxis.type = 'logarithmic';
+    options.yAxis.reversed = true;
+    options.yAxis.max = 1;
+    options.yAxis.minorTickInterval = 0.1;
+    options.yAxis.labels = {
+        formatter: function () {
+            return this.value;
+        }
+    };
+
+    options.plotOptions.series.lineWidth = 1;
+    options.plotOptions.series.marker = {enabled: false};
+
+    options.tooltip = {
+        useHTML: true,
+        formatter: function () {
+            return '<span style="color:' + this.series.color + '">\u25CF</span> <b>' + this.series.name +
+                '</b><br/><p>Name: ' + this.series.options.title +
+                '</p><p>Date: ' + new Date(this.x).toLocaleDateString() +
+                "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] +
+                "</p><p>P-value: " + utility.sigFigs(this.y, 3) +
+                "</p>";
+        }
+    };
+
+    return options;
+
+}
+
+function addMasterChart(renderTo, options) {
 
     options.subtitle = {
         text: 'Select an area by dragging across the lower chart'
     };
-    options.exporting.chartOptions.subtitle.text = ""; // Remove subtitle
-    options.plotOptions.series.states = {
-        hover: {
-            lineWidth: 2
+    options.exporting.chartOptions.subtitle.text = ""; // Remove subtitle on export
+
+    // create the master chart
+    var optionsCopy = $.extend(true, {}, options);
+    optionsCopy.chart.renderTo = renderTo;
+    optionsCopy.chart.reflow = false;
+    optionsCopy.chart.borderWidth = 0;
+    optionsCopy.chart.backgroundColor = null;
+    optionsCopy.chart.marginLeft = 50;
+    optionsCopy.chart.marginRight = 20;
+    optionsCopy.chart.zoomType = 'x';
+    optionsCopy.chart.events = {
+
+        // listen to the selection event on the master chart to update the
+        // extremes of the detail chart
+        selection: function (event) {
+            var extremesObject = event.xAxis[0],
+                min = extremesObject.min,
+                max = extremesObject.max,
+                xAxis = this.xAxis[0];
+
+            // Smooth hacks
+            plotting.charts.enrichment.chart.xAxis[0].setExtremes(min, max);
+            plotting.charts.enrichment.chart.showResetZoom();
+            var oldOnClick = plotting.charts.enrichment.chart.resetZoomButton.element.onclick;
+            plotting.charts.enrichment.chart.resetZoomButton.element.onclick = function (event) {
+                oldOnClick();
+                xAxis.removePlotBand('mask-selection');
+            };
+
+
+            xAxis.removePlotBand('mask-selection');
+            xAxis.addPlotBand({
+                id: 'mask-selection',
+                from: min,
+                to: max,
+                color: 'rgba(0, 0, 150, 0.2)'
+            });
+
+
+            return false;
         }
     };
+    optionsCopy.title.text = null;
+    optionsCopy.subtitle.text = null;
+    optionsCopy.xAxis.showLastTickLabel = true;
+    optionsCopy.xAxis.title = {
+        text: null
+    };
+    optionsCopy.yAxis.gridLineWidth = 0;
+    optionsCopy.yAxis.labels = {enabled: false};
+    optionsCopy.yAxis.title = {text: null};
+    optionsCopy.yAxis.showFirstLabel = false;
+    optionsCopy.yAxis.lineWidth = 0;
+    optionsCopy.yAxis.plotLines = [];
+    optionsCopy.tooltip = {
+        formatter: function () {
+            return false;
+        }
+    };
+    optionsCopy.legend = {enabled: false};
+    optionsCopy.credits = {enabled: false};
+    optionsCopy.plotOptions.series.enableMouseTracking = false;
+    optionsCopy.plotOptions.series.marker = {enabled: false};
+    optionsCopy.plotOptions.series.states = {
+        hover: {
+            lineWidth: 0
+        }
+
+    };
+    optionsCopy.exporting = {enabled: false};
+
+    // if (outsideTopNCheck) {
+    //     optionsCopy.series.shift();
+    // }
+    //
+    // if (insignificantCheck) {
+    //     optionsCopy.series.shift();
+    // }
+
+    return optionsCopy;
+}
+
+function handleGraphRankChart(args) {
+    try {
+        args.HC_enrichment = JSON.parse(args.HC_enrichment);
+    } catch (e) {
+        console.log(e);
+        return;
+    }
+
+    // console.log(args);
+
+    var options = plotting.defaultHCOptions('hc_enrichment_container', args.HC_enrichment.chart);
+    commonEnrichmentChartOptions(options);
+
     options.plotOptions.series.events.mouseOver = function () {
         var item = this.legendItem;
         Highcharts.each(this.chart.series, function (series, i) {
-            if (series.legendItem !== item && series.legendItem != null && series.visible) {
+            if (series.legendItem !== item && series.legendItem !== null && series.visible) {
                 series.legendItem.css({
                     color: 'grey'
                 });
-//              series.legendLine.attr({
-//                  stroke: 'grey' 
-//              });
-//              series.legendSymbol.attr({
-//                  fill: 'grey' 
-//              });
             }
         });
 
     };
     options.plotOptions.series.events.mouseOut = function () {
         Highcharts.each(this.chart.series, function (series, i) {
-            if (series.legendItem != null && series.visible) {
+            if (series.legendItem !== null && series.visible) {
                 series.legendItem.css({
                     color: 'black'
                 });
-//             series.legendLine.attr({
-//                 stroke: series.color 
-//             });
-//             series.legendSymbol.attr({
-//                 fill: series.color
-//             });
             }
         });
     };
 
-    if (args.HC_enrichment.type == "pvalue") {
-        options.plotOptions.series.point = {
-            events: {
-                click: function () {
-                    fetchTermInformation([{name: 'termId', value: this.series.name}, {
-                        name: 'edition',
-                        value: GLOBALS.dateToEdition[this.x]
-                    }]);
-                },
+    options.plotOptions.series.point = {
+        events: {
+            click: function () {
+                fetchTermInformation([{name: 'termId', value: this.series.name}, {
+                    name: 'edition',
+                    value: GLOBALS.dateToEdition[this.x]
+                }, {name: 'value', value: utility.roundHalf(this.y)}, {
+                    name: 'valueLabel',
+                    value: "Relative Rank"
+                }]);
             }
-        };
-        options.yAxis = {
-            type: 'logarithmic',
-            reversed: true,
-            title: {
-                text: args.HC_enrichment.yLabel
-            },
-            max: 1,
-            minorTickInterval: 0.1,
-            labels: {
-                formatter: function () {
-                    return this.value;
-                }
-            },
-//                       plotLines : [{
-//                          value : args.hc_threshold,
-//                          color : 'black',
-//                          dashStyle : 'shortdash',
-//                          width : 2,
-//                          label : {
-//                             text : 'Threshold'
-//                          },
-//                          zIndex: 5
-//                       }]
-        };
-        options.plotOptions.series.lineWidth = 1;
-        options.tooltip = {
-            headerFormat: '<b>{series.name}</b><br />',
-            pointFormat: 'x = {point.x}, y = {point.y}',
-            useHTML: true,
-            formatter: function () {
-                return '<span style="color:' + this.series.color + '">\u25CF</span><b>' + this.series.name +
-                    '</b><br/><p>Name: ' + this.series.options.title +
-                    '</p><p>Date: ' + new Date(this.x).toLocaleDateString() +
-                    "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] +
-                    "</p><p>P-value: " + utility.sigFigs(this.y, 3) +
-                    "</p>";
-            }
-        };
-
-        // add threshold line
-        var cutoffsData = []
-
-        for (var key in args.HC_enrichment.cutoffs) {
-            cutoffsData.push([parseInt(key, 10), args.HC_enrichment.cutoffs[key]]);
         }
-
-        options.series.unshift({
-            name: "Threshold",
-            data: cutoffsData,
-            type: 'line',
-            lineWidth: 2,
-            zIndex: 5,
-            enableMouseTracking: false,
-            dashStyle: 'shortdash',
-            color: 'black',
-        });
+    };
 
 
-    } else {
         //rank
-        var maxRank = args.HC_enrichment.maxRank;
+        var maxRank = args.HC_enrichment.chart.extra.maxRank;
+        var outsideTopNCheck = args.HC_enrichment.chart.extra.outsideTopNCheck;
+        var insignificantCheck = args.HC_enrichment.chart.extra.insignificantCheck;
+        var dateToMaxSigRank = args.HC_enrichment.chart.extra.dateToMaxSigRank;
+        var topN = args.HC_enrichment.chart.extra.topN;
 
         var opacity = Math.min(10 / args.HC_enrichment.chart.series.length + 1 / 100, 0.1);
         //var opacity = Math.min(10/maxRank+1/100,0.1);
 
-        var dateToMaxSigRank = args.HC_enrichment.dateToMaxSigRank;
-        var topN = args.HC_enrichment.topN;
-        var outsideTopNCheck = args.HC_enrichment.outsideTopNCheck;
-        var insignificantCheck = args.HC_enrichment.insignificantCheck;
 
-        options.plotOptions.series.point = {
-            events: {
-                click: function () {
-                    fetchTermInformation([{name: 'termId', value: this.series.name}, {
-                        name: 'edition',
-                        value: GLOBALS.dateToEdition[this.x]
-                    }, {name: 'value', value: utility.roundHalf(this.y)}, {
-                        name: 'valueLabel',
-                        value: "Relative Rank"
-                    }]);
-                }
-            }
-        };
         options.yAxis = {
             type: 'linear',
             reversed: true,
@@ -656,166 +834,15 @@ function handleGraphSelected(xhr, status, args) {
 //    }
 
 
-    }
+
 
     for (var i = 0; i < options.series.length; i++) {
         var series = options.series[i];
         series.marker = {enabled: false};
     }
 
-    if (!utility.isUndefined(args.HC_enrichment.errors) && args.HC_enrichment.type == "pvalue") {
-        // Essentially if stability graph
-        console.log("Errors", args.HC_enrichment.errors);
-        var series = args.HC_enrichment.errors.series[0];
-        var name = series.name;
-        var data = []
 
-        for (var j = 0; j < series.data.length; j++) {
-            var point = series.data[j];
-            data.push([point.x, point.y.left, point.y.right]);
-        }
-
-        options.series.push({
-            name: name,
-            data: data,
-            type: 'arearange',
-            lineWidth: 0,
-            linkedTo: ':previous',
-            fillOpacity: 0.3,
-            zIndex: -1,
-            enableMouseTracking: false
-//         point : {
-//            events: {
-//               click: function () { //do nothing
-//               },
-//            }
-//         },
-//         states : {
-//            hover: {
-//               lineWidth: 1
-//            }
-//         }
-
-        });
-
-        var dateToStabilityScore = args.HC_enrichment.dateToStabilityScore;
-
-        // This is necessary as special double types are not allowed in the JSON spec
-        // We bypass this via a string type adaptor for Infinity and NaN
-        for (var key in dateToStabilityScore) {
-            if (dateToStabilityScore.hasOwnProperty(key)) {
-                var stabilityScore = dateToStabilityScore[key];
-                if (stabilityScore === 'Infinity') {
-                    stabilityScore = 'No Change';
-                } else if (stabilityScore === 'NaN') {
-                    stabilityScore = 'No Data';
-                } else {
-                    stabilityScore = utility.sigFigs(stabilityScore, 3)
-                }
-                dateToStabilityScore[key] = stabilityScore;
-            }
-        }
-
-        options.tooltip = {
-            headerFormat: '<b>{series.name}</b><br />',
-            pointFormat: 'x = {point.x}, y = {point.y}',
-            useHTML: true,
-            formatter: function () {
-                return '<span style="color:' + this.series.color + '">\u25CF</span><b>' + this.series.name +
-                    '</b><br/><p>Name: ' + this.series.options.title +
-                    '</p><p>Date: ' + new Date(this.x).toLocaleDateString() +
-                    "</p><p>Edition: " + GLOBALS.dateToEdition[this.x] +
-                    "</p><p>P-value: " + utility.sigFigs(this.y, 3) +
-                    "</p><p>Stability Score: " + dateToStabilityScore[this.x] +
-                    "</p>";
-            }
-        }
-
-//      options.plotOptions.series.point = {
-//                                          events: {
-//                                             click: function () {
-//                                                fetchTermInformation([{name:'termId', value:this.series.name},{name:'edition', value:dateToEdition[this.x]}, {name:'value', value:dateToStabilityScore[this.x]}, {name:'valueLabel', value:"Stability Score"} ]);
-//                                             }
-//                                          }
-//                                       };
-
-
-    }
-
-
-    // create the detail chart
-    plotting.charts.enrichment.options = options;
-    plotting.charts.enrichment.recreate(options);
-
-    // create the master chart
-    var optionsCopy = $.extend(true, {}, options);
-    optionsCopy.chart.renderTo = 'hc_enrichmentMaster_container';
-    optionsCopy.chart.reflow = false;
-    optionsCopy.chart.borderWidth = 0;
-    optionsCopy.chart.backgroundColor = null;
-    optionsCopy.chart.marginLeft = 50;
-    optionsCopy.chart.marginRight = 20;
-    optionsCopy.chart.zoomType = 'x';
-    optionsCopy.chart.events = {
-
-        // listen to the selection event on the master chart to update the
-        // extremes of the detail chart
-        selection: function (event) {
-            var extremesObject = event.xAxis[0],
-                min = extremesObject.min,
-                max = extremesObject.max,
-                xAxis = this.xAxis[0];
-
-            // Smooth hacks
-            plotting.charts.enrichment.chart.xAxis[0].setExtremes(min, max);
-            plotting.charts.enrichment.chart.showResetZoom();
-            var oldOnClick = plotting.charts.enrichment.chart.resetZoomButton.element.onclick;
-            plotting.charts.enrichment.chart.resetZoomButton.element.onclick = function (event) {
-                oldOnClick();
-                xAxis.removePlotBand('mask-selection');
-            }
-
-
-            xAxis.removePlotBand('mask-selection');
-            xAxis.addPlotBand({
-                id: 'mask-selection',
-                from: min,
-                to: max,
-                color: 'rgba(0, 0, 150, 0.2)'
-            });
-
-
-            return false;
-        }
-    };
-    optionsCopy.title.text = null;
-    optionsCopy.subtitle.text = null;
-    optionsCopy.xAxis.showLastTickLabel = true;
-    optionsCopy.xAxis.title = {
-        text: null
-    };
-    optionsCopy.yAxis.gridLineWidth = 0;
-    optionsCopy.yAxis.labels = {enabled: false};
-    optionsCopy.yAxis.title = {text: null};
-    optionsCopy.yAxis.showFirstLabel = false;
-    optionsCopy.yAxis.lineWidth = 0;
-    optionsCopy.yAxis.plotLines = [];
-    optionsCopy.tooltip = {
-        formatter: function () {
-            return false;
-        }
-    };
-    optionsCopy.legend = {enabled: false};
-    optionsCopy.credits = {enabled: false};
-    optionsCopy.plotOptions.series.enableMouseTracking = false;
-    optionsCopy.plotOptions.series.marker = {enabled: false};
-    optionsCopy.plotOptions.series.states = {
-        hover: {
-            lineWidth: 0
-        }
-
-    };
-    optionsCopy.exporting = {enabled: false};
+    var optionsCopy = addMasterChart('hc_enrichmentMaster_container', options);
 
     if (outsideTopNCheck) {
         optionsCopy.series.shift();
@@ -825,6 +852,11 @@ function handleGraphSelected(xhr, status, args) {
         optionsCopy.series.shift();
     }
 
+    // create the detail chart
+    plotting.charts.enrichment.options = options;
+    plotting.charts.enrichment.recreate(options);
+
+    // create the master chart
     plotting.charts.enrichmentMaster.options = optionsCopy;
     plotting.charts.enrichmentMaster.recreate(optionsCopy);
 
@@ -843,6 +875,7 @@ function reInitializeCharts() {
         plotting.removeAllCharts();
         plotting.createNewChart('terms');
         plotting.createNewChart('similarity');
+        plotting.createNewChart('stability');
         plotting.createNewChart('enrichment');
         plotting.createNewChart('enrichmentMaster');
     } catch (e) {
