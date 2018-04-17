@@ -140,7 +140,7 @@ function createOverviewChart(args) {
                             fetchGraphDiff([{name: 'goId', value: args.HC_overview.goId},
                                 {name: 'edition', value: dateToGOEditionId[this.x]},
                                 {name: 'compareEdition', value: dateToGOEditionId[previousX]}]);
-                        } else if (this.y === 2) {
+                        } else if (this.y === 2 && this.colorIndex === 1) {
                             fetchGraph([{name: 'goId', value: args.HC_overview.goId},
                                 {name: 'edition', value: dateToGOEditionId[this.x]}]);
                         }
@@ -192,7 +192,8 @@ function createOverviewChart(args) {
                         x2: nextPointX,
                         y: 2,
                         name: point.y === 1 ? 'Exists' : 'Does Not Exist',
-                        color: point.y === 1 ? '#2bce48' : '#d63232'
+                        color: point.y === 1 ? '#2bce48' : '#d63232',
+                        colorIndex: point.y
                     };
                 };
 
