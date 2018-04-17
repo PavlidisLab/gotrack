@@ -9,7 +9,7 @@
                 xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites"
                 xmlns:of="http://omnifaces.org/functions"
 >
-    >
+
 
     <ui:define name="metadata">
         <f:metadata>
@@ -398,19 +398,25 @@
                     <span>
                             <span style="font-size: 1.17em;font-weight:bold;">Graph Selected Terms:</span>
                             <p:commandButton
+                                    id="createRankChartBySelected"
                                     disabled="#{not enrichmentView.combinedAnalysis.success}"
                                     value="By Rank"
                                     style="margin-left:5px;"
                                     action="#{enrichmentView.createRankChartBySelected()}"
                                     icon="fa fa-line-chart"
-                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphRankChart(args);"/>
+                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphRankChart(args);">
+                                <p:confirm header="Confirmation" message="No terms selected, this will plot all terms significant in any edition. This is a lot of data, are you sure?" icon="ui-icon-alert" disabled="#{not empty enrichmentView.selectedEnrichmentTableValues}"/>
+                            </p:commandButton>
                             <p:commandButton
+                                    id="createPValueChartBySelected"
                                     disabled="#{not enrichmentView.combinedAnalysis.success}"
                                     value="By P-Value"
                                     style="margin-left:5px;"
                                     action="#{enrichmentView.createPValueChartBySelected()}"
                                     icon="fa fa-line-chart"
-                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphPValueChart(args);"/>
+                                    oncomplete="PF('enrichmentChartWdg').show();handleGraphPValueChart(args);">
+                                <p:confirm header="Confirmation" message="No terms selected, this will plot all terms significant in any edition. This is a lot of data, are you sure?" icon="ui-icon-alert" disabled="#{not empty enrichmentView.selectedEnrichmentTableValues}"/>
+                            </p:commandButton>
                         </span>
                     </p:outputPanel>
                 </div>
@@ -487,6 +493,11 @@
                              action="#{enrichmentView.fetchTermInformation()}"/>
 
         </h:form>
+        <p:confirmDialog global="true" showEffect="fade" hideEffect="fade">
+            <p:commandButton value="Yes" type="button" styleClass="ui-confirmdialog-yes" icon="ui-icon-check" />
+            <p:commandButton value="No" type="button" styleClass="ui-confirmdialog-no" icon="ui-icon-close" />
+        </p:confirmDialog>
+
         <p:dialog header="Gene Info" widgetVar="geneDialog" modal="false"
                   showEffect="fade" hideEffect="fade" resizable="false">
             <p:outputPanel id="geneDetail" style="text-align:center;">
@@ -651,9 +662,10 @@
             <p:ajax event="restoreMaximize"
                     onstart="enrichmentChartDlgResize();return false;"/>
             <div id="hc_container" style="width: 100%; height: 100%;">
-                <div id="hc_enrichment_container" style="width: 100%; height: 80%;"></div>
-                <div id="hc_enrichmentMaster_container"
-                     style="width: 100%; height: 15%; border: solid; border-width: thin; margin-top: 10px;"></div>
+                <div id="hc_enrichment_container" style="width: 100%; height: 100%;"></div>
+                <!--<div style="text-align: center;color: #666666;margin-top: 10px;">Zoom an area by dragging across this chart</div>-->
+                <!--<div id="hc_enrichmentMaster_container"-->
+                     <!--style="width: 100%; height: 15%; border: solid; border-width: thin;"></div>-->
             </div>
 
         </p:dialog>

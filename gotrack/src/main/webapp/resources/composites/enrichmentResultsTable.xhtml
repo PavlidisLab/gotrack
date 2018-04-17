@@ -36,6 +36,8 @@
                  resizableColumns="true">
         <p:ajax event="filter"
                 oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))"/>
+        <p:ajax event="rowSelect" update=":formEnrich:createRankChartBySelected :formEnrich:createPValueChartBySelected" />
+        <p:ajax event="rowUnselect" update=":formEnrich:createRankChartBySelected :formEnrich:createPValueChartBySelected" />
 
 
         <f:facet name="footer">

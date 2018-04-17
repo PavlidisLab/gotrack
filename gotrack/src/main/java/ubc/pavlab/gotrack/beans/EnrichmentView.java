@@ -483,7 +483,6 @@ public class EnrichmentView implements Serializable {
 
         ChartValues chart = createPValueChart( Sets.newHashSet( term ) );
         chart.setTitle( "Enrichment Stability" );
-        chart.setSubtitle( term.getGoId() + " - " + term.getName() );
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
 
@@ -520,6 +519,7 @@ public class EnrichmentView implements Serializable {
      */
     public void createPValueChartByTopN() {
         ChartValues chart = createPValueChart( combinedAnalysis.getEnrichmentAnalysis().getTopNTerms( TOP_N_ENRICHMENT_CHART ) );
+        chart.setSubtitle( "Top " + TOP_N_ENRICHMENT_CHART + " terms in all editions" );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_pvalue",
                 new GsonBuilder().serializeNulls().create().toJson( createHCCallbackParamMap( chart ) ) );
@@ -533,6 +533,7 @@ public class EnrichmentView implements Serializable {
         if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.isEmpty() ) {
             // If nothing selected graph everything
             chart = createPValueChart( combinedAnalysis.getEnrichmentAnalysis().getTermsSignificantInAnyEdition() );
+            chart.setSubtitle( "Terms significant in any edition" );
         } else {
             chart = createPValueChart( selectedEnrichmentTableValues.stream().map( EnrichmentTableValues::getTerm )
                     .collect( Collectors.toList() ) );
@@ -551,6 +552,7 @@ public class EnrichmentView implements Serializable {
         Map<GeneOntologyTerm, SeriesExtra> seriesMap = new HashMap<>();
         SeriesExtra cutoffSeries = new SeriesExtra( "Threshold" );
         cutoffSeries.putExtra( "lineWidth", 2 );
+        cutoffSeries.putExtra( "title", "Significance threshold" );
         cutoffSeries.putExtra( "zIndex", 5 );
         cutoffSeries.putExtra( "enableMouseTracking", false );
         cutoffSeries.putExtra( "dashStyle", "shortdash" );
@@ -576,11 +578,19 @@ public class EnrichmentView implements Serializable {
 
         ChartValues cv = new ChartValues("Enrichment Results" ,"P-Value", "Date" );
 
+        if (termsToChart.size() == 1) {
+            GeneOntologyTerm term = termsToChart.iterator().next();
+            cv.setSubtitle( term.getGoId() + " - " + term.getName() );
+        }
+
         cv.addSeries( cutoffSeries );
 
         for ( Series s : seriesMap.values() ) {
             cv.addSeries( s );
         }
+
+        cv.getExtra().put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
+        cv.getExtra().put( "referenceEdition", similarityReferenceEdition.getDate().getTime() );
 
         return cv;
 
@@ -595,6 +605,7 @@ public class EnrichmentView implements Serializable {
         if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.isEmpty() ) {
             // If nothing selected graph everything
             chart = createRankChart( combinedAnalysis.getEnrichmentAnalysis().getTermsSignificantInAnyEdition(), null );
+            chart.setSubtitle( "Terms significant in any edition" );
         } else {
             chart = createRankChart( selectedEnrichmentTableValues.stream().map( EnrichmentTableValues::getTerm )
                     .collect( Collectors.toSet() ), null );
@@ -612,6 +623,8 @@ public class EnrichmentView implements Serializable {
         Set<GeneOntologyTerm> selectedTerms = combinedAnalysis.getEnrichmentAnalysis().getTopNTerms( TOP_N_ENRICHMENT_CHART );
 
         ChartValues chart = createRankChart( selectedTerms, TOP_N_ENRICHMENT_CHART );
+        chart.setSubtitle( "Top " + TOP_N_ENRICHMENT_CHART + " terms in all editions" );
+
         RequestContext.getCurrentInstance().addCallbackParam( "HC_enrichment",
                 new GsonBuilder().serializeNulls().create().toJson( createHCCallbackParamMap( chart ) ) );
     }
@@ -667,6 +680,11 @@ public class EnrichmentView implements Serializable {
         cv.getExtra().put( "maxRank", -1.0 ); // largest rank over all editions and terms to help create polygon regions
         cv.getExtra().put( "outsideTopNCheck", false ); // Is any term outside of the topN in any edition
         cv.getExtra().put( "insignificantCheck", false ); // Are there any terms which are insignificant in an edition
+
+        if (termsToChart.size() == 1) {
+            GeneOntologyTerm term = termsToChart.iterator().next();
+            cv.setSubtitle( term.getGoId() + " - " + term.getName() );
+        }
 
         Map<GeneOntologyTerm, SeriesExtra> seriesMap = new HashMap<>();
 
@@ -741,7 +759,7 @@ public class EnrichmentView implements Serializable {
             }
 
             if (maxRank > (double)cv.getExtra().get( "maxRank" ) ) {
-                cv.getExtra().put( "maxRank", maxRank );
+                cv.getExtra().put( "maxRank", maxRank );  // largest rank over all editions and terms to help create polygon regions
             }
 
             dateToMaxSigRank.put( edition.getDate().getTime(), breakPoint );
@@ -752,8 +770,11 @@ public class EnrichmentView implements Serializable {
             cv.addSeries( s );
         }
 
-        cv.getExtra().put( "dateToMaxSigRank", dateToMaxSigRank ); // largest rank over all editions and terms to help create polygon regions
-        cv.getExtra().put( "topN", topN ); // largest rank over all editions and terms to help create polygon regions
+        cv.getExtra().put( "dateToMaxSigRank", dateToMaxSigRank );
+        cv.getExtra().put( "topN", topN );
+
+        cv.getExtra().put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
+        cv.getExtra().put( "referenceEdition", similarityReferenceEdition.getDate().getTime() );
 
         return cv;
 

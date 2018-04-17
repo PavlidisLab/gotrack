@@ -376,7 +376,7 @@ function handleGraphHistogram(xhr, status, args) {
     Highcharts.chart('hc_chart_dlg_container', options);
 }
 
-function commonEnrichmentChartOptions(options) {
+function commonEnrichmentChartOptions(options, chart) {
     plotting.addLegend(options);
     plotting.addLegendTooltips(options);
 
@@ -398,6 +398,32 @@ function commonEnrichmentChartOptions(options) {
             }
         }
     };
+
+    options.xAxis.plotLines = [{
+        value: chart.extra.referenceEdition,
+        color: '#a9a9a9',
+        width: 1,
+        dashStyle: 'Dot',
+        id: 'plot-line-reference',
+        className: 'export',
+        zIndex: 3,
+        label: {
+            text: 'Reference',
+            verticalAlign: 'bottom',
+            textAlign: 'center',
+            y: -30,
+            style: {
+                fontSize: '12px'
+            }
+        }
+    }];
+
+    if (options.series.length < 1) {
+        for (var j = 0; j < options.series.length; j++) {
+            var s = options.series[j];
+            s.showInLegend = false;
+        }
+    }
 }
 
 function handleGraphPValueChart(args) {
@@ -412,7 +438,7 @@ function handleGraphPValueChart(args) {
     options.plotOptions.series.events.mouseOver = function () {
         var item = this.legendItem;
         Highcharts.each(this.chart.series, function (series, i) {
-            if (series.legendItem !== item && series.legendItem !== null && series.visible) {
+            if (series.legendItem !== item && series.legendItem && series.visible) {
                 series.legendItem.css({
                     color: 'grey'
                 });
@@ -422,7 +448,7 @@ function handleGraphPValueChart(args) {
     };
     options.plotOptions.series.events.mouseOut = function () {
         Highcharts.each(this.chart.series, function (series, i) {
-            if (series.legendItem !== null && series.visible) {
+            if (series.legendItem && series.visible) {
                 series.legendItem.css({
                     color: 'black'
                 });
@@ -430,18 +456,17 @@ function handleGraphPValueChart(args) {
         });
     };
 
-
-
-
-    var masterOptions = addMasterChart('hc_enrichmentMaster_container', options);
-
     // create the detail chart
     plotting.charts.enrichment.options = options;
-    plotting.charts.enrichment.recreate(options);
+    plotting.charts.enrichment.recreate(options, function (c) {
+        redrawSelectedEditionPlotLine(c, {x: args.HC_pvalue.chart.extra.selectedEdition});
+    });
 
-    // create the master chart
-    plotting.charts.enrichmentMaster.options = masterOptions;
-    plotting.charts.enrichmentMaster.recreate(masterOptions);
+    // var masterOptions = createMasterChart('hc_enrichmentMaster_container', options);
+    //
+    // // create the master chart
+    // plotting.charts.enrichmentMaster.options = masterOptions;
+    // plotting.charts.enrichmentMaster.recreate(masterOptions);
 }
 
 function handleGraphStabilityChart(args) {
@@ -453,17 +478,9 @@ function handleGraphStabilityChart(args) {
         return;
     }
 
-    console.log(args);
+    // console.log(args);
 
     var options = createPValueChartOptions('hc_stability_container', args.HC_stability);
-
-    // Overwrite some options
-
-    options.legend = {
-        align: 'center',
-        verticalAlign: 'bottom',
-        layout: 'horizontal'
-    };
 
     // console.log("Errors", args.HC_enrichment.errors);
     var series = args.HC_stability.errors.series[0];
@@ -520,13 +537,17 @@ function handleGraphStabilityChart(args) {
 
     // create the detail chart
     plotting.charts.stability.options = options;
-    plotting.charts.stability.recreate(options);
+    plotting.charts.stability.recreate(options, function (c) {
+        redrawSelectedEditionPlotLine(c, {x: args.HC_stability.chart.extra.selectedEdition});
+    });
 }
 
 function createPValueChartOptions(renderTo, chartValues) {
 
     var options = plotting.defaultHCOptions(renderTo, chartValues.chart);
-    commonEnrichmentChartOptions(options);
+    commonEnrichmentChartOptions(options, chartValues.chart);
+
+    options.series[0].showInLegend = true; // Threshold
 
     options.yAxis.type = 'logarithmic';
     options.yAxis.reversed = true;
@@ -557,12 +578,7 @@ function createPValueChartOptions(renderTo, chartValues) {
 
 }
 
-function addMasterChart(renderTo, options) {
-
-    options.subtitle = {
-        text: 'Select an area by dragging across the lower chart'
-    };
-    options.exporting.chartOptions.subtitle.text = ""; // Remove subtitle on export
+function createMasterChart(renderTo, options) {
 
     // create the master chart
     var optionsCopy = $.extend(true, {}, options);
@@ -656,12 +672,12 @@ function handleGraphRankChart(args) {
     // console.log(args);
 
     var options = plotting.defaultHCOptions('hc_enrichment_container', args.HC_enrichment.chart);
-    commonEnrichmentChartOptions(options);
+    commonEnrichmentChartOptions(options, args.HC_enrichment.chart);
 
     options.plotOptions.series.events.mouseOver = function () {
         var item = this.legendItem;
         Highcharts.each(this.chart.series, function (series, i) {
-            if (series.legendItem !== item && series.legendItem !== null && series.visible) {
+            if (series.legendItem !== item && series.legendItem && series.visible) {
                 series.legendItem.css({
                     color: 'grey'
                 });
@@ -671,7 +687,7 @@ function handleGraphRankChart(args) {
     };
     options.plotOptions.series.events.mouseOut = function () {
         Highcharts.each(this.chart.series, function (series, i) {
-            if (series.legendItem !== null && series.visible) {
+            if (series.legendItem && series.visible) {
                 series.legendItem.css({
                     color: 'black'
                 });
@@ -778,6 +794,7 @@ function handleGraphRankChart(args) {
                 var s = {
                     name: "Insignificant Region",
                     type: 'polygon',
+                    title: "Region where results are not significant",
                     data: polygonPoints.slice(),
                     color: Highcharts.Color(plotting.MAXIMALLY_DISTINCT_COLORS[2]).setOpacity(0.2).get(),
                     enableMouseTracking: false,
@@ -810,6 +827,7 @@ function handleGraphRankChart(args) {
                 s = {
                     name: "Outside Top " + topN,
                     type: 'polygon',
+                    title: "Region outside the top " + topN + " results but still significant",
                     data: polygonPoints.slice(),
                     color: Highcharts.Color(plotting.MAXIMALLY_DISTINCT_COLORS[0]).setOpacity(0.2).get(),
                     enableMouseTracking: false,
@@ -841,24 +859,25 @@ function handleGraphRankChart(args) {
         series.marker = {enabled: false};
     }
 
-
-    var optionsCopy = addMasterChart('hc_enrichmentMaster_container', options);
-
-    if (outsideTopNCheck) {
-        optionsCopy.series.shift();
-    }
-
-    if (insignificantCheck) {
-        optionsCopy.series.shift();
-    }
-
     // create the detail chart
     plotting.charts.enrichment.options = options;
-    plotting.charts.enrichment.recreate(options);
+    plotting.charts.enrichment.recreate(options, function (c) {
+        redrawSelectedEditionPlotLine(c, {x: args.HC_enrichment.chart.extra.selectedEdition});
+    });
 
-    // create the master chart
-    plotting.charts.enrichmentMaster.options = optionsCopy;
-    plotting.charts.enrichmentMaster.recreate(optionsCopy);
+    // var optionsCopy = createMasterChart('hc_enrichmentMaster_container', options);
+    //
+    // if (outsideTopNCheck) {
+    //     optionsCopy.series.shift();
+    // }
+    //
+    // if (insignificantCheck) {
+    //     optionsCopy.series.shift();
+    // }
+    //
+    // // create the master chart
+    // plotting.charts.enrichmentMaster.options = optionsCopy;
+    // plotting.charts.enrichmentMaster.recreate(optionsCopy);
 
 }
 
@@ -930,29 +949,5 @@ $(document).ready(function () {
         plotting.charts.similarity.resize();
     };
 
-    /**
-     * Extend the Axis.getLinePath method in order to visualize breaks with two parallel
-     * slanted lines. For each break, the slanted lines are inserted into the line path.
-     */
-    Highcharts.wrap(Highcharts.Axis.prototype, 'getLinePath', function (proceed, lineWidth) {
-        var axis = this,
-            path = proceed.call(this, lineWidth),
-            x = path[1];
 
-        Highcharts.each(this.breakArray || [], function (brk) {
-            var from;
-            if (!axis.horiz) {
-                y = axis.toPixels(brk.from);
-                path.splice(3, 0,
-                    'L', x, y - 4, // stop
-                    'M', x + 5, y - 9, 'L', x - 5, y + 1, // lower slanted line
-                    'M', x + 5, y - 1, 'L', x - 5, y + 9, // higher slanted line
-                    'M', x, y + 4
-                );
-            }
-        });
-        return path;
-    });
-
-
-})
+});
