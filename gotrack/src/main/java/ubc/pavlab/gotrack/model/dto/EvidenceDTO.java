@@ -31,7 +31,6 @@ import ubc.pavlab.gotrack.model.Evidence;
 @Getter
 @RequiredArgsConstructor
 public final class EvidenceDTO {
-    private final int id;
     private final String evidence;
     private final String description;
     private final String category;

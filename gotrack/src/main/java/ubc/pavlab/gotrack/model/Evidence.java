@@ -28,21 +28,24 @@ import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
  * Represents an evidence code to be applied to an annotation
  * 
  * @author mjacobson
- * @version $Id$
  */
 @Getter
 @ToString
-@EqualsAndHashCode(of={"id"})
+@EqualsAndHashCode(of={"evidence"})
 public final class Evidence {
-    private final int id;
     private final String evidence;
     private final String description;
     private final String  category;
     private final boolean curated;
 
+    public Evidence( String evidence ) {
+        this.evidence = evidence;
+        this.description = "";
+        this.category = "unknown";
+        this.curated = true; // Very likely true
+    }
+
     public Evidence( EvidenceDTO dto ) {
-        super();
-        this.id = dto.getId();
         this.evidence = dto.getEvidence();
         this.description = dto.getDescription();
         this.category = dto.getCategory();

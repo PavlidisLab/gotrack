@@ -23,14 +23,14 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Data Transfer Object for gene counts grouped by category, edition
+ * Data Transfer Object for gene counts grouped by evidence, edition
  * 
  * @author mjacobson
  */
 @Getter
 @RequiredArgsConstructor
-public final class EditionCategoryCountDTO {
+public final class EditionEvidenceCountDTO {
     private final Integer edition;
-    private final String category;
+    private final String evidence;
     private final int count;
 }

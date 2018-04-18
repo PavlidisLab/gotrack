@@ -19,36 +19,20 @@
 
 package ubc.pavlab.gotrack.model.dto;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+
 import java.sql.Date;
 
 /**
- * Data Transfer Object for gene counts grouped by category, date
+ * Data Transfer Object for gene counts grouped by evidence, date
  * 
  * @author mjacobson
- * @version $Id$
  */
-public final class CategoryCountDTO {
+@Getter
+@RequiredArgsConstructor
+public final class EvidenceCountDTO {
     private final Date date;
-    private final String category;
+    private final String evidence;
     private final int count;
-
-    public CategoryCountDTO( Date date, String category, int count ) {
-        super();
-        this.date = date;
-        this.category = category;
-        this.count = count;
-    }
-
-    public Date getDate() {
-        return date;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    public int getCount() {
-        return count;
-    }
-
 }

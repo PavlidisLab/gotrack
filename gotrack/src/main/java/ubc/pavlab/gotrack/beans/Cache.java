@@ -45,6 +45,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -150,8 +151,7 @@ public class Cache implements Serializable {
     private Map<String, Evidence> evidenceCache = new ConcurrentHashMap<>();
 
     // Holds all unique evidence categories (Automatic, Author, etc).
-    // TODO consider turning into objects (or possibly enum if we are sure the categories won't be changing any time soon...)
-    private ImmutableMap<String, Set<Evidence>> evidenceCategoryCache = null;
+    private Map<String, Set<Evidence>> evidenceCategoryCache = new ConcurrentHashMap<>();
 
     /*
      * Page specific caches
@@ -382,13 +382,9 @@ public class Cache implements Serializable {
 
         // Evidence Category cache creation
         // ****************************
-        Map<String, Set<Evidence>> builder = Maps.newLinkedHashMap();
-
         evidenceCache.values().stream().sorted(Comparator.comparing( Evidence::getCategory ) ).forEach( e -> {
-            builder.computeIfAbsent( e.getCategory(), c -> new LinkedHashSet<>() ).add( e );
+            evidenceCategoryCache.computeIfAbsent( e.getCategory(), c -> new LinkedHashSet<>() ).add( e );
         } );
-
-        evidenceCategoryCache = ImmutableMap.copyOf( builder );
     }
 
     private void createGOTerms( CacheDAO cacheDAO ) {

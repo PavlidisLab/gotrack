@@ -6,7 +6,6 @@
       xmlns:h="http://xmlns.jcp.org/jsf/html"
       xmlns:f="http://xmlns.jcp.org/jsf/core"
       xmlns:p="http://primefaces.org/ui"
-      xmlns:of="http://omnifaces.org/functions"
       xmlns:composite="http://xmlns.jcp.org/jsf/composite"
 >
 <composite:interface>
@@ -17,25 +16,14 @@
 
 <composite:implementation>
 
-    <p:dataTable var="annot" value="#{cc.attrs.value}" emptyMessage="No annotations found with given criteria">
-        <p:column headerText="Qualifier">
-            <f:facet name="header">
-                <p:overlayPanel for="qualifierHelpBtn" hideEffect="fade" appendToBody="true" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Flags that modify the interpretation of an annotation.</p>
-                        <p>See <a href="http://geneontology.org/page/go-qualifiers" style="color: -webkit-link;">http://geneontology.org/page/go-qualifiers</a></p>
-
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="qualifierHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Qualifier"/>
-            </f:facet>
-            <h:outputText value="#{annot.qualifier}"/>
-        </p:column>
-        <p:column headerText="Evidence">
+    <p:dataTable var="tuple"
+                 value="#{cc.attrs.value}"
+                 emptyMessage="No evidence found with given criteria"
+                 sortBy="#{tuple.t2}"
+                 sortOrder="descending"
+                 style="width: 800px;"
+                >
+        <p:column headerText="Evidence" sortBy="#{tuple.t1.evidence}" style="width:100px">
             <f:facet name="header">
                 <p:overlayPanel for="evidenceHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
                     <div class="overlay-help">
@@ -49,9 +37,9 @@
                                   style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
                 <h:outputText value="Evidence"/>
             </f:facet>
-            <h:outputText value="#{annot.evidence.evidence}"/>
+            <h:outputText value="#{tuple.t1.evidence}"/>
         </p:column>
-        <p:column>
+        <p:column sortBy="#{tuple.t1.category}" style="width:150px">
             <f:facet name="header">
                 <p:overlayPanel for="categoryHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
                     <div class="overlay-help">
@@ -71,9 +59,9 @@
                 <h:outputText value="Category"/>
             </f:facet>
 
-            <h:outputText value="#{annot.evidence.category}"/>
+            <h:outputText value="#{tuple.t1.category}"/>
         </p:column>
-        <p:column headerText="Description">
+        <p:column headerText="Description" sortBy="#{tuple.t1.description}">
             <f:facet name="header">
                 <p:overlayPanel for="descriptionHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
                     <div class="overlay-help">
@@ -87,22 +75,37 @@
                                   style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
                 <h:outputText value="Description"/>
             </f:facet>
-            <h:outputText value="#{annot.evidence.description}"/>
+            <h:outputText value="#{tuple.t1.description}"/>
         </p:column>
-        <p:column headerText="Reference">
+        <p:column headerText="Curation" sortBy="#{tuple.t1.curated}" style="width:100px">
             <f:facet name="header">
-                <p:overlayPanel for="referenceHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
+                <p:overlayPanel for="curatedHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
                     <div class="overlay-help">
-                        <p>Cited reference which supports the GO term to gene product association.</p>
+                        <p>Is the annotation type curated or automatic.</p>
                     </div>
                 </p:overlayPanel>
-                <p:commandButton  id="referenceHelpBtn" value=""
+                <p:commandButton  id="curatedHelpBtn" value=""
                                   styleClass="no-value no-background fa-fix noupdate"
                                   icon="fa fa-question-circle" type="button"
                                   style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Reference"/>
+                <h:outputText value="Curation"/>
             </f:facet>
-            <h:outputText value="#{annot.reference}"/>
+            <h:outputText value="#{tuple.t1.curated ? 'Curated' : 'Automatic'}"/>
+        </p:column>
+        <p:column headerText="Count" sortBy="#{tuple.t2}" style="width:100px">
+            <f:facet name="header">
+                <p:overlayPanel for="countHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
+                    <div class="overlay-help">
+                        <p>Count of direct annotations under this evidence type.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="countHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Count"/>
+            </f:facet>
+            <h:outputText value="#{tuple.t2}"/>
         </p:column>
         <f:facet name="footer">
             <!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->

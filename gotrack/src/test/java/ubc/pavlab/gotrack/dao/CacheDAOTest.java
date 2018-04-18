@@ -639,17 +639,17 @@ public class CacheDAOTest extends BaseTest {
         boolean found3 = false;
 
         for ( EvidenceDTO dto : res ) {
-            found1 |= ( dto.getId() == 10 && dto.getEvidence().equals( "ISM" )
+            found1 |= ( dto.getEvidence().equals( "ISM" )
                     && dto.getDescription().equals( "Inferred from Sequence Model" )
                     && dto.getCategory().equals( "Computational" )
                     && dto.getCurated().equals( true ));
 
-            found2 |= ( dto.getId() == 18 && dto.getEvidence().equals( "NAS" )
+            found2 |= ( dto.getEvidence().equals( "NAS" )
                     && dto.getDescription().equals( "Non-traceable Author Statement" )
                     && dto.getCategory().equals( "Author" )
                     && dto.getCurated().equals( true ));
 
-            found3 |= ( dto.getId() == 22 && dto.getEvidence().equals( "IEA" )
+            found3 |= ( dto.getEvidence().equals( "IEA" )
                     && dto.getDescription().equals( "Inferred from Electronic Annotation" )
                     && dto.getCategory().equals( "Automatic" )
                     && dto.getCurated().equals( false ));
@@ -669,7 +669,7 @@ public class CacheDAOTest extends BaseTest {
         }
 
         // distinct categories
-        Assert.assertThat( categories.elementSet().size(), Matchers.is( 5 ) );
+        Assert.assertThat( categories.elementSet().size(), Matchers.is( 6 ) );
         Assert.assertThat( categories.count( "Experimental" ), Matchers.is( 6 ) );
         Assert.assertThat( categories.count( "Computational" ), Matchers.is( 10 ) );
         Assert.assertThat( categories.count( "Author" ), Matchers.is( 2 ) );

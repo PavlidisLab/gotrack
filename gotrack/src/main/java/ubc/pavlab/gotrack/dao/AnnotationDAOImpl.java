@@ -74,18 +74,16 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             "order by NULL";
 
     // Collect evidence breakdown for a specific term, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
-    private static final String SQL_CATEGORY_BREAKDOWN_RANGE_DATES_SINGLE_TERM = "select date, evcat.category , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
-            "inner join " + SQL_EVIDENCE + " evcat on evcat.evidence = ann.evidence " +
+    private static final String SQL_EVIDENCE_BREAKDOWN_RANGE_DATES_SINGLE_TERM = "select date, evidence , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
             "inner join " + SQL_ACCESSION + " acc on acc.id=ann.accession_id  " +
             "inner join " + SQL_EDITION + " ed using(species_id, edition) " +
-            "where go_id=? AND DATE BETWEEN ? AND ? group by date, evcat.category " +
+            "where go_id=? AND DATE BETWEEN ? AND ? group by date, evidence " +
             "order by date";
 
     // Collect evidence breakdown for a specific term in a specific species, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
-    private static final String SQL_CATEGORY_BREAKDOWN_RANGE_EDITIONS_SINGLE_SPECIES_SINGLE_TERM = "select edition, evcat.category , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
-            "inner join " + SQL_EVIDENCE + " evcat on evcat.evidence = ann.evidence " +
+    private static final String SQL_EVIDENCE_BREAKDOWN_RANGE_EDITIONS_SINGLE_SPECIES_SINGLE_TERM = "select edition, evidence , COUNT(*) count from " + SQL_ANNOTATION + " ann " +
             "inner join " + SQL_ACCESSION + " acc on acc.id=ann.accession_id  " +
-            "where go_id=? AND species_id=? AND edition between ? and ? group by edition, evcat.category " +
+            "where go_id=? AND species_id=? AND edition between ? and ? group by edition, evidence " +
             "order by edition";
 
     // Collect unique, directly annotated genes for multiple terms in a single species. Meant to be used on a term and
@@ -311,7 +309,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
     }
 
     @Override
-    public List<CategoryCountDTO> categoryCountsRangeDates( String goId, Date min, Date max ) throws DAOException {
+    public List<EvidenceCountDTO> categoryCountsRangeDates( String goId, Date min, Date max ) throws DAOException {
         // TODO pretty slow...
 
         if ( goId == null || goId.equals( "" ) ) {
@@ -329,8 +327,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        List<CategoryCountDTO> results = new ArrayList<>();
-        String sql = SQL_CATEGORY_BREAKDOWN_RANGE_DATES_SINGLE_TERM;
+        List<EvidenceCountDTO> results = new ArrayList<>();
+        String sql = SQL_EVIDENCE_BREAKDOWN_RANGE_DATES_SINGLE_TERM;
 
         log.debug( sql );
 
@@ -352,7 +350,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
             startTime = System.currentTimeMillis();
             while (resultSet.next()) {
-                results.add( new CategoryCountDTO( resultSet.getDate( "date" ), resultSet.getString( "category" ),
+                results.add( new EvidenceCountDTO( resultSet.getDate( "date" ), resultSet.getString( "evidence" ),
                         resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();
@@ -368,7 +366,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
 
     @Override
-    public List<EditionCategoryCountDTO> categoryCountsSingleSpeciesRangeEditions( String goId, Species species, Integer minEdition, Integer maxEdition ) throws DAOException {
+    public List<EditionEvidenceCountDTO> categoryCountsSingleSpeciesRangeEditions( String goId, Species species, Integer minEdition, Integer maxEdition ) throws DAOException {
 
         if ( goId == null || goId.equals( "" ) || species == null ) {
             return Lists.newArrayList();
@@ -385,8 +383,8 @@ public class AnnotationDAOImpl implements AnnotationDAO {
         PreparedStatement statement = null;
         ResultSet resultSet = null;
 
-        List<EditionCategoryCountDTO> results = new ArrayList<>();
-        String sql = SQL_CATEGORY_BREAKDOWN_RANGE_EDITIONS_SINGLE_SPECIES_SINGLE_TERM;
+        List<EditionEvidenceCountDTO> results = new ArrayList<>();
+        String sql = SQL_EVIDENCE_BREAKDOWN_RANGE_EDITIONS_SINGLE_SPECIES_SINGLE_TERM;
 
         log.debug( sql );
 
@@ -408,7 +406,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
             startTime = System.currentTimeMillis();
             while (resultSet.next()) {
-                results.add( new EditionCategoryCountDTO( resultSet.getInt( "edition" ), resultSet.getString( "category" ),
+                results.add( new EditionEvidenceCountDTO( resultSet.getInt( "edition" ), resultSet.getString( "evidence" ),
                         resultSet.getInt( "count" ) ) );
             }
             endTime = System.currentTimeMillis();

@@ -325,6 +325,29 @@ function createEvidenceCountChart(args) {
     var options = plotting.defaultHCOptions('hc_evidence_container', args.HC_evidence.chart);
     commonOptions(options);
 
+    var clickBehaviour = function (p) {
+        evidenceChartClickEvent([{
+            name: 'edition',
+            value: args.HC_evidence.chart.extra.dateToEdition[p.x]
+        }]);
+    };
+
+    options.plotOptions.series.point = {
+        events: {
+            click: function (event) {
+                var p = this;
+                clickBehaviour(p);
+            }
+        }
+    };
+
+    options.chart.events = {
+        click: function (event) {
+            var p = this.hoverPoint;
+            clickBehaviour(p);
+        }
+    };
+
     plotting.charts.evidence.options = options;
     plotting.charts.evidence.recreate(options);
 

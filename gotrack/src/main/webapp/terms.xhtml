@@ -4,6 +4,7 @@
                 xmlns:f="http://xmlns.jcp.org/jsf/core"
                 xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
                 xmlns:p="http://primefaces.org/ui"
+                xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites"
 >
 
     <ui:define name="metadata">
@@ -114,6 +115,10 @@
                 <p:remoteCommand name="fetchGraphDiff"
                                  oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
                                  action="#{graphFactory.fetchGraphDiff()}"/>
+                <p:remoteCommand name="evidenceChartClickEvent"
+                                 update=":evidenceChartClickEventDlg"
+                                 oncomplete="PF('evidenceChartClickEventWdg').show()"
+                                 action="#{termView.evidenceChartClickEvent()}"/>
 
                 <div style="white-space: nowrap; min-width: 1000px;">
                     <div style="padding: 10px 30px 10px 30px; ">
@@ -131,7 +136,6 @@
                                     </p>
 
                                     <h3>Controls:</h3>
-                                    <p><b>&lt;Click&gt;</b> any edition to view the enrichment results at that point in time in bottom table.</p>
                                     <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
                                     <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
                                     <p><b>&lt;Click&gt;</b> on the Subset button on top of the legend to toggle between important subsets of series. Namely: Direct, Indirect, and All.</p>
@@ -148,19 +152,16 @@
                             <p:overlayPanel for="countHelpBtn" appendToBody="true" hideEffect="fade">
                                 <div class="overlay-help">
                                     <h3 style="margin-top: 0;">Description:</h3>
-                                    <p><b>Annotation Category Counts</b> shows per evidence category counts of direct annotations made with this term.
+                                    <p><b>Annotation Evidence Counts</b> shows per evidence counts of direct annotations made with this term.
                                     </p>
 
                                     <h3>Legend Descriptions:</h3>
                                     <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
-                                    <p><span style="color:#2bce48;">Author</span>: Annotation was made on the basis of a statement made by the author(s).</p>
-                                    <p><span style="color:#0075dc;">Automatic</span>: Assigned by automated methods, not assigned by curators.</p>
-                                    <p><span style="color:#993f00;">Computational</span>: Annotation is based on an in silico analysis of the gene sequence and/or other data.</p>
-                                    <p><span style="color:#4c005c;">Curatorial</span>: Annotation made on the basis of a curatorial judgement that does not fit into one of the other evidence code classifications.</p>
-                                    <p><span style="color:#191919;">Experimental</span>: Results from a physical characterization of a gene or gene product that has supported the association of a GO term.</p>
+                                    <p><span style="color:#2bce48;">Curated</span>: Counts of annotation which were assigned by a curator.</p>
+                                    <p><span style="color:#0075dc;">Automatic</span>: Counts of annotation which were assigned by automated methods, not by curators.</p>
 
                                     <h3>Controls:</h3>
-                                    <p><b>&lt;Click&gt;</b> any edition to view the term sets described above.</p>
+                                    <p><b>&lt;Click&gt;</b> any edition to view the per category count breakdowns in that edition.</p>
                                     <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
                                     <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
                                 </div>
@@ -377,6 +378,17 @@
                 <h:outputText value="Ancestor Chart"/>
             </f:facet>
             <svg id="dagDialog" height="500" width="700"/>
+        </p:dialog>
+
+        <p:dialog id="evidenceChartClickEventDlg"
+                      widgetVar="evidenceChartClickEventWdg" modal="false" showEffect="fade"
+                      hideEffect="fade" resizable="false" dynamic="true" style="max-width:90%;">
+            <f:facet name="header">
+                Edition #{termView.evidenceChartClickEdition.edition} : #{termView.evidenceChartClickEdition.date}
+            </f:facet>
+            <!--<p:outputPanel style="text-align:center;">-->
+                <comps:evidenceCountTable value="#{termView.evidenceChartClickData}"/>
+            <!--</p:outputPanel>-->
         </p:dialog>
 
 

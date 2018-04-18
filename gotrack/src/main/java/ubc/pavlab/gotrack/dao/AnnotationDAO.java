@@ -45,13 +45,13 @@ public interface AnnotationDAO {
      * Retrieves counts of unique annotations grouped by evidence category over time for a specific GO Id
      * where date falls between @min and @max
      */
-    List<CategoryCountDTO> categoryCountsRangeDates( String goId, Date min, Date max ) throws DAOException;
+    List<EvidenceCountDTO> categoryCountsRangeDates( String goId, Date min, Date max ) throws DAOException;
 
     /**
      * Retrieves counts of unique annotations grouped by evidence category over time for a specific GO Id and species
      * where where @minimum <= edition <= @maximum
      */
-    List<EditionCategoryCountDTO> categoryCountsSingleSpeciesRangeEditions( String goId, Species species, Integer minEdition, Integer maxEdition ) throws DAOException;
+    List<EditionEvidenceCountDTO> categoryCountsSingleSpeciesRangeEditions( String goId, Species species, Integer minEdition, Integer maxEdition ) throws DAOException;
 
     /**
      * Retrieve data necessary for tracking a specific gene over time where @minimum <= edition <= @maximum

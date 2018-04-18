@@ -141,12 +141,12 @@ public class GeneOntologyTest {
         go.freeze();
 
         // Create some annotations for the leafs
-        ev0 = new Evidence( new EvidenceDTO( 1, "EXP", "Inferred from Experiment", "Experimental", true ) );
+        ev0 = new Evidence( new EvidenceDTO("EXP", "Inferred from Experiment", "Experimental", true ) );
         ev1 = new Evidence(
-                new EvidenceDTO( 7, "ISS", "Inferred from Sequence or structural Similarity", "Computational", true ) );
-        evOverlap = new Evidence( new EvidenceDTO( 17, "TAS", "Traceable Author Statement", "Author", true ) );
+                new EvidenceDTO( "ISS", "Inferred from Sequence or structural Similarity", "Computational", true ) );
+        evOverlap = new Evidence( new EvidenceDTO( "TAS", "Traceable Author Statement", "Author", true ) );
 
-        evNot = new Evidence( new EvidenceDTO( 5, "IGI", "Inferred from Genetic Interaction", "Experimental", true ) );
+        evNot = new Evidence( new EvidenceDTO( "IGI", "Inferred from Genetic Interaction", "Experimental", true ) );
 
         annotationMap = Maps.newHashMap();
 
