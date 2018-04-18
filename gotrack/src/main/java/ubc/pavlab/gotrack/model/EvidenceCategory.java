@@ -17,23 +17,34 @@
  *
  */
 
-package ubc.pavlab.gotrack.model.dto;
+package ubc.pavlab.gotrack.model;
 
+import com.google.common.collect.ComparisonChain;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import ubc.pavlab.gotrack.model.Evidence;
+import lombok.ToString;
 
 /**
- * Data Transfer Object for {@link Evidence}
- * 
+ * Represents an evidence code category
+ *
  * @author mjacobson
  */
 @Getter
 @RequiredArgsConstructor
-public final class EvidenceDTO {
-    private final int id;
-    private final String evidence;
-    private final String description;
+@ToString
+@EqualsAndHashCode
+public final class EvidenceCategory implements Comparable<EvidenceCategory> {
+
     private final String category;
-    private final Boolean curated;
+    private final boolean curated;
+
+    @Override
+    public int compareTo( EvidenceCategory that ) {
+        return ComparisonChain.start()
+                .compare( this.category, that.category )
+                .compareTrueFirst( this.curated, that.curated )
+                .result();
+    }
+
 }

@@ -656,15 +656,9 @@ public class GeneView implements Serializable {
             Map<String, Long> categoryCounts = editionData.entrySet().stream()
                     .flatMap( e -> e.getValue().stream() )
                     .collect( Collectors.groupingBy( o -> o.getEvidence().getCategory(), Collectors.counting() ) );
-            for (String category : cache.getEvidenceCategories() ) {
+            for (String category : cache.getEvidenceCategories().keySet() ) {
                 seriesMap.computeIfAbsent( category, Series::new ).addDataPoint( ed.getDate(), categoryCounts.getOrDefault( category, 0L ) );
             }
-        }
-
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : data.rowMap().entrySet() ) {
-            Edition ed = entry.getKey();
-
-
         }
 
         for ( Series series : seriesMap.values().stream().sorted( Comparator.comparing( Series::getName ) ).collect( Collectors.toList() ) ) {
@@ -672,7 +666,7 @@ public class GeneView implements Serializable {
         }
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
-        hcGsonMap.put( "categories", cache.getEvidenceCategories().stream().sorted().collect( Collectors.toList() ) );
+        hcGsonMap.put( "categories", cache.getEvidenceCategories().keySet().stream().sorted().collect( Collectors.toList() ) );
         RequestContext.getCurrentInstance().addCallbackParam( "HC", new Gson().toJson( hcGsonMap ) );
 
     }

@@ -19,6 +19,9 @@
 
 package ubc.pavlab.gotrack.model;
 
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 
 /**
@@ -27,11 +30,15 @@ import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
  * @author mjacobson
  * @version $Id$
  */
+@Getter
+@ToString
+@EqualsAndHashCode(of={"id"})
 public final class Evidence {
     private final int id;
     private final String evidence;
     private final String description;
-    private final String category;
+    private final String  category;
+    private final boolean curated;
 
     public Evidence( EvidenceDTO dto ) {
         super();
@@ -39,46 +46,7 @@ public final class Evidence {
         this.evidence = dto.getEvidence();
         this.description = dto.getDescription();
         this.category = dto.getCategory();
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public String getEvidence() {
-        return evidence;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
-    @Override
-    public String toString() {
-        return "Evidence [id=" + id + ", evidence=" + evidence + ", description=" + description + ", category="
-                + category + "]";
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + id;
-        return result;
-    }
-
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        Evidence other = ( Evidence ) obj;
-        if ( id != other.id ) return false;
-        return true;
+        this.curated = dto.getCurated();
     }
 
 }

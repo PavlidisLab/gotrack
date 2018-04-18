@@ -151,7 +151,7 @@ public class Cache implements Serializable {
 
     // Holds all unique evidence categories (Automatic, Author, etc).
     // TODO consider turning into objects (or possibly enum if we are sure the categories won't be changing any time soon...)
-    private ImmutableSet<String> evidenceCategoryCache = null;
+    private ImmutableMap<String, Set<Evidence>> evidenceCategoryCache = null;
 
     /*
      * Page specific caches
@@ -382,12 +382,13 @@ public class Cache implements Serializable {
 
         // Evidence Category cache creation
         // ****************************
-        Set<String> tmpCategories = new TreeSet<>();
-        for ( Evidence e : evidenceCache.values() ) {
-            tmpCategories.add( e.getCategory() );
-        }
+        Map<String, Set<Evidence>> builder = Maps.newLinkedHashMap();
 
-        evidenceCategoryCache = ImmutableSet.copyOf( tmpCategories );
+        evidenceCache.values().stream().sorted(Comparator.comparing( Evidence::getCategory ) ).forEach( e -> {
+            builder.computeIfAbsent( e.getCategory(), c -> new LinkedHashSet<>() ).add( e );
+        } );
+
+        evidenceCategoryCache = ImmutableMap.copyOf( builder );
     }
 
     private void createGOTerms( CacheDAO cacheDAO ) {
@@ -1119,7 +1120,7 @@ public class Cache implements Serializable {
         return evidenceCache.get( evidence );
     }
 
-    public Set<String> getEvidenceCategories() {
+    public Map<String, Set<Evidence>> getEvidenceCategories() {
         return evidenceCategoryCache;
     }
 

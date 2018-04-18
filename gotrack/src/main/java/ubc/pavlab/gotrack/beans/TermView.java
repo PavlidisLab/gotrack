@@ -29,10 +29,7 @@ import lombok.extern.java.Log;
 import org.primefaces.context.RequestContext;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.exception.TermNotFoundException;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.GOEdition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.*;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
@@ -369,7 +366,7 @@ public class TermView implements Serializable {
                 "Annotation Count", "Date" );
         evidenceChart.setSubtitle( currentTerm.getGoId() + " - " + currentTerm.getName() );
         // Done in this manner to keep order and color of categories constant
-        for ( String category : cache.getEvidenceCategories() ) {
+        for ( String category : cache.getEvidenceCategories().keySet() ) {
             Series s = new Series( category );
             Map<Date, Integer> m = evidenceCounts.get( category );
             if ( m != null ) {
