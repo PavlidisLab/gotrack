@@ -50,6 +50,7 @@
                     <h:link value="Track Gene" outcome="/genes.xhtml" styleClass="nav-item eased"/>
                     <h:link value="Track Term" outcome="/terms.xhtml" styleClass="nav-item eased"/>
                     <h:link value="Track Enrichment" outcome="/enrichment.xhtml" styleClass="nav-item eased"/>
+                    <h:link value="Downloads" outcome="/downloads.xhtml" styleClass="nav-item eased"/>
 
                     <!--<h:link value="Documentation" outcome="/documentation.xhtml" styleClass="nav-item eased"/>-->
                     <!--<h:link value="Resources" outcome="/resources.xhtml" styleClass="nav-item eased"/>-->
@@ -80,7 +81,7 @@
                                                  converter="speciesConverter">
                                     <f:selectItems value="#{cache.speciesList}" var="spec"
                                                    itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
-                                    <p:ajax event="change" process="@this" listener="#{annotationDownloadView.filterEditions}" update=":annotationDownloadForm"/>
+                                    <p:ajax event="change" process="@this" />
                                 </p:selectOneMenu>
                             </h:panelGrid>
                         </h:form>
@@ -231,10 +232,10 @@
 
                 <p:outputPanel styleClass="center fitted" style="margin-top:25px;text-align: center;white-space: nowrap;">
 
-                    <p style="font-size:1.4em;">Compare and/or download monthly annotations from #{cache.speciesList.size()} species over the last #{cache.availableYears} years.</p>
+                    <p style="font-size:1.4em;">Compare and <a href="downloads.xhtml">download</a> monthly annotations from #{cache.speciesList.size()} species over #{cache.availableYears} years.</p>
                     <div class="inline-middle">
-                        <h3>Database</h3>
-                        <h:panelGrid columns="2" style="margin: 10px auto;" cellspacing="10">
+                        <h3>Database Statistics</h3>
+                        <h:panelGrid columns="2" style="margin: 10px auto;" cellspacing="10" >
                             <h:outputText value="Date last updated:"/>
                             <h:outputText value="#{statsService.latestUpdate}"/>
 
@@ -254,13 +255,7 @@
                             </h:outputText>
                         </h:panelGrid>
                     </div>
-                    <div class="inline-middle" style="vertical-align: top;">
 
-                        <h:form id="annotationDownloadForm" style="margin-top:10px;">
-                            <h3>Download #{sessionManager.species.commonName} Annotations</h3>
-                            <comps:annotationDownload id="annotationDownload1" />
-                        </h:form>
-                    </div>
                 </p:outputPanel>
 
             </div>
@@ -276,7 +271,7 @@
     <div id="footer">
         <p:separator style="width: 70%"/>
         <div class="fitted center" style="white-space: nowrap;">
-            <p>&copy; Michael Smith Laboratories, 2017 <h:link value="Terms and Conditions" outcome="about.xhtml"/></p>
+            <p>&copy; Michael Smith Laboratories, 2018 <h:link value="Terms and Conditions" outcome="about.xhtml"/></p>
         </div>
     </div>
 </h:body>

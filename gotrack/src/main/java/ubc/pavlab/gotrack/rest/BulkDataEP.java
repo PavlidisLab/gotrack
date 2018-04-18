@@ -116,15 +116,14 @@ public class BulkDataEP {
             String[] headers = new String[]{
                     "edition",
                     "date",
-                    "go_edition",
                     "go_date",
-                    "avgDirectByGene",
-                    "avgDirectSimilarity",
-                    "avgGenesByTerm",
-                    "avgInferredByGene",
-                    "avgInferredSimilarity",
-                    "avgMultifunctionality",
-                    "geneCount"
+                    "avg_direct_by_gene",
+                    "avg_inferred_by_gene",
+                    "avg_direct_similarity",
+                    "avg_inferred_similarity",
+                    "avg_inferred_by_term",
+                    "avg_multifunctionality",
+                    "gene_count"
             };
 
             StreamingOutput stream = os -> {
@@ -143,19 +142,17 @@ public class BulkDataEP {
                         writer.write( SEPARATOR );
                         writer.write( edition.getDate().toString() );
                         writer.write( SEPARATOR );
-                        writer.write( edition.getGoEdition().getId().toString() );
-                        writer.write( SEPARATOR );
                         writer.write( edition.getGoEdition().getDate().toString() );
                         writer.write( SEPARATOR );
                         writer.write( aggregate.getAvgDirectByGene().toString() );
                         writer.write( SEPARATOR );
-                        writer.write( aggregate.getAvgDirectSimilarity().toString() );
-                        writer.write( SEPARATOR );
-                        writer.write( aggregate.getAvgGenesByTerm().toString() );
-                        writer.write( SEPARATOR );
                         writer.write( aggregate.getAvgInferredByGene().toString() );
                         writer.write( SEPARATOR );
+                        writer.write( aggregate.getAvgDirectSimilarity().toString() );
+                        writer.write( SEPARATOR );
                         writer.write( aggregate.getAvgInferredSimilarity().toString() );
+                        writer.write( SEPARATOR );
+                        writer.write( aggregate.getAvgGenesByTerm().toString() );
                         writer.write( SEPARATOR );
                         writer.write( aggregate.getAvgMultifunctionality().toString() );
                         writer.write( SEPARATOR );
@@ -169,7 +166,7 @@ public class BulkDataEP {
             };
 
             return Response.ok( stream )
-                    .header( "Content-Disposition", "attachment; filename=" + filename + ".tsv" )
+                    .header( "Content-Disposition", "attachment; filename=" + filename + ".tsv.gz" )
                     .build();
 
         } catch (Exception ex) {
@@ -216,7 +213,6 @@ public class BulkDataEP {
             String[] headers = new String[]{
                     "edition",
                     "date",
-                    "go_edition",
                     "go_date",
                     "accession",
                     "symbol",
@@ -248,8 +244,6 @@ public class BulkDataEP {
                             editionData.append( edition.getEdition().toString() );
                             editionData.append( SEPARATOR );
                             editionData.append( edition.getDate().toString() );
-                            editionData.append( SEPARATOR );
-                            editionData.append( edition.getGoEdition().getId().toString() );
                             editionData.append( SEPARATOR );
                             editionData.append( edition.getGoEdition().getDate().toString() );
                             editionData.append( SEPARATOR );
@@ -326,7 +320,6 @@ public class BulkDataEP {
             String[] headers = new String[]{
                     "edition",
                     "date",
-                    "go_edition",
                     "go_date",
                     "go_id",
                     "direct_count",
@@ -370,13 +363,111 @@ public class BulkDataEP {
             };
 
             return Response.ok( stream )
-                    .header( "Content-Disposition", "attachment; filename=" + filename + ".tsv" )
+                    .header( "Content-Disposition", "attachment; filename=" + filename + ".tsv.gz" )
                     .build();
 
         } catch (Exception ex) {
             log.warn( "error", ex );
             JSONObject response = new JSONObject();
             response.put( "error", ex );
+            return Response.status( 400 ).entity( response.toString() ).type( MediaType.APPLICATION_JSON ).build();
+        }
+
+    }
+
+    @GET
+    @Path("/species/{speciesId}/annotations")
+    public Response fetchEditionLevelAnnotations( @PathParam("speciesId") Integer speciesId, @QueryParam("edition") Integer editionId ) {
+
+        try {
+
+            Species species = cache.getSpecies( speciesId );
+
+
+            if ( species == null ) {
+                JSONObject response = new JSONObject();
+                response.put( "error", "Unknown Species ID" );
+                return Response.status( 400 ).entity( response.toString() ).type( MediaType.APPLICATION_JSON ).build();
+            }
+
+            String filename = "annotations." + species.getCommonName();
+
+            final List<Edition> editions = selectEditions( species, editionId );
+
+            if ( editions.isEmpty() ) {
+                JSONObject response = new JSONObject();
+                response.put( "error", "Cannot find edition(s)" );
+                return Response.status( 204 ).entity( response.toString() ).type( MediaType.APPLICATION_JSON ).build();
+            } else if ( editions.size() == 1 ) {
+                Edition ed = editions.get( 0 );
+                filename += "." + ed.getEdition() + "-" + ed.getDate();
+            }
+
+            if (editions.size() > 1) {
+                // Temporarily disallowed
+                JSONObject response = new JSONObject();
+                response.put( "error", "Multiple editions temporarily disallowed. Please use '?edition=<id>'." );
+                return Response.status( 403 ).entity( response.toString() ).type( MediaType.APPLICATION_JSON ).build();
+            }
+
+            Collections.sort( editions );
+
+            String[] headers = new String[]{
+                    "edition",
+                    "date",
+                    "go_date",
+                    "accession",
+                    "symbol",
+                    "name",
+                    "go_ids",
+            };
+
+            StreamingOutput stream = os -> {
+                GZIPOutputStream zip = new GZIPOutputStream( os );
+                Writer writer = new BufferedWriter( new OutputStreamWriter( zip, "UTF-8" ) );
+
+                writer.write( Arrays.stream( headers ).collect( Collectors.joining( SEPARATOR ) ) );
+                writer.write( LINE_SEPARATOR );
+
+                for ( Edition edition : editions ) {
+
+                    Map<Gene, Set<GeneOntologyTerm>> data = annotationService.fetchEditionSimple( species, edition );
+
+                    if ( data != null ) {
+
+                        for ( Map.Entry<Gene, Set<GeneOntologyTerm>> geneEntry: data.entrySet()) {
+                            Gene gene = geneEntry.getKey();
+
+                            writer.write( edition.getEdition().toString() );
+                            writer.write( SEPARATOR );
+                            writer.write( edition.getDate().toString() );
+                            writer.write( SEPARATOR );
+                            writer.write( edition.getGoEdition().getDate().toString() );
+                            writer.write( SEPARATOR );
+                            writer.write( gene.getAccession().getAccession() );
+                            writer.write( SEPARATOR );
+                            writer.write( gene.getSymbol() );
+                            writer.write( SEPARATOR );
+                            writer.write( gene.getName() );
+                            writer.write( SEPARATOR );
+                            writer.write( geneEntry.getValue().stream().map( GeneOntologyTerm::getGoId ).collect( Collectors.joining( "|" ) )  );
+                            writer.write( LINE_SEPARATOR );
+                        }
+                    }
+                }
+                writer.flush();
+                zip.close();
+                writer.close();
+            };
+
+            return Response.ok( stream )
+                    .header( "Content-Disposition", "attachment; filename=" + filename + ".tsv.gz" )
+                    .build();
+
+        } catch (Exception ex) {
+            log.warn( "error", ex );
+            JSONObject response = new JSONObject();
+            response.put( "error", ex.getMessage() );
             return Response.status( 400 ).entity( response.toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
 

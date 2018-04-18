@@ -269,23 +269,56 @@ table.no-border td {
     border: none !important;
 }
 
-#page-title h1, #page-title h1 > a, #page-title h2, #page-title h3 {
+.page-title h1, .page-title h1 > a, .page-title h2, .page-title h3 {
     color: #888;
     margin: auto;
     margin-top: 10px;
 }
 
-#page-title h2 > p {
+.page-title h2 > p {
     margin-top: 10px;
     margin-bottom: 10px;
 }
 
-#page-title h3 {
+.page-title h3 {
     margin-top: 5px;
     margin-bottom: 5px;
     font-size: 1em;
 }
 
-#page-title {
+.page-title {
     text-align: center;
+}
+
+
+
+button.ui-button.fa-fix {
+    vertical-align: middle;
+}
+
+button.ui-button.fa-fix > span.ui-icon {
+    margin-left: -6px;
+    margin-top: -6px;
+}
+
+button.ui-button.no-value {
+    height: 12px;
+    width: 1.5em;
+    outline: none;
+}
+
+button.ui-button.no-value > span.ui-button-text {
+    display:none;
+}
+
+button.ui-button.no-background {
+    background: none;
+    border: none;
+    box-shadow: none;
+}
+
+button.ui-button.no-background:hover {
+    -moz-box-shadow: 0 0 5px #85b2cb;
+    -webkit-box-shadow: 0 0 8px #85b2cb;
+    box-shadow: 0 0 8px #85b2cb;
 }

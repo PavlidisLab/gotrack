@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 
 /**
  * Backing bean for a annotation download input
- * 
+ * Deprecated for downloads page.
  * @author mjacobson
  */
 @Named
