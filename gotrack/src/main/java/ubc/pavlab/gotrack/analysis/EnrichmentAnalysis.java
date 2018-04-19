@@ -54,8 +54,6 @@ public class EnrichmentAnalysis {
 
     private final double threshold;
 
-    private final Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> rawData;
-
     // Holds those unmodifiable results which met the population limits and had population data present in cache
     private final Map<Edition, Enrichment<GeneOntologyTerm, Gene>> rawResults;
 
@@ -90,9 +88,6 @@ public class EnrichmentAnalysis {
          * magnitude that we will be computing.
          */
 
-        // Store raw data used in this analysis
-        this.rawData = geneGOMap;
-
         // Store options
         this.minAnnotatedPopulation = min;
         this.maxAnnotatedPopulation = max == 0 ? Integer.MAX_VALUE : max;
@@ -113,9 +108,9 @@ public class EnrichmentAnalysis {
             Edition ed = editionEntry.getKey();
             Map<GeneOntologyTerm, Set<Gene>> data = editionEntry.getValue();
 
-            StandardPopulation<GeneOntologyTerm, Gene> sample = Population.standardPopulation( data );
+            StandardCompletePopulation<GeneOntologyTerm, Gene> sample = CompletePopulation.standardCompletePopulation( data );
 
-            Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, ed );
+            Population<GeneOntologyTerm> population = Population.cachedGOPopulation( cache, ed );
 
             Enrichment<GeneOntologyTerm, Gene> enrichment = new Enrichment<>( test, threshold, minAnnotatedPopulation,
                     maxAnnotatedPopulation );
@@ -267,10 +262,17 @@ public class EnrichmentAnalysis {
     }
 
     /**
-     * @return raw enrichment results, both significant and not, which passed all rejection tests.
+     * @return raw enrichment results, both significant and not.
      */
     public Map<Edition, Enrichment<GeneOntologyTerm, Gene>> getRawResults() {
         return rawResults;
+    }
+
+    /**
+     * @return raw enrichment results, both significant and not.
+     */
+    public Enrichment<GeneOntologyTerm, Gene> getRawResults(Edition edition) {
+        return rawResults.get( edition );
     }
 
     //    /**
@@ -329,13 +331,12 @@ public class EnrichmentAnalysis {
      * @return Genes which were annotated to a specific term in a specific edition in this analysis.
      */
     public Set<Gene> getGeneSet( Edition ed, GeneOntologyTerm term ) {
-        Map<GeneOntologyTerm, Set<Gene>> m1 = rawData.get( ed );
-        if ( m1 != null ) {
-            return Collections.unmodifiableSet( m1.get( term ) );
+        Enrichment<GeneOntologyTerm, Gene> enrichment = rawResults.get( ed );
+        if (enrichment == null) {
+            return null;
         }
 
-        return null;
-
+        return enrichment.getSamplePopulation().getEntities( term );
     }
 
     /**

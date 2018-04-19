@@ -33,17 +33,16 @@ import java.util.Set;
 /**
  * Represents a population of entities with associated properties. Needs to make the ability to count the number of
  * entities with a certain property available, the means is left up to the particular implementation.
- * 
+ *
  * @author mjacobson
- * @version $Id$
  */
-public abstract class Population<T, G> {
+public abstract class Population<T> {
     public abstract Integer countProperty( T t );
 
     public abstract int size();
 
     public static <T, G> StandardPopulation<T, G> standardPopulation( Map<T, Set<G>> annotationMap ) {
-        return new StandardPopulation<T, G>( annotationMap );
+        return new StandardPopulation<>( annotationMap );
     }
 
     public static CachedGOPopulation cachedGOPopulation( Cache cache, Edition edition ) {
@@ -55,7 +54,7 @@ public abstract class Population<T, G> {
 /**
  * Implementation of population backed by an already existing cache.
  */
-abstract class CachedPopulation<C, T, G> extends Population<T, G> {
+abstract class CachedPopulation<C, T, G> extends Population<T> {
 
     C cache;
 
@@ -64,10 +63,12 @@ abstract class CachedPopulation<C, T, G> extends Population<T, G> {
     }
 }
 
+
+
 /**
  * Standard implementation of population.
  */
-class StandardPopulation<T, G> extends Population<T, G> {
+class StandardPopulation<T, G> extends Population<T> {
     //    private Map<T, Set<G>> annotationMap;
     private Map<T, Integer> annotationCountMap;
     private Integer distinctEntityCount;

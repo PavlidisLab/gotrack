@@ -23,6 +23,7 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.*;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Tuples;
 
 import java.sql.Date;
@@ -44,12 +45,13 @@ public interface AnnotationDAO {
      * Retrieves counts of unique annotations grouped by evidence category over time for a specific GO Id
      * where date falls between @min and @max
      */
-    List<CategoryCountDTO> categoryCountsRangeDates( String goId, Date min, Date max ) throws DAOException;
+    List<EvidenceCountDTO> categoryCountsRangeDates( String goId, Date min, Date max ) throws DAOException;
 
     /**
-     * Retrieves counts of unique genes which have this GO Id annotated to it over time
+     * Retrieves counts of unique annotations grouped by evidence category over time for a specific GO Id and species
+     * where where @minimum <= edition <= @maximum
      */
-    List<DirectAnnotationCountDTO> directGeneCountsAllEditions( String goId ) throws DAOException;
+    List<EditionEvidenceCountDTO> categoryCountsSingleSpeciesRangeEditions( String goId, Species species, Integer minEdition, Integer maxEdition ) throws DAOException;
 
     /**
      * Retrieve data necessary for tracking a specific gene over time where @minimum <= edition <= @maximum
@@ -60,6 +62,12 @@ public interface AnnotationDAO {
      * Retrieve data necessary for enrichment of given set of genes in a given edition
      */
     List<SimpleAnnotationDTO> simpleAnnotationSingleEdition( Edition ed, Set<Gene> genes ) throws DAOException;
+
+    List<Tuples.Tuple3<Integer, String, Boolean>> inferredGenesRangeEditions( GeneOntologyTerm term, Species species, Integer minEdition, Integer maxEdition ) throws DAOException;
+
+    List<Tuples.Tuple2<String, Boolean>> inferredGenesSingleEdition( GeneOntologyTerm term, Edition edition ) throws DAOException;
+
+    List<String> directGenesSingleEdition( GeneOntologyTerm term, Edition edition ) throws DAOException;
 
     /**
      * Retrieve data necessary for bulk download of a single edition - terms only

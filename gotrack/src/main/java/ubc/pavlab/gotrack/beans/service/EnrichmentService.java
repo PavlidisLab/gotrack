@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * TODO Document Me
@@ -81,12 +82,11 @@ public class EnrichmentService implements Serializable {
      * @param genes             hitlist
      * @param species           species id
      * @param enrichmentOptions Enrichment options
-     * @param scm               method for similarity comparison
      * @param topN              number of top terms to use for top N series
      * @param statusPoller      poller for live status updates
      * @return Container class holding the enrichment and stability/similarity analyses
      */
-    public CombinedAnalysis combinedAnalysis( Set<Gene> genes, Species species, EnrichmentAnalysisOptions enrichmentOptions, SimilarityCompareMethod scm, int topN, StatusPoller statusPoller ) {
+    public CombinedAnalysis combinedAnalysis( Set<Gene> genes, Species species, EnrichmentAnalysisOptions enrichmentOptions, Edition similarityReferenceEdition, int topN, StatusPoller statusPoller ) {
 
         statusPoller.newStatus( "Starting Enrichment Analysis", 0 );
         EnrichmentAnalysis analysis = enrichment( genes,
@@ -107,7 +107,7 @@ public class EnrichmentService implements Serializable {
 
         statusPoller.newStatus( "Running Similarity Analyses on all editions...", 75 );
 
-        SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, scm, cache );
+        SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, similarityReferenceEdition, SimilarityMethod.JACCARD, cache );
         statusPoller.completeStatus();
         log.info( "Running stability analysis" );
 
@@ -302,7 +302,7 @@ public class EnrichmentService implements Serializable {
             Map<Edition, Set<GeneOntologyTerm>> series = geneEntry.getValue();
             for ( Entry<Edition, Set<GeneOntologyTerm>> editionEntry : series.entrySet() ) {
                 Edition ed = editionEntry.getKey();
-                Set<GeneOntologyTerm> propagatedTerms = cache.propagate( editionEntry.getValue(), ed );
+                Set<GeneOntologyTerm> propagatedTerms = GeneOntologyTerm.propagate( editionEntry.getValue().stream() ).collect( Collectors.toSet() );
 
                 if ( propagatedTerms == null ) {
                     // No ontology exists for this edition
@@ -401,11 +401,11 @@ public class EnrichmentService implements Serializable {
 
         max = max < 1 ? Integer.MAX_VALUE : max;
 
-        Population<GeneOntologyTerm, Gene> population = Population.cachedGOPopulation( cache, ed );
+        Population<GeneOntologyTerm> population = Population.cachedGOPopulation( cache, ed );
 
         Enrichment<GeneOntologyTerm, Gene> enrichment = new Enrichment<>( mtc, thresh, min, max );
 
-        enrichment.runAnalysis( Population.standardPopulation( data ), population );
+        enrichment.runAnalysis( CompletePopulation.standardCompletePopulation( data ), population );
 
         return enrichment;
     }
@@ -457,8 +457,7 @@ public class EnrichmentService implements Serializable {
                 geneGOMapFromDB = annotationService.fetchSingleEnrichmentData( ed, genesToLoad );
 
                 for ( Entry<Gene, Set<GeneOntologyTerm>> geneEntry : geneGOMapFromDB.entrySet() ) {
-
-                    addGeneData( geneEntry.getKey(), propagate( ed, geneEntry.getValue() ), filterAspect, geneGOMap );
+                    addGeneData( geneEntry.getKey(), GeneOntologyTerm.propagate( geneEntry.getValue().stream() ).collect( Collectors.toSet() ), filterAspect, geneGOMap );
                 }
 
                 log.info( "Retrieved (" + genesToLoad.size() + ") genes from db and ("
@@ -480,10 +479,6 @@ public class EnrichmentService implements Serializable {
             log.info( "Empty geneset" );
             return null;
         }
-    }
-
-    private Set<GeneOntologyTerm> propagate( Edition ed, Set<GeneOntologyTerm> goSet ) {
-        return cache.propagate( goSet, ed );
     }
 
     private void addGeneData( Gene gene, Set<GeneOntologyTerm> goSet, Set<Aspect> filterAspect,

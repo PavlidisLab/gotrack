@@ -2,12 +2,14 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="http://java.sun.com/jsf/html"
-      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
       xmlns:p="http://primefaces.org/ui"
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
 <h:head>
     <title>GOTrack</title>
+    <link rel="shortcut icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
+    <link rel="icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <h:outputStylesheet library="css" name="style.css"/>
     <h:outputStylesheet library="css" name="tipsy.css"/>
     <h:outputStylesheet library="css" name="trends.css"/>
@@ -18,11 +20,11 @@
     <meta http-equiv="Expires" content="0"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="description"
-          content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms."/>
+          content="GOtrack: Track changes to the Gene Ontology and GO gene annotations"/>
 
     <meta name="keywords"
           content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software,enrichment,GO"/>
-    <meta name="author" content="GOtrack admin (jacobsonmt+gotrack@gmail.com)"/>
+    <meta name="author" content="GOtrack admin (pavlab-support@msl.ubc.ca)"/>
 
     <ui:include src="/WEB-INF/templates/analytics.xhtml"/>
 
@@ -33,7 +35,8 @@
 
 
     <!-- Highcharts stuff -->
-    <ui:include src="/WEB-INF/includes/highcharts-js.xhtml" />
+    <script src="https://code.highcharts.com/6.0.7/highcharts.js" type="text/javascript"></script>
+    <script src="https://code.highcharts.com/6.0.7/modules/exporting.js" type="text/javascript"></script>
 
     <h:outputScript library="js" name="tipsy.js"/>
 
@@ -65,6 +68,8 @@
                         <h:link value="Track Gene" outcome="/genes.xhtml" styleClass="nav-item eased"/>
                         <h:link value="Track Term" outcome="/terms.xhtml" styleClass="nav-item eased"/>
                         <h:link value="Track Enrichment" outcome="/enrichment.xhtml" styleClass="nav-item eased"/>
+                        <h:link value="Downloads" outcome="/downloads.xhtml" styleClass="nav-item eased"/>
+                        <h:link value="About" outcome="/about.xhtml" styleClass="nav-item eased"/>
 
                         <!--<h:link value="Documentation" outcome="/documentation.xhtml" styleClass="nav-item eased"/>-->
                         <!--<h:link value="Resources" outcome="/resources.xhtml" styleClass="nav-item eased"/>-->
@@ -83,7 +88,7 @@
 
                 <p:outputPanel>
 
-                    <div id="page-title">
+                    <div class="page-title">
                         <h1>Global Trends</h1>
                     </div>
                     <p:separator style="max-width:400px; margin-bottom:25px;"/>
@@ -97,7 +102,7 @@
                                                  converter="speciesConverter">
                                     <f:selectItems value="#{cache.speciesList}" var="spec"
                                                    itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
-                                    <p:ajax event="change" process="@this" listener="#{annotationDownloadView.filterEditions}" oncomplete="fetchCharts();"/>
+                                    <p:ajax event="change" process="@this" onstart="plotting.removeAllCharts();$('.loading').show();" oncomplete="fetchCharts();"/>
                                 </p:selectOneMenu>
                             </h:panelGrid>
                         </h:form>
@@ -113,7 +118,7 @@
                     <h:form id="centerTabViewForm" style="margin:0 25px 0 25px;" prependId="false">
                         <p:remoteCommand name="fetchCharts" async="true"
                                          oncomplete="handleFetchCharts(xhr, status, args);"
-                                         actionListener="#{trends.loadCharts(sessionManager.species)}"/>
+                                         action="#{trends.loadCharts(sessionManager.species)}"/>
                         <p:outputPanel class="chart-container">
                             <p:panelGrid columns="2" styleClass="no-border" style="margin: 0 auto;">
                                 <p:outputPanel styleClass=" chart-panel well">
@@ -195,7 +200,7 @@
         <div id="footer">
             <p:separator style="width: 70%"/>
             <div class="fitted center" style="white-space: nowrap;">
-                <p>&copy; Michael Smith Laboratories, 2017 <h:link value="Terms and Conditions" outcome="about.xhtml"/></p>
+                <p>&copy; Michael Smith Laboratories, 2016-2018 <h:link value="About" outcome="about.xhtml"/></p>
             </div>
         </div>
     </h:body>

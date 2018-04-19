@@ -2,13 +2,15 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="http://java.sun.com/jsf/html"
-      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
       xmlns:p="http://primefaces.org/ui"
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
-      xmlns:comps="http://java.sun.com/jsf/composite/composites">
+      xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites">
 <h:head>
     <title>GOTrack</title>
+    <link rel="shortcut icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
+    <link rel="icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <h:outputStylesheet library="css" name="style.css"/>
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -17,11 +19,11 @@
     <meta http-equiv="Expires" content="0"/>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <meta name="description"
-          content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms."/>
+          content="GOtrack: Track changes to the Gene Ontology and GO gene annotations"/>
 
     <meta name="keywords"
           content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software,enrichment,GO"/>
-    <meta name="author" content="GOtrack admin (jacobsonmt+gotrack@gmail.com)"/>
+    <meta name="author" content="GOtrack admin (pavlab-support@msl.ubc.ca)"/>
 
     <ui:include src="/WEB-INF/templates/analytics.xhtml"/>
 
@@ -48,6 +50,8 @@
                     <h:link value="Track Gene" outcome="/genes.xhtml" styleClass="nav-item eased"/>
                     <h:link value="Track Term" outcome="/terms.xhtml" styleClass="nav-item eased"/>
                     <h:link value="Track Enrichment" outcome="/enrichment.xhtml" styleClass="nav-item eased"/>
+                    <h:link value="Downloads" outcome="/downloads.xhtml" styleClass="nav-item eased"/>
+                    <h:link value="About" outcome="/about.xhtml" styleClass="nav-item eased"/>
 
                     <!--<h:link value="Documentation" outcome="/documentation.xhtml" styleClass="nav-item eased"/>-->
                     <!--<h:link value="Resources" outcome="/resources.xhtml" styleClass="nav-item eased"/>-->
@@ -78,7 +82,7 @@
                                                  converter="speciesConverter">
                                     <f:selectItems value="#{cache.speciesList}" var="spec"
                                                    itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
-                                    <p:ajax event="change" process="@this" listener="#{annotationDownloadView.filterEditions}" update=":annotationDownloadForm"/>
+                                    <p:ajax event="change" process="@this" />
                                 </p:selectOneMenu>
                             </h:panelGrid>
                         </h:form>
@@ -152,13 +156,13 @@
                     <p style="font-size:1.4em;">Explore Gene Ontology's (GO) and GO annotation's (GOA) history and how its change over time impacts application and interpretation.</p>
                     <div>
                         <div class="section-description">
-                            <p>In-depth information on annotation, term, structure and global changes over time.</p>
+                            <p>In-depth information on annotation, term, structure and global trends.</p>
                         </div>
                         <p:lightBox styleClass="imagebox inline-middle">
                             <div>
-                                <h:outputLink value="/gotrack/javax.faces.resource/RB1-Details.png?ln=img"
+                                <h:outputLink value="/gotrack/javax.faces.resource/screenshot-geneview.png?ln=img"
                                               title="Gene Tracking Details">
-                                    <h:graphicImage library="img" width="200" height="112" name="RB1-Details.png"/>
+                                    <h:graphicImage library="img" width="200" height="112" name="screenshot-geneview.png"/>
                                 </h:outputLink>
                                 <div class="caption">
                                     <h:outputText value="Track changes in annotations."/>
@@ -166,14 +170,14 @@
                             </div>
 
                             <f:facet name="inline">
-                                <h:graphicImage library="img" width="900" name="RB1-Details.png"/>
+                                <h:graphicImage library="img" width="900" name="screenshot-geneview.png"/>
                             </f:facet>
                         </p:lightBox>
                         <p:lightBox styleClass="imagebox inline-middle">
                             <div>
-                                <h:outputLink value="/gotrack/javax.faces.resource/FOXP2-Evidence.png?ln=img"
+                                <h:outputLink value="/gotrack/javax.faces.resource/screenshot-gene-annotation.png?ln=img"
                                               title="Gene Tracking Evidence">
-                                    <h:graphicImage library="img" width="200" height="112" name="FOXP2-Evidence.png"/>
+                                    <h:graphicImage library="img" width="200" height="112" name="screenshot-gene-annotation.png"/>
                                 </h:outputLink>
                                 <div class="caption">
                                     <h:outputText value="Track changes in evidence."/>
@@ -181,7 +185,7 @@
                             </div>
 
                             <f:facet name="inline">
-                                <h:graphicImage library="img" width="900" name="FOXP2-Evidence.png"/>
+                                <h:graphicImage library="img" width="900" name="screenshot-gene-annotation.png"/>
                             </f:facet>
                         </p:lightBox>
                     </div>
@@ -193,9 +197,9 @@
                         </div>
                         <p:lightBox styleClass="imagebox inline-middle" cap="this is a caption">
                             <div>
-                                <h:outputLink value="/gotrack/javax.faces.resource/top_25.png?ln=img"
+                                <h:outputLink value="/gotrack/javax.faces.resource/screenshot-enrichment-top-rank.png?ln=img"
                                               title="Enrichment Top 25">
-                                    <h:graphicImage library="img" width="200" height="112" name="top_25.png"/>
+                                    <h:graphicImage library="img" width="200" height="112" name="screenshot-enrichment-top-rank.png"/>
                                 </h:outputLink>
                                 <div class="caption">
                                     <h:outputText value="Track stability of enrichments."/>
@@ -203,15 +207,15 @@
                             </div>
 
                             <f:facet name="inline">
-                                <h:graphicImage library="img" width="900" name="top_25.png"/>
+                                <h:graphicImage library="img" width="900" name="screenshot-enrichment-top-rank.png"/>
                             </f:facet>
                         </p:lightBox>
                         <p:lightBox styleClass="imagebox inline-middle">
                             <div>
-                                <h:outputLink value="/gotrack/javax.faces.resource/current_similarity.png?ln=img"
+                                <h:outputLink value="/gotrack/javax.faces.resource/screenshot-enrichmentview.png?ln=img"
                                               title="Similarity Analysis">
                                     <h:graphicImage library="img" width="200" height="112"
-                                                    name="current_similarity.png"/>
+                                                    name="screenshot-enrichmentview.png"/>
                                 </h:outputLink>
                                 <div class="caption">
                                     <h:outputText value="Track similarity of enrichments."/>
@@ -219,7 +223,7 @@
                             </div>
 
                             <f:facet name="inline">
-                                <h:graphicImage library="img" width="900" name="current_similarity.png"/>
+                                <h:graphicImage library="img" width="900" name="screenshot-enrichmentview.png"/>
                             </f:facet>
                         </p:lightBox>
                     </div>
@@ -229,9 +233,10 @@
 
                 <p:outputPanel styleClass="center fitted" style="margin-top:25px;text-align: center;white-space: nowrap;">
 
-                    <p style="font-size:1.4em;">Compare and/or download monthly annotations from #{statsService.latestSpeciesCnt} species over the last #{statsService.latestYearsAvailable} years.</p>
+                    <p style="font-size:1.4em;">Compare and <a href="downloads.xhtml">download</a> monthly annotations from #{cache.speciesList.size()} species over #{cache.availableYears} years.</p>
                     <div class="inline-middle">
-                        <h:panelGrid columns="2" style="margin: 10px auto;" cellspacing="10">
+                        <h3>Database Statistics</h3>
+                        <h:panelGrid columns="2" style="margin: 10px auto;" cellspacing="10" >
                             <h:outputText value="Date last updated:"/>
                             <h:outputText value="#{statsService.latestUpdate}"/>
 
@@ -251,12 +256,7 @@
                             </h:outputText>
                         </h:panelGrid>
                     </div>
-                    <div class="inline-middle">
 
-                        <h:form id="annotationDownloadForm" style="margin-top:10px;">
-                            <comps:annotationDownload id="annotationDownload1" />
-                        </h:form>
-                    </div>
                 </p:outputPanel>
 
             </div>
@@ -272,7 +272,7 @@
     <div id="footer">
         <p:separator style="width: 70%"/>
         <div class="fitted center" style="white-space: nowrap;">
-            <p>&copy; Michael Smith Laboratories, 2017 <h:link value="Terms and Conditions" outcome="about.xhtml"/></p>
+            <p>&copy; Michael Smith Laboratories, 2016-2018 <h:link value="About" outcome="about.xhtml"/></p>
         </div>
     </div>
 </h:body>

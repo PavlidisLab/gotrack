@@ -19,70 +19,27 @@
 
 package ubc.pavlab.gotrack.analysis;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+
 /**
  * Scores which attempt to explore the impact that annotation stability has on the performance of gene set enrichment
  * analyses
  * 
  * @author mjacobson
- * @version $Id$
  */
+@Getter
+@RequiredArgsConstructor
+@ToString
 public final class StabilityScore {
 
-    private final double sampleSigma;
-    private final double populationSigma;
-    private final double minPvalue;
-    private final double maxPvalue;
-    private final double score;
-    private final double averageScore;
-
-    /**
-     * @param sampleSigma standard deviation of sample annotated
-     * @param populationSigma standard deviation of population annotated
-     * @param minPvalue minimum p-value given greedy variation of parameters around 95% confidence interval
-     * @param maxPvalue maximum p-value given greedy variation of parameters around 95% confidence interval
-     * @param score Stability score (log( ( maxPvalue - minPvalue ) / pvalue ), essentially a log of coefficient of
-     *        variation
-     * @param averageScore simple average of score sup to this point: log( SUM_edition (e^score(edition)) )
-     */
-    public StabilityScore( double sampleSigma, double populationSigma, double minPvalue, double maxPvalue, double score,
-            double averageScore ) {
-        super();
-        this.sampleSigma = sampleSigma;
-        this.populationSigma = populationSigma;
-        this.minPvalue = minPvalue;
-        this.maxPvalue = maxPvalue;
-        this.score = score; // Math.log( ( maxPvalue - minPvalue ) / pvalue );
-        this.averageScore = averageScore;
-    }
-
-    public double getSampleSigma() {
-        return sampleSigma;
-    }
-
-    public double getPopulationSigma() {
-        return populationSigma;
-    }
-
-    public double getMinPvalue() {
-        return minPvalue;
-    }
-
-    public double getMaxPvalue() {
-        return maxPvalue;
-    }
-
-    public double getScore() {
-        return score;
-    }
-
-    public double getAverageScore() {
-        return averageScore;
-    }
-
-    @Override
-    public String toString() {
-        return "StabilityScore [sampleSigma=" + sampleSigma + ", populationSigma=" + populationSigma + ", minPvalue="
-                + minPvalue + ", maxPvalue=" + maxPvalue + ", score=" + score + "]";
-    }
+    private final double sampleSigma; //standard deviation of sample annotated
+    private final double populationSigma; //standard deviation of population annotated
+    private final double minPvalue; //minimum p-value given greedy variation of parameters around 95% confidence interval
+    private final double maxPvalue; //maximum p-value given greedy variation of parameters around 95% confidence interval
+    private final double score; //Stability score (log( ( maxPvalue - minPvalue ) / cutoff )
+    private final double averageScore; //simple average of scores up to this point: log( SUM_edition (e^score(edition)) )
+    private final double pastSignificancePercentage; // % of editions this was significant in recent past
 
 }

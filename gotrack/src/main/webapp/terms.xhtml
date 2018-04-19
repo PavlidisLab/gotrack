@@ -1,15 +1,17 @@
 <ui:composition template="/WEB-INF/templates/mainLayout.xhtml"
                 xmlns="http://www.w3.org/1999/xhtml"
-                xmlns:h="http://java.sun.com/jsf/html"
-                xmlns:f="http://java.sun.com/jsf/core"
-                xmlns:ui="http://java.sun.com/jsf/facelets"
+                xmlns:h="http://xmlns.jcp.org/jsf/html"
+                xmlns:f="http://xmlns.jcp.org/jsf/core"
+                xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
                 xmlns:p="http://primefaces.org/ui"
+                xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites"
 >
 
     <ui:define name="metadata">
         <f:metadata>
             <f:viewParam id="query" name="query" value="#{termView.query}"/>
-            <f:event type="preRenderView" listener="#{termView.init}"/>
+            <f:viewParam id="allSpecies" name="allSpecies" value="#{termView.allSpecies}" required="false"/>
+            <f:viewAction action="#{termView.init}" />
         </f:metadata>
     </ui:define>
     <ui:define name="pageTitle">GOtrack</ui:define>
@@ -26,7 +28,10 @@
 
 
         <!-- Highcharts stuff -->
-        <ui:include src="/WEB-INF/includes/highcharts-js.xhtml" />
+        <script src="https://code.highcharts.com/6.0.7/highcharts.js"></script>
+        <script src="https://code.highcharts.com/6.0.7/modules/exporting.js"></script>
+        <script src="https://code.highcharts.com/6.0.7/modules/xrange.js"></script>
+
 
         <h:outputScript library="js" name="tipsy.js"/>
         <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
@@ -37,14 +42,9 @@
         <h:outputScript library="js" name="gograph.js"/>
         <h:outputScript library="js" name="term.js"/>
 
-        <h:outputScript rendered="#{termView.trackedTerms != null}">
+        <h:outputScript rendered="#{termView.currentTerm != null}">
             $(document).ready(function () {
-            $('.loading').show();
-            fetchDAGData();
-            fetchEvidenceChart();
-            fetchOverviewChart();
-            fetchGeneChart();
-
+                fetchCharts();
             });
         </h:outputScript>
     </ui:define>
@@ -54,162 +54,273 @@
     </ui:define>
 
     <ui:define name="center_layout">
-        <p:outputPanel rendered="#{termView.trackedTerms != null}">
-            <div id="page-title">
-                <h1>#{termView.currentTerm.goId} - #{termView.currentTerm.name}</h1>
-                <h:form>
-                    <p>#{termView.currentTerm.aspect.label}</p>
-                </h:form>
+        <p:outputPanel rendered="#{termView.currentTerm != null}">
+            <div id="page-title" style="position:relative;max-width:800px;margin:0 auto;width: fit-content;">
+                <h1>                                   <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{termView.currentTerm.goId}"
+                                                          target="_blank" style="text-decoration: none;">
+                    <h:graphicImage library="img" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;height:1em;width:1em;" styleClass="emphasize-hover"/>
+                </a>
+                    #{termView.currentTerm.goId} - #{termView.currentTerm.name}</h1>
+                <h3>#{termView.currentTerm.aspect.label}</h3>
+                <p>#{cache.getCurrentDefinition( termView.currentTerm )}</p>
+
+                <div style="width:75px;height:100%;position:absolute;top:0;right:-95px;" >
+                    <p:overlayPanel for="currentancestryHelpBtn" appendToBody="true" hideEffect="fade">
+                        <div class="overlay-help">
+                            <h3 style="margin-top: 0;">Description:</h3>
+                            <p><b>Ancestry Chart:</b> The most current ancestry chart for the selected GO term.</p>
+                            <p><b>&lt;Click&gt;</b> to open a larger, interactive view.</p>
+                        </div>
+                    </p:overlayPanel>
+                    <p:commandButton id="currentancestryHelpBtn" value="" style="left: -15px;"
+                                     styleClass="no-value no-background fa-fix noupdate absoluteBtn"
+                                     icon="fa fa-question-circle" type="button"/>
+                    <div id="loading-spinner-DAG" class="loading"
+                         style="display: none;width: 100%; height: 100%;"/>
+                    <svg id="currentAncestryLogo" style="cursor: pointer;" class="emphasize-hover"/>
+                </div>
 
             </div>
             <p:separator style="max-width:400px"/>
+            <div style="width: fit-content; margin: 5px auto 0 auto;">
+                <h:form prependId="false" >
+                    <h:panelGrid columns="2" style="border:none;">
+
+                        <p:outputLabel for="species_select" value="Species:" />
+                        <p:selectOneMenu id="species_select" value="#{sessionManager.species}"
+                                         converter="speciesConverter">
+                            <f:selectItems value="#{cache.speciesList}" var="spec"
+                                           itemValue="#{spec}" itemLabel="#{spec.commonName}"/>
+                            <p:ajax event="change" process="@this" onstart="preSwitchSpecies();" oncomplete="postSwitchSpecies();" update=":centerTabViewForm:tables"/>
+                        </p:selectOneMenu>
+                    </h:panelGrid>
+                </h:form>
+            </div>
             <h:form id="centerTabViewForm" style="margin:0 25px 0 25px;">
                 <p:remoteCommand name="fetchDAGData" async="true"
                                  oncomplete="handleFetchDAGData(xhr, status, args);"
-                                 actionListener="#{termView.fetchDAGData()}"/>
+                                 action="#{termView.fetchDAGData()}"/>
                 <p:remoteCommand name="fetchOverviewChart" async="true"
                                  oncomplete="handleFetchOverviewChart(xhr, status, args);"
-                                 actionListener="#{termView.fetchOverviewChart()}"/>
+                                 action="#{termView.fetchOverviewChart()}"/>
                 <p:remoteCommand name="fetchGeneChart" async="true"
                                  oncomplete="handleFetchGeneChart(xhr, status, args);"
-                                 actionListener="#{termView.fetchGeneChart()}"/>
+                                 action="#{termView.fetchGeneChart()}"/>
                 <p:remoteCommand name="fetchEvidenceChart" async="true"
                                  oncomplete="handleFetchEvidenceChart(xhr, status, args);"
-                                 actionListener="#{termView.fetchEvidenceChart()}"/>
+                                 action="#{termView.fetchEvidenceChart()}"/>
                 <p:remoteCommand name="fetchGraph"
                                  oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
-                                 actionListener="#{termView.fetchGraph()}"/>
-                <p:tabView id="centerTabView" widgetVar="centerTabWdg" onTabShow="tabShowed(index)">
-                    <p:tab>
+                                 action="#{graphFactory.fetchGraph()}"/>
+                <p:remoteCommand name="fetchGraphDiff"
+                                 oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"
+                                 action="#{graphFactory.fetchGraphDiff()}"/>
+                <p:remoteCommand name="evidenceChartClickEvent"
+                                 update=":evidenceChartClickEventDlg"
+                                 oncomplete="PF('evidenceChartClickEventWdg').show()"
+                                 action="#{termView.evidenceChartClickEvent()}"/>
+
+                <div style="white-space: nowrap; min-width: 1000px;">
+                    <div style="padding: 10px 30px 10px 30px; ">
+                        <div class="well chart-container" style="margin-right:5px;">
+                            <p:overlayPanel for="annotatedHelpBtn" appendToBody="true" hideEffect="fade">
+                                <div class="overlay-help">
+                                    <h3 style="margin-top: 0;">Description:</h3>
+                                    <p>The
+                                        <b>Gene Breakdown</b> shows per species counts of distinct genes that have been annotated with this GO term over its history.
+                                    </p>
+
+                                    <h3>Legend Descriptions:</h3>
+                                    <p>
+                                        <b>Direct vs Not:</b> Direct measures look only at those genes which have been directly annotated with this term. Non-direct series (inferred) also counts genes which have been annotated with a child of this term.
+                                    </p>
+
+                                    <h3>Controls:</h3>
+                                    <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
+                                    <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+                                    <p><b>&lt;Click&gt;</b> on the Subset button on top of the legend to toggle between important subsets of series. Namely: Direct, Indirect, and All.</p>
+                                </div>
+                            </p:overlayPanel>
+                            <p:commandButton id="annotatedHelpBtn" value=""
+                                             styleClass="no-value no-background fa-fix noupdate absoluteBtn"
+                                             icon="fa fa-question-circle" type="button"/>
+                            <div id="loading-spinner-gene" class="loading"
+                                 style="display: none;width: 100%; height: 250px;"/>
+                            <div id="hc_gene_container" style="display: none;width: 100%; height: 250px;"/>
+                        </div>
+                        <div class="well chart-container">
+                            <p:overlayPanel for="countHelpBtn" appendToBody="true" hideEffect="fade">
+                                <div class="overlay-help">
+                                    <h3 style="margin-top: 0;">Description:</h3>
+                                    <p><b>Annotation Evidence Counts</b> shows per evidence counts of direct annotations made with this term.
+                                    </p>
+
+                                    <h3>Legend Descriptions:</h3>
+                                    <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+                                    <p><span style="color:#2bce48;">Curated</span>: Counts of annotation which were assigned by a curator.</p>
+                                    <p><span style="color:#0075dc;">Automatic</span>: Counts of annotation which were assigned by automated methods, not by curators (IEA).</p>
+
+                                    <h3>Controls:</h3>
+                                    <p><b>&lt;Click&gt;</b> any edition to view the per category count breakdowns in that edition.</p>
+                                    <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
+                                    <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+                                </div>
+                            </p:overlayPanel>
+                            <p:commandButton id="countHelpBtn" value=""
+                                             styleClass="no-value no-background fa-fix noupdate absoluteBtn"
+                                             icon="fa fa-question-circle" type="button"/>
+                            <div id="loading-spinner-evidence" class="loading"
+                                 style="display: none;width: 100%; height: 250px;"/>
+                            <div id="hc_evidence_container"
+                                 style="display: none;width: 100%; height: 250px;"/>
+                        </div>
+
+                    </div>
+                    <div style="padding: 0 30px 10px 30px;margin-right: -19px;">
+                        <div class="well chart-container" style="width:98%;">
+                            <p:overlayPanel for="historyHelpBtn" appendToBody="true" hideEffect="fade">
+                                <div class="overlay-help">
+                                    <h3 style="margin-top: 0;">Description:</h3>
+                                    <p>Shows metrics on the history of the selected GO term:</p>
+
+                                    <h3>Legend Descriptions:</h3>
+                                    <p><b>Existence</b>: Displays green when the term existed and red when it did not.</p>
+                                    <p><b>Structure Change</b>: Displays as green when the ancestry chart changed from the previous GO edition.</p>
+                                    <p><b>Name Change</b>: Displays as green when the name of this term changed.</p>
+
+                                    <h3>Controls:</h3>
+                                    <p><b>&lt;Click&gt;</b> an Existence bar to show the ancestry chart at that point in history.</p>
+                                    <p><b>&lt;Click&gt;</b> a Structure Change bar to show the ancestry chart
+                                        at that point in history overlayed with the changes from the previous edition.
+                                        <span style="color:#2bce48;">Green nodes</span> and dashed green edges were newly created.
+                                        <span style="color:#FF0000;">Red nodes</span> and dashed red edges were removed.</p>
+                                    <p> <b>&lt;Hover&gt;</b> a Name Change bar to show the name change.</p>
+                                </div>
+                            </p:overlayPanel>
+                            <p:commandButton id="historyHelpBtn" value=""
+                                             styleClass="no-value no-background fa-fix noupdate absoluteBtn"
+                                             icon="fa fa-question-circle" type="button"/>
+                            <div id="loading-spinner-overview" class="loading"
+                                 style="display: none;width: 100%; height: 175px;"/>
+                            <div id="hc_overview_container"
+                                 style="display: none;width: 100%; height: 175px;"/>
+                        </div>
+                    </div>
+                </div>
+                <p:accordionPanel id="tables" activeIndex="1" style="padding: 0 30px 10px 30px" dynamic="true">
+                    <p:tab id="geneTab">
                         <f:facet name='title'>
-                            <h:outputText value="Term Information "/>
-                            <p:commandButton id="termInfoTabHelpBtn" value=""
+                            <p:overlayPanel for="genesTabHelpBtn" appendToBody="true" hideEffect="fade" rendered="#{termView.displayInferred()}">
+                                <p>Shows the <b>genes</b> annotated with this term or one of its children in the most current edition.</p>
+                            </p:overlayPanel>
+                            <p:overlayPanel for="genesTabHelpBtn" appendToBody="true" hideEffect="fade" rendered="#{not termView.displayInferred()}">
+                                <p>Shows the <b>genes</b> annotated with this term in the most current edition. This term is too large to display genes of all of its children.</p>
+                            </p:overlayPanel>
+
+                            <p:commandButton id="genesTabHelpBtn" value=""
                                              styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
                                              title="Help"
+                                             onclick="event.stopPropagation();"
                                              type="button"/>
+                            <h:outputText value="Genes"  rendered="#{termView.displayInferred()}"/>
+                            <h:outputText value="Directly Annotated Genes"  rendered="#{not termView.displayInferred()}"/>
                         </f:facet>
-                        <p:outputPanel>
-                            <p:panelGrid styleClass="no-border">
-                                <p:row>
-                                    <p:column>
-                                        <h:outputText value="ID"/>
-                                    </p:column>
-                                    <p:column>
-                                        <h:outputText value="#{termView.currentTerm.goId}"
-                                                      styleClass="sqlDialogText"/>
-                                    </p:column>
-                                </p:row>
-                                <p:row>
-                                    <p:column>
-                                        <h:outputText value="Aspect"/>
-                                    </p:column>
-                                    <p:column>
-                                        <h:outputText value="#{termView.currentTerm.aspect.label}"
-                                                      styleClass="sqlDialogText"/>
-                                    </p:column>
-                                </p:row>
-                                <p:row>
-                                    <p:column>
-                                        <h:outputText value="Name"/>
-                                    </p:column>
-                                    <p:column>
-                                        <h:outputText value="#{termView.currentTerm.name}"
-                                                      styleClass="sqlDialogText"/>
-                                    </p:column>
-                                </p:row>
-                                <p:row>
-                                    <p:column style="vertical-align: top">
-                                        <h:outputText value="Definition"/>
-                                    </p:column>
-                                    <p:column>
-                                        <h:outputText value="#{termView.definition}"
-                                                      styleClass="sqlDialogText"/>
-                                    </p:column>
-                                </p:row>
-                            </p:panelGrid>
-                            <h3>Ancestry Chart</h3>
-                            <div id="loading-spinner-DAG" class="loading"
-                                 style="display: none;"/>
-                            <svg id="currentAncestry" width="900" height="600"/>
-                        </p:outputPanel>
+                        <p:dataTable var="entry"
+                                     value="#{termView.fetchCurrentGenesMap().entrySet().toArray()}"
+                                     emptyMessage="No genes found." style="width:100%;"
+                                     scrollHeight="150"
+                                     scrollable="true"
+                                     scrollRows="25">
+                            <p:column headerText="Direct" style="width:80px;">
+                                <p:outputPanel style="text-align:center;" rendered="#{entry.getValue()}">
+                                    <i class="fa fa-check" style="margin-right: 5px;color: green;"/>
+                                </p:outputPanel>
+                                <p:outputPanel style="text-align:center;" rendered="#{not entry.getValue()}">
+                                    <i class="fa fa-times" style="margin-right: 5px;color: red;"/>
+                                </p:outputPanel>
+                            </p:column>
+                            <p:column headerText="Symbol" style="width:120px;">
+                                <a href="http://www.uniprot.org/uniprot/#{entry.getKey().accession.accession}"
+                                   target="_blank" style="margin-right: 5px; text-decoration: none;">
+                                    <h:graphicImage library="img" width="18" height="12" name="uniprot_logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
+                                </a>
+                                <p:link value="#{entry.getKey().symbol}" outcome="genes" target="_blank">
+                                    <f:param name="accession" value="#{entry.getKey().accession.accession}"/>
+                                </p:link>
+                            </p:column>
+
+                            <p:column headerText="Accession">
+                                <h:outputText value="#{entry.getKey().accession.accession}"/>
+                            </p:column>
+
+                            <p:column headerText="Description">
+                                <h:outputText value="#{entry.getKey().name}"/>
+                            </p:column>
+
+                            <p:column headerText="Synonyms">
+                                <ui:repeat
+                                        value="#{entry.getKey().synonyms.toArray()}"
+                                        var="syn" varStatus="loop"> #{syn}#{!loop.last ? ', ' : ''}
+                                </ui:repeat>
+                            </p:column>
+
+                            <f:facet name="footer">
+                                <!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
+                                &#8203;
+                            </f:facet>
+                        </p:dataTable>
                     </p:tab>
                     <p:tab>
                         <f:facet name='title'>
-                            <h:outputText value="Child Terms "/>
+                            <p:overlayPanel for="childTabHelpBtn" appendToBody="true" hideEffect="fade">
+                                <p>Shows the <b>Child terms</b> in the most current edition.</p>
+                            </p:overlayPanel>
                             <p:commandButton id="childTabHelpBtn" value=""
                                              styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
                                              title="Help"
+                                             onclick="event.stopPropagation();"
                                              type="button"/>
+                            <h:outputText value="Child Terms "/>
                         </f:facet>
-                        <p:outputPanel>
-                            <p:dataTable var="child" value="#{termView.currentTerm.children}"
-                                         styleClass="child-table">
-                                <p:column headerText="Relationship" width="100px">
-                                    <h:outputText value="#{child.type}"/>
-                                </p:column>
+                        <p:dataTable var="child" value="#{termView.getChildTerms(termView.currentTerm)}"
+                                     emptyMessage="No child terms found."
+                                     style="width:100%;"
+                                     scrollHeight="150"
+                                     scrollable="true"
+                                     scrollRows="25">
+                            <p:column headerText="Relationship" style="width:100px">
+                                <h:outputText value="#{child.type}"/>
+                            </p:column>
 
-                                <p:column headerText="Term" width="100px">
-                                    <p:link value="#{child.relation.goId}" outcome="terms"
-                                            target="_blank">
-                                        <f:param name="query" value="#{child.relation.goId}"/>
-                                    </p:link>
-                                </p:column>
+                            <p:column headerText="Term" style="width:100px">
+                                <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{child.relation.goId}"
+                                   target="_blank" style="text-decoration: none;">
+                                    <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
+                                </a>
+                                <p:commandLink action="#{graphFactory.fetchGraph(child.relation)}"
+                                               oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
+                                    <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
+                                </p:commandLink>
+                                <p:link value="#{child.relation.goId}" outcome="terms" target="_blank">
+                                    <f:param name="query" value="#{child.relation.goId}"/>
+                                </p:link>
+                            </p:column>
 
-                                <p:column headerText="Name">
-                                    <h:outputText value="#{child.relation.name}"/>
-                                </p:column>
-                            </p:dataTable>
-                        </p:outputPanel>
+                            <p:column headerText="Name">
+                                <h:outputText value="#{child.relation.name}"/>
+                            </p:column>
+                            <f:facet name="footer">
+                                <!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
+                                &#8203;
+                            </f:facet>
+                        </p:dataTable>
                     </p:tab>
-                    <p:tab>
-                        <f:facet name='title'>
-                            <h:outputText value="History "/>
-                            <p:commandButton id="historyTabHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             title="Help"
-                                             type="button"/>
-                        </f:facet>
-                        <p:outputPanel>
-                            <div id="loading-spinner-overview" class="loading"
-                                 style="display: none;"/>
-                            <div id="hc_overview_container"
-                                 style="width: 100%; height: 600px;"/>
-
-                        </p:outputPanel>
-                    </p:tab>
-                    <p:tab>
-                        <f:facet name='title'>
-                            <h:outputText value="Gene Breakdown "/>
-                            <p:commandButton id="geneTabHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             title="Help"
-                                             type="button"/>
-                        </f:facet>
-                        <div id="loading-spinner-gene" class="loading"
-                             style="display: none;"/>
-                        <div id="hc_gene_container" style="width: 100%; height: 600px;"/>
-
-                    </p:tab>
-                    <p:tab>
-                        <f:facet name='title'>
-                            <h:outputText value="Evidence Breakdown "/>
-                            <p:commandButton id="evidenceTabHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             title="Help"
-                                             type="button"/>
-                        </f:facet>
-                        <div id="loading-spinner-evidence" class="loading"
-                             style="display: none;"/>
-                        <div id="hc_evidence_container"
-                             style="width: 100%; height: 600px;"/>
-
-                    </p:tab>
-                </p:tabView>
+                </p:accordionPanel>
 
             </h:form>
         </p:outputPanel>
 
-        <p:outputPanel rendered="#{termView.trackedTerms == null}">
+        <p:outputPanel rendered="#{termView.currentTerm == null}">
             <h:form>
                 <h3 style="text-align: center;">Track a Term</h3>
                 <p:panelGrid style="margin-bottom:10px" cellpadding="5"
@@ -244,81 +355,43 @@
 
     </ui:define>
     <ui:define name="dialogs">
-        <p:dialog id="graphDlg" header="Ancestor Chart"
+        <p:dialog id="graphDlg" header=""
                   widgetVar="graphDlgWdg" modal="false" showEffect="fade"
-                  hideEffect="fade" resizable="false" height="600px;" width="800px;">
+                  hideEffect="fade" resizable="false" height="600px;" width="800px;" style="max-width:90%;">
+            <f:facet name="header">
+                <p:overlayPanel for="ancestryHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <h3 style="margin-top: 0;">Description:</h3>
+                        <p><b>Ancestry Chart:</b> The most current ancestry chart for the selected GO term.</p>
+
+                        <h3>Controls:</h3>
+                        <p><b>&lt;Click&gt;</b> a term to open its individual page.</p>
+                        <p><b>&lt;Hover&gt;</b> a term to view more information and highlight its direct relations.</p>
+                        <p><b>&lt;Mouse Wheel&gt;</b> to zoom.</p>
+                        <p><b>&lt;Drag&gt;</b> to pan.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="ancestryHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Ancestor Chart"/>
+            </f:facet>
             <svg id="dagDialog" height="500" width="700"/>
         </p:dialog>
 
-        <p:overlayPanel for=":centerTabViewForm:centerTabView:termInfoTabHelpBtn" hideEffect="fade"
-                        style="width:600px;text-align:left;">
-            <p>The <b>Term Information</b> tab shows the most current information for the selected GO term.</p>
-            <p>
-                <b>Ancestry Chart:</b> The most current ancestry chart for the selected GO term. The figure is interactive:
-                <i>select</i> a term to open its individual page,
-                <i>hover</i> a term to view more information and highlight its direct relations, <i>zoom</i>, and
-                <i>pan</i>.</p>
-            <ul>
-                <li><i>Selecting</i> a term will open its individual page.</li>
-                <li>
-                    <i>Hovering</i> a term show more information as well as both highlight its direct relations and fade those terms which are not in its path to Root.
-                </li>
-                <li><i>Zoom</i> using mouse wheel.</li>
-                <li><i>Pan</i> by click and drag.</li>
-            </ul>
-        </p:overlayPanel>
+        <p:dialog id="evidenceChartClickEventDlg"
+                      widgetVar="evidenceChartClickEventWdg" modal="false" showEffect="fade"
+                      hideEffect="fade" resizable="false" dynamic="true" style="max-width:90%;">
+            <f:facet name="header">
+                Edition #{termView.evidenceChartClickEdition.edition} : #{termView.evidenceChartClickEdition.date}
+            </f:facet>
+            <!--<p:outputPanel style="text-align:center;">-->
+                <comps:evidenceCountTable value="#{termView.evidenceChartClickData}"/>
+            <!--</p:outputPanel>-->
+        </p:dialog>
 
-        <p:overlayPanel for=":centerTabViewForm:centerTabView:childTabHelpBtn" hideEffect="fade"
-                        style="width:600px;text-align:left;">
-            <p>The <b>Child Terms</b> tab shows children of the selected term from the most current edition.</p>
-        </p:overlayPanel>
 
-        <p:overlayPanel for=":centerTabViewForm:centerTabView:historyTabHelpBtn" hideEffect="fade"
-                        style="width:600px;text-align:left;">
-            <p>The <b>History</b> tab shows three metrics about the selected GO term:</p>
-            <ul>
-                <li><b>Existence:</b> Displays green when the term existed and red when it did not.
-                    <i>Clicking</i> a bar will show the ancestry chart at that point in history.
-                </li>
-                <li>
-                    <b>Structure Change:</b> Displays as green when the ancestry chart changed from the previous GO edition.
-                    <i>Clicking</i> a bar will show the ancestry chart at that point in history overlayed with the changes from the previous edition:
-                    <ul>
-                        <li>Green nodes and dashed green edges were newly created.</li>
-                        <li>Red nodes and dashed red edges were removed.</li>
-                    </ul>
-                </li>
-                <li><b>Name Change:</b> Displays as green when the name of this term changed.
-                    <i>Hovering</i> a bar will show the name change.
-                </li>
-            </ul>
-        </p:overlayPanel>
-
-        <p:overlayPanel for=":centerTabViewForm:centerTabView:geneTabHelpBtn" hideEffect="fade"
-                        style="width:600px;text-align:left;">
-            <p>The
-                <b>Gene Breakdown</b> tab shows per species counts of distinct genes that have been annotated with this GO term over its history.
-            </p>
-            <p>
-                <b>Direct vs Not:</b> Direct measures look only at those genes which have been directly annotated with this term. Non-direct series (inferred) also counts genes which have been annotated with a child of this term.
-            </p>
-            <p>
-                <i>Clicking</i> the Subset button on top of the legend will toggle between important subsets of series. Namely: Direct, Indirect, and All.
-            </p>
-        </p:overlayPanel>
-
-        <p:overlayPanel for=":centerTabViewForm:centerTabView:evidenceTabHelpBtn" hideEffect="fade"
-                        style="width:600px;text-align:left;">
-            <p>The <b>Evidence Breakdown</b> tab shows per evidence category counts of annotations made with this term.
-            </p>
-            <p>See the following for an explanation of Evidence Codes:</p>
-            <p:lightBox>
-                <h:outputLink value="/gotrack/javax.faces.resource/diag-evCodeFlowChartGood.png?ln=img"
-                              title="Evidence Code Flow Chart">
-                    <h:graphicImage library="img" width="100" height="56" name="diag-evCodeFlowChartGood.png"/>
-                </h:outputLink>
-            </p:lightBox>
-        </p:overlayPanel>
 
     </ui:define>
 

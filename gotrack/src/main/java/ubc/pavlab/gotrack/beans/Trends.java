@@ -75,6 +75,12 @@ public class Trends {
             ChartValues multifunctionalityChart = new ChartValues( "Multifunctionality", "Multifunctionality [10^-5]", "Date" );
             ChartValues geneJaccardChart = new ChartValues( "Semantic Similarity", "Jaccard Index", "Date" );
 
+            geneCountChart.setSubtitle( sp.getScientificName() );
+            termsForGeneChart.setSubtitle( sp.getScientificName() );
+            inferredGenesForTermChart.setSubtitle( sp.getScientificName() );
+            multifunctionalityChart.setSubtitle( sp.getScientificName() );
+            geneJaccardChart.setSubtitle( sp.getScientificName() );
+
             geneCountChart.setMin( 0 );
             termsForGeneChart.setMin( 0 );
             geneJaccardChart.setMin( 0 );
@@ -130,7 +136,6 @@ public class Trends {
     }
 
     public void loadCharts( Species species ) {
-        RequestContext.getCurrentInstance().addCallbackParam( "species", species );
         RequestContext.getCurrentInstance().addCallbackParam( "HC_map", allChartsJSON.get( species ) );
     }
 

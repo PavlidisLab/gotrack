@@ -2,60 +2,77 @@ function onLoad() {
 }
 
 function centerResize() {
-    try {
-        var index = PrimeFaces.widgets.centerTabWdg.getActiveIndex();
-        tabShowed(index);
-    } catch (e) {
-        console.log(e);
-    }
+    onresize();
 }
 
-function tabShowed(index) {
+function fetchCharts() {
+    $('.loading').show();
+    fetchDAGData();
+    fetchEvidenceChart();
+    fetchOverviewChart();
+    fetchGeneChart();
+}
+
+function preSwitchSpecies() {
     try {
-        if (index == 0) {
-            CS.overview.graph.resize();
-        } else if (index == 2) {
-            plotting.charts.overview.resize();
-        } else if (index == 3) {
-            plotting.charts.gene.resize();
-        } else if (index == 4) {
-            plotting.charts.evidence.resize();
-        }
+        $('#loading-spinner-gene').show();
+        $('#hc_gene_container').hide();
+        $('#loading-spinner-evidence').show();
+        $('#hc_evidence_container').hide();
     } catch (e) {
         console.log(e);
     }
+
+    plotting.charts.gene.destroy();
+    // delete plotting.charts.gene;
+    plotting.charts.evidence.destroy();
+    // delete plotting.charts.evidence;
+
+}
+
+function postSwitchSpecies() {
+
+    fetchEvidenceChart();
+    fetchGeneChart();
 }
 
 function handleFetchDAGData(xhr, status, args) {
-    console.log(args);
+    // console.log(args);
     try {
         $('#loading-spinner-DAG').hide();
-        $('#currentAncestry').show();
+        $('#currentAncestryLogo').show();
     } catch (e) {
         console.log(e);
     }
-    CS.overview = gograph.createNewGraph('#currentAncestry', JSON.parse(args.graph_data));
+    CS.logo = gograph.createNewGraphLogo('#currentAncestryLogo', JSON.parse(args.graph_data));
+
+    $('#currentAncestryLogo').click(function(e) {
+        PF('graphDlgWdg').show();
+        handleFetchGraphDialog(null, null, args);
+    });
+    // $.onclick()
     // CS.overview = createVisGraph(args, '#currentAncestry');
 }
 
 function handleFetchOverviewChart(xhr, status, args) {
-
+    // console.log(args);
     try {
         $('#loading-spinner-overview').hide();
+        $('#hc_overview_container').show();
         args.HC_overview = JSON.parse(args.HC_overview);
     } catch (e) {
         console.log(e);
         return;
     }
-    console.log(args);
 
     createOverviewChart(args);
 }
 
 function handleFetchGeneChart(xhr, status, args) {
-    console.log(args);
+    // console.log(args);
     try {
         $('#loading-spinner-gene').hide();
+        $('#hc_gene_container').show();
     } catch (e) {
         console.log(e);
     }
@@ -70,9 +87,11 @@ function handleFetchGeneChart(xhr, status, args) {
 }
 
 function handleFetchEvidenceChart(xhr, status, args) {
-    console.log(args);
+    // console.log(args);
     try {
         $('#loading-spinner-evidence').hide();
+        $('#hc_evidence_container').show();
+
     } catch (e) {
         console.log(e);
     }
@@ -89,8 +108,10 @@ function handleFetchEvidenceChart(xhr, status, args) {
 
 
 function handleFetchGraphDialog(xhr, status, args) {
-    console.log(args);
-    CS.dialogGraph = gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
+    // console.log(args);
+    if (!$.isEmptyObject(args)) {
+        CS.dialogGraph = gograph.createNewGraph('#dagDialog', JSON.parse(args.graph_data));
+    }
     // CS.dialogGraph = createVisGraph(args, "#dagDialog");
 }
 
@@ -101,19 +122,27 @@ function createOverviewChart(args) {
 
     var options = plotting.ganttHCOptions('hc_overview_container', args.HC_overview.chart); // Custom data importer ahead
 
-    //options.yAxis.categories = ['Name Change', 'Structure Change','Existence']
+    options.credits = {enabled:false};
+
+    options.subtitle.style= {
+        fontSize: "0.9em"
+    };
 
     options.plotOptions = {
         series: {
             grouping: false,
             point: {
                 events: {
-                    click: function () {
-                        if (this.y != 0) {
-                            fetchGraph([{name: 'edition', value: dateToGOEditionId[this.x]}, {
-                                name: 'showDiff',
-                                value: this.y == 1
-                            }]);
+                    click: function (e) {
+                        if (this.y === 1) {
+                            var indexAmongAllEditions = this.series.chart.series[2].xData.indexOf(this.x);
+                            var previousX = this.series.chart.series[2].xData[indexAmongAllEditions-1];
+                            fetchGraphDiff([{name: 'goId', value: args.HC_overview.goId},
+                                {name: 'edition', value: dateToGOEditionId[this.x]},
+                                {name: 'compareEdition', value: dateToGOEditionId[previousX]}]);
+                        } else if (this.y === 2 && this.colorIndex === 1) {
+                            fetchGraph([{name: 'goId', value: args.HC_overview.goId},
+                                {name: 'edition', value: dateToGOEditionId[this.x]}]);
                         }
                     }
                 }
@@ -135,7 +164,7 @@ function createOverviewChart(args) {
             };
             if (i === 0) {
                 pointAdder = function (point, nextPointX) {
-                    if (point.y == 1) {
+                    if (point.y === 1) {
                         return {
                             x: point.x,
                             x2: nextPointX,
@@ -149,8 +178,8 @@ function createOverviewChart(args) {
                 };
             } else if (i === 1) {
                 pointAdder = function (point, nextPointX) {
-                    if (point.y == 1) {
-                        return {x: point.x, x2: nextPointX, y: i, name: 'Structure Has Changed', color: '#2bce48'};
+                    if (point.y === 1) {
+                        return {x: point.x, x2: nextPointX, y: 1, name: 'Structure Has Changed', color: '#2bce48'};
                     } else {
                         return null;
                     }
@@ -161,9 +190,10 @@ function createOverviewChart(args) {
                     return {
                         x: point.x,
                         x2: nextPointX,
-                        y: i,
-                        name: point.y == 1 ? 'Exists' : 'Does Not Exist',
-                        color: point.y == 1 ? '#2bce48' : '#d63232'
+                        y: 2,
+                        name: point.y === 1 ? 'Exists' : 'Does Not Exist',
+                        color: point.y === 1 ? '#2bce48' : '#d63232',
+                        colorIndex: point.y
                     };
                 };
 
@@ -175,7 +205,7 @@ function createOverviewChart(args) {
                 var point = series.data[j];
                 var nextPointX = (j > series.data.length - 2) ? point.x + 2629740000 : series.data[j + 1].x; //add month
                 var dataPoint = pointAdder(point, nextPointX);
-                if (dataPoint != null) {
+                if (dataPoint !== null) {
                     data.push(dataPoint);
                 }
 
@@ -183,7 +213,6 @@ function createOverviewChart(args) {
 
             options.series.push({
                 name: name,
-                pointWidth: 40,
                 data: data
             });
         }
@@ -198,81 +227,89 @@ function createOverviewChart(args) {
 function createGeneCountChart(args) {
 
     var options = plotting.defaultHCOptions('hc_gene_container', args.HC_gene.chart);
-    plotting.addLegend(options);
+    commonOptions(options);
 
 
     if (!utility.isUndefined(args.HC_gene.chart)) {
-        //args.hc_gene_data.series.sort(function(a,b) {return (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0);} );
+
+        var multipleSpecies = options.series.length > 2;
+
         for (var i = 0; i < options.series.length; i++) {
             var series = options.series[i];
-            series.visible = series.name.indexOf("Direct") > -1;
+            if (multipleSpecies) {
+                series.visible = series.name.indexOf("Direct") > -1;
+            }
             series.isolated = false;
         }
 
-        options.exporting.buttons = {
-            toggleSubsets: {
-                align: 'right',
-                verticalAlign: "top",
-                x: -138,
-                y: 0,
-                onclick: function () {
-                    this.toggleSubsets = (this.toggleSubsets + 1) % 3;
-                    var button = this.exportSVGElements[3];
-                    button.attr({fill: '#33cc33'});
+        if (multipleSpecies) {
 
-                    var test = function () {
-                        return true;
-                    }
-                    switch (this.toggleSubsets) {
-                        case 0: //Direct only
-                            text = "Subset: Direct";
-                            test = function (s) {
-                                return s.name.indexOf("Direct") > -1;
-                            }
-                            break;
-                        case 1: //Indirect only
-                            text = "Subset: Indirect";
-                            test = function (s) {
-                                return s.name.indexOf("Direct") == -1;
-                            }
-                            break;
-                        case 2: //All
-                            text = "Subset: All";
-                            break;
-                    }
+            options.exporting.buttons = {
+                toggleSubsets: {
+                    align: 'right',
+                    verticalAlign: "top",
+                    x: -30,
+                    y: 0,
+                    onclick: function () {
+                        this.toggleSubsets = (this.toggleSubsets + 1) % 3;
+                        var button = this.exportSVGElements[3];
+                        button.attr({fill: '#33cc33'});
 
-                    button.parentGroup.attr({text: text});
-                    var series = this.series;
-                    for (var i = 0; i < series.length; i++) {
-                        var s = series[i];
-                        if (test(s)) {
-                            s.setVisible(true, false)
-                            s.isolated = false;
-                        } else {
-                            s.setVisible(false, false)
-                            s.isolated = false;
+                        var test = function () {
+                            return true;
+                        };
+                        switch (this.toggleSubsets) {
+                            case 0: //Direct only
+                                text = "Subset: Direct";
+                                test = function (s) {
+                                    return s.name.indexOf("Direct") > -1;
+                                };
+                                break;
+                            case 1: //Indirect only
+                                text = "Subset: Indirect";
+                                test = function (s) {
+                                    return s.name.indexOf("Direct") === -1;
+                                };
+                                break;
+                            case 2: //All
+                                text = "Subset: All";
+                                break;
                         }
-                    }
-                    this.redraw();
-                },
-                symbol: 'circle',
-                symbolFill: '#33cc33',
-                symbolStrokeWidth: 1,
-                _titleKey: "toggleSubsetsTitle",
-                text: 'Subset: Direct'
-            }
-        };
 
-        // Monkey patch some functionality to happen before any existing legendItemClick event
-        var oldLegendItemClick = options.plotOptions.series.events.legendItemClick || function () {
+                        button.parentGroup.attr({text: text});
+                        var series = this.series;
+                        for (var i = 0; i < series.length; i++) {
+                            var s = series[i];
+                            if (test(s)) {
+                                s.setVisible(true, false);
+                                s.isolated = false;
+                            } else {
+                                s.setVisible(false, false);
+                                s.isolated = false;
+                            }
+                        }
+                        this.redraw();
+                    },
+                    symbol: 'circle',
+                    symbolFill: '#33cc33',
+                    symbolStrokeWidth: 1,
+                    _titleKey: "toggleSubsetsTitle",
+                    text: 'Subset: Direct'
+                }
             };
 
-        options.plotOptions.series.events.legendItemClick = function (event) {
-            var button = this.chart.exportSVGElements[3];
-            button.attr({fill: '#E0E0E0'});
-            button.parentGroup.attr({text: "Subset: Custom"});
-            event.target.chart.toggleSubsets = -1;
-            return oldLegendItemClick(event);
+
+            // Monkey patch some functionality to happen before any existing legendItemClick event
+            var oldLegendItemClick = options.plotOptions.series.events.legendItemClick || function () {
+                };
+
+            options.plotOptions.series.events.legendItemClick = function (event) {
+                var button = this.chart.exportSVGElements[3];
+                button.attr({fill: '#E0E0E0'});
+                button.parentGroup.attr({text: "Subset: Custom"});
+                event.target.chart.toggleSubsets = -1;
+                return oldLegendItemClick(event);
+            };
         }
 
         plotting.charts.gene.options = options;
@@ -286,7 +323,30 @@ function createGeneCountChart(args) {
 function createEvidenceCountChart(args) {
 
     var options = plotting.defaultHCOptions('hc_evidence_container', args.HC_evidence.chart);
-    plotting.addLegend(options);
+    commonOptions(options);
+
+    var clickBehaviour = function (p) {
+        evidenceChartClickEvent([{
+            name: 'edition',
+            value: args.HC_evidence.chart.extra.dateToEdition[p.x]
+        }]);
+    };
+
+    options.plotOptions.series.point = {
+        events: {
+            click: function (event) {
+                var p = this;
+                clickBehaviour(p);
+            }
+        }
+    };
+
+    options.chart.events = {
+        click: function (event) {
+            var p = this.hoverPoint;
+            clickBehaviour(p);
+        }
+    };
 
     plotting.charts.evidence.options = options;
     plotting.charts.evidence.recreate(options);
@@ -294,8 +354,35 @@ function createEvidenceCountChart(args) {
 
 }
 
+function commonOptions(options) {
+    plotting.addLegend(options);
+    options.legend = {
+        margin: 0,
+        verticalAlign: 'bottom',
+        y: 17
+    };
+    // options.credits = {enabled:false};
+
+    options.subtitle.style= {
+        fontSize: "0.9em"
+    };
+
+    options.xAxis.crosshair = {
+        width: 1,
+        color: 'red',
+        dashStyle: 'shortdot'
+    };
+}
+
 $(document).ready(function () {
     //escDialog();
+
+    // Resize plots on window resize
+    window.onresize = function (event) {
+        plotting.charts.overview.resize();
+        plotting.charts.gene.resize();
+        plotting.charts.evidence.resize();
+    };
 
     try {
 
@@ -307,88 +394,6 @@ $(document).ready(function () {
     } catch (err) {
 
     }
-
-    /**
-     * Highcharts X-range series plugin
-     */
-    (function (H) {
-        var defaultPlotOptions = H.getOptions().plotOptions,
-            columnType = H.seriesTypes.column,
-            each = H.each;
-
-        defaultPlotOptions.xrange = H.merge(defaultPlotOptions.column, {});
-        H.seriesTypes.xrange = H.extendClass(columnType, {
-            type: 'xrange',
-            parallelArrays: ['x', 'x2', 'y'],
-            animate: H.seriesTypes.line.prototype.animate,
-
-            /**
-             * Borrow the column series metrics, but with swapped axes. This gives free access
-             * to features like groupPadding, grouping, pointWidth etc.
-             */
-            getColumnMetrics: function () {
-                var metrics,
-                    chart = this.chart,
-                    swapAxes = function () {
-                        each(chart.series, function (s) {
-                            var xAxis = s.xAxis;
-                            s.xAxis = s.yAxis;
-                            s.yAxis = xAxis;
-                        });
-                    };
-
-                swapAxes();
-
-                this.yAxis.closestPointRange = 1;
-                metrics = columnType.prototype.getColumnMetrics.call(this);
-
-                swapAxes();
-
-                return metrics;
-            },
-            translate: function () {
-                columnType.prototype.translate.apply(this, arguments);
-                var series = this,
-                    xAxis = series.xAxis,
-                    yAxis = series.yAxis,
-                    metrics = series.columnMetrics;
-
-                H.each(series.points, function (point) {
-                    barWidth = xAxis.translate(H.pick(point.x2, point.x + (point.len || 0))) - point.plotX;
-                    point.shapeArgs = {
-                        x: point.plotX,
-                        y: point.plotY + metrics.offset + (point.options.yOffset || 0),
-                        width: barWidth,
-                        height: metrics.width
-                    };
-                    point.tooltipPos[0] += barWidth / 2;
-                    point.tooltipPos[1] -= metrics.width / 2;
-                });
-            }
-        });
-
-        /**
-         * Max x2 should be considered in xAxis extremes
-         */
-        H.wrap(H.Axis.prototype, 'getSeriesExtremes', function (proceed) {
-            var axis = this,
-                dataMax = Number.MIN_VALUE;
-
-            proceed.call(this);
-            if (this.isXAxis) {
-                each(this.series, function (series) {
-                    each(series.x2Data || [], function (val) {
-                        if (val > dataMax) {
-                            dataMax = val;
-                        }
-                    });
-                });
-                if (dataMax > Number.MIN_VALUE) {
-                    axis.dataMax = dataMax;
-                }
-            }
-        });
-    }(Highcharts));
 
     CS = {};
 

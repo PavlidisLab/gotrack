@@ -36,11 +36,14 @@ import javax.inject.Inject;
  * @author mjacobson
  * @version $Id$
  */
-@FacesConverter("geneConverter")
+@FacesConverter(value="geneConverter", managed = true)
 public class GeneConverter implements Converter {
 
     @Inject
     private Cache cache;
+
+    public GeneConverter() {
+    }
 
     @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String accession ) {

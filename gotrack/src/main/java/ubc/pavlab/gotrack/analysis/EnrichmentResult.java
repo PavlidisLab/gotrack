@@ -19,12 +19,20 @@
 
 package ubc.pavlab.gotrack.analysis;
 
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+
 /**
  * (Almost but not really) immutable result of GO enrichment analysis for a single term
- * 
+ *
  * @author mjacobson
- * @version $Id$
  */
+@Getter
+@Setter
+@EqualsAndHashCode(of = {"sampleAnnotated", "populationAnnotated", "sampleSize", "populationSize"})
+@ToString
 public class EnrichmentResult {
 
     private double pvalue;
@@ -34,9 +42,10 @@ public class EnrichmentResult {
     private final int populationSize;
     private int rank;
     private double fractionalRank;
+    private boolean significant;
 
     public EnrichmentResult( double pvalue, int sampleAnnotated, int populationAnnotated, int sampleSize,
-            int populationSize ) {
+                             int populationSize ) {
         super();
         this.pvalue = pvalue;
         this.sampleAnnotated = sampleAnnotated;
@@ -46,78 +55,7 @@ public class EnrichmentResult {
     }
 
     public double getExpected() {
-        return sampleSize * ( ( double ) populationAnnotated ) / populationSize;
-    }
-
-    public double getPvalue() {
-        return pvalue;
-    }
-
-    public void setPvalue( double pvalue ) {
-        this.pvalue = pvalue;
-    }
-
-    public int getRank() {
-        return rank;
-    }
-
-    public void setRank( int rank ) {
-        this.rank = rank;
-    }
-
-    public double getFractionalRank() {
-        return fractionalRank;
-    }
-
-    public void setFractionalRank( double fractionalRank ) {
-        this.fractionalRank = fractionalRank;
-    }
-
-    public int getSampleAnnotated() {
-        return sampleAnnotated;
-    }
-
-    public int getPopulationAnnotated() {
-        return populationAnnotated;
-    }
-
-    public int getSampleSize() {
-        return sampleSize;
-    }
-
-    public int getPopulationSize() {
-        return populationSize;
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + populationAnnotated;
-        result = prime * result + populationSize;
-        result = prime * result + sampleAnnotated;
-        result = prime * result + sampleSize;
-        return result;
-    }
-
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        EnrichmentResult other = ( EnrichmentResult ) obj;
-        if ( populationAnnotated != other.populationAnnotated ) return false;
-        if ( populationSize != other.populationSize ) return false;
-        if ( sampleAnnotated != other.sampleAnnotated ) return false;
-        if ( sampleSize != other.sampleSize ) return false;
-        return true;
-    }
-
-    @Override
-    public String toString() {
-        return "EnrichmentResult [pvalue=" + pvalue + ", sampleAnnotated=" + sampleAnnotated + ", populationAnnotated="
-                + populationAnnotated + ", sampleSize=" + sampleSize + ", populationSize=" + populationSize + ", rank="
-                + rank + ", fractionalRank=" + fractionalRank + "]";
+        return sampleSize * ((double) populationAnnotated) / populationSize;
     }
 
 }

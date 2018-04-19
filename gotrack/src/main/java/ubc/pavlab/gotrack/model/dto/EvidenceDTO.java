@@ -19,42 +19,20 @@
 
 package ubc.pavlab.gotrack.model.dto;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import ubc.pavlab.gotrack.model.Evidence;
 
 /**
  * Data Transfer Object for {@link Evidence}
  * 
  * @author mjacobson
- * @version $Id$
  */
+@Getter
+@RequiredArgsConstructor
 public final class EvidenceDTO {
-    private final int id;
     private final String evidence;
     private final String description;
     private final String category;
-
-    public EvidenceDTO( int id, String evidence, String description, String category ) {
-        super();
-        this.id = id;
-        this.evidence = evidence;
-        this.description = description;
-        this.category = category;
-    }
-
-    public int getId() {
-        return id;
-    }
-
-    public String getEvidence() {
-        return evidence;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public String getCategory() {
-        return category;
-    }
-
+    private final Boolean curated;
 }

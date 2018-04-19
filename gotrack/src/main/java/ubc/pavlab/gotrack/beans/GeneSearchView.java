@@ -19,7 +19,7 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import jersey.repackaged.com.google.common.collect.Lists;
+import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.search.GeneMatch;

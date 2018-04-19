@@ -1,10 +1,11 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml"
-      xmlns:h="http://java.sun.com/jsf/html"
-      xmlns:f="http://java.sun.com/jsf/core"
-      xmlns:ui="http://java.sun.com/jsf/facelets"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
       xmlns:p="http://primefaces.org/ui"
+      xmlns:o="http://omnifaces.org/ui"
 >
 
 <f:view contentType="text/html">
@@ -23,7 +24,7 @@
         <meta http-equiv="Expires" content="0"/>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta name="description"
-              content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms."/>
+              content="GOtrack: Track changes to the Gene Ontology and GO gene annotations."/>
 
         <meta name="keywords"
               content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software"/>
@@ -37,6 +38,7 @@
     <h:body id="body" onload="onLoad()">
         <p:layout fullPage="true" onResize="centerResize()">
             <p:growl id="globalGrowl" globalOnly="true" autoUpdate="true" life="5000" escape="false"/>
+            <p:growl widgetVar="stickyGrowl" escape="false" sticky="true" showDetail="true" for="betaMessage"/>
             <p:layoutUnit id="top" position="north" size="50">
                 <h:form id="topForm">
                     <p:menubar toggleEvent="click" style="border: 1px solid transparent">
@@ -50,9 +52,11 @@
                                     icon="fa fa-bar-chart"/>
                         <p:menuitem value="Global Trends" outcome="/trends.xhtml"
                                     icon="fa fa-globe"/>
-                        <!-- 						<p:menuitem value="&nbsp; Tutorial" outcome="/about.xhtml" icon="fa fa-question-circle" styleClass="right-border" />
-                                                <p:menuitem value="&nbsp; Documentation" outcome="/documentation.xhtml" icon="fa fa-book" styleClass="right-border" />
-                                                <p:menuitem value="&nbsp; Resources" outcome="/resources.xhtml" icon="fa fa-info-circle" styleClass="right-border" /> -->
+                        <p:menuitem value="Downloads" outcome="/downloads.xhtml"
+                                    icon="fa fa-download"/>
+                        <p:menuitem value="About" outcome="/about.xhtml"
+                                    icon="fa fa-question-circle"/>
+
                         <f:facet name="options">
                             <p:commandButton type="button" icon="fa fa-terminal" onclick="showTerminal()"
                                              rendered="#{facesContext.application.projectStage != 'Production'}"/>
@@ -62,21 +66,33 @@
             </p:layoutUnit>
 
             <p:layoutUnit id="bottom" position="south" size="40">
-                <p id="bottom-footer" class="center">
-                    &copy; Michael Smith Laboratories, 2016 <p:link outcome="/terms.xhtml">Terms and Conditions</p:link>
+                <p id="bottom-footer" class="center" style="position:absolute;margin:auto;height:1em;top:0;left:0;right:0;bottom:0;">
+                    &copy; Michael Smith Laboratories, 2016-2018 <p:link outcome="/about.xhtml">About</p:link>
                 </p>
             </p:layoutUnit>
 
             <ui:insert name="left_right_layout"/>
 
             <p:layoutUnit id="center" position="center">
-                <p:messages for="betaMessage" closable="true"/>
+                <!--<p:messages for="betaMessage" closable="true"/>-->
 
                 <ui:insert name="center_layout"/>
 
             </p:layoutUnit>
 
         </p:layout>
+
+        <o:socket channel="sessionTimeout" scope="session" onclose="sessionScopedSocketCloseListener" onmessage="socketListener" />
+        <script type="text/javascript">
+            function sessionScopedSocketCloseListener(code) {
+                if (code == 1000) {
+                    PF("stickyGrowl").renderMessage({severity: "warn", summary: "Session has expired!", detail: "Please refresh the page." });
+                }
+            }
+            function socketListener(message, channel, event) {
+                console.log(message);
+            }
+        </script>
 
         <ui:insert name="dialogs"/>
 

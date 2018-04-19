@@ -15,12 +15,12 @@ table.no-border, table.no-border tr, table.no-border td {
     line-height: 16px;
 }
 
-#left li.ui-datalist-item > span {
+#left li.ui-datalist-item > span, #left li.ui-datalist-item > a {
     display: inline-block;
     vertical-align: middle;
 }
 
-#left li.ui-datalist-item > a {
+#left li.ui-datalist-item > a.ui-icon {
     display: inline-block;
     vertical-align: sub;
     margin-right: 10px;
@@ -121,7 +121,7 @@ button.smallBtn > span.fa {
 	margin-top:-6px;
 } */
 
-tr.ui-widget-content.significant td:nth-last-child(2) {
+tr.ui-widget-content.significant td:nth-last-child(3) {
     background: #DCF9D4;
 }
 
@@ -214,11 +214,6 @@ tr.ui-widget-content.significant td:nth-last-child(2) {
     background: #E47C84;
 }
 
-div.ui-overlaypanel-content {
-    width: 600px;
-    text-align: left;
-}
-
 div.options-overlay > div.ui-overlaypanel-content {
     width: 400px;
 }
@@ -253,20 +248,4 @@ div.ui-datatable-header table > tbody > tr.ui-widget-content {
 
 #formSelect > div.ui-datalist ul {
     padding-left: 5px;
-}
-
-.chart-container {
-    width: 49%;
-    display: inline-block;
-    padding-bottom: 15px;
-}
-
-button.ui-button.absoluteBtn {
-    position: absolute;
-}
-
-button.ui-button.absoluteBtn > span {
-    left: 5px;
-    top: 5px;
-    z-index: 99999;
 }

@@ -3,12 +3,12 @@
         PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
         "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en"
-      xmlns:h="http://java.sun.com/jsf/html"
-      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:h="http://xmlns.jcp.org/jsf/html"
+      xmlns:f="http://xmlns.jcp.org/jsf/core"
       xmlns:p="http://primefaces.org/ui"
       xmlns:of="http://omnifaces.org/functions"
-      xmlns:composite="http://java.sun.com/jsf/composite"
-      xmlns:comps="http://java.sun.com/jsf/composite/composites"
+      xmlns:composite="http://xmlns.jcp.org/jsf/composite"
+      xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites"
 >
 <composite:interface>
 
@@ -22,25 +22,23 @@
 <composite:implementation>
     <p:dataTable id="enrichmentTable" widgetVar="tableEnrichmentWdg"
                  var="entry" value="#{cc.attrs.value}"
-                 sortMode="multiple" style="margin-bottom:0"
+                 sortMode="multiple" style="margin-bottom:0;max-height: 225px;"
                  emptyMessage="No enrichment data found for selected edition"
                  filteredValue="#{cc.attrs.filteredValue}"
-                 rowStyleClass="#{entry.significant == true ? 'significant' : 'not-significant'}"
+                 rowStyleClass="#{entry.result.significant == true ? 'significant' : 'not-significant'}"
                  styleClass="ui-table-exporter-align-right ui-table-graph-float-left"
-                 scrollable="true" scrollHeight="300"
+                 scrollable="true"
                  selectionMode="multiple"
                  selection="#{cc.attrs.selection}"
                  rowKey="#{entry.term.goId}"
                  liveScroll="true"
-                 scrollRows="25">
+                 scrollRows="25"
+                 resizableColumns="true">
         <p:ajax event="filter"
                 oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))"/>
+        <p:ajax event="rowSelect" update=":formEnrich:createRankChartBySelected :formEnrich:createPValueChartBySelected" />
+        <p:ajax event="rowUnselect" update=":formEnrich:createRankChartBySelected :formEnrich:createPValueChartBySelected" />
 
-        <f:facet name="header">
-            <p:outputPanel id="headerPanel" rendered="#{cc.attrs.header != null}">
-                <h:outputText value="#{cc.attrs.header}"/>
-            </p:outputPanel>
-        </f:facet>
 
         <f:facet name="footer">
             <!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->
@@ -71,16 +69,50 @@
         </f:facet>
 
         <p:column style="width:10px;" exportable="false">
+            <f:facet name="header">
+                <p:overlayPanel for="rowexpansionHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                            <p><b>&lt;Click&gt;</b> on <span class="ui-icon ui-icon-circle-triangle-e"></span> to view more details, such as which genes in your hit list are associated with the term.</p>
+
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="rowexpansionHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top; margin-left: -4px;"/>
+            </f:facet>
             <p:rowToggler/>
         </p:column>
         <p:column filterBy="#{entry.term.goId}"
-                  filterMatchMode="contains" sortBy="#{entry.term.goId}"
-                  headerText="Id" style="width:120px;" exportable="false">
+                  filterMatchMode="contains"
+                  sortBy="#{entry.term.goId}"
+                  style="width:100px;"
+                  exportable="false">
+            <f:facet name="header">
+                <p:overlayPanel for="goidHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>
+                            Gene Ontology Id.
+                        </p>
+                        <p>
+                            <b>&lt;Click&gt;</b> on <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;"/> to view the term's QuickGO entry.
+                        </p>
+                        <p>
+                            <b>&lt;Click&gt;</b> on <span class="ui-icon fa fa-sitemap"></span> to view the term's ancestry chart, <b>NOTE</b>: we do not propagate across aspects whereas QuickGo does.
+                        </p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="goidHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Id"/>
+            </f:facet>
             <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{entry.term.goId}"
                target="_blank" style="text-decoration: none;">
                 <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
             </a>
-            <p:commandLink actionListener="#{geneView.fetchTermGraph(entry.term)}"
+            <p:commandLink action="#{graphFactory.fetchGraph(entry.term)}"
                            oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
                 <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
             </p:commandLink>
@@ -91,9 +123,24 @@
         <p:column headerText="Id" style="display: none;">
             <h:outputText value="#{entry.term.goId}"/>
         </p:column>
-        <p:column filterBy="#{entry.term.aspect}" filterMatchMode="in"
-                  sortBy="#{entry.term.aspect}" headerText="Aspect"
-                  style="width:150px;">
+        <p:column filterBy="#{entry.term.aspect}"
+                  filterMatchMode="in"
+                  sortBy="#{entry.term.aspect}"
+                  style="width:120px;">
+            <f:facet name="header">
+                <p:overlayPanel for="aspectHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>
+                            One of Biological Process, Cellular Component, or Molecular Function.
+                        </p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="aspectHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Aspect"/>
+            </f:facet>
             <f:facet name="filter">
                 <p:selectManyButton
                         onchange="PF('tableEnrichmentWdg').filter()"
@@ -105,34 +152,91 @@
             <h:outputText value="#{entry.term.aspect.label}"/>
         </p:column>
         <p:column filterBy="#{entry.term.name}"
-                  filterMatchMode="contains" sortBy="#{entry.term.name}"
-                  headerText="Name" style="width:500px;">
+                  filterMatchMode="contains"
+                  sortBy="#{entry.term.name}">
+            <f:facet name="header">
+                <p:overlayPanel for="termnameHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>
+                            Short description of the given term.
+                        </p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="termnameHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Name"/>
+            </f:facet>
             <h:outputText value="#{entry.term.name}"/>
         </p:column>
 
         <p:column filterBy="#{entry.result.populationAnnotated}"
-                  headerText="Set Size"
                   sortBy="#{entry.result.populationAnnotated}"
                   filterFunction="#{enrichmentView.filterByNumberLT}"
-                  style="width:70px;">
+                  style="width:80px;">
+            <f:facet name="header">
+                <p:overlayPanel for="popannotatedHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>
+                            Number of genes in the background (all annotated genes) that are annotated with the given term.
+                        </p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="popannotatedHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Pop. Hits"/>
+            </f:facet>
             <h:outputText value="#{entry.result.populationAnnotated}">
                 <f:convertNumber type="number"/>
             </h:outputText>
         </p:column>
 
+
+
         <p:column filterBy="#{entry.result.sampleAnnotated}"
-                  headerText="Hits" sortBy="#{entry.result.sampleAnnotated}"
+                  sortBy="#{entry.result.sampleAnnotated}"
                   filterFunction="#{enrichmentView.filterByNumberLT}"
                   style="width:60px;">
+            <f:facet name="header">
+                <p:overlayPanel for="hitsHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>
+                            Number of genes in the hit list annotated with the given term.
+                        </p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="hitsHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Hits"/>
+            </f:facet>
             <h:outputText value="#{entry.result.sampleAnnotated}">
                 <f:convertNumber type="number"/>
             </h:outputText>
         </p:column>
 
-        <p:column filterBy="#{entry.result.pvalue}" headerText="P-Value"
+        <p:column filterBy="#{entry.result.pvalue}"
                   sortBy="#{entry.result.pvalue}"
                   filterFunction="#{enrichmentView.filterByNumberLT}"
-                  style="width:120px;">
+                  style="width:80px;">
+            <f:facet name="header">
+                <p:overlayPanel for="pvalueHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>
+                            P-Value (after correction if Bonferroni). Highlighted green if the term is significant in the selected edition.
+                        </p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="pvalueHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="P-Value"/>
+            </f:facet>
             <h:outputText value="#{entry.result.pvalue}"
                           rendered="#{entry.result.pvalue lt 0.0001}">
                 <f:convertNumber type="number" pattern="#.##E0"/>
@@ -143,18 +247,75 @@
             </h:outputText>
         </p:column>
 
-        <p:column filterBy="#{entry.stability.score}" headerText="Recent Stability"
+        <p:column filterBy="#{entry.stability.pastSignificancePercentage}"
+                  sortBy="#{entry.stability.pastSignificancePercentage}"
+                  filterFunction="#{enrichmentView.filterByNumberLT}"
+                  style="width:120px;">
+            <f:facet name="header">
+                <p:overlayPanel for="recentsignificanceHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>Percentage of the past 24 editions that this term was significant.</p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="recentsignificanceHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Past Significance"/>
+            </f:facet>
+            <h:outputText value="#{entry.stability.pastSignificancePercentage}" rendered="#{entry.stability.pastSignificancePercentage != 'NaN'}">
+                <f:convertNumber type="percent"/>
+            </h:outputText>
+            <h:outputText value="No Data" rendered="#{entry.stability.pastSignificancePercentage == 'NaN'}"/>
+        </p:column>
+
+        <p:column filterBy="#{entry.stability.score}"
                   sortBy="#{entry.stability.score}"
                   filterFunction="#{enrichmentView.filterByNumberLT}"
                   style="width:120px;"
                   styleClass="stability-gradient stability-gradient#{entry.stabilityQuantile}">
-            <p:commandLink actionListener="#{enrichmentView.createStabilityChart(entry.term)}"
-                           oncomplete="PF('enrichmentChartWdg').show();handleGraphSelected(xhr, status, args);">
+            <f:facet name="header">
+                <p:overlayPanel for="recentStabilityHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>Metric representing the variability of the term's p-value in its recent past.</p>
+                        <p>
+                            This is calculated using <i>six month rolling regressions</i> on the historical changes in
+                            'Pop. Hits' and 'Hits'. Given the results of these regressions we use their 95% confidence
+                            intervals to calculate a 95% confidence interval around the p-value. This range is then used
+                            to calculate the negative log of the coefficient of variation with respect to that edition's
+                            significance cutoff to get the stability score.
+                        </p>
+                        <p>
+                            The stability score typically ranges between -10 and 10 with 10 being more
+                            stable than -10.
+                        </p>
+                        <p>
+                            A score of <b>No Change</b> means we saw no significant variation in both
+                            Pop. Hits and Hits over its recent past (keep in mind this does <b>not</b> mean the p-value
+                            is constant).
+                        </p>
+                        <p>A score of <b>No Data</b> means there was not enough available.</p>
+                        <p>
+                            <b>&lt;Click&gt;</b> on <span class="ui-icon fa fa-line-chart"></span> to plot the term's
+                            p-value and 95% confidence interval over its history.
+                        </p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="recentStabilityHelpBtn" value=""
+                                 styleClass="no-value no-background fa-fix noupdate"
+                                 icon="fa fa-question-circle" type="button"
+                                 style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="Recent Stability"/>
+            </f:facet>
+            <p:commandLink action="#{enrichmentView.createStabilityChart(entry.term)}"
+                           oncomplete="PF('stabilityChartWdg').show();handleGraphStabilityChart(args);">
                 <i class="fa fa-line-chart emphasize-hover" style="margin-right: 5px;"/>
             </p:commandLink>
-            <h:outputText value="#{entry.stability.score}">
+            <h:outputText value="#{entry.stability.score}" rendered="#{entry.stability.score != 'NaN' and entry.stability.score != 'Infinity'}">
                 <f:convertNumber type="number"/>
             </h:outputText>
+            <h:outputText value="No Data" rendered="#{entry.stability.score == 'NaN'}"/>
+            <h:outputText value="No Change" rendered="#{entry.stability.score == 'Infinity'}"/>
         </p:column>
 
         <p:rowExpansion>
@@ -163,53 +324,54 @@
                     <p:tab title="Details">
                         <p:panelGrid columns="2">
 
-                            <h:outputText value="Population Size"/>
+
+                            <h:outputText value="Population Size" title="# genes in the background (all annotated genes)."/>
                             <h:outputText
                                     value="#{entry.result.populationSize}"
                                     styleClass="sqlDialogText"/>
 
-                            <h:outputText value="# Population Annotated"/>
+                            <h:outputText value="# Population Annotated" title="# genes in the background (all annotated genes) that are annotated with the given term."/>
                             <h:outputText
                                     value="#{entry.result.populationAnnotated}"
                                     styleClass="sqlDialogText"/>
 
-                            <h:outputText value="Hit List Size"/>
+                            <h:outputText value="Hit List Size" title="# genes from your hit list available in this edition."/>
                             <h:outputText
                                     value="#{entry.result.sampleSize}"
                                     styleClass="sqlDialogText"/>
 
-                            <h:outputText value="# Hit List Annotated"/>
+                            <h:outputText value="# Hit List Annotated" title="# genes in the hit list annotated with the given term."/>
                             <h:outputText
                                     value="#{entry.result.sampleAnnotated}"
                                     styleClass="sqlDialogText"/>
 
-                            <h:outputText value="# Hit List Expected"/>
+                            <h:outputText value="# Hit List Expected" title="Expected # of genes to be annotated in your hit list given random sampling from population."/>
                             <h:outputText
                                     value="#{entry.result.expected}"
                                     styleClass="sqlDialogText">
                                 <f:convertNumber type="number" pattern="#.##E0"/>
                             </h:outputText>
 
-                            <h:outputText value="Rank"/>
+                            <h:outputText value="Rank" title="Fractional rank of this terms p-value in this edition."/>
                             <h:outputText
                                     value="#{entry.result.fractionalRank}"
                                     styleClass="sqlDialogText"/>
 
-                            <h:outputText value="P-Value"/>
+                            <h:outputText value="P-Value" title="P-value in this edition."/>
                             <h:outputText
                                     value="#{entry.result.pvalue}"
                                     styleClass="sqlDialogText">
                                 <f:convertNumber type="number" pattern="#.##E0"/>
                             </h:outputText>
 
-                            <h:outputText value="Stability Score"/>
+                            <h:outputText value="Stability Score" title="Recent stability score."/>
                             <h:outputText
                                     value="#{entry.stability.score}"
                                     styleClass="sqlDialogText">
                                 <f:convertNumber type="number"/>
                             </h:outputText>
 
-                            <h:outputText value="Stability Score Avg"/>
+                            <h:outputText value="Stability Score Avg" title="Mean stability score up to this edition."/>
                             <h:outputText
                                     value="#{entry.stability.averageScore}"
                                     styleClass="sqlDialogText">

@@ -19,39 +19,27 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.log4j.Logger;
-
 import gnu.trove.map.hash.TObjectDoubleHashMap;
 import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.hashkey.HyperUCFKey;
+
+import java.util.*;
 
 /**
  * Calculates scores which attempt to explore the stability of gene set enrichment analyses results over time.
  * 
  * 
  * @author mjacobson
- * @version $Id$
  */
 public class StabilityAnalysis {
 
-    private static final Logger log = Logger.getLogger( StabilityAnalysis.class );
-
     private final Map<GeneOntologyTerm, Map<Edition, StabilityScore>> stabilityScores;
+
+    private static final int SIGNIFICANCE_QUEUE_SIZE = 24;
 
     /**
      * @param analysis results of enrichment analysis
-     * @param TOP_N_JACCARD number of top terms to use for top N series
-     * @param scm compare method to be used in the analysis
-     * @param cache Cache bean in order to access propagation needed for parent similarity, null to leave out parent
-     *        similarity
      */
     public StabilityAnalysis( EnrichmentAnalysis analysis ) {
 
@@ -97,6 +85,14 @@ public class StabilityAnalysis {
                 }
             };
 
+            // Queue to hold the previous 24 editions and if they were significant
+            LinkedHashMap<Edition, Boolean> significanceQueue = new LinkedHashMap<Edition, Boolean>() {
+                @Override
+                protected boolean removeEldestEntry( Map.Entry<Edition, Boolean> eldest ) {
+                    return this.size() > SIGNIFICANCE_QUEUE_SIZE;
+                }
+            };
+
             // holds previous result for comparison purposes
             EnrichmentResult previousResult = null;
 
@@ -106,10 +102,18 @@ public class StabilityAnalysis {
 
             // iterate over editions in order
             for ( Edition ed : orderedEditions ) {
+
+                // P-Value cutoff for significance
+                Double cutoff = analysis.getCutoff( ed );
+
                 EnrichmentResult er = data.get( ed );
                 if ( er != null ) {
                     if ( previousResult != null ) {
                         // if the term was significant in this edition and there is a previous edition to compare against
+
+                        // Compute % past 24 editions this term was significant
+                        significanceQueue.put( ed, er.isSignificant() );
+                        double pastPercentSignificant = (double) significanceQueue.values().stream().filter( p -> p ).count() / significanceQueue.size();
 
                         // holds changes in the two statistics we are interested in: sample and population annotated
                         // int r, int m
@@ -166,26 +170,16 @@ public class StabilityAnalysis {
                         }
 
                         // calculate scores (very similar to a coefficient of variation)
-                        double score = ( maxp - minp ) / er.getPvalue();
+                        double score = ( maxp - minp ) / cutoff;
                         runningScore += score;
                         runningScoreCnt++;
 
-                        scores.put( ed, new StabilityScore( b[0], b[1], minp, maxp, Math.log( score ),
-                                Math.log( runningScore / runningScoreCnt ) ) );
-
-                        //                        if ( er.getPvalue() > maxp || er.getPvalue() < minp ) {
-                        //                            log.debug( t.getGoId() );
-                        //                            log.debug( ed.getEdition() );
-                        //                            log.debug( er );
-                        //                            log.debug( Arrays.toString( a ) );
-                        //                            log.debug( Arrays.toString( b ) );
-                        //                            log.debug( Arrays.toString( new int[] { rMin, rMax, mMin, mMax } ) );
-                        //
-                        //                        }
+                        scores.put( ed, new StabilityScore( b[0], b[1], minp, maxp, -Math.log( score ),
+                                -Math.log( runningScore / runningScoreCnt ), pastPercentSignificant ) );
 
                     } else {
                         scores.put( ed,
-                                new StabilityScore( -1, -1, er.getPvalue(), er.getPvalue(), Double.NaN, Double.NaN ) );
+                                new StabilityScore( -1, -1, er.getPvalue(), er.getPvalue(), Double.NaN, Double.NaN, Double.NaN ) );
                     }
                     previousResult = er;
                 }
@@ -203,10 +197,7 @@ public class StabilityAnalysis {
     /**
      * Alter contingency table to make physical sense
      * 
-     * @param r sampleAnnotated
-     * @param m populationAnnotated
-     * @param k sampleSize
-     * @param t populationSize (N+M)
+     * @param arr sampleAnnotated, populationAnnotated, sampleSize, populationSize
      * @return if, after previously having changed r and/or m, the numbers make physical sense
      */
     private static boolean fixParameters( int[] arr ) {

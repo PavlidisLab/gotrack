@@ -29,16 +29,19 @@ import org.junit.*;
 import org.mockito.Mockito;
 import ubc.pavlab.gotrack.BaseTest;
 import ubc.pavlab.gotrack.model.Accession;
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Gene.GeneBuilder;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.dto.*;
+import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.utilities.Tuples;
 import ubc.pavlab.gotrack.utilities.Tuples.Tuple3;
 
 import java.sql.Date;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *
@@ -339,31 +342,39 @@ public class AnnotationDAOTest extends BaseTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    public void testCategoryCounts() {
-        List<CategoryCountDTO> res = annotationDAO.categoryCountsRangeDates( "GO:0007005",
+    public void testEvidenceCounts() {
+        List<EvidenceCountDTO> res = annotationDAO.categoryCountsRangeDates( "GO:0007005",
                 java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) );
 
         List<Tuple3<Date, String, Integer>> records = Lists.newArrayList();
 
-        for ( CategoryCountDTO dto : res ) {
-            records.add( Tuples.tuple3( dto.getDate(), dto.getCategory(), dto.getCount() ) );
+        for ( EvidenceCountDTO dto : res ) {
+            records.add( Tuples.tuple3( dto.getDate(), dto.getEvidence(), dto.getCount() ) );
         }
 
         Assert.assertThat( records,
-                Matchers.containsInAnyOrder( Tuples.tuple3( Date.valueOf( "2015-04-27" ), "Author", 2 ),
-                        Tuples.tuple3( Date.valueOf( "2015-04-27" ), "Computational", 11 ),
-                        Tuples.tuple3( Date.valueOf( "2015-04-27" ), "Experimental", 9 ),
-                        Tuples.tuple3( Date.valueOf( "2015-05-26" ), "Author", 1 ),
-                        Tuples.tuple3( Date.valueOf( "2015-05-26" ), "Experimental", 5 ),
-                        Tuples.tuple3( Date.valueOf( "2015-06-02" ), "Author", 1 ),
-                        Tuples.tuple3( Date.valueOf( "2015-06-02" ), "Computational", 11 ),
-                        Tuples.tuple3( Date.valueOf( "2015-06-02" ), "Experimental", 4 ),
-                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "Author", 2 ),
-                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "Computational", 11 ),
-                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "Experimental", 9 ),
-                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Author", 2 ),
-                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Computational", 11 ),
-                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Experimental", 9 ) ) );
+                Matchers.containsInAnyOrder( Tuples.tuple3( Date.valueOf( "2015-04-27" ), "IDA", 6 ),
+                        Tuples.tuple3( Date.valueOf( "2015-04-27" ), "IMP", 3 ),
+                        Tuples.tuple3( Date.valueOf( "2015-04-27" ), "ISO", 9 ),
+                        Tuples.tuple3( Date.valueOf( "2015-04-27" ), "ISS", 2 ),
+                        Tuples.tuple3( Date.valueOf( "2015-04-27" ), "NAS", 2 ),
+                        Tuples.tuple3( Date.valueOf( "2015-05-26" ), "IDA", 2 ),
+                        Tuples.tuple3( Date.valueOf( "2015-05-26" ), "IMP", 3 ),
+                        Tuples.tuple3( Date.valueOf( "2015-05-26" ), "NAS", 1 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-02" ), "IDA", 4 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-02" ), "ISO", 9 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-02" ), "ISS", 2 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-02" ), "NAS", 1 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "IDA", 6 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "IMP", 3 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "ISO", 9 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "ISS", 2 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "NAS", 2 ),
+                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "IDA", 6 ),
+                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "IMP", 3 ),
+                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "ISO", 9 ),
+                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "ISS", 2 ),
+                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "NAS", 2 ) ) );
 
         res = annotationDAO.categoryCountsRangeDates( "GO:0008150",
                 java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) ); // BP
@@ -374,15 +385,15 @@ public class AnnotationDAOTest extends BaseTest {
 
         records = Lists.newArrayList();
 
-        for ( CategoryCountDTO dto : res ) {
-            records.add( Tuples.tuple3( dto.getDate(), dto.getCategory(), dto.getCount() ) );
+        for ( EvidenceCountDTO dto : res ) {
+            records.add( Tuples.tuple3( dto.getDate(), dto.getEvidence(), dto.getCount() ) );
         }
 
         Assert.assertThat( records,
-                Matchers.containsInAnyOrder( Tuples.tuple3( Date.valueOf( "2015-04-27" ), "Curatorial", 1 ),
-                        Tuples.tuple3( Date.valueOf( "2015-05-26" ), "Curatorial", 1 ),
-                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "Curatorial", 1 ),
-                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "Curatorial", 1 ) ) );
+                Matchers.containsInAnyOrder( Tuples.tuple3( Date.valueOf( "2015-04-27" ), "ND", 1 ),
+                        Tuples.tuple3( Date.valueOf( "2015-05-26" ), "ND", 1 ),
+                        Tuples.tuple3( Date.valueOf( "2015-06-22" ), "ND", 1 ),
+                        Tuples.tuple3( Date.valueOf( "2015-07-20" ), "ND", 1 ) ) );
 
         res = annotationDAO.categoryCountsRangeDates( "",
                 java.sql.Date.valueOf( "2015-01-01" ),  java.sql.Date.valueOf( "2016-01-01" ) );
@@ -396,48 +407,113 @@ public class AnnotationDAOTest extends BaseTest {
 
     }
 
-    @SuppressWarnings("unchecked")
+    @Test
+    public void testSingleSpeciesEvidenceCounts() {
+        Species human = new Species( 7, "Human", "", 9606, null );
+        Species mouse = new Species( 8, "Mouse", "", 10090, null );
+
+        List<Tuple3<Integer, String, Integer>> records = annotationDAO.categoryCountsSingleSpeciesRangeEditions( "GO:0007005", human,
+                144, 147 ).stream()
+                .map( dto -> Tuples.tuple3( dto.getEdition(), dto.getEvidence(), dto.getCount() ) )
+                .collect( Collectors.toList() );
+
+        Assert.assertThat( records,
+                Matchers.containsInAnyOrder( Tuples.tuple3( 144, "IDA", 2 ),
+                        Tuples.tuple3( 144, "IMP", 3 ),
+                        Tuples.tuple3( 144, "NAS", 1 ),
+                        Tuples.tuple3( 145, "IDA", 2 ),
+                        Tuples.tuple3( 145, "IMP", 3 ),
+                        Tuples.tuple3( 145, "NAS", 1 ),
+                        Tuples.tuple3( 146, "IDA", 2 ),
+                        Tuples.tuple3( 146, "IMP", 3 ),
+                        Tuples.tuple3( 146, "NAS", 1 ),
+                        Tuples.tuple3( 147, "IDA", 2 ),
+                        Tuples.tuple3( 147, "IMP", 3 ),
+                        Tuples.tuple3( 147, "NAS", 1 ) ) );
+
+        records = annotationDAO.categoryCountsSingleSpeciesRangeEditions( "GO:0007005", mouse,
+                130, 133 ).stream()
+                .map( dto -> Tuples.tuple3( dto.getEdition(), dto.getEvidence(), dto.getCount() ) )
+                .collect( Collectors.toList() );
+
+        Assert.assertThat( records,
+                Matchers.containsInAnyOrder( Tuples.tuple3( 130, "IDA", 4 ),
+                        Tuples.tuple3( 130, "ISO", 9 ),
+                        Tuples.tuple3( 130, "ISS", 2 ),
+                        Tuples.tuple3( 130, "NAS", 1 ),
+                        Tuples.tuple3( 131, "IDA", 4 ),
+                        Tuples.tuple3( 131, "ISO", 9 ),
+                        Tuples.tuple3( 131, "ISS", 2 ),
+                        Tuples.tuple3( 131, "NAS", 1 ),
+                        Tuples.tuple3( 132, "IDA", 4 ),
+                        Tuples.tuple3( 132, "ISO", 9 ),
+                        Tuples.tuple3( 132, "ISS", 2 ),
+                        Tuples.tuple3( 132, "NAS", 1 ),
+                        Tuples.tuple3( 133, "IDA", 4 ),
+                        Tuples.tuple3( 133, "ISO", 9 ),
+                        Tuples.tuple3( 133, "ISS", 2 ),
+                        Tuples.tuple3( 133, "NAS", 1 ) ) );
+
+        Assert.assertThat( annotationDAO.categoryCountsSingleSpeciesRangeEditions( "GO:0008150", human,
+                144,  145 ).size(), Matchers.is( 0 ) );
+
+        records = annotationDAO.categoryCountsSingleSpeciesRangeEditions( "GO:0003674", human,
+                144, 145 ).stream()
+                .map( dto -> Tuples.tuple3( dto.getEdition(), dto.getEvidence(), dto.getCount() ) )
+                .collect( Collectors.toList() );
+
+        Assert.assertThat( records,
+                Matchers.containsInAnyOrder( Tuples.tuple3( 144, "ND", 1 ),
+                        Tuples.tuple3( 145, "ND", 1 ) ) );
+
+        Assert.assertThat( annotationDAO.categoryCountsSingleSpeciesRangeEditions( "", human,
+                144,  147 ).size(), Matchers.is( 0 ) );
+
+        Assert.assertThat( annotationDAO.categoryCountsSingleSpeciesRangeEditions( null, human,
+                144, 147 ).size(), Matchers.is( 0 ) );
+
+    }
+
     @Test
     public void testDirectGeneCounts() {
-        List<DirectAnnotationCountDTO> res = annotationDAO.directGeneCountsAllEditions( "GO:0007005" );
+        Species human = new Species( 7, "Human", "", 9606, null );
+        Species mouse = new Species( 8, "Mouse", "", 10090, null );
 
-        List<Tuple3<Integer, Integer, Integer>> records = Lists.newArrayList();
+        Edition edMock1 = Mockito.mock(Edition.class);
+        Mockito.when( edMock1.getEdition() ).thenReturn( 145 );
+        Mockito.when( edMock1.getSpecies() ).thenReturn( human );
+        Edition edMock2 = Mockito.mock(Edition.class);
+        Mockito.when( edMock2.getEdition() ).thenReturn( 131 );
+        Mockito.when( edMock2.getSpecies() ).thenReturn( mouse );
 
-        for ( DirectAnnotationCountDTO dto : res ) {
-            records.add( Tuples.tuple3( dto.getSpecies(), dto.getEdition(), dto.getCount() ) );
-        }
+        List<String> res = annotationDAO.directGenesSingleEdition( new GeneOntologyTerm( "GO:0007005" ), edMock1 );
 
-        Assert.assertThat( records,
-                Matchers.containsInAnyOrder( Tuples.tuple3( 7, 144, 4 ),
-                        Tuples.tuple3( 7, 145, 4 ),
-                        Tuples.tuple3( 7, 146, 4 ),
-                        Tuples.tuple3( 7, 147, 4 ),
-                        Tuples.tuple3( 8, 130, 9 ),
-                        Tuples.tuple3( 8, 131, 9 ),
-                        Tuples.tuple3( 8, 132, 9 ),
-                        Tuples.tuple3( 8, 133, 9 ) ) );
+        Assert.assertThat( res.size(), Matchers.is( 4 ) );
+        Assert.assertThat( res, Matchers.containsInAnyOrder( "O60313", "P36776", "Q96CQ1", "Q9BSK2" ) );
 
-        res = annotationDAO.directGeneCountsAllEditions( "GO:0007568" );
+        res = annotationDAO.directGenesSingleEdition( new GeneOntologyTerm( "GO:0007005" ), edMock2 );
 
-        records = Lists.newArrayList();
+        Assert.assertThat( res.size(), Matchers.is( 9 ) );
+        Assert.assertThat( res, Matchers.containsInAnyOrder(
+                "D6RH79",
+                "E0CXD1",
+                "F6R114",
+                "F6U775",
+                "H7BX01",
+                "P58281",
+                "Q3TZX3",
+                "Q8BZJ4",
+                "Q922G0"
+        ) );
 
-        for ( DirectAnnotationCountDTO dto : res ) {
-            records.add( Tuples.tuple3( dto.getSpecies(), dto.getEdition(), dto.getCount() ) );
-        }
+        res = annotationDAO.directGenesSingleEdition( new GeneOntologyTerm( "GO:0007568" ), edMock1 );
 
-        Assert.assertThat( records,
-                Matchers.containsInAnyOrder( Tuples.tuple3( 7, 144, 1 ),
-                        Tuples.tuple3( 7, 145, 1 ),
-                        Tuples.tuple3( 7, 146, 1 ),
-                        Tuples.tuple3( 7, 147, 1 ) ) );
+        Assert.assertThat( res.size(), Matchers.is( 1 ) );
+        Assert.assertThat( res, Matchers.containsInAnyOrder( "P36776" ) );
 
-        res = annotationDAO.directGeneCountsAllEditions( "" );
-
+        res = annotationDAO.directGenesSingleEdition( null, edMock1 );
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
-        res = annotationDAO.directGeneCountsAllEditions( null );
-
-        Assert.assertThat( res.size(), Matchers.is( 0 ) );
     }
 
 }

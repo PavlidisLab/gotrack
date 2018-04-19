@@ -35,11 +35,15 @@ import javax.inject.Inject;
  *
  * @author mjacobson
  */
-@FacesConverter("speciesConverter")
+@FacesConverter(value = "speciesConverter", managed = true)
 public class SpeciesConverter implements Converter {
 
     @Inject
     private Cache cache;
+
+    // Required for CDI injection
+    public SpeciesConverter() {
+    }
 
     @Override
     public Object getAsObject( FacesContext fc, UIComponent uic, String value ) {

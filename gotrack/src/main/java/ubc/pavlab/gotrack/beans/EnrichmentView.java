@@ -19,11 +19,11 @@
 
 package ubc.pavlab.gotrack.beans;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import jersey.repackaged.com.google.common.collect.Lists;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.java.Log;
@@ -42,20 +42,20 @@ import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.search.GeneMatch;
 import ubc.pavlab.gotrack.model.table.EnrichmentTableValues;
-import ubc.pavlab.gotrack.model.visualization.Graph;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.SessionScoped;
 import javax.faces.application.FacesMessage;
 import javax.faces.application.ProjectStage;
 import javax.faces.context.FacesContext;
-import javax.faces.event.ActionEvent;
 import javax.inject.Inject;
 import javax.inject.Named;
 import java.io.Serializable;
 import java.sql.Date;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * View bean based around the enrichment functionality of GOTrack.
@@ -112,6 +112,7 @@ public class EnrichmentView implements Serializable {
 
     // Similarity Settings
     private static final int TOP_N_JACCARD = 5; // Number of terms to use in the similarity top N
+    private static final int TOP_N_ENRICHMENT_CHART = 10; // Number of terms to use in the top N enrichment charts
 
     @Inject
     private Cache cache;
@@ -151,9 +152,20 @@ public class EnrichmentView implements Serializable {
     @Getter
     EnrichmentAnalysisOptions enrichmentOptions = new EnrichmentAnalysisOptions();
 
+    // Date selection properties ***************
+
     @Getter
     @Setter
-    private SimilarityCompareMethod similarityCompareMethod = SimilarityCompareMethod.CURRENT; // Method to use in the similarity analysis
+    private Integer similarityReferenceYear = null;
+
+    @Getter
+    private List<Edition> filteredSimilarityReferenceEditions = Lists.newArrayList();
+
+    @Getter
+    @Setter
+    private Edition similarityReferenceEdition = null;
+
+    // *****************************************
 
     // Enrichment Feedback
     @Getter
@@ -185,10 +197,6 @@ public class EnrichmentView implements Serializable {
 
     // ********************************************************
 
-
-    // Stability Data
-    private Map<Edition, double[]> stabilityRangeCache = Maps.newConcurrentMap();
-
     // Enrichment Chart
     @Getter
     @Setter
@@ -197,10 +205,6 @@ public class EnrichmentView implements Serializable {
     @Getter
     @Setter
     private EnrichmentChartMeasure enrichmentChartMeasure = EnrichmentChartMeasure.RANK; //TODO
-
-    @Getter
-    @Setter
-    private int enrichmentChartTopN = 10; //TODO
 
     // Select Data Point functionality
     @Getter
@@ -247,9 +251,9 @@ public class EnrichmentView implements Serializable {
     public void postConstruct() {
         log.info( "postConstruct" );
         selectedSpecies = session.getSpecies();
-
+        resetSimilarityDateSelector();
         for ( Species species : cache.getSpeciesList() ) {
-            speciesToSelectedGenes.put( species, Lists.<Gene>newArrayList() );
+            speciesToSelectedGenes.put( species, Lists.newArrayList() );
         }
     }
 
@@ -265,12 +269,16 @@ public class EnrichmentView implements Serializable {
         log.info( "EnrichmentView init" );
         if ( FacesContext.getCurrentInstance().getApplication().getProjectStage() == ProjectStage.Development ) {
             FacesContext.getCurrentInstance().addMessage( "betaMessage", new FacesMessage( FacesMessage.SEVERITY_WARN,
-                    "This is the DEVELOPMENT version of GOTrack!", null ) );
+                    "This is the DEVELOPMENT version of GOTrack!", "" ) );
         }
         if ( combinedAnalysis != null && combinedAnalysis.isSuccess() ) {
             // When loading a previous analysis, we want to show the gene hit list that is associated with it, 
             // not the most recently viewed one.
             selectedSpecies = combinedAnalysis.getEnrichmentAnalysis().getCurrentSpecies();
+            if ( !similarityReferenceEdition.getSpecies().equals( selectedSpecies ) ) {
+                resetSimilarityDateSelector();
+            }
+
         } else {
             enrichmentTableEdition = cache.getCurrentEditions( selectedSpecies );
 
@@ -293,12 +301,11 @@ public class EnrichmentView implements Serializable {
                 new HashSet<>( speciesToSelectedGenes.get( selectedSpecies ) ),
                 selectedSpecies,
                 enrichmentOptions,
-                similarityCompareMethod,
+                similarityReferenceEdition,
                 TOP_N_JACCARD,
                 statusPoller );
 
         enrichmentResults = combinedAnalysis.getEnrichmentAnalysis().getResults();
-        stabilityRangeCache = Maps.newConcurrentMap();
 
         statusPoller.newStatus( "Creating tables and charts...", 90 );
 
@@ -311,6 +318,14 @@ public class EnrichmentView implements Serializable {
         timer.stop();
         statusPoller.newStatus( "Finished in: " + timer.getTime() / 1000.0 + " seconds", 100 );
 
+    }
+
+    private void resetSimilarityDateSelector() {
+        similarityReferenceEdition = cache.getCurrentEditions( selectedSpecies );
+        Calendar cal = Calendar.getInstance();
+        cal.setTime( similarityReferenceEdition.getDate() );
+        similarityReferenceYear = cal.get( Calendar.YEAR );
+        filterSimilarityReferenceEditions();
     }
 
     /**
@@ -346,6 +361,8 @@ public class EnrichmentView implements Serializable {
 
         loadEnrichmentTableData( enrichmentTableEdition );
 
+        selectedSimilarityScore = combinedAnalysis.getSimilarityAnalysis().getSimilarityScore( enrichmentTableEdition );
+
     }
 
     private Map<String, Object> createHCCallbackParamMap( ChartValues chart ) {
@@ -364,8 +381,11 @@ public class EnrichmentView implements Serializable {
         ChartValues cv = new ChartValues( "GO Term Counts by Edition",
                 "Count of Unique GO Terms", "Date" );
         Series significantTerms = new Series( "Significant Terms" );
-        Series allTerms = new Series( "All Tested Terms" );
-        Series rejectedTerms = new Series( "Rejected Terms" );
+
+        SeriesExtra allTerms = new SeriesExtra( "All Tested Terms" );
+        allTerms.putExtra( "visible", false );
+        SeriesExtra rejectedTerms = new SeriesExtra( "Rejected Terms" );
+        rejectedTerms.putExtra( "visible", false );
 
         for ( Entry<Edition, Enrichment<GeneOntologyTerm, Gene>> rawResultsEntry : combinedAnalysis.getEnrichmentAnalysis().getRawResults()
                 .entrySet() ) {
@@ -381,6 +401,8 @@ public class EnrichmentView implements Serializable {
         cv.addSeries( rejectedTerms );
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( cv );
+        hcGsonMap.put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
+        hcGsonMap.put( "referenceEdition", similarityReferenceEdition.getDate().getTime() );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_terms", new Gson().toJson( hcGsonMap ) );
     }
@@ -392,9 +414,7 @@ public class EnrichmentView implements Serializable {
      */
     private void createSimilarityChart() {
         // Create Similarity Chart
-        ChartValues cv = new ChartValues( "Enrichment Similarity to "
-                + (similarityCompareMethod.equals( SimilarityCompareMethod.PROXIMAL ) ? "Previous" : "Current")
-                + " Edition",
+        ChartValues cv = new ChartValues( "Enrichment Similarity to " + combinedAnalysis.getSimilarityAnalysis().getReferenceEdition().getDate(),
                 "Jaccard Similarity Index", "Date" );
         cv.setMin( 0 );
         cv.setMax( 1 );
@@ -427,10 +447,29 @@ public class EnrichmentView implements Serializable {
         }
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( cv );
+        hcGsonMap.put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
+        hcGsonMap.put( "referenceEdition", similarityReferenceEdition.getDate().getTime() );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_similarity", new Gson().toJson( hcGsonMap ) );
 
     }
+
+    /**
+     * Create P-value Histogram
+     */
+    public void createPValueHistogram() {
+        // Create P-value Histogram
+        List<Double> pvalues = combinedAnalysis.getEnrichmentAnalysis().getRawResults().get( enrichmentTableEdition ).getResults().values()
+                .stream()
+                .map( EnrichmentResult::getPvalue )
+                .collect( Collectors.toList() );
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_histo", new Gson().toJson( pvalues ) );
+        RequestContext.getCurrentInstance().addCallbackParam( "edition", new Gson().toJson( enrichmentTableEdition ) );
+    }
+
+
+
+    // Enrichment Charts ---------------------------------------------------------------------------------------
 
     /**
      * Entry point to ajax request for a graph of a single term with p-value error bands based on stability confidence
@@ -442,310 +481,303 @@ public class EnrichmentView implements Serializable {
             // return failed
         }
 
-        createChart( Sets.newHashSet( term ), null, true );
-    }
+        ChartValues chart = createPValueChart( Sets.newHashSet( term ) );
+        chart.setTitle( "Enrichment Stability" );
 
-    // Enrichment Charts ---------------------------------------------------------------------------------------
+        Map<String, Object> hcGsonMap = createHCCallbackParamMap( chart );
 
-    public void fetchTermGraph( GeneOntologyTerm term ) {
-        Graph graph = Graph.fromGO( term );
-        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
-    }
+        // Create error bands to display the 95% confidence around each point
+        Map<Edition, StabilityScore> scores = combinedAnalysis.getStabilityAnalysis().getStabilityScores( term );
+        Map<Long, Object> dateToStabilityScore = new HashMap<>();
 
-    /**
-     * Create chart for comparing terms and seeing how their p-values or ranks change over time. If a single term is
-     * selected and the graph is to be based on p-value (not rank) then error bands are also sent.
-     *
-     * @param selectedTerms Terms to be graphed, if null grap everything
-     * @param topN          Cutoff for the 'desired' region in the graph, selectedTerms should already be trimmed down to topN
-     * @param pvalue        true if p-value is to be graphed, false if rank
-     */
-    private void createChart( Set<GeneOntologyTerm> selectedTerms, Integer topN, boolean pvalue ) {
-        // Get data
-        Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> data = null;
-        if ( selectedTerms == null ) {
-            selectedTerms = combinedAnalysis.getEnrichmentAnalysis().getTermsSignificantInAnyEdition();
-            data = enrichmentResults;
-        } else {
-            data = filter( selectedTerms );
-        }
+        Series rangeSeries = new Series( "95% Confidence" );
 
-        // Get sorted editions
-        List<Edition> eds = new ArrayList<>( data.keySet() );
-        Collections.sort( eds );
+        enrichmentResults.entrySet().stream().sorted( Map.Entry.comparingByKey() ).forEach( entry -> {
+            Edition edition = entry.getKey();
+            EnrichmentResult er = entry.getValue().get( term );
 
-        // Chart
-        ChartValues cv = null;
-
-        double maxRank = -1; // for use in rank metric
-
-        Map<String, Object> hcGsonMap = null;
-
-        if ( pvalue ) {
-            // Graph p-values
-            Map<GeneOntologyTerm, SeriesExtra> series = new HashMap<>();
-            for ( Edition ed : eds ) {
-                for ( GeneOntologyTerm term : selectedTerms ) {
-                    EnrichmentResult er = data.get( ed ).get( term );
-                    if ( er != null ) {
-                        SeriesExtra s = series.get( term );
-                        if ( s == null ) {
-                            s = new SeriesExtra( term.getGoId() );
-                            s.putExtra( "title", term.getName() );
-                            series.put( term, s );
-                        }
-                        s.addDataPoint( ed.getDate(), er.getPvalue() );
-                    }
-                }
-
+            if ( er != null ) {
+                StabilityScore sc = scores.get( edition );
+                rangeSeries.addDataPoint( edition.getDate(), sc.getMinPvalue(), sc.getMaxPvalue() );
+                Double s = sc.getScore();
+                // JSON does not support special Double types so we convert them to strings and deal with them in the front-end
+                dateToStabilityScore.put( edition.getDate().getTime(), s.isInfinite() || s.isNaN() ? s.toString() : s );
             }
-            cv = new ChartValues(
-                    selectedTerms.size() == 1 ? "Enrichment Stability Results" : "Enrichment Results",
-                    "P-Value", "Date" );
+        } );
 
-            for ( Series s : series.values() ) {
-                cv.addSeries( s );
-            }
+        ChartValues cv = new ChartValues();
+        cv.addSeries( rangeSeries );
+        hcGsonMap.put( "errors", cv );
+        hcGsonMap.put( "dateToStabilityScore", dateToStabilityScore );
 
-            Map<Long, Double> cutoffs = new TreeMap<>();
-            for ( Edition ed : eds ) {
-                cutoffs.put( ed.getDate().getTime(), combinedAnalysis.getEnrichmentAnalysis().getCutoff( ed ) );
-            }
-
-            hcGsonMap = createHCCallbackParamMap( cv );
-            hcGsonMap.put( "type", "pvalue" );
-            hcGsonMap.put( "cutoffs", cutoffs );
-
-        } else {
-            // rank
-
-            // Holds map of date -> max rank that is still significant, this is used in the font-end
-            // to determine the regions of the graph
-            Map<Long, Double> dateToMaxSigRank = new HashMap<>();
-
-            Map<GeneOntologyTerm, SeriesExtra> series = new HashMap<>();
-
-            boolean outsideTopNCheck = false; // Is any term outside of the topN in any edition
-            boolean insignificantCheck = false; // Are there any terms which are insignificant in an edition
-            for ( Edition ed : eds ) {
-                int maxSignificantRank = combinedAnalysis.getEnrichmentAnalysis().getTermsSignificant( ed ).size() - 1;
-
-                // First we compute the relative ranks among the terms selected
-                Map<GeneOntologyTerm, EnrichmentResult> editionData = data.get( ed );
-                ArrayList<Entry<GeneOntologyTerm, EnrichmentResult>> sortedData = new ArrayList<>(
-                        editionData.entrySet() );
-
-                // Sort by ranks
-                Collections.sort( sortedData, new Comparator<Entry<GeneOntologyTerm, EnrichmentResult>>() {
-                    @Override
-                    public int compare( Entry<GeneOntologyTerm, EnrichmentResult> e1,
-                                        Entry<GeneOntologyTerm, EnrichmentResult> e2 ) {
-                        return Integer.compare( e1.getValue().getRank(), e2.getValue().getRank() );
-                    }
-                } );
-
-                // Compute standard relative ranks
-
-                Map<GeneOntologyTerm, Double> relativeRanks = new HashMap<>();
-                Map<Integer, List<GeneOntologyTerm>> standardRanks = new HashMap<>();
-                int r = -1;
-                EnrichmentResult previousResult = null;
-                int cnt = -1;
-                for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : sortedData ) {
-                    cnt++;
-                    EnrichmentResult er = entry.getValue();
-                    if ( er.equals( previousResult ) ) {
-                        // pass
-                    } else {
-                        r = cnt;
-                    }
-                    List<GeneOntologyTerm> termSet = standardRanks.get( r );
-                    if ( termSet == null ) {
-                        termSet = new ArrayList<>();
-                        standardRanks.put( r, termSet );
-                    }
-                    termSet.add( entry.getKey() );
-                    previousResult = er;
-                }
-
-                // Compute fractional relative ranks with jitter
-
-                // We use jitter because if two points have the exact same y-value in the front-end in makes mousing over
-                // the data a pain
-                for ( Entry<Integer, List<GeneOntologyTerm>> rankEntry : standardRanks.entrySet() ) {
-                    int standardRank = rankEntry.getKey();
-                    List<GeneOntologyTerm> termSet = rankEntry.getValue();
-                    Collections.sort( termSet );
-                    double newRank = standardRank + (termSet.size() - 1) / 2.0;
-                    double jitter = 0;
-                    for ( GeneOntologyTerm term : termSet ) {
-                        relativeRanks.put( term, newRank + jitter );
-                        jitter += 0.01;
-
-                    }
-                }
-
-                double breakPoint = relativeRanks.size(); // Where the cutoff is for significance among the terms in this edition
-                for ( GeneOntologyTerm term : selectedTerms ) {
-                    // for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : editionData ) {
-                    // GeneOntologyTerm term = entry.getKey();
-                    SeriesExtra s = series.get( term );
-                    if ( s == null ) {
-                        s = new SeriesExtra( term.getGoId() );
-                        s.putExtra( "title", term.getName() );
-                        series.put( term, s );
-                    }
-                    EnrichmentResult er = editionData.get( term );
-                    Double relativeRank = relativeRanks.get( term );
-                    if ( er != null ) {
-                        int rank = er.getRank();
-                        // find smallest relative rank that is insignificant
-                        if ( rank > maxSignificantRank && relativeRank < breakPoint ) {
-                            insignificantCheck = true; // There are some insignificant points
-                            breakPoint = relativeRank;
-                        }
-
-                        if ( topN != null && rank > topN && rank <= maxSignificantRank ) {
-                            outsideTopNCheck = true;
-                        }
-
-                        if ( relativeRank > maxRank ) {
-                            maxRank = relativeRank;
-                        }
-
-                        s.addDataPoint( ed.getDate(), relativeRank );
-                    } else {
-                        s.addDataPoint( ed.getDate(), null );
-                    }
-                }
-
-                dateToMaxSigRank.put( ed.getDate().getTime(), breakPoint );
-
-            }
-
-            cv = new ChartValues( "Enrichment Results by Relative Rank",
-                    "Relative Rank", "Date" );
-
-            for ( Series s : series.values() ) {
-                cv.addSeries( s );
-            }
-
-            hcGsonMap = createHCCallbackParamMap( cv );
-            hcGsonMap.put( "maxRank", maxRank );
-            hcGsonMap.put( "dateToMaxSigRank", dateToMaxSigRank );
-            hcGsonMap.put( "insignificantCheck", insignificantCheck );
-            hcGsonMap.put( "outsideTopNCheck", outsideTopNCheck );
-            hcGsonMap.put( "type", "rank" );
-            hcGsonMap.put( "topN", topN );
-            // if ( topN != null ) {
-            // if ( insigCheck ) {
-            // RequestContext.getCurrentInstance().addCallbackParam(
-            // "hc_breakAt",
-            // new Gson().toJson( Arrays.asList( Arrays.asList( topN + 1, maxRank + 1, 3 ),
-            // Arrays.asList( maxRank + 2, m, 0 ) ) ) );
-            // } else {
-            // RequestContext.getCurrentInstance().addCallbackParam( "hc_breakAt",
-            // new Gson().toJson( Arrays.asList( Arrays.asList( topN + 1, maxRank + 1, 3 ) ) ) );
-            // }
-            // }
-
-        }
-
-        if ( selectedTerms.size() == 1 && pvalue ) {
-            // if there is a single graphed term and pvalue is the chosen metric we also create error bands to display
-            // the 95% confidence around each point
-            GeneOntologyTerm term = selectedTerms.iterator().next();
-            Map<Edition, StabilityScore> scores = combinedAnalysis.getStabilityAnalysis().getStabilityScores( term );
-            Map<Long, Object> dateToStabilityScore = new HashMap<>();
-
-            Series rangeSeries = new Series( "95% Confidence" );
-
-            for ( Edition ed : eds ) {
-                EnrichmentResult er = data.get( ed ).get( term );
-                if ( er != null ) {
-                    StabilityScore sc = scores.get( ed );
-                    rangeSeries.addDataPoint( ed.getDate(), sc.getMinPvalue(), sc.getMaxPvalue() );
-                    Double s = sc.getScore();
-                    // JSON does not support special Double types so we convert them to strings and deal with them in the front-end
-                    dateToStabilityScore.put( ed.getDate().getTime(), s.isInfinite() || s.isNaN() ? s.toString() : s );
-                }
-
-            }
-            cv = new ChartValues();
-            cv.addSeries( rangeSeries );
-            hcGsonMap.put( "errors", cv );
-            hcGsonMap.put( "dateToStabilityScore", dateToStabilityScore );
-
-        }
-
-        RequestContext.getCurrentInstance().addCallbackParam( "HC_enrichment",
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_stability",
                 new GsonBuilder().serializeNulls().create().toJson( hcGsonMap ) );
     }
 
     /**
-     * Entry point to ajax call for creating different charts based on front-end settings such as:
-     * <p>
-     * by pvalue or rank
-     * topN or selected
+     * Entry point to ajax request for a graph of top N terms by p-value
      */
-    public void createChart( boolean byRank, boolean selected ) {
-        if ( !selected ) {
-            Set<GeneOntologyTerm> selectedTerms = combinedAnalysis.getEnrichmentAnalysis().getTopNTerms( enrichmentChartTopN );
+    public void createPValueChartByTopN() {
+        ChartValues chart = createPValueChart( combinedAnalysis.getEnrichmentAnalysis().getTopNTerms( TOP_N_ENRICHMENT_CHART ) );
+        chart.setSubtitle( "Top " + TOP_N_ENRICHMENT_CHART + " terms in all editions" );
 
-            createChart( selectedTerms, enrichmentChartTopN, !byRank );
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_pvalue",
+                new GsonBuilder().serializeNulls().create().toJson( createHCCallbackParamMap( chart ) ) );
+    }
+
+    /**
+     * Entry point to ajax request for a graph of selected terms by p-value
+     */
+    public void createPValueChartBySelected() {
+        ChartValues chart;
+        if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.isEmpty() ) {
+            // If nothing selected graph everything
+            chart = createPValueChart( combinedAnalysis.getEnrichmentAnalysis().getTermsSignificantInAnyEdition() );
+            chart.setSubtitle( "Terms significant in any edition" );
         } else {
-            if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.isEmpty() ) {
-                // If nothing selected graph everything
-                createChart( null, null, !byRank );
+            chart = createPValueChart( selectedEnrichmentTableValues.stream().map( EnrichmentTableValues::getTerm )
+                    .collect( Collectors.toList() ) );
+        }
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_pvalue",
+                new GsonBuilder().serializeNulls().create().toJson( createHCCallbackParamMap( chart ) ) );
+    }
+
+
+    private ChartValues createPValueChart( Collection<GeneOntologyTerm> termsToChart ) {
+        if (termsToChart == null || termsToChart.isEmpty() ) {
+            return null; //failed
+        }
+
+        Map<GeneOntologyTerm, SeriesExtra> seriesMap = new HashMap<>();
+        SeriesExtra cutoffSeries = new SeriesExtra( "Threshold" );
+        cutoffSeries.putExtra( "lineWidth", 2 );
+        cutoffSeries.putExtra( "title", "Significance threshold" );
+        cutoffSeries.putExtra( "zIndex", 5 );
+        cutoffSeries.putExtra( "enableMouseTracking", false );
+        cutoffSeries.putExtra( "dashStyle", "shortdash" );
+        cutoffSeries.putExtra( "color", "black" );
+
+        enrichmentResults.entrySet().stream().sorted( Map.Entry.comparingByKey() ).forEach( entry -> {
+                Edition edition = entry.getKey();
+                for ( GeneOntologyTerm term : termsToChart ) {
+                    EnrichmentResult er = entry.getValue().get( term );
+                    if ( er != null ) {
+                        SeriesExtra s = seriesMap.get( term );
+                        if ( s == null ) {
+                            s = new SeriesExtra( term.getGoId() );
+                            s.putExtra( "title", term.getName() );
+                            seriesMap.put( term, s );
+                        }
+                        s.addDataPoint( edition.getDate(), er.getPvalue() );
+                    }
+                }
+
+            cutoffSeries.addDataPoint( edition.getDate(), combinedAnalysis.getEnrichmentAnalysis().getCutoff( edition ) );
+        } );
+
+        ChartValues cv = new ChartValues("Enrichment Results" ,"P-Value", "Date" );
+
+        if (termsToChart.size() == 1) {
+            GeneOntologyTerm term = termsToChart.iterator().next();
+            cv.setSubtitle( term.getGoId() + " - " + term.getName() );
+        }
+
+        cv.addSeries( cutoffSeries );
+
+        for ( Series s : seriesMap.values() ) {
+            cv.addSeries( s );
+        }
+
+        cv.getExtra().put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
+        cv.getExtra().put( "referenceEdition", similarityReferenceEdition.getDate().getTime() );
+
+        return cv;
+
+    }
+
+    /**
+     * Entry point to ajax call for creating rank charts of selected terms
+     */
+    public void createRankChartBySelected() {
+
+        ChartValues chart;
+        if ( selectedEnrichmentTableValues == null || selectedEnrichmentTableValues.isEmpty() ) {
+            // If nothing selected graph everything
+            chart = createRankChart( combinedAnalysis.getEnrichmentAnalysis().getTermsSignificantInAnyEdition(), null );
+            chart.setSubtitle( "Terms significant in any edition" );
+        } else {
+            chart = createRankChart( selectedEnrichmentTableValues.stream().map( EnrichmentTableValues::getTerm )
+                    .collect( Collectors.toSet() ), null );
+        }
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_enrichment",
+                new GsonBuilder().serializeNulls().create().toJson( createHCCallbackParamMap( chart ) ) );
+    }
+
+    /**
+     * Entry point to ajax call for creating rank charts of by Top N
+     */
+    public void createRankChartByTopN() {
+
+        Set<GeneOntologyTerm> selectedTerms = combinedAnalysis.getEnrichmentAnalysis().getTopNTerms( TOP_N_ENRICHMENT_CHART );
+
+        ChartValues chart = createRankChart( selectedTerms, TOP_N_ENRICHMENT_CHART );
+        chart.setSubtitle( "Top " + TOP_N_ENRICHMENT_CHART + " terms in all editions" );
+
+        RequestContext.getCurrentInstance().addCallbackParam( "HC_enrichment",
+                new GsonBuilder().serializeNulls().create().toJson( createHCCallbackParamMap( chart ) ) );
+    }
+
+    private <E, T extends Comparable, R> Map<T,Double> fractionalRank( Collection<E> sortedData, Function<E,T> getKey, Function<E,R> getValue, boolean jitterRanks) {
+        Map<T, Double> relativeRanks = new LinkedHashMap<>();
+        int currentRank = 0;
+        int idx = 0;
+        List<E> previousResultGroup = Lists.newArrayList();
+        for ( E termEntry : sortedData ) {
+            R er = getValue.apply(termEntry);
+
+            E previousEntry = previousResultGroup.isEmpty() ? null : previousResultGroup.iterator().next();
+
+            if ( previousEntry == null || er.equals( getValue.apply( previousEntry ) ) ) {
+                // same as previous group
+                previousResultGroup.add( termEntry );
             } else {
-                // Graph selected terms
-                Set<GeneOntologyTerm> selectedTerms = new HashSet<>();
-
-                for ( EnrichmentTableValues entry : selectedEnrichmentTableValues ) {
-                    selectedTerms.add( entry.getTerm() );
+                // new group; assign ranks to previous group
+                previousResultGroup.sort( Comparator.comparing( getKey::apply ) );
+                double fractionalRank = currentRank + (previousResultGroup.size() - 1) / 2.0;
+                double jitter = 0;
+                for ( E previousResultGroupEntry : previousResultGroup ) {
+                    relativeRanks.put( getKey.apply(previousResultGroupEntry), fractionalRank + jitter );
+                    if (jitterRanks) jitter += 0.01;
                 }
 
-                createChart( selectedTerms, null, !byRank );
+                previousResultGroup = Lists.newArrayList(termEntry);
+                currentRank = idx;
             }
+
+            idx++;
         }
+
+        // Assign final group
+        previousResultGroup.sort( Comparator.comparing( getKey::apply ) );
+        double fractionalRank = currentRank + (previousResultGroup.size() - 1) / 2.0;
+        double jitter = 0;
+        for ( E previousResultGroupEntry : previousResultGroup ) {
+            relativeRanks.put( getKey.apply(previousResultGroupEntry), fractionalRank + jitter );
+            if (jitterRanks) jitter += 0.01;
+        }
+
+        return relativeRanks;
     }
 
-    /**
-     * Filter enrichmentResults for just those terms in the given set
-     *
-     * @param terms terms wanted
-     * @return filtered enrichment results with just those terms from the given set
-     */
-    private Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> filter( Set<GeneOntologyTerm> terms ) {
-        Map<Edition, Map<GeneOntologyTerm, EnrichmentResult>> filteredData = new HashMap<>();
-        for ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> editionEntry : enrichmentResults.entrySet() ) {
-            Edition ed = editionEntry.getKey();
-            Map<GeneOntologyTerm, EnrichmentResult> termsInEdition = new HashMap<>();
-            filteredData.put( ed, termsInEdition );
+    private ChartValues createRankChart( Set<GeneOntologyTerm> termsToChart, Integer topN ) {
+        if (termsToChart == null || termsToChart.isEmpty() ) {
+            return null; //failed
+        }
 
-            Map<GeneOntologyTerm, EnrichmentResult> editionData = editionEntry.getValue();
+        ChartValues  cv = new ChartValues( "Enrichment Results by Relative Rank", "Relative Rank", "Date" );
+        cv.getExtra().put( "maxRank", -1.0 ); // largest rank over all editions and terms to help create polygon regions
+        cv.getExtra().put( "outsideTopNCheck", false ); // Is any term outside of the topN in any edition
+        cv.getExtra().put( "insignificantCheck", false ); // Are there any terms which are insignificant in an edition
 
-            for ( GeneOntologyTerm term : terms ) {
-                EnrichmentResult er = editionData.get( term );
+        if (termsToChart.size() == 1) {
+            GeneOntologyTerm term = termsToChart.iterator().next();
+            cv.setSubtitle( term.getGoId() + " - " + term.getName() );
+        }
+
+        Map<GeneOntologyTerm, SeriesExtra> seriesMap = new HashMap<>();
+
+        // Holds map of date -> max rank that is still significant, this is used in the font-end
+        // to determine the regions of the graph
+        Map<Long, Double> dateToMaxSigRank = new HashMap<>();
+
+
+        enrichmentResults.entrySet().stream().sorted( Map.Entry.comparingByKey() ).forEach( ( Entry<Edition, Map<GeneOntologyTerm, EnrichmentResult>> entry ) -> {
+            Edition edition = entry.getKey();
+
+            double maxRank = -1; // for use in rank metric
+            boolean outsideTopNCheck = false; // Is any term outside of the topN in any edition
+            boolean insignificantCheck = false; // Are there any terms which are insignificant in an edition
+
+            LinkedHashMap<GeneOntologyTerm, EnrichmentResult> sortedData = entry.getValue().entrySet().stream()
+                    .filter( termEntry -> termsToChart.contains( termEntry.getKey() ) )
+                    .sorted( Comparator.comparing( termEntry -> termEntry.getValue().getRank() ) )
+                    .collect( Collectors.toMap( Entry::getKey, Entry::getValue,
+                            ( e1, e2 ) -> e1, LinkedHashMap::new
+                    ) );
+
+            // Compute fractional relative ranks with jitter
+            Map<GeneOntologyTerm, Double> relativeRanks = fractionalRank( sortedData.entrySet(), Entry::getKey, Entry::getValue, true );
+
+
+            double breakPoint = relativeRanks.size(); // Where the cutoff is for significance among the terms in this edition
+            for ( GeneOntologyTerm term : termsToChart ) {
+
+
+
+                // for ( Entry<GeneOntologyTerm, EnrichmentResult> entry : editionData ) {
+                // GeneOntologyTerm term = entry.getKey();
+                SeriesExtra s = seriesMap.get( term );
+                if ( s == null ) {
+                    s = new SeriesExtra( term.getGoId() );
+                    s.putExtra( "title", term.getName() );
+                    seriesMap.put( term, s );
+                }
+
+                Double relativeRank = relativeRanks.get( term );
+                EnrichmentResult er = sortedData.get( term );
                 if ( er != null ) {
-                    termsInEdition.put( term, er );
+
+                    // find smallest relative rank that is insignificant
+                    if ( !er.isSignificant() && relativeRank < breakPoint ) {
+                        insignificantCheck = true; // There are some insignificant points
+                        breakPoint = relativeRank;
+                    }
+
+                    if ( er.isSignificant() && topN != null && er.getRank() > topN ) {
+                        outsideTopNCheck = true;
+                    }
+
+                    if ( relativeRank > maxRank ) {
+                        // Get the largest rank over all editions and terms to help create polygon regions
+                        maxRank = relativeRank;
+                    }
+
+                    s.addDataPoint( edition.getDate(), relativeRank );
+                } else {
+                    s.addDataPoint( edition.getDate(), null );
                 }
             }
 
+            if (insignificantCheck) {
+                cv.getExtra().put( "insignificantCheck", true );
+            }
+
+            if (outsideTopNCheck) {
+                cv.getExtra().put( "outsideTopNCheck", true );
+            }
+
+            if (maxRank > (double)cv.getExtra().get( "maxRank" ) ) {
+                cv.getExtra().put( "maxRank", maxRank );  // largest rank over all editions and terms to help create polygon regions
+            }
+
+            dateToMaxSigRank.put( edition.getDate().getTime(), breakPoint );
+
+        } );
+
+        for ( Series s : seriesMap.values() ) {
+            cv.addSeries( s );
         }
 
-        return filteredData;
+        cv.getExtra().put( "dateToMaxSigRank", dateToMaxSigRank );
+        cv.getExtra().put( "topN", topN );
 
-    }
+        cv.getExtra().put( "selectedEdition", enrichmentTableEdition.getDate().getTime() );
+        cv.getExtra().put( "referenceEdition", similarityReferenceEdition.getDate().getTime() );
 
-    /**
-     * Entry point for retrieving data on click of similarity chart
-     */
-    public void fetchSimilarityInformation() {
-        Integer edition = Integer.valueOf(
-                FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
-        Edition ed = cache.getEdition( selectedSpecies, edition );
-        selectedSimilarityScore = combinedAnalysis.getSimilarityAnalysis().getSimilarityScores( ed );
+        return cv;
+
     }
 
     /**
@@ -794,46 +826,19 @@ public class EnrichmentView implements Serializable {
         selectedValueName = null;
     }
 
-    // Stability ---------------------------------------------------------------------------------------
 
-    private double[] stabilityRange( Edition ed ) {
-        if ( ed == null ) {
-            return null;
-        }
-
-        double[] range = stabilityRangeCache.get( ed );
-        if ( range == null ) {
-            // Figure out range of values for Stability scores
-
-            Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
-
-            double minStability = Double.POSITIVE_INFINITY;
-            double maxStability = Double.NEGATIVE_INFINITY;
-            for ( GeneOntologyTerm term : editionData.keySet() ) {
-                StabilityScore sc = combinedAnalysis.getStabilityAnalysis().getStabilityScores( term, ed );
-                Double v = sc.getScore();
-                if ( !v.isInfinite() && !v.isNaN() ) {
-                    if ( v > maxStability ) maxStability = v;
-                    if ( v < minStability ) minStability = v;
-                }
-            }
-            range = new double[2];
-            range[0] = minStability;
-            range[1] = maxStability;
-            stabilityRangeCache.put( ed, range );
-        }
-
-        return range;
-    }
-
-    // Enrichment Table ---------------------------------------------------------------------------------------
-
-    public void loadEnrichmentTableData() {
+    /**
+     * Used for clicks on data points in term/similarity charts
+     */
+    public void loadTableData() {
         Integer edition = Integer.valueOf(
                 FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
         Edition ed = cache.getEdition( selectedSpecies, edition );
         loadEnrichmentTableData( ed );
+        selectedSimilarityScore = combinedAnalysis.getSimilarityAnalysis().getSimilarityScore( ed );
     }
+
+    // Enrichment Table ---------------------------------------------------------------------------------------
 
     /**
      * Prepares data for enrichment table
@@ -845,8 +850,6 @@ public class EnrichmentView implements Serializable {
         enrichmentTableEdition = ed;
 
         if ( ed != null ) {
-            double[] stabilityRange = stabilityRange( ed );
-            Set<GeneOntologyTerm> sigTerms = combinedAnalysis.getEnrichmentAnalysis().getTermsSignificant( ed );
             Map<GeneOntologyTerm, EnrichmentResult> editionData = enrichmentResults.get( ed );
             for ( Entry<GeneOntologyTerm, EnrichmentResult> termEntry : editionData.entrySet() ) {
                 GeneOntologyTerm term = termEntry.getKey();
@@ -854,13 +857,13 @@ public class EnrichmentView implements Serializable {
                 StabilityScore sc = combinedAnalysis.getStabilityAnalysis().getStabilityScores( term, ed );
                 Double val = sc.getScore();
                 int quantile = 0;
-                if ( !val.isNaN() && !val.isInfinite() ) {
-                    quantile = (int) Math
-                            .round( 19 * (val - stabilityRange[0]) / (stabilityRange[1] - stabilityRange[0]) ) + 1;
+                if ( !val.isNaN() ) {
+                    // Scale from -8 -> 10
+                    quantile = (int) Math.max( 1, Math.min( 20, 20 - (Math.ceil( val ) + 8) ) );
                 }
 
                 enrichmentTableValues
-                        .add( new EnrichmentTableValues( ed, term, er, sc, quantile, sigTerms.contains( term ) ) );
+                        .add( new EnrichmentTableValues( ed, term, er, sc, quantile ) );
             }
             Collections.sort( enrichmentTableValues );
 
@@ -888,7 +891,7 @@ public class EnrichmentView implements Serializable {
     /**
      * Remove all genes from selected species' hit list
      */
-    public void removeAllGenes( ActionEvent actionEvent ) {
+    public void removeAllGenes() {
         List<Gene> selectGenes = speciesToSelectedGenes.get( selectedSpecies );
         if ( selectGenes != null ) {
             selectGenes.clear();
@@ -898,7 +901,7 @@ public class EnrichmentView implements Serializable {
     /**
      * Add gene to to hit list
      */
-    public void addGene( ActionEvent actionEvent ) {
+    public void addGene() {
         List<Gene> selectGenes = speciesToSelectedGenes.get( selectedSpecies );
         if ( selectGenes == null ) {
             selectGenes = new ArrayList<>();
@@ -923,7 +926,7 @@ public class EnrichmentView implements Serializable {
      * Add multiple genes based on input to the 'Add Multiple' modal field, this string is then split
      * and turned into GeneMatch to then be confirmed or altered by the user
      */
-    public void searchMultipleGenes( ActionEvent actionEvent ) {
+    public void searchMultipleGenes() {
         Set<String> inputSet = new HashSet<>( Arrays.asList( bulkQuery.split( "\\s*(,|\\s)\\s*" ) ) );
         geneMatches = new ArrayList<>();
         Map<GeneMatch.Level, Integer> cntMap = new HashMap<>();
@@ -1003,6 +1006,23 @@ public class EnrichmentView implements Serializable {
     public List<GeneMatch> complete( String query ) {
         if ( StringUtils.isEmpty( query.trim() ) || selectedSpecies == null ) return Lists.newArrayList();
         return Lists.newArrayList( this.cache.searchGeneBySymbol( query.trim(), selectedSpecies, MAX_RESULTS ) );
+    }
+
+    public void filterSimilarityReferenceEditions() {
+        Calendar calendar = Calendar.getInstance();
+        filteredSimilarityReferenceEditions = cache.getAllEditions( selectedSpecies ).stream().filter( ed -> {
+            calendar.setTime( ed.getDate() );
+            return calendar.get( Calendar.YEAR ) == similarityReferenceYear;
+        } ).sorted().collect( Collectors.toList() );
+        if ( !filteredSimilarityReferenceEditions.isEmpty() ) {
+            similarityReferenceEdition = filteredSimilarityReferenceEditions.get( 0 );
+        }
+    }
+
+    public List<Gene> getGenesBackingTopTermsForEdition( Edition edition ) {
+        if ( combinedAnalysis == null || edition == null ) return Lists.newArrayList();
+        return combinedAnalysis.getSimilarityAnalysis().getSimilarityScore( edition ).getTopGenes().stream()
+                .sorted().collect( Collectors.toList() );
     }
 
     // Getters / Setters ---------------------------------------------------------------------------------------

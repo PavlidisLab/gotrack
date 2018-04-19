@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.model;
 
+import lombok.Getter;
 import ubc.pavlab.gotrack.model.dto.EditionDTO;
 
 import java.sql.Date;
@@ -29,6 +30,7 @@ import java.sql.Date;
  * @author mjacobson
  * @version $Id$
  */
+@Getter
 public class Edition implements Comparable<Edition> {
 
     private final Species species;
@@ -46,30 +48,6 @@ public class Edition implements Comparable<Edition> {
         this.date = dto.getDate();
         this.release = dto.getRelease();
         this.goEdition = goEdition;
-    }
-
-    public Integer getEdition() {
-        return edition;
-    }
-
-    public Date getDate() {
-        return date;
-    }
-
-    public Date getGoDate() {
-        return goEdition.getDate();
-    }
-
-    public Integer getGoEditionId() {
-        return goEdition.getId();
-    }
-
-    public GOEdition getGoEdition() {
-        return goEdition;
-    }
-
-    public Integer getRelease() {
-        return release;
     }
 
     @Override

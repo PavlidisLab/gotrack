@@ -19,9 +19,7 @@
 
 package ubc.pavlab.gotrack.beans.component;
 
-import com.google.common.base.Joiner;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 import org.primefaces.model.DefaultStreamedContent;
@@ -42,10 +40,11 @@ import java.io.InputStream;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Backing bean for a annotation download input
- * 
+ * Deprecated for downloads page.
  * @author mjacobson
  */
 @Named
@@ -85,6 +84,10 @@ public class AnnotationDownloadView implements Serializable {
         filterEditions();
     }
 
+    public ImmutableList<Integer> getAllYears() {
+        return cache.getSpeciesYears( session.getSpecies() );
+    }
+
     public Integer getYear() {
         return year;
     }
@@ -102,16 +105,11 @@ public class AnnotationDownloadView implements Serializable {
     }
 
     public void filterEditions() {
-        Predicate<Edition> predicate = new Predicate<Edition>() {
-            private Calendar calendar = Calendar.getInstance();
-            @Override
-            public boolean apply(Edition input) {
-                calendar.setTime( input.getDate() );
-                return calendar.get( Calendar.YEAR ) == year;
-            }
-        };
-        filteredEditions = Lists.newArrayList( Iterables.filter( cache.getAllEditions( session.getSpecies() ), predicate ));
-        Collections.sort( filteredEditions );
+        Calendar calendar = Calendar.getInstance();
+        filteredEditions = cache.getAllEditions( session.getSpecies() ).stream().filter( ed -> {
+            calendar.setTime( ed.getDate() );
+            return calendar.get( Calendar.YEAR ) == year;
+        } ).sorted().collect( Collectors.toList() );
     }
 
     public List<Edition> getFilteredEditions(){
@@ -122,7 +120,6 @@ public class AnnotationDownloadView implements Serializable {
         // TODO: Cache files to disk
         Map<Gene, Set<GeneOntologyTerm>> data =  annotationService.fetchEditionSimple( session.getSpecies(), edition );
         final StringBuilder sb = new StringBuilder();
-        Joiner joiner = Joiner.on("|").skipNulls();
         for ( Map.Entry<Gene, Set<GeneOntologyTerm>> geneEntry: data.entrySet()) {
             Gene gene = geneEntry.getKey();
             sb.append( gene.getSymbol() );
@@ -131,7 +128,8 @@ public class AnnotationDownloadView implements Serializable {
             sb.append( "\t" );
             sb.append( gene.getName() );
             sb.append( "\t" );
-            sb.append( joiner.join( geneEntry.getValue() ) );
+
+            sb.append( GeneOntologyTerm.propagate( geneEntry.getValue().stream() ).map( GeneOntologyTerm::getGoId ).collect( Collectors.joining( "|" ) ) );
             sb.append( System.lineSeparator() );
         }
         InputStream in = new ByteArrayInputStream(sb.toString().getBytes( StandardCharsets.UTF_8));

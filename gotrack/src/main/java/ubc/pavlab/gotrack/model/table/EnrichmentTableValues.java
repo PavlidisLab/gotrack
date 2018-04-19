@@ -19,6 +19,9 @@
 
 package ubc.pavlab.gotrack.model.table;
 
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.ToString;
 import ubc.pavlab.gotrack.analysis.EnrichmentResult;
 import ubc.pavlab.gotrack.analysis.StabilityScore;
 import ubc.pavlab.gotrack.model.Edition;
@@ -26,10 +29,12 @@ import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 /**
  * Represents a row in the enrichment table of EnrichmentView
- * 
+ *
  * @author mjacobson
- * @version $Id$
  */
+@Getter
+@EqualsAndHashCode(of = {"edition", "term"})
+@ToString
 public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> {
 
     // private final String rowKey;
@@ -38,72 +43,16 @@ public class EnrichmentTableValues implements Comparable<EnrichmentTableValues> 
     private final EnrichmentResult result;
     private final StabilityScore stability;
     private final int stabilityQuantile;
-    private final boolean significant;
 
     public EnrichmentTableValues( Edition edition, GeneOntologyTerm term, EnrichmentResult result,
-            StabilityScore stability, int stabilityQuantile,
-            boolean significant ) {
+                                  StabilityScore stability, int stabilityQuantile ) {
         super();
         this.edition = edition;
         this.term = term;
         this.result = result;
-        this.significant = significant;
         this.stability = stability;
         this.stabilityQuantile = stabilityQuantile;
         // this.rowKey = edition.getEdition().toString() + term.getGoId();
-    }
-
-    public Edition getEdition() {
-        return edition;
-    }
-
-    public GeneOntologyTerm getTerm() {
-        return term;
-    }
-
-    public EnrichmentResult getResult() {
-        return result;
-    }
-
-    public StabilityScore getStability() {
-        return stability;
-    }
-
-    public int getStabilityQuantile() {
-        return stabilityQuantile;
-    }
-
-    public boolean isSignificant() {
-        return significant;
-    }
-
-    @Override
-    public String toString() {
-        return "EnrichmentTableValues [edition=" + edition + ", term=" + term + ", result=" + result + "]";
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( edition == null ) ? 0 : edition.hashCode() );
-        result = prime * result + ( ( term == null ) ? 0 : term.hashCode() );
-        return result;
-    }
-
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        EnrichmentTableValues other = ( EnrichmentTableValues ) obj;
-        if ( edition == null ) {
-            if ( other.edition != null ) return false;
-        } else if ( !edition.equals( other.edition ) ) return false;
-        if ( term == null ) {
-            if ( other.term != null ) return false;
-        } else if ( !term.equals( other.term ) ) return false;
-        return true;
     }
 
     @Override

@@ -19,8 +19,9 @@
 
 package ubc.pavlab.gotrack.beans.service;
 
-import jersey.repackaged.com.google.common.collect.Lists;
-import jersey.repackaged.com.google.common.collect.Maps;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.beans.Cache;
 import ubc.pavlab.gotrack.model.Edition;
@@ -37,6 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * TODO Document Me
@@ -128,10 +130,9 @@ public class MultifunctionalityService implements Serializable {
      */
     private Set<GeneOntologyTerm> retrieveData( Gene gene, Edition ed ) {
 
-        Set<GeneOntologyTerm> data = annotationService
-                .fetchSingleEnrichmentData( ed, Lists.newArrayList( gene ) ).get( gene );
+        Set<GeneOntologyTerm> data = annotationService.fetchSingleEnrichmentData( ed, Lists.newArrayList( gene ) ).get( gene );
 
-        return cache.propagate( data, ed );
+        return GeneOntologyTerm.propagate( data.stream() ).collect( Collectors.toSet() );
 
     }
 
@@ -143,8 +144,7 @@ public class MultifunctionalityService implements Serializable {
         Map<Edition, Set<GeneOntologyTerm>> propagatedData = new HashMap<>();
 
         for ( Entry<Edition, Set<GeneOntologyTerm>> entry : map.entrySet() ) {
-            Edition ed = entry.getKey();
-            propagatedData.put( ed, cache.propagate( entry.getValue(), ed ) );
+            propagatedData.put( entry.getKey(), GeneOntologyTerm.propagate( entry.getValue().stream() ).collect( Collectors.toSet() ) );
         }
         return propagatedData;
     }

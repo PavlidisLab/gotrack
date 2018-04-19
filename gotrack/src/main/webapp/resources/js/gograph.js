@@ -3,14 +3,17 @@
  */
 (function (gograph, $, undefined) {
 
-    gograph.graphs = [];
-
     gograph.createNewGraph = function (id, graph_data, callback) {
-        console.log("Creating graph: " + id);
-        this.graphs.push(new GOGraph(id, graph_data, callback));
+        // console.log("Creating graph: " + id);
+        return new GOGraph(id, graph_data, callback, false);
     };
 
-    function GOGraph(id, graph_data, callback) {
+    gograph.createNewGraphLogo = function (id, graph_data, callback) {
+        // console.log("Creating graph logo: " + id);
+        return new GOGraph(id, graph_data, callback, true);
+    };
+
+    function GOGraph(id, graph_data, callback, is_logo) {
         /*
          * id -> html ID of container. Ex. #dag-graph
          * graph_data -> {"nodes":[
@@ -39,12 +42,15 @@
             return {};
         });
 
-        loadGraphData(g, graph_data);
+        loadGraphData(g, graph_data, is_logo);
 
         g.nodes().forEach(function (v) {
             var node = g.node(v);
             // Round the corners of the nodes
             node.rx = node.ry = 5;
+            if (is_logo) {
+                node.width = node.height = 1;
+            }
         });
 
         // Set up an SVG group so that we can translate the final graph.
@@ -132,7 +138,9 @@
             svgGroup.attr("transform", "translate(" + d3.event.translate + ")" +
                 "scale(" + d3.event.scale + ")");
         });
-        svg.call(zoom);
+        if (!is_logo) {
+            svg.call(zoom);
+        }
 
         // Run the renderer. This is what draws the final graph.
         render(svgGroup, g);
@@ -141,121 +149,145 @@
 
             // tooltips
 
+        if (!is_logo) {
+            var nodes = svgGroup.selectAll("g.node");
             // Simple function to style the tooltip for the given node.
-        var styleTooltip = function (name, description) {
+            var styleTooltip = function (name, description) {
                 return "<p class='name'>" + name + "</p><p class='description'>" + description + "</p>";
             };
 
-        var nodes = svgGroup.selectAll("g.node");
-        nodes.attr("title", function (v) {
-            return styleTooltip(g.node(v).go_id, g.node(v).description)
-        });
-        nodes.each(function (v) {
-            $(this).tipsy({gravity: "w", opacity: 0.8, html: true});
-        });
 
-        // events
-        nodes.on("click", function (id) {
-            if (d3.event.defaultPrevented) return;
-            var _node = g.node(id);
-            try { // your browser may block popups
-                window.open(_node.href);
-            } catch (e) { // fall back on url change
-                window.location.href = _node.href;
-            }
-        });
-
-        var nodeEdges;
-        var neighbors;
-        var path;
-
-        nodes.on("mouseover", function (id) {
-            //var _node = g.node(id);
-            svgGroup.select("g.nodes").classed("hover", true); // Used to lower opacity of other nodes
-            svgGroup.select("g.edgePaths").classed("hover", true); // Used to lower opacity of other edges
-
-            d3.select(this).classed("hover", true);
-
-            nodeEdges = g.nodeEdges(id);
-            nodeEdges.forEach(function (neid) {
-                d3.select(g.edge(neid).elem).classed("hover", true);
+            nodes.attr("title", function (v) {
+                return styleTooltip(g.node(v).go_id, g.node(v).description)
+            });
+            nodes.each(function (v) {
+                $(this).tipsy({gravity: "w", opacity: 0.8, html: true});
             });
 
-            neighbors = g.neighbors(id);
-            neighbors.forEach(function (nid) {
-                d3.select(g.node(nid).elem).classed("neighbour", true);
+            // events
+            nodes.on("click", function (id) {
+                if (d3.event.defaultPrevented) return;
+                var _node = g.node(id);
+                try { // your browser may block popups
+                    window.open(_node.href);
+                } catch (e) { // fall back on url change
+                    window.location.href = _node.href;
+                }
             });
 
-            path = g.getEntirePathLinks(id);
-            path.forEach(function (e) {
-                d3.select(g.node(e.w).elem).classed("family", true);
-                d3.select(g.node(e.v).elem).classed("family", true);
-                d3.select(g.edge(e).elem).classed("family", true);
-            });
-        })
-            .on("mouseout", function (id) {
-                svgGroup.select("g.nodes").classed("hover", false);
-                svgGroup.select("g.edgePaths").classed("hover", false);
 
-                d3.select(this).classed("hover", false);
+            var nodeEdges;
+            var neighbors;
+            var path;
 
-                //var nodeEdges = g.nodeEdges(id);
+            nodes.on("mouseover", function (id) {
+                //var _node = g.node(id);
+                svgGroup.select("g.nodes").classed("hover", true); // Used to lower opacity of other nodes
+                svgGroup.select("g.edgePaths").classed("hover", true); // Used to lower opacity of other edges
+
+                d3.select(this).classed("hover", true);
+
+                nodeEdges = g.nodeEdges(id);
                 nodeEdges.forEach(function (neid) {
-                    d3.select(g.edge(neid).elem).classed("hover", false);
+                    d3.select(g.edge(neid).elem).classed("hover", true);
                 });
 
-                //var neighbors = g.neighbors(id);
+                neighbors = g.neighbors(id);
                 neighbors.forEach(function (nid) {
-                    d3.select(g.node(nid).elem).classed("neighbour", false);
+                    d3.select(g.node(nid).elem).classed("neighbour", true);
                 });
 
+                path = g.getEntirePathLinks(id);
                 path.forEach(function (e) {
-                    d3.select(g.node(e.w).elem).classed("family", false);
-                    d3.select(g.node(e.v).elem).classed("family", false);
-                    d3.select(g.edge(e).elem).classed("family", false);
+                    d3.select(g.node(e.w).elem).classed("family", true);
+                    d3.select(g.node(e.v).elem).classed("family", true);
+                    d3.select(g.edge(e).elem).classed("family", true);
                 });
-            });
+            })
+                .on("mouseout", function (id) {
+                    svgGroup.select("g.nodes").classed("hover", false);
+                    svgGroup.select("g.edgePaths").classed("hover", false);
 
-        // Add Legend
+                    d3.select(this).classed("hover", false);
 
-        var legend = drawLegend(svg);
+                    //var nodeEdges = g.nodeEdges(id);
+                    nodeEdges.forEach(function (neid) {
+                        d3.select(g.edge(neid).elem).classed("hover", false);
+                    });
 
-        var legendWidth = legend.node().getBBox().width;
-        var legendHeight = legend.node().getBBox().height;
+                    //var neighbors = g.neighbors(id);
+                    neighbors.forEach(function (nid) {
+                        d3.select(g.node(nid).elem).classed("neighbour", false);
+                    });
 
-        legend.append("text")
-            .attr("class", "title")
-            .attr("x", legendWidth / 2)
-            .attr("y", -15)
-            .attr("alignment-baseline", "middle")
-            .attr("text-anchor", "middle")
-            .text("Legend");
+                    path.forEach(function (e) {
+                        d3.select(g.node(e.w).elem).classed("family", false);
+                        d3.select(g.node(e.v).elem).classed("family", false);
+                        d3.select(g.edge(e).elem).classed("family", false);
+                    });
+                });
 
-        var legendSideMargin = 20;
-        var globalMargin = 20;
+            // Add Legend
+
+            var legend = drawLegend(svg);
+
+            var legendWidth = legend.node().getBBox().width;
+            var legendHeight = legend.node().getBBox().height;
+
+            legend.append("text")
+                .attr("class", "title")
+                .attr("x", legendWidth / 2)
+                .attr("y", -15)
+                .attr("alignment-baseline", "middle")
+                .attr("text-anchor", "middle")
+                .text("Legend");
+
+            var legendSideMargin = 20;
+
+        } else {
+            var legendWidth = 0;
+            var legendHeight = 0;
+            var legendSideMargin = 0;
+        }
+        var globalMargin = is_logo ? 2 : 20;
 
         // Center the graph
-        var initialScale = 0.75;
+        var parentHeight = $(svg[0][0].parentNode).height();
+        var parentWidth = $(svg[0][0].parentNode).width();
+        var initialScale = is_logo ? parentHeight / g.graph().height : 0.75;
 
         var adjustedHeight = g.graph().height * initialScale + 2 * globalMargin;
+        var adjustedWidth = g.graph().width * initialScale + 2 * globalMargin + legendWidth + legendSideMargin;
         var yTranslate = globalMargin;
-        if (g.graph().height * initialScale < legendHeight) {
+        var xTranslate = globalMargin;
+
+        // Correct height if legend is larger that graph
+        if (!is_logo && g.graph().height * initialScale < legendHeight) {
             adjustedHeight = legendHeight + 2 * globalMargin;
             yTranslate = globalMargin + (legendHeight - g.graph().height * initialScale) / 2;
         }
 
-        svg.attr('width', g.graph().width * initialScale + 2 * globalMargin + legendWidth + legendSideMargin);
+        if ( is_logo && adjustedWidth < parentWidth ) {
+            // Scale x if logo is too narrow
+            svg.attr("transform", "scale(" + parentWidth/adjustedWidth + "," + 1 + ")");
+            // adjustedWidth = parentWidth;
+        }
+
         zoom
-            .translate([(svg.attr("width") - g.graph().width * initialScale - legendWidth - legendSideMargin) / 2, yTranslate])
+            .translate([xTranslate, yTranslate])
             .scale(initialScale)
             .event(svg);
 
+        svg.attr('width', adjustedWidth);
         svg.attr('height', adjustedHeight);
 
-        legend.attr("transform", "translate(" + ( svg.attr("width") - legendWidth - legendSideMargin) + "," + (globalMargin + 15) + ")");
+        if (!is_logo) {
+            legend.attr("transform", "translate(" + ( svg.attr("width") - legendWidth - legendSideMargin) + "," + (globalMargin + 15) + ")");
+            this.legend = legend;
+        }
 
         this.graph = g;
-        this.legend = legend;
+
         this.renderer = render;
         this.nodes = function () {
             return svgGroup.selectAll("g.node");
@@ -271,14 +303,15 @@
         return ( typeof variable === 'undefined' );
     };
 
-    function loadGraphData(g, graph_data) {
+    function loadGraphData(g, graph_data, is_logo) {
         var rawnodes = graph_data.nodes;
         var rawedges = graph_data.edges;
 
         var createNodeOpts = function (n) {
             return {
                 class: n.classes.join(" "),
-                label: n.label.substring(0, 15) + ( (n.label.length > 15) ? "..." : "" ),
+                label: is_logo ? "" : n.label.substring(0, 15) + ( (n.label.length > 15) ? "..." : "" ),
+                // label: "",
                 href: "terms.xhtml?query=GO%3A" + utility.pad(n.id, 7),
                 description: n.label,
                 go_id: "GO:" + utility.pad(n.id, 7)

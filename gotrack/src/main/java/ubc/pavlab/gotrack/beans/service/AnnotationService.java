@@ -39,6 +39,7 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 
 /**
  * Service layer on top of annotation DAO. Contains methods for fetching information related to annotations and counts
@@ -199,7 +200,7 @@ public class AnnotationService implements Serializable {
 
             if ( go == null ) {
                 log.debug(
-                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEditionId() );
+                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEdition().getId() );
                 missingTerms.put( enrichmentDTO.getGoId(), enrichmentDTO );
                 continue;
             }
@@ -329,7 +330,7 @@ public class AnnotationService implements Serializable {
 
             if ( go == null ) {
                 log.debug(
-                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEditionId() );
+                        "Could not find (" + enrichmentDTO.getGoId() + ") in GO Edition Id: " + ed.getGoEdition().getId() );
                 missingTerms.put( enrichmentDTO.getGoId(), enrichmentDTO );
                 continue;
             }
@@ -355,80 +356,176 @@ public class AnnotationService implements Serializable {
     }
 
     /**
-     * Method used to get annotation count grouped by evidence category for a term.
+     * Method used to get annotation count grouped by evidence for a term.
      *
      * @param t term
-     * @return Counts annotations for each evidence category grouped by date
+     * @return Counts annotations for each evidence grouped by date
      */
-    public Map<String, Map<Date, Integer>> fetchCategoryCounts( GeneOntologyTerm t ) {
-        return fetchCategoryCounts( t.getGoId(), null, null );
+    public Map<Evidence, Map<Date, Integer>> fetchEvidenceCounts( GeneOntologyTerm t ) {
+        return fetchEvidenceCounts( t.getGoId(), null, null );
     }
 
     /**
-     * Method used to get annotation count grouped by evidence category for a term between two dates
+     * Method used to get annotation count grouped by evidence for a term between two dates
      *
      * @param t term
-     * @return Counts annotations for each evidence category grouped by date
+     * @return Counts annotations for each evidence grouped by date
      */
-    private Map<String, Map<Date, Integer>> fetchCategoryCounts( GeneOntologyTerm t, Date min, Date max ) {
-        return fetchCategoryCounts( t.getGoId(), min, max );
+    private Map<Evidence, Map<Date, Integer>> fetchEvidenceCounts( GeneOntologyTerm t, Date min, Date max ) {
+        return fetchEvidenceCounts( t.getGoId(), min, max );
     }
 
     /**
-     * Method used to get annotation count grouped by evidence category for a term between two dates
+     * Method used to get annotation count grouped by evidence for a term between two dates
      *
      * @param goId term
-     * @return Counts annotations for each evidence category grouped by date
+     * @return Counts annotations for each evidence grouped by date
      */
-    private Map<String, Map<Date, Integer>> fetchCategoryCounts( String goId, Date min, Date max ) {
-        Map<String, Map<Date, Integer>> results = new LinkedHashMap<>();
+    private Map<Evidence, Map<Date, Integer>> fetchEvidenceCounts( String goId, Date min, Date max ) {
+        Map<Evidence, Map<Date, Integer>> results = new LinkedHashMap<>();
 
         Date startDate = min == null ? cache.getGlobalMinGOEdition().getDate() : min;
         Date stopDate = max == null ? cache.getGlobalMaxGOEdition().getDate() : max;
 
-        List<CategoryCountDTO> resultset = annotationDAO.categoryCountsRangeDates( goId, startDate, stopDate );
-        for ( CategoryCountDTO dto : resultset ) {
-            Map<Date, Integer> m2 = results.get( dto.getCategory() );
-            if ( m2 == null ) {
-                m2 = new HashMap<>();
-                results.put( dto.getCategory(), m2 );
+        List<EvidenceCountDTO> resultset = annotationDAO.categoryCountsRangeDates( goId, startDate, stopDate );
+        for ( EvidenceCountDTO dto : resultset ) {
+
+            Evidence evidence = cache.getEvidence( dto.getEvidence() );
+
+            if ( evidence == null ) {
+                log.warn( "Evidence (" + dto.getEvidence() + ") not found!" );
+                evidence = new Evidence( dto.getEvidence() );
             }
-            m2.put( dto.getDate(), dto.getCount() );
+
+            results.computeIfAbsent( evidence, k -> new HashMap<>() ).put( dto.getDate(), dto.getCount() );
         }
         return results;
     }
 
     /**
-     * This is not used as we are currently doing this with cached data.
+     * Method used to get annotation count in a species grouped by evidence for a term
      *
-     * @param t term
-     * @return Counts of genes that are directly annotated with this term grouped by species and edition.
+     * @param term term
+     * @param species species
+     * @return Counts annotations for each evidence grouped by date
      */
-    public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( GeneOntologyTerm t ) {
-        return fetchDirectGeneCounts( t.getGoId() );
+    public Map<Evidence, Map<Date, Integer>> fetchEvidenceCountsInSpecies( GeneOntologyTerm term, Species species ) {
+        return fetchEvidenceCountsInSpecies( term, species, null, null );
     }
 
     /**
-     * This is not used as we are currently doing this with cached data.
+     * Method used to get annotation count in a species grouped by evidence for a term between two editions
      *
-     * @param goId term
-     * @return Counts of genes that are directly annotated with this term grouped by species and edition.
+     * @param term term
+     * @param species species
+     * @return Counts annotations for each evidence grouped by date
      */
-    public Map<Integer, Map<Edition, Integer>> fetchDirectGeneCounts( String goId ) {
-        Map<Integer, Map<Edition, Integer>> results = new HashMap<>();
-        List<DirectAnnotationCountDTO> resultset = annotationDAO.directGeneCountsAllEditions( goId );
-        for ( DirectAnnotationCountDTO dto : resultset ) {
-            Map<Edition, Integer> m2 = results.get( dto.getSpecies() );
-            if ( m2 == null ) {
-                m2 = new HashMap<>();
-                results.put( dto.getSpecies(), m2 );
+    public Map<Evidence, Map<Date, Integer>> fetchEvidenceCountsInSpecies( GeneOntologyTerm term, Species species, Edition min, Edition max ) {
+        Map<Evidence, Map<Date, Integer>> results = new LinkedHashMap<>();
+
+        int minEdition = min == null ? cache.getGlobalMinEdition( species ).getEdition() : min.getEdition();
+        int maxEdition = max == null ? cache.getCurrentEditions( species ).getEdition() : max.getEdition();
+
+        for ( EditionEvidenceCountDTO dto : annotationDAO.categoryCountsSingleSpeciesRangeEditions( term.getGoId(), species, minEdition, maxEdition ) ) {
+
+            Edition ed = cache.getEdition( species, dto.getEdition() ); //TODO: current-edition-refactor
+
+            if ( ed == null ) {
+                log.warn( "Edition (" + dto.getEdition() + ") not found!" );
+                continue;
             }
 
-            Edition ed = cache.getEdition( dto.getSpecies(), dto.getEdition() );
+            Evidence evidence = cache.getEvidence( dto.getEvidence() );
 
-            m2.put( ed, dto.getCount() );
+            if ( evidence == null ) {
+                log.warn( "Evidence (" + dto.getEvidence() + ") not found!" );
+                evidence = new Evidence( dto.getEvidence() );
+            }
+
+            results.computeIfAbsent( evidence, k -> new HashMap<>() ).put( ed.getDate(), dto.getCount() );
         }
         return results;
+    }
+
+    /**
+     * Method used to get annotation count in a species grouped by evidence for a term in a specific edition
+     *
+     * @param term term
+     * @param species species
+     * @return Counts annotations for each evidence
+     */
+    public Map<Evidence, Integer> fetchEvidenceCountsInSpecies( GeneOntologyTerm term, Species species, Edition edition ) {
+        if (term == null || species ==null || edition == null ) return Maps.newHashMap();
+        Map<Evidence, Integer> results = new LinkedHashMap<>();
+
+        for ( EditionEvidenceCountDTO dto : annotationDAO.categoryCountsSingleSpeciesRangeEditions( term.getGoId(), species, edition.getEdition(), edition.getEdition() ) ) {
+
+            Evidence evidence = cache.getEvidence( dto.getEvidence() );
+
+            if ( evidence == null ) {
+                log.warn( "Evidence (" + dto.getEvidence() + ") not found!" );
+                evidence = new Evidence( dto.getEvidence() );
+            }
+
+            results.put( evidence, dto.getCount() );
+        }
+        return results;
+    }
+
+    public Map<Edition, Map<Gene, Boolean>> fetchInferredGenes( GeneOntologyTerm term, Species species ) {
+        return fetchInferredGenes( term, species, null, null );
+    }
+
+    private Map<Edition, Map<Gene, Boolean>> fetchInferredGenes( GeneOntologyTerm term, Species species, Edition min, Edition max ) {
+        int minEdition = min == null ? cache.getGlobalMinEdition( species ).getEdition() : min.getEdition();
+        int maxEdition = max == null ? cache.getCurrentEditions( species ).getEdition() : max.getEdition();
+
+        Map<Edition, Map<Gene, Boolean>> results = new HashMap<>();
+
+        for ( Tuples.Tuple3<Integer, String, Boolean> tuple : annotationDAO.inferredGenesRangeEditions( term, species, minEdition, maxEdition ) ) {
+            Edition ed = cache.getEdition( species, tuple.getT1() );
+
+            Gene g = cache.getCurrentGene( tuple.getT2() );
+            if ( g == null ) {
+                log.warn( "Could not find Accession:" + tuple.getT2() );
+                continue;
+                //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
+            }
+
+            results.computeIfAbsent( ed, k -> new HashMap<>() ).put( g, tuple.getT3() );
+        }
+        return results;
+    }
+
+    public Map<Gene, Boolean> fetchInferredGenes( GeneOntologyTerm term, Edition edition ) {
+
+        Map<Gene, Boolean> results = new HashMap<>();
+
+        for ( Tuples.Tuple2<String, Boolean> tuple : annotationDAO.inferredGenesSingleEdition( term, edition ) ) {
+
+            Gene g = cache.getCurrentGene( tuple.getT1() );
+            if ( g == null ) {
+                log.warn( "Could not find Accession:" + tuple.getT1() );
+                continue;
+                //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
+            }
+
+            results.put( g, tuple.getT2() );
+        }
+        return results;
+    }
+
+    public Stream<Gene> fetchDirectGenes( GeneOntologyTerm term, Edition edition ) {
+
+        return annotationDAO.directGenesSingleEdition( term, edition ).stream().map( accession -> {
+            Gene g = cache.getCurrentGene( accession );
+            if ( g == null ) {
+                log.warn( "Could not find Accession:" + accession );
+                //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
+            }
+            return g;
+
+        } ).filter( Objects::nonNull );
     }
 
     public Map<Gene, Set<GeneOntologyTerm>> fetchEditionSimple(Species species, Edition edition) {
@@ -443,16 +540,22 @@ public class AnnotationService implements Serializable {
 
             Gene g = cache.getCurrentGene( tup.getT1() );
             if ( g == null ) {
-                log.warn( "Could not find Accession:" + tup.getT1() );
+                log.debug( "Could not find Accession:" + tup.getT1() );
                 continue;
                 //TODO: Create mock gene? requires loading symbols from db. ex. g = new Gene( symbol, species );
+            }
+
+            if ( !g.getSpecies().equals( species ) ) {
+                // These annotations used to be of species but are now something else (usually because of a split).
+                // leave these out of the results
+                continue;
             }
 
             GeneOntologyTerm go = cache.getTerm( edition, tup.getT2());
 
             if ( go == null ) {
                 log.debug(
-                        "Could not find (" + tup.getT2() + ") in GO Edition Id: " + edition.getGoEditionId() );
+                        "Could not find (" + tup.getT2() + ") in GO Edition Id: " + edition.getGoEdition().getId() );
                 missingTerms.put( tup.getT2(), tup );
                 continue;
             }
@@ -474,9 +577,9 @@ public class AnnotationService implements Serializable {
         }
 
         // Propagate terms
-        for ( Entry<Gene, Set<GeneOntologyTerm>> geneSetEntry : data.entrySet() ) {
-            geneSetEntry.setValue( cache.propagate(geneSetEntry.getValue(), edition) );
-        }
+//        for ( Entry<Gene, Set<GeneOntologyTerm>> geneSetEntry : data.entrySet() ) {
+//            geneSetEntry.setValue( GeneOntologyTerm.propagate( geneSetEntry.getValue().stream() ).collect( Collectors.toSet() ) );
+//        }
 
         return data;
     }

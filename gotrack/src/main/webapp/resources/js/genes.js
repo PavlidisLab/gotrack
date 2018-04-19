@@ -4,25 +4,8 @@ function onLoad() {
 
 function centerResize() {
     try {
-        var index = PrimeFaces.widgets.centerTabWdg.getActiveIndex();
-        tabShowed(index);
+        onresize();
         PrimeFaces.widgets.funcTable.render();
-    } catch (e) {
-        console.log(e);
-    }
-}
-
-function tabShowed(index) {
-    try {
-        if (index == 0) {
-            plotting.charts.annotation.resize();
-        } else if (index == 1) {
-            plotting.charts.similarity.resize();
-        } else if (index == 2) {
-            plotting.charts.multi.resize();
-        } else if (index == 3) {
-            plotting.charts.lossgain.resize();
-        }
     } catch (e) {
         console.log(e);
     }
@@ -40,12 +23,10 @@ function afterRowSelection() {
     var cnt = PF('funcTable').getSelectedRowsCount();
     try {
         if (cnt >= 1) {
-            // enable View Terms button
-            PF('viewTermsWdg').enable();
+            // enable button
             PF('viewGOGraphWdg').enable();
         } else {
-            // disable View Terms button
-            PF('viewTermsWdg').disable();
+            // disable button
             PF('viewGOGraphWdg').disable();
         }
     } catch (e) {
@@ -69,19 +50,13 @@ function handleFetchData(xhr, status, args) {
         GLOBALS.dateToEdition = JSON.parse(args.dateToEdition);
         var dates = Object.keys(GLOBALS.dateToEdition).map(Number);
         dates.sort();
-        GLOBALS.xMin = Number(dates[0])
-        GLOBALS.xMax = Number(dates[dates.length - 1])
+        GLOBALS.xMin = Number(dates[0]);
+        GLOBALS.xMax = Number(dates[dates.length - 1]);
     }
 
 }
 
 function fetchCharts() {
-    try {
-        PF('viewTermsWdg').disable();
-    } catch (e) {
-        console.log(e);
-    }
-
     try {
         PF('viewGOGraphWdg').disable();
     } catch (e) {
@@ -136,6 +111,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
 
     try {
         $('#loading-spinner-annotation').hide();
+        $('#hc_annotation_container').show();
     } catch (e) {
         console.log(e);
     }
@@ -150,7 +126,13 @@ function handleFetchAnnotationChart(xhr, status, args) {
     console.log('handleFetchAnnotationChart', args);
 
     var options = plotting.defaultHCOptions('hc_annotation_container', args.HC.chart);
+    options.exporting.chartOptions.subtitle.text = ""; // Remove subtitle
     commonOptions(options, args.HC);
+
+    options.subtitle = {
+        text: "<b>&lt;Click&gt;</b> to view annotations at a specific date. <b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> will compare that edition to the currently selected edition.",
+        style: {"font-size": "10px"}
+    };
 
     plotting.charts.annotation.options = options;
     plotting.charts.annotation.recreate(options, function (c) {
@@ -163,6 +145,7 @@ function handleFetchSimilarityChart(xhr, status, args) {
 
     try {
         $('#loading-spinner-similarity').hide();
+        $('#hc_similarity_container').show();
     } catch (e) {
         console.log(e);
     }
@@ -192,6 +175,7 @@ function handleFetchMultiChart(xhr, status, args) {
 
     try {
         $('#loading-spinner-multifunctionality').hide();
+        $('#hc_multi_container').show();
     } catch (e) {
         console.log(e);
     }
@@ -215,6 +199,7 @@ function handleFetchMultiChart(xhr, status, args) {
 }
 
 function handleFetchTimeline(xhr, status, args) {
+
     try {
         args.HC = JSON.parse(args.HC);
     } catch (e) {
@@ -226,150 +211,34 @@ function handleFetchTimeline(xhr, status, args) {
 
     if (!args.HC.success) {
         console.log(args.HC.info);
-        $('#hc_timeline_container').empty();
-        $('#hc_timeline_container').append("<p>" + args.HC.info + "</p>");
+        var hc_timeline_container = $('#hc_timeline_container');
+        hc_timeline_container.empty();
+        hc_timeline_container.append("<p>" + args.HC.info + "</p>");
         return;
     }
 
-    var tmp = args.HC.category_positions;
-    var evidenceCategories = new Array(tmp.length);
-
-    // Inverse the map
-    for (var cat in tmp) {
-        evidenceCategories[tmp[cat]] = cat;
-    }
-
-    var categories = [];
-    var tooltipData = {};
-    for (var i = 0; i < args.HC.chart.series.length; i++) {
-        categories.push(args.HC.chart.series[i].name);
-        tooltipData[i] = {};
-    }
-
-    var termNames = args.HC.term_names;
-
-    var options = plotting.ganttHCOptions('hc_timeline_container', args.HC.chart);
-    options.colors = plotting.MAXIMALLY_DISTINCT_COLORS;
-
+    var options = plotting.defaultHCOptions('hc_timeline_container', args.HC.chart);
+    plotting.addLegend(options);
+    plotting.addAreaStreamGraphToggle(options);
     options.legend = {};
-    options.yAxis = {
-        categories: categories,
-        min: 0,
-        max: categories.length - 1,
-        title: '',
-        labels: {
-            formatter: function () {
-                return this.value;
-            }
-        }
-    };
+    options.chart.type = "area";
+    options.chart.zoomType = 'x';
 
-    options.plotOptions = {
-        series: {
-            grouping: false,
-            turboThreshold: 0,
-            cropThreshold: 100000,
-            point: {
-                events: {
-                    click: function () {
-                        fetchTimelinePointData([{
-                            name: 'edition',
-                            value: GLOBALS.dateToEdition[this.x]
-                        }, {name: 'termId', value: categories[this.y]}]);
-                    }
-                }
-            }
-        }
-    };
+    options.plotOptions.area = {step: 'left'};
 
-    options.yAxis.labels.formatter = function () {
-        var name = termNames[this.value];
-        var trimName = name;
-        if (name.length > 25) {
-            trimName = name.substring(0, 22) + "...";
-        }
-        var styleTooltip = function (n, d) {
-            return "<p class='name'>" + n + "</p><p class='description'>" + d + "</p>";
+    // options.plotOptions.series.stacking='percent';
+    for (var i = 0; i < options.series.length; i++) {
+        options.series[i].fillColor = {
+            linearGradient: { x1: 0, x2: 0, y1: 0, y2: 1 },
+            stops: [
+                [0, Highcharts.Color(plotting.MAXIMALLY_DISTINCT_COLORS[i]).setOpacity(1).get('rgba')],
+                [1, Highcharts.Color(plotting.MAXIMALLY_DISTINCT_COLORS[i]).setOpacity(0).get('rgba')]
+            ]
         };
-        return '<span class="timeline-yaxis-category clearfix" title="' + styleTooltip(this.value, name) + '"><div style="text-align: right;">' + this.value + '</div><div style="text-align: right;">' + trimName + '</div></span>'
-        //return '<span title="'+termNames[this.value]+'">' + this.value + '</span><span>'+termNames[this.value]+'</span>';
-    };
-    options.yAxis.labels.useHTML = true;
-
-    var height = $('#hc_timeline_container').height();
-    var pointWidth = 5;
-    if (height != null) {
-        var pointWidth = (height - 100) / categories.length / evidenceCategories.length / 2 - 2
-        pointWidth = (pointWidth < 0.5 ? 0.5 : pointWidth);
     }
-
-
-    for (var k = 0; k < evidenceCategories.length; k++) {
-        var cat = evidenceCategories[k];
-        options.series.push({
-            name: cat,
-            pointWidth: pointWidth,
-            data: []
-        });
-    }
-
-    for (var i = 0; i < args.HC.chart.series.length; i++) {
-        var series = args.HC.chart.series[i];
-        var name = series.name;
-        var data = []
-        var tData = tooltipData[i];
-        for (var j = 0; j < series.data.length; j++) {
-            var point = series.data[j];
-            var nextPointX = (j > series.data.length - 2) ? point.x + 2629740000 : series.data[j + 1].x; //get next edition or add month
-
-            var tArr = [];
-
-            for (var k = 0; k < evidenceCategories.length; k++) {
-                var cat = evidenceCategories[k];
-                var mask = 1 << k;
-                if ((point.y & mask) != 0) {
-                    // bit is set
-                    options.series[k].data.push({x: point.x, x2: nextPointX, y: i, name: cat, yOffset: pointWidth * k});
-                    tArr.push(k);
-                } else {
-                    // bit is not set
-                }
-            }
-
-            tData[point.x] = tArr;
-        }
-
-    }
-
-    // Highcharts requires sorted data
-    for (var k = 0; k < options.series.length; k++) {
-        options.series[k].data.sort(function (a, b) {
-            return a.x - b.x;
-        });
-    }
-
-    options.tooltip.formatter = function () {
-        var s = '<b>' + Highcharts.dateFormat('%b %Y',
-                new Date(this.x)) + '</b>';
-
-        var data = tooltipData[this.y][this.x];
-
-        for (var i = 0; i < data.length; i++) {
-            var k = data[i];
-            s += '<br/>' + evidenceCategories[k]
-        }
-
-        return s;
-    }
-//   options.tooltip.positioner = function () {
-//      return { x: 80, y: 50 };
-//   }
 
     plotting.charts.timeline.options = options;
-    plotting.charts.timeline.recreate(options, function (c) {
-        $("span.timeline-yaxis-category").tipsy({gravity: "w", opacity: 0.8, html: true});
-    });
-
+    plotting.charts.timeline.recreate(options);
 
 }
 
@@ -428,7 +297,18 @@ function redrawSelectedEditionPlotLine(c, p) {
         value: p.x,
         color: plotting.comparisonColors[0],
         width: 1,
-        id: 'plot-line-selected'
+        id: 'plot-line-selected',
+        zIndex: 3,
+        label: {
+            text: 'Selected',
+            verticalAlign: 'top',
+            textAlign: 'center',
+            y: 30,
+            style: {
+                color: '#5a0000',
+                fontSize: '12px'
+            }
+        }
     });
 }
 
@@ -450,11 +330,12 @@ function hideTags() {
 function commonOptions(options, config) {
     plotting.addLegend(options);
     plotting.addScaleToggle(options, config);
-    options.subtitle = {
-        text: "<b>&lt;Click&gt;</b> to view annotations at a specific date. <b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> will compare that edition to the currently selected edition.",
-        style: {"font-size": "10px"}
+
+    options.legend = {
+        margin: 0,
+        verticalAlign: 'bottom',
+        y: 17
     };
-    options.legend = {};
     options.tooltip.pointFormatter = function () {
         return '<span style="color:' + this.color + '">\u25CF</span> ' + this.series.name + ': <b>' + utility.sigFigs(this.y, 3) + '</b><br/>';
     };
@@ -516,96 +397,21 @@ function commonOptions(options, config) {
             width: 1,
             color: 'red',
             dashStyle: 'shortdot'
-        },
-        min: utility.isUndefined(GLOBALS.xMin) ? null : GLOBALS.xMin,
-        max: utility.isUndefined(GLOBALS.xMax) ? null : GLOBALS.xMax
+        }
+        // min: utility.isUndefined(GLOBALS.xMin) ? null : GLOBALS.xMin,
+        // max: utility.isUndefined(GLOBALS.xMax) ? null : GLOBALS.xMax
     });
 }
 
 $(document).ready(function () {
     //escDialog();
 
-    /**
-     * Highcharts X-range series plugin
-     */
-    (function (H) {
-        var defaultPlotOptions = H.getOptions().plotOptions,
-            columnType = H.seriesTypes.column,
-            each = H.each;
-
-        defaultPlotOptions.xrange = H.merge(defaultPlotOptions.column, {});
-        H.seriesTypes.xrange = H.extendClass(columnType, {
-            type: 'xrange',
-            parallelArrays: ['x', 'x2', 'y'],
-            animate: H.seriesTypes.line.prototype.animate,
-
-            /**
-             * Borrow the column series metrics, but with swapped axes. This gives free access
-             * to features like groupPadding, grouping, pointWidth etc.
-             */
-            getColumnMetrics: function () {
-                var metrics,
-                    chart = this.chart,
-                    swapAxes = function () {
-                        each(chart.series, function (s) {
-                            var xAxis = s.xAxis;
-                            s.xAxis = s.yAxis;
-                            s.yAxis = xAxis;
-                        });
-                    };
-
-                swapAxes();
-
-                this.yAxis.closestPointRange = 1;
-                metrics = columnType.prototype.getColumnMetrics.call(this);
-
-                swapAxes();
-
-                return metrics;
-            },
-            translate: function () {
-                columnType.prototype.translate.apply(this, arguments);
-                var series = this,
-                    xAxis = series.xAxis,
-                    yAxis = series.yAxis,
-                    metrics = series.columnMetrics;
-
-                H.each(series.points, function (point) {
-                    barWidth = xAxis.translate(H.pick(point.x2, point.x + (point.len || 0))) - point.plotX;
-                    point.shapeArgs = {
-                        x: point.plotX,
-                        y: point.plotY + metrics.offset + (point.options.yOffset || 0),
-                        width: barWidth,
-                        height: metrics.width
-                    };
-                    point.tooltipPos[0] += barWidth / 2;
-                    point.tooltipPos[1] -= metrics.width / 2;
-                });
-            }
-        });
-
-        /**
-         * Max x2 should be considered in xAxis extremes
-         */
-        H.wrap(H.Axis.prototype, 'getSeriesExtremes', function (proceed) {
-            var axis = this,
-                dataMax = Number.MIN_VALUE;
-
-            proceed.call(this);
-            if (this.isXAxis) {
-                each(this.series, function (series) {
-                    each(series.x2Data || [], function (val) {
-                        if (val > dataMax) {
-                            dataMax = val;
-                        }
-                    });
-                });
-                if (dataMax > Number.MIN_VALUE) {
-                    axis.dataMax = dataMax;
-                }
-            }
-        });
-    }(Highcharts));
+    // Resize plots on window resize
+    window.onresize = function (event) {
+        plotting.charts.annotation.resize();
+        plotting.charts.similarity.resize();
+        plotting.charts.multi.resize();
+    };
 
     GLOBALS = {dateToEdition: {}};
 

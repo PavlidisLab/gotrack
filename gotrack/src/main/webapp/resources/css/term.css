@@ -3,21 +3,6 @@ table.termSearchTable {
 	/* border: 1px solid #A8A8A8; */
 }
 
-#currentAncestry {
-	/* margin-top: 25px; */
-	border: 1px solid grey;
-}
-
-div.child-table {
-	min-width: 300px;
-	display: table;	
-}
-
-div.child-table table {
-	 table-layout: auto !important;
-	 width: 700px;
-}
-
 div.ui-lightbox-content-wrapper > div.ui-lightbox-content {
 	background: #FCFFFF;
 }

@@ -24,7 +24,7 @@
                     console.log(e);
                 }
             } else {
-                console.log('Chart not yet created');
+                // console.log('Chart not yet created');
             }
             this._exists = false;
 
@@ -37,7 +37,7 @@
             if (!this.exists()) {
                 this.chart = new Highcharts.Chart(this.options, callback);
                 this._exists = true;
-                console.log("Chart created");
+                // console.log("Chart created");
             }
         }
         this.reset = function () {
@@ -127,16 +127,37 @@
                 type: 'xrange',
                 zoomType: 'x',
                 resetZoomButton: {
+                    theme: {
+                        fill: 'white',
+                        stroke: 'silver',
+                        r: 5,
+                        style: {
+                            fontSize: '10px'
+                        },
+                        states: {
+                            hover: {
+                                fill: '#41739D',
+                                style: {
+                                    color: 'white'
+                                }
+                            }
+                        }
+                    },
+                    relativeTo: 'chart',
                     position: {
-                        align: 'left',
+                        align: 'right',
                         // verticalAlign: 'top', // by default
-                        x: 0,
-                        y: -35,
+                        x: -50,
+                        y: 10
                     }
                 }
             },
             title: {
                 text: chart.title
+            },
+
+            subtitle: {
+                text: chart.subtitle
             },
 
             xAxis: {
@@ -208,11 +229,27 @@
                 renderTo: renderTo,
                 zoomType: 'x',
                 resetZoomButton: {
+                    theme: {
+                        fill: 'white',
+                        stroke: 'silver',
+                        r: 5,
+                        style: {
+                            fontSize: '10px'
+                        },
+                        states: {
+                            hover: {
+                                fill: '#41739D',
+                                style: {
+                                    color: 'white'
+                                }
+                            }
+                        }
+                    },
                     relativeTo: 'chart',
                     position: {
-                        align: 'left',
+                        align: 'right',
                         // verticalAlign: 'top', // by default
-                        x: 30,
+                        x: -50,
                         y: 10
                     }
                 }
@@ -221,11 +258,16 @@
                 text: chart.title
             },
 
+            subtitle: {
+                text: chart.subtitle
+            },
+
             xAxis: {
                 type: 'datetime',
                 title: {
                     text: chart.xLabel
                 },
+                minTickInterval:  360 * 24 * 3600000,
                 minRange: 60 * 24 * 3600000 // fourteen days
             },
 
@@ -267,6 +309,69 @@
                 sourceHeight: 900,
                 csv: {
                     dateFormat: '%Y-%m-%d'
+                },
+                chartOptions: {
+                    chart: {
+                        events: {
+                            load: function () {
+                                var ids_to_remove = [];
+                                for (var i = 0; i < this.xAxis[0].plotLinesAndBands.length; i++) {
+                                    var pl = this.xAxis[0].plotLinesAndBands[i];
+                                    if (pl.options.className !== "export" && !ids_to_remove.includes(pl.id)) {
+                                        ids_to_remove.push(pl.id);
+                                    }
+                                }
+                                for (i = 0; i < ids_to_remove.length; i++) {
+                                    this.xAxis[0].removePlotLine(ids_to_remove[i]);
+                                }
+                            }
+                        }
+                    },
+                    title: {
+                        style: {
+                            fontSize: '3em'
+                        }
+                    },
+                    subtitle: {
+                        style: {
+                            fontSize: '2em'
+                        }
+                    },
+                    legend: {
+                        itemStyle: {
+                            fontSize: '2em'
+                        },
+                        symbolPadding: 10,
+                        itemDistance: 50
+                    },
+                    xAxis: {
+                        tickPixelInterval: 150,
+                        title: {
+                            style: {
+                                fontSize: '3em'
+                            }
+                        },
+                        labels: {
+                            style: {
+                                fontSize: '3em'
+                            }
+                        }
+
+                    },
+                    yAxis: {
+                        title: {
+                            style: {
+                                fontSize: '3em'
+                            },
+                            margin: 30
+                        },
+                        labels: {
+                            style: {
+                                fontSize: '3em'
+                            }
+                        }
+
+                    }
                 }
             }
         };
@@ -286,11 +391,9 @@
                     name: name,
                     data: data
                 };
-                if (!isUndefined(series.extra) && !isUndefined(series.extra.color)) {
-                    seriesOptions.color = series.extra.color;
-                }
-                if (!isUndefined(series.extra) && !isUndefined(series.extra.title)) {
-                    seriesOptions.title = series.extra.title;
+
+                if (!isUndefined(series.extra)) {
+                    seriesOptions = Highcharts.merge(seriesOptions, series.extra);
                 }
                 options.series.push(seriesOptions)
 
@@ -387,11 +490,27 @@
     };
 
     plotting.addScaleToggle = function (options, config) {
-        options.chart.resetZoomButton.position.x = 105;
+        // options.chart.resetZoomButton.position.x = 105;
         options.exporting = options.exporting || {};
         options.exporting.buttons = options.exporting.buttons || {};
         $.extend(options.exporting.buttons, {
             scaleToggle: {
+                theme: {
+                    fill: 'white',
+                    stroke: 'silver',
+                    r: 5,
+                    style: {
+                        fontSize: '10px'
+                    },
+                    states: {
+                        hover: {
+                            fill: '#41739D',
+                            style: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                },
                 align: 'left',
                 //verticalAlign:'middle',
                 x: 20,
@@ -399,10 +518,10 @@
                     // The toggling of the text is not using an official API, can break with version update!
                     if (this.yAxis[0].isLog) {
                         this.exportSVGElements[3].element.nextSibling.innerHTML = "Linear";
-                        this.yAxis[0].update({type: 'linear', min: config.chart.min, max: config.chart.max});
+                        this.yAxis[0].update({type: 'linear', min: config.chart.min, max: config.chart.max, tickInterval: undefined});
                     } else {
                         this.exportSVGElements[3].element.nextSibling.innerHTML = "Log";
-                        this.yAxis[0].update({type: 'logarithmic', min: null, max: config.chart.max});
+                        this.yAxis[0].update({type: 'logarithmic', min: null, max: config.chart.max, tickInterval: 1});
                     }
 
                 },
@@ -410,6 +529,7 @@
                 symbolFill: '#bada55',
                 symbolStroke: '#330033',
                 symbolStrokeWidth: 1,
+                symbolSize: 10,
                 _titleKey: 'axis_toggle',
                 text: 'Linear'
             }
@@ -417,6 +537,84 @@
         options.lang = options.lang || {};
         $.extend(options.lang, {
             axis_toggle: 'Toggle Axis Type: Logarithmic/Linear'
+        });
+    };
+
+    plotting.addAreaStreamGraphToggle = function (options, config) {
+        // options.chart.resetZoomButton.position.x = 105;
+        options.exporting = options.exporting || {};
+        options.exporting.buttons = options.exporting.buttons || {};
+        $.extend(options.exporting.buttons, {
+            areaStreamGraphToggle: {
+                theme: {
+                    fill: 'white',
+                    stroke: 'silver',
+                    r: 5,
+                    style: {
+                        fontSize: '10px'
+                    },
+                    states: {
+                        hover: {
+                            fill: '#41739D',
+                            style: {
+                                color: 'white'
+                            }
+                        }
+                    }
+                },
+                align: 'left',
+                //verticalAlign:'middle',
+                x: 20,
+                onclick: function () {
+                    // The toggling of the text is not using an official API, can break with version update!
+                    if (this.series[0].type === 'area') {
+                        this.exportSVGElements[3].element.nextSibling.innerHTML = "Streamgraph";
+                        for (var i = 0; i < this.series.length; i++) {
+                            var s = this.series[i];
+                            s.update({
+                                type: 'streamgraph'
+                            });
+                        }
+
+                        this.yAxis[0].update({
+                            gridLineColor: 'transparent',
+                            labels: {enabled:false},
+                            startOnTick: false,
+                            endOnTick: false
+                        });
+                    } else {
+                        this.exportSVGElements[3].element.nextSibling.innerHTML = "Area";
+
+
+                        for (var i = 0; i < this.series.length; i++) {
+                            var s = this.series[i];
+                            s.update({
+                                type: 'area'
+                            });
+                        }
+
+                        this.yAxis[0].update({
+                            gridLineColor: null,
+                            labels: {enabled:true},
+                            startOnTick: null,
+                            endOnTick: null
+                        });
+
+                    }
+
+                },
+                symbol: 'circle',
+                symbolFill: '#bada55',
+                symbolStroke: '#330033',
+                symbolStrokeWidth: 1,
+                symbolSize: 10,
+                _titleKey: 'type_toggle',
+                text: 'Area    '
+            }
+        });
+        options.lang = options.lang || {};
+        $.extend(options.lang, {
+            type_toggle: 'Toggle Chart Type: Area/Streamgraph'
         });
     };
 
@@ -443,7 +641,8 @@
         });
     };
 
-    plotting.addSynchronization = function(options) {
+    plotting.addSynchronization = function(options, syncGroup) {
+        options.syncGroup = syncGroup;
         var that = this;
         $.extend(options.plotOptions.series, {
             point: {

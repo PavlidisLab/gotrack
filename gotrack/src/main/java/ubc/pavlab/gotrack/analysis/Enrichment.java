@@ -19,24 +19,18 @@
 
 package ubc.pavlab.gotrack.analysis;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
-import org.apache.log4j.Logger;
-
 import com.google.common.base.Predicates;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
 import gnu.trove.map.hash.TObjectDoubleHashMap;
+import lombok.Getter;
+import org.apache.log4j.Logger;
 import ubc.pavlab.gotrack.model.hashkey.HyperUCFKey;
+
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 /**
  * Runs over-representation analysis (enrichment) on given sample and population data.
@@ -44,25 +38,30 @@ import ubc.pavlab.gotrack.model.hashkey.HyperUCFKey;
  * @author mjacobson
  * @version $Id$
  */
+@Getter
 public class Enrichment<T, G> {
 
     private static final Logger log = Logger.getLogger( Enrichment.class );
 
-    //    private Ontology<T> ontology;
-
-    //    private Population population;
+    private CompletePopulation<T, G> samplePopulation;
 
     private boolean complete = false;
 
     private MultipleTestCorrection multipleTestCorrectionMethod = MultipleTestCorrection.BONFERRONI;
+
     private double threshold = 0.05;
+
     private int populationMin = 0;
+
     private int populationMax = 0;
 
     // Computed
     private Map<T, EnrichmentResult> results;
+
     private double cutoff;
+
     private Set<T> significantTerms;
+
     private Set<T> rejectedTerms;
 
     private int calculations;
@@ -79,20 +78,20 @@ public class Enrichment<T, G> {
         this.populationMax = populationMax <= 0 ? Integer.MAX_VALUE : populationMax;
     }
 
-    protected boolean runAnalysis( StandardPopulation<T, G> sample, Population<T, G> population,
+    protected boolean runAnalysis( CompletePopulation<T, G> sample, Population<T> population,
             TObjectDoubleHashMap<HyperUCFKey> logProbCache ) {
         return runAnalysis( sample, population, sample.getProperties(), logProbCache );
     }
 
-    public boolean runAnalysis( StandardPopulation<T, G> sample, Population<T, G> population ) {
+    public boolean runAnalysis( CompletePopulation<T, G> sample, Population<T> population ) {
         return runAnalysis( sample, population, sample.getProperties() );
     }
 
-    public boolean runAnalysis( Population<T, G> sample, Population<T, G> population, Set<T> tests ) {
+    public boolean runAnalysis( CompletePopulation<T, G> sample, Population<T> population, Set<T> tests ) {
         return runAnalysis( sample, population, tests, null );
     }
 
-    protected boolean runAnalysis( Population<T, G> sample, Population<T, G> population, Set<T> tests,
+    protected boolean runAnalysis( CompletePopulation<T, G> sample, Population<T> population, Set<T> tests,
             TObjectDoubleHashMap<HyperUCFKey> logProbCache ) {
 
         if ( logProbCache == null ) {
@@ -103,6 +102,7 @@ public class Enrichment<T, G> {
         // Used to test for no entry in memoization cache
         double noEntryValue = logProbCache.getNoEntryValue();
 
+        this.samplePopulation = sample;
         this.results = Maps.newHashMap();
         this.cutoff = 0;
         this.significantTerms = Sets.newHashSet();
@@ -223,6 +223,12 @@ public class Enrichment<T, G> {
             previousResult = er;
         }
 
+        // Set significance
+        for ( T t : sig ) {
+            EnrichmentResult er = results.get( t );
+            er.setSignificant( true );
+        }
+
         // Compute fractional Ranks
 
         for ( Entry<Integer, List<T>> rankEntry : standardRanks.entrySet() ) {
@@ -250,32 +256,8 @@ public class Enrichment<T, G> {
                 sampleSize, populationSize );
     }
 
-    public void setMultipleTestCorrection( MultipleTestCorrection test ) {
-        multipleTestCorrectionMethod = test;
-    }
-
-    public void setThreshold( double t ) {
+    void setThreshold( double t ) {
         threshold = t;
-    }
-
-    public void setPopulationMin( int min ) {
-        populationMin = min;
-    }
-
-    public void setPopulationMax( int max ) {
-        populationMax = max;
-    }
-
-    public boolean isComplete() {
-        return complete;
-    }
-
-    public double getCutoff() {
-        return cutoff;
-    }
-
-    public int getCalculations() {
-        return calculations;
     }
 
     /**
@@ -285,48 +267,21 @@ public class Enrichment<T, G> {
         return Maps.filterKeys( results, Predicates.in( significantTerms ) );
     }
 
-    /**
-     * @return unmodifiable set containing only significant terms
-     */
-    public Set<T> getSignificantTerms() {
-        return significantTerms;
-    }
 
     /**
-     * @return unmodifiable set containing only rejected terms
-     */
-    public Set<T> getRejectedTerms() {
-        return rejectedTerms;
-    }
-
-    /**
-     * @param specificTerm
      * @return Enrichment Result for specific term else null if doesn't exist
      */
     public EnrichmentResult getResult( T t ) {
         return results.get( t );
     }
 
-    /**
-     * @return unmodifiable map containing all results
-     */
-    public Map<T, EnrichmentResult> getResults() {
-        return results;
-    }
 
     /**
      * @param n
      * @return Top N terms
      */
     public Set<T> getTopNTerms( int n ) {
-        Set<T> top = Sets.newHashSet();
-        for ( T t : significantTerms ) {
-            EnrichmentResult er = getResult( t );
-            if ( er.getRank() < n ) {
-                top.add( t );
-            }
-        }
-        return top;
+        return significantTerms.stream().filter( t -> getResult( t ).getRank() < n ).collect( Collectors.toSet() );
     }
 
     public static <T> LinkedHashSet<T> getSortedKeySetByValue(

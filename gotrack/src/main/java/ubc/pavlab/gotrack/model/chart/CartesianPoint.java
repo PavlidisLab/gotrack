@@ -25,15 +25,14 @@ import java.sql.Date;
  * Represents a simple point with a long x value and an arbitrary number y value
  * 
  * @author mjacobson
- * @version $Id$
  */
-public class CartesianPoint implements Point {
-    private final long x;
+public class CartesianPoint implements Point<Double, Number> {
+    private final double x;
     private final Number y;
 
-    public CartesianPoint( long x, Number y ) {
+    public CartesianPoint( Number x, Number y ) {
         super();
-        this.x = x;
+        this.x = x.doubleValue();
         this.y = y;
     }
 
@@ -43,7 +42,7 @@ public class CartesianPoint implements Point {
     }
 
     @Override
-    public long getX() {
+    public Double getX() {
         return x;
     }
 
@@ -53,7 +52,7 @@ public class CartesianPoint implements Point {
     }
 
     @Override
-    public int compareTo( Point o ) {
-        return Long.compare( this.getX(), o.getX() );
+    public int compareTo( Point<Double, Number> o ) {
+        return this.getX().compareTo( o.getX() );
     }
 }

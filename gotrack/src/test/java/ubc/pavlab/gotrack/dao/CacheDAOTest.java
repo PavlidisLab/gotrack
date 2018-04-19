@@ -629,22 +629,30 @@ public class CacheDAOTest extends BaseTest {
     @Test
     public void testGetEvidence() {
         List<EvidenceDTO> res = cacheDAO.getEvidence();
-        Assert.assertThat( res.size(), Matchers.is( 22 ) );
+        Assert.assertThat( res.size(), Matchers.is( 27 ) );
 
         Multiset<String> categories = HashMultiset.create();
 
         // spot checks
         boolean found1 = false;
         boolean found2 = false;
+        boolean found3 = false;
 
         for ( EvidenceDTO dto : res ) {
-            found1 |= ( dto.getId() == 10 && dto.getEvidence().equals( "ISM" )
+            found1 |= ( dto.getEvidence().equals( "ISM" )
                     && dto.getDescription().equals( "Inferred from Sequence Model" )
-                    && dto.getCategory().equals( "Computational" ) );
+                    && dto.getCategory().equals( "Computational" )
+                    && dto.getCurated().equals( true ));
 
-            found2 |= ( dto.getId() == 18 && dto.getEvidence().equals( "NAS" )
+            found2 |= ( dto.getEvidence().equals( "NAS" )
                     && dto.getDescription().equals( "Non-traceable Author Statement" )
-                    && dto.getCategory().equals( "Author" ) );
+                    && dto.getCategory().equals( "Author" )
+                    && dto.getCurated().equals( true ));
+
+            found3 |= ( dto.getEvidence().equals( "IEA" )
+                    && dto.getDescription().equals( "Inferred from Electronic Annotation" )
+                    && dto.getCategory().equals( "Automatic" )
+                    && dto.getCurated().equals( false ));
             categories.add( dto.getCategory() );
         }
 
@@ -656,12 +664,17 @@ public class CacheDAOTest extends BaseTest {
             fail( "Failed spot check 2 for Evidence" );
         }
 
+        if ( !found3 ) {
+            fail( "Failed spot check 3 for Evidence" );
+        }
+
         // distinct categories
-        Assert.assertThat( categories.elementSet().size(), Matchers.is( 5 ) );
+        Assert.assertThat( categories.elementSet().size(), Matchers.is( 6 ) );
         Assert.assertThat( categories.count( "Experimental" ), Matchers.is( 6 ) );
         Assert.assertThat( categories.count( "Computational" ), Matchers.is( 10 ) );
         Assert.assertThat( categories.count( "Author" ), Matchers.is( 2 ) );
         Assert.assertThat( categories.count( "Curatorial" ), Matchers.is( 3 ) );
+        Assert.assertThat( categories.count( "High Throughput" ), Matchers.is( 5 ) );
         Assert.assertThat( categories.count( "Automatic" ), Matchers.is( 1 ) );
 
     }
