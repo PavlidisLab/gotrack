@@ -24,7 +24,7 @@
         <meta http-equiv="Expires" content="0"/>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta name="description"
-              content="GOtrack is an integral tool that reflects the problems and trends in the stability and annotation biases of multiple model organisms."/>
+              content="GOtrack: Track changes to the Gene Ontology and GO gene annotations."/>
 
         <meta name="keywords"
               content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software"/>
@@ -54,9 +54,9 @@
                                     icon="fa fa-globe"/>
                         <p:menuitem value="Downloads" outcome="/downloads.xhtml"
                                     icon="fa fa-download"/>
-                        <!-- 						<p:menuitem value="&nbsp; Tutorial" outcome="/about.xhtml" icon="fa fa-question-circle" styleClass="right-border" />
-                                                <p:menuitem value="&nbsp; Documentation" outcome="/documentation.xhtml" icon="fa fa-book" styleClass="right-border" />
-                                                <p:menuitem value="&nbsp; Resources" outcome="/resources.xhtml" icon="fa fa-info-circle" styleClass="right-border" /> -->
+                        <p:menuitem value="About" outcome="/about.xhtml"
+                                    icon="fa fa-question-circle"/>
+
                         <f:facet name="options">
                             <p:commandButton type="button" icon="fa fa-terminal" onclick="showTerminal()"
                                              rendered="#{facesContext.application.projectStage != 'Production'}"/>
@@ -67,7 +67,7 @@
 
             <p:layoutUnit id="bottom" position="south" size="40">
                 <p id="bottom-footer" class="center" style="position:absolute;margin:auto;height:1em;top:0;left:0;right:0;bottom:0;">
-                    &copy; Michael Smith Laboratories, 2018 <p:link outcome="/terms.xhtml">Terms and Conditions</p:link>
+                    &copy; Michael Smith Laboratories, 2016-2018 <p:link outcome="/about.xhtml">About</p:link>
                 </p>
             </p:layoutUnit>
 
