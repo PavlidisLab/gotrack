@@ -134,7 +134,8 @@ public class TermView implements Serializable {
     }
 
     public boolean displayInferred() {
-        return cache.getInferredAnnotationCount( cache.getCurrentEditions( session.getSpecies() ), currentTerm ) <= MAX_INFERRED_GENES_DISPLAY_COUNT;
+        Integer cnt = cache.getInferredAnnotationCount( cache.getCurrentEditions( session.getSpecies() ), currentTerm );
+        return cnt == null || cnt  <= MAX_INFERRED_GENES_DISPLAY_COUNT;
     }
 
     public Map<Gene, Boolean> fetchCurrentGenesMap() {
