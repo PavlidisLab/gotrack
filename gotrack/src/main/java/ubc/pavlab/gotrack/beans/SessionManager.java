@@ -20,6 +20,7 @@
 package ubc.pavlab.gotrack.beans;
 
 import org.apache.log4j.Logger;
+import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Species;
 
 import javax.annotation.PostConstruct;
@@ -101,6 +102,10 @@ public class SessionManager implements Serializable {
 
     public Species getSpecies() {
         return species;
+    }
+
+    public Edition getCurrentEdition() {
+        return cache.getCurrentEditions( species );
     }
 
     public void setSpecies( Species species ) {

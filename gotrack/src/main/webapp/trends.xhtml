@@ -24,7 +24,7 @@
 
     <meta name="keywords"
           content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software,enrichment,GO"/>
-    <meta name="author" content="GOtrack admin (jacobsonmt+gotrack@gmail.com)"/>
+    <meta name="author" content="GOtrack admin (pavlab-support@msl.ubc.ca)"/>
 
     <ui:include src="/WEB-INF/templates/analytics.xhtml"/>
 
@@ -68,6 +68,8 @@
                         <h:link value="Track Gene" outcome="/genes.xhtml" styleClass="nav-item eased"/>
                         <h:link value="Track Term" outcome="/terms.xhtml" styleClass="nav-item eased"/>
                         <h:link value="Track Enrichment" outcome="/enrichment.xhtml" styleClass="nav-item eased"/>
+                        <h:link value="Downloads" outcome="/downloads.xhtml" styleClass="nav-item eased"/>
+                        <h:link value="About" outcome="/about.xhtml" styleClass="nav-item eased"/>
 
                         <!--<h:link value="Documentation" outcome="/documentation.xhtml" styleClass="nav-item eased"/>-->
                         <!--<h:link value="Resources" outcome="/resources.xhtml" styleClass="nav-item eased"/>-->
@@ -86,7 +88,7 @@
 
                 <p:outputPanel>
 
-                    <div id="page-title">
+                    <div class="page-title">
                         <h1>Global Trends</h1>
                     </div>
                     <p:separator style="max-width:400px; margin-bottom:25px;"/>
@@ -198,7 +200,7 @@
         <div id="footer">
             <p:separator style="width: 70%"/>
             <div class="fitted center" style="white-space: nowrap;">
-                <p>&copy; Michael Smith Laboratories, 2017 <h:link value="Terms and Conditions" outcome="about.xhtml"/></p>
+                <p>&copy; Michael Smith Laboratories, 2016-2018 <h:link value="About" outcome="about.xhtml"/></p>
             </div>
         </div>
     </h:body>

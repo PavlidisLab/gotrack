@@ -224,6 +224,8 @@ function handleFetchTimeline(xhr, status, args) {
     options.chart.type = "area";
     options.chart.zoomType = 'x';
 
+    options.plotOptions.area = {step: 'left'};
+
     // options.plotOptions.series.stacking='percent';
     for (var i = 0; i < options.series.length; i++) {
         options.series[i].fillColor = {

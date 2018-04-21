@@ -20,12 +20,9 @@
 package ubc.pavlab.gotrack.model.chart;
 
 import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Represents a chart which holds series, points in a simple manner for conversion to JSON
@@ -34,16 +31,22 @@ import java.util.Set;
  */
 @Getter
 @Setter
-@RequiredArgsConstructor
 public class ChartValues {
 
     private Set<Series> series = new LinkedHashSet<>();
-    private final String title;
-    private final String yLabel;
-    private final String xLabel;
+    private Map<String, Object> extra = new HashMap<>();
+    private String yLabel;
+    private String xLabel;
+    private String title;
     private String subtitle;
     private Integer min;
     private Integer max;
+
+    public ChartValues(String title, String yLabel, String xLabel ) {
+        this.title = title;
+        this.yLabel = yLabel;
+        this.xLabel = xLabel;
+    }
 
     public ChartValues() {
         this(null, null, null);

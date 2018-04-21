@@ -45,6 +45,7 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -150,8 +151,7 @@ public class Cache implements Serializable {
     private Map<String, Evidence> evidenceCache = new ConcurrentHashMap<>();
 
     // Holds all unique evidence categories (Automatic, Author, etc).
-    // TODO consider turning into objects (or possibly enum if we are sure the categories won't be changing any time soon...)
-    private ImmutableSet<String> evidenceCategoryCache = null;
+    private Map<String, Set<Evidence>> evidenceCategoryCache = new ConcurrentHashMap<>();
 
     /*
      * Page specific caches
@@ -382,12 +382,9 @@ public class Cache implements Serializable {
 
         // Evidence Category cache creation
         // ****************************
-        Set<String> tmpCategories = new TreeSet<>();
-        for ( Evidence e : evidenceCache.values() ) {
-            tmpCategories.add( e.getCategory() );
-        }
-
-        evidenceCategoryCache = ImmutableSet.copyOf( tmpCategories );
+        evidenceCache.values().stream().sorted(Comparator.comparing( Evidence::getCategory ) ).forEach( e -> {
+            evidenceCategoryCache.computeIfAbsent( e.getCategory(), c -> new LinkedHashSet<>() ).add( e );
+        } );
     }
 
     private void createGOTerms( CacheDAO cacheDAO ) {
@@ -1030,6 +1027,25 @@ public class Cache implements Serializable {
 
     /**
      * @param ed edition
+     * @return count of genes annotated with this term or any of its children
+     */
+    public Map<GeneOntologyTerm, Integer> getInferredAnnotationCount( Edition ed ) {
+        if ( ed == null ) return null;
+        return inferredAnnotationCount.get( ed );
+
+    }
+
+    /**
+     * @param ed edition
+     * @return count of genes annotated with this term
+     */
+    public Map<GeneOntologyTerm, Integer> getDirectAnnotationCount( Edition ed ) {
+        if ( ed == null ) return null;
+        return directAnnotationCount.get( ed );
+    }
+
+    /**
+     * @param ed edition
      * @return aggregate
      */
     public Aggregate getAggregate( Edition ed ) {
@@ -1100,7 +1116,7 @@ public class Cache implements Serializable {
         return evidenceCache.get( evidence );
     }
 
-    public Set<String> getEvidenceCategories() {
+    public Map<String, Set<Evidence>> getEvidenceCategories() {
         return evidenceCategoryCache;
     }
 

@@ -4,7 +4,7 @@
     <groupId>ubc.pavlab</groupId>
     <artifactId>gotrack</artifactId>
     <packaging>war</packaging>
-    <version>1.3-SNAPSHOT</version>
+    <version>1.4-SNAPSHOT</version>
     <name>gotrack</name>
     <url>http://maven.apache.org</url>
 
@@ -220,7 +220,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>18.0</version>
+            <version>23.0</version>
         </dependency>
 
         <!-- Trove -->

@@ -44,7 +44,7 @@ import java.util.stream.Collectors;
 
 /**
  * Backing bean for a annotation download input
- * 
+ * Deprecated for downloads page.
  * @author mjacobson
  */
 @Named
@@ -128,9 +128,8 @@ public class AnnotationDownloadView implements Serializable {
             sb.append( "\t" );
             sb.append( gene.getName() );
             sb.append( "\t" );
-            sb.append( geneEntry.getValue().stream()
-                    .map( GeneOntologyTerm::getGoId )
-                    .collect( Collectors.joining( "|" ) ) );
+
+            sb.append( GeneOntologyTerm.propagate( geneEntry.getValue().stream() ).map( GeneOntologyTerm::getGoId ).collect( Collectors.joining( "|" ) ) );
             sb.append( System.lineSeparator() );
         }
         InputStream in = new ByteArrayInputStream(sb.toString().getBytes( StandardCharsets.UTF_8));

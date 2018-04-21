@@ -26,8 +26,8 @@ package ubc.pavlab.gotrack.model.chart;
  * @author mjacobson
  * @version $Id$
  */
-public interface Point extends Comparable<Point> {
-    public long getX();
+public interface Point<X, Y> extends Comparable<Point<X,Y>> {
+    public X getX();
 
-    public Object getY();
+    public Y getY();
 }

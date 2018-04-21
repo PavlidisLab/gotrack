@@ -25,18 +25,18 @@ import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.java.Log;
+import lombok.extern.log4j.Log4j;
 import org.primefaces.context.RequestContext;
 import ubc.pavlab.gotrack.beans.service.AnnotationService;
 import ubc.pavlab.gotrack.exception.TermNotFoundException;
-import ubc.pavlab.gotrack.model.Edition;
-import ubc.pavlab.gotrack.model.GOEdition;
-import ubc.pavlab.gotrack.model.Gene;
-import ubc.pavlab.gotrack.model.Species;
+import ubc.pavlab.gotrack.model.*;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.model.go.Relation;
+import ubc.pavlab.gotrack.model.go.RelationshipType;
 import ubc.pavlab.gotrack.model.visualization.Graph;
+import ubc.pavlab.gotrack.utilities.Tuples;
 
 import javax.annotation.PostConstruct;
 import javax.faces.application.FacesMessage;
@@ -49,6 +49,7 @@ import java.io.Serializable;
 import java.sql.Date;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -57,14 +58,14 @@ import java.util.stream.Collectors;
  * @author mjacobson
  * @version $Id$
  */
-@Log
+@Log4j
 @Named
 @ViewScoped
 public class TermView implements Serializable {
 
     private static final long serialVersionUID = 3768269202724289260L;
 
-    private static final int MAX_INFERRED_GENES_DISPLAY_COUNT = 100;
+    private static final int MAX_INFERRED_GENES_DISPLAY_COUNT = 500;
 
     @Inject
     private Cache cache;
@@ -85,6 +86,11 @@ public class TermView implements Serializable {
 
     @Getter
     private GeneOntologyTerm currentTerm;
+
+    @Getter
+    private List<Tuples.Tuple2<Evidence, Integer>> evidenceChartClickData;
+    @Getter
+    private Edition evidenceChartClickEdition;
 
     public TermView() {
         log.info( "TermView created" );
@@ -134,11 +140,26 @@ public class TermView implements Serializable {
     public Map<Gene, Boolean> fetchCurrentGenesMap() {
         Edition ed = cache.getCurrentEditions( session.getSpecies() );
         if ( displayInferred() ) {
-            return annotationService.fetchInferredGenes( currentTerm, ed );
+            return annotationService.fetchInferredGenes( currentTerm, ed ).entrySet().stream()
+                    .sorted( Map.Entry.<Gene, Boolean>comparingByValue().reversed().thenComparing( Map.Entry.comparingByKey() ) )
+                    .collect( Collectors.toMap( Map.Entry::getKey, Map.Entry::getValue,
+                            ( e1, e2 ) -> e1, LinkedHashMap::new ) );
         } else {
-            return annotationService.fetchDirectGenes( currentTerm, ed ).collect( Collectors.toMap( g -> g, g -> true ) );
+            return annotationService.fetchDirectGenes( currentTerm, ed ).collect(
+                    Collectors.toMap( Function.identity(),
+                            g -> true,
+                            ( u, v ) -> v,
+                            LinkedHashMap::new
+                    ) );
         }
 
+    }
+
+    public List<Relation<GeneOntologyTerm>> getChildTerms( GeneOntologyTerm term ) {
+        return term.getChildren().stream()
+                .sorted( Comparator.comparing( (Function<Relation<GeneOntologyTerm>, RelationshipType>) Relation::getType )
+                        .thenComparing( Relation::getRelation ) )
+                .collect( Collectors.toList() );
     }
 
     /**
@@ -343,28 +364,75 @@ public class TermView implements Serializable {
     public void fetchEvidenceChart() {
         // Make evidence charts
 
-        Map<String, Map<Date, Integer>> evidenceCounts = allSpecies ?
-                annotationService.fetchCategoryCounts( currentTerm ) :
-                annotationService.fetchCategoryCountsInSpecies( currentTerm, session.getSpecies() );
+        Map<Evidence, Map<Date, Integer>> evidenceCounts = allSpecies ?
+                annotationService.fetchEvidenceCounts( currentTerm ) :
+                annotationService.fetchEvidenceCountsInSpecies( currentTerm, session.getSpecies() );
 
-        ChartValues evidenceChart = new ChartValues( "Annotation Category Counts" + (allSpecies ? "" : " in " + session.getSpecies().getCommonName()),
+        ChartValues evidenceChart = new ChartValues( "Annotation Evidence Counts" + (allSpecies ? "" : " in " + session.getSpecies().getCommonName()),
                 "Annotation Count", "Date" );
         evidenceChart.setSubtitle( currentTerm.getGoId() + " - " + currentTerm.getName() );
-        // Done in this manner to keep order and color of categories constant
-        for ( String category : cache.getEvidenceCategories() ) {
-            Series s = new Series( category );
-            Map<Date, Integer> m = evidenceCounts.get( category );
-            if ( m != null ) {
-                for ( Entry<Date, Integer> entry : m.entrySet() ) {
-                    s.addDataPoint( entry.getKey(), entry.getValue() );
-                }
-            }
-            evidenceChart.addSeries( s );
+
+        Map<Date, Integer> curatedData = Maps.newLinkedHashMap();
+        Map<Date, Integer> automaticData = Maps.newLinkedHashMap();
+
+        for ( Entry<Evidence, Map<Date, Integer>> entry : evidenceCounts.entrySet() ) {
+            Evidence evidence = entry.getKey();
+            Map<Date, Integer> data = evidence.isCurated() ? curatedData : automaticData;
+            entry.getValue().forEach(
+                    (k, v) -> data.merge(k, v, (v1, v2) -> v1 + v2)
+            );
         }
+
+        Series curated = new Series( "Curated" );
+        for ( Entry<Date, Integer> entry : curatedData.entrySet() ) {
+            curated.addDataPoint( entry.getKey(), entry.getValue() );
+        }
+
+        Series automatic = new Series( "Automatic" );
+        for ( Entry<Date, Integer> entry : automaticData.entrySet() ) {
+            automatic.addDataPoint( entry.getKey(), entry.getValue() );
+        }
+
+        evidenceChart.addSeries( curated );
+        evidenceChart.addSeries( automatic );
+
+        evidenceChart.getExtra().put( "dateToEdition", createDateToEditionMap() );
 
         Map<String, Object> hcGsonMap = createHCCallbackParamMap( evidenceChart );
 
         RequestContext.getCurrentInstance().addCallbackParam( "HC_evidence", new Gson().toJson( hcGsonMap ) );
+    }
+
+    private Map<Long, Integer> createDateToEditionMap() {
+
+        // A map that will be needed in the front end for drilling down
+        Map<Long, Integer> dateToEdition = new HashMap<>();
+
+        cache.getAllEditions( session.getSpecies() ).forEach( ed -> {
+            dateToEdition.put( ed.getDate().getTime(), ed.getEdition() );
+        } );
+
+        return dateToEdition;
+    }
+
+    public void evidenceChartClickEvent() {
+        Integer editionId;
+        try {
+            editionId = Integer.valueOf(
+                    FacesContext.getCurrentInstance().getExternalContext().getRequestParameterMap().get( "edition" ) );
+        } catch (NumberFormatException e) {
+            log.warn( e );
+            return;
+        }
+
+        if (allSpecies ) {
+            return; // Not supported yet
+        }
+
+        evidenceChartClickEdition = cache.getEdition( session.getSpecies(), editionId );
+
+        evidenceChartClickData = annotationService.fetchEvidenceCountsInSpecies( currentTerm, session.getSpecies(), evidenceChartClickEdition )
+        .entrySet().stream().map( e -> new Tuples.Tuple2<>( e.getKey(), e.getValue() ) ).collect( Collectors.toList());
     }
 
 }

@@ -106,7 +106,7 @@ public class CacheDAOImpl implements CacheDAO {
     private static final String SQL_GO_DEFINITION = "select go_id, definition from " + SQL_DEFINITION;
 
     // Evidence
-    private static final String SQL_EVIDENCE = "SELECT id, evidence, description, category FROM " + SQL_EVIDENCE_CATEGORY;
+    private static final String SQL_EVIDENCE = "SELECT evidence, description, category, curated FROM " + SQL_EVIDENCE_CATEGORY;
 
     // Vars ---------------------------------------------------------------------------------------
 
@@ -539,8 +539,9 @@ public class CacheDAOImpl implements CacheDAO {
             preparedStatement = connection.prepareStatement( SQL_EVIDENCE );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                list.add( new EvidenceDTO( resultSet.getInt( "id" ), resultSet.getString( "evidence" ),
-                        resultSet.getString( "description" ), resultSet.getString( "category" ) ) );
+                list.add( new EvidenceDTO( resultSet.getString( "evidence" ),
+                        resultSet.getString( "description" ), resultSet.getString( "category" ),
+                        resultSet.getBoolean( "curated" )) );
             }
         } catch ( SQLException e ) {
             throw new DAOException( e );

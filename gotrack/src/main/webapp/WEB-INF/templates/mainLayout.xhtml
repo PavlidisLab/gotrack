@@ -52,9 +52,11 @@
                                     icon="fa fa-bar-chart"/>
                         <p:menuitem value="Global Trends" outcome="/trends.xhtml"
                                     icon="fa fa-globe"/>
-                        <!-- 						<p:menuitem value="&nbsp; Tutorial" outcome="/about.xhtml" icon="fa fa-question-circle" styleClass="right-border" />
-                                                <p:menuitem value="&nbsp; Documentation" outcome="/documentation.xhtml" icon="fa fa-book" styleClass="right-border" />
-                                                <p:menuitem value="&nbsp; Resources" outcome="/resources.xhtml" icon="fa fa-info-circle" styleClass="right-border" /> -->
+                        <p:menuitem value="Downloads" outcome="/downloads.xhtml"
+                                    icon="fa fa-download"/>
+                        <p:menuitem value="About" outcome="/about.xhtml"
+                                    icon="fa fa-question-circle"/>
+
                         <f:facet name="options">
                             <p:commandButton type="button" icon="fa fa-terminal" onclick="showTerminal()"
                                              rendered="#{facesContext.application.projectStage != 'Production'}"/>
