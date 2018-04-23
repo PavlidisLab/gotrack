@@ -6,7 +6,8 @@
                 xmlns:p="http://primefaces.org/ui"
                 xmlns:o="http://omnifaces.org/ui"
                 xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites"
-                xmlns:c="http://xmlns.jcp.org/jsp/jstl/core">
+                xmlns:c="http://xmlns.jcp.org/jsp/jstl/core"
+                xmlns:fn="http://java.sun.com/jsp/jstl/functions">
 
     <ui:define name="metadata">
         <f:metadata>
@@ -79,9 +80,7 @@
                              selectionMode="multiple"
                              rowKey="#{termRow.term.goId}"
                              scrollHeight="100%"
-                             rowStyleClass="rightPanelRow-#{termRow.type}"
-                             expandableRowGroups="true"
-                             sortBy="#{termRow.type}">
+                             rowStyleClass="rightPanelRow-#{termRow.direct}">
                     <p:ajax event="rowDblselect" oncomplete="afterRowSelection();fetchTimeline();"/>
                     <p:ajax event="rowSelect" onstart="afterRowSelection();return false;"/>
                     <p:ajax event="rowUnselect" onstart="afterRowSelection();return false;"/>
@@ -100,11 +99,6 @@
                                          style="display:none;"/>
                         <p:columnToggler widgetVar="colToggler" datasource="funcTable" trigger="toggler"/>
                     </f:facet>
-                    <p:headerRow>
-                        <p:column colspan="5">
-                            <h:outputText value="#{termRow.type.label}"/>
-                        </p:column>
-                    </p:headerRow>
 
                     <p:column style="width:25px" styleClass="fixed">
                         <f:facet name="header">
@@ -187,7 +181,7 @@
                         </p:link>
                     </p:column>
                     <p:column filterBy="#{termRow.term.aspect}" filterMatchMode="in"
-                              headerText="Aspect" style="width:155px;" styleClass="fixed">
+                              headerText="Aspect" style="width:110px;" styleClass="fixed">
                         <f:facet name="header">
                             <p:overlayPanel for="aspectHelpBtn" hideEffect="fade" appendToBody="true">
                                 <div class="overlay-help">
@@ -207,7 +201,7 @@
                                     onchange="PF('funcTable').filter()"
                                     style="font-size: 75%" converter="omnifaces.GenericEnumConverter">
                                 <f:selectItems value="#{cache.aspects}"
-                                               var="aspect" itemValue="#{aspect}" itemLabel="#{aspect}"/>
+                                               var="aspect" itemValue="#{aspect}" itemLabel="#{fn:substring(aspect, 0, 1)}"/>
                             </p:selectManyButton>
                         </f:facet>
                         <h:outputText value="#{termRow.term.aspect.label}"/>
@@ -229,6 +223,71 @@
                             <h:outputText value="Name"/>
                         </f:facet>
                         <h:outputText value="#{termRow.term.name}"/>
+                    </p:column>
+
+                    <p:column headerText="Curated" style="width:70px;" styleClass="fixed" filterFunction="#{geneView.filterByTrueNull}"
+                              filterBy="#{termRow.curated}">
+                        <f:facet name="header">
+                            <p:overlayPanel for="curatedHelpBtn" hideEffect="fade" appendToBody="true">
+                                <div class="overlay-help">
+                                    <p>
+                                        <span class="ui-icon fa fa-check" style="color: green;vertical-align: text-top;"></span>: Term has one or more curated annotations.
+                                    </p>
+                                    <p>
+                                        <span class="ui-icon fa fa-times" style="color: red;vertical-align: text-top;"></span>: Term only has uncurated annotations.
+                                    </p>
+                                    <p>
+                                        Blank will only occur during edition comparison. It implies the term only exists in one or more comparison editions and not the selected one.
+                                    </p>
+                                </div>
+                            </p:overlayPanel>
+                            <p:commandButton  id="curatedHelpBtn" value=""
+                                              styleClass="no-value no-background fa-fix noupdate"
+                                              icon="fa fa-question-circle" type="button"
+                                              style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                            <h:outputText value="Curated"/>
+                        </f:facet>
+                        <f:facet name="filter">
+                            <p:selectBooleanCheckbox onchange="PF('funcTable').filter()" />
+                        </f:facet>
+                        <p:outputPanel style="text-align:center;" rendered="#{termRow.curated}">
+                            <i class="fa fa-check" style="margin-right: 5px;color: green;"/>
+                        </p:outputPanel>
+                        <p:outputPanel style="text-align:center;" rendered="#{not termRow.curated and termRow.curated != null}">
+                            <i class="fa fa-times" style="margin-right: 5px;color: red;"/>
+                        </p:outputPanel>
+                    </p:column>
+                    <p:column headerText="Direct" style="width:60px;" styleClass="fixed" filterFunction="#{geneView.filterByTrueNull}"
+                              filterBy="#{termRow.direct}">
+                        <f:facet name="header">
+                            <p:overlayPanel for="directHelpBtn" hideEffect="fade" appendToBody="true">
+                                <div class="overlay-help">
+                                    <p>
+                                        <span class="ui-icon fa fa-check" style="color: green;vertical-align: text-top;"></span>: Term is directly annotated in selected edition.
+                                    </p>
+                                    <p>
+                                        <span class="ui-icon fa fa-times" style="color: red;vertical-align: text-top;"></span>: Annotation is inferred from a descendant term in selected edition.
+                                    </p>
+                                    <p>
+                                        Blank will only occur during edition comparison. It implies the term only exists in one or more comparison editions and not the selected one.
+                                    </p>
+                                </div>
+                            </p:overlayPanel>
+                            <p:commandButton  id="directHelpBtn" value=""
+                                              styleClass="no-value no-background fa-fix noupdate"
+                                              icon="fa fa-question-circle" type="button"
+                                              style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                            <h:outputText value="Direct"/>
+                        </f:facet>
+                        <f:facet name="filter">
+                            <p:selectBooleanCheckbox onchange="PF('funcTable').filter()" />
+                        </f:facet>
+                        <p:outputPanel style="text-align:center;" rendered="#{termRow.direct}">
+                            <i class="fa fa-check" style="margin-right: 5px;color: green;"/>
+                        </p:outputPanel>
+                        <p:outputPanel style="text-align:center;" rendered="#{not termRow.direct and termRow.direct != null}">
+                            <i class="fa fa-times" style="margin-right: 5px;color: red;"/>
+                        </p:outputPanel>
                     </p:column>
 
                     <p:rowExpansion>

@@ -26,6 +26,7 @@ import org.hamcrest.Matchers;
 import org.junit.*;
 import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.Evidence;
+import ubc.pavlab.gotrack.model.FullAnnotation;
 import ubc.pavlab.gotrack.model.GOEdition;
 import ubc.pavlab.gotrack.model.dto.EvidenceDTO;
 import ubc.pavlab.gotrack.model.dto.GOEditionDTO;
@@ -309,7 +310,7 @@ public class GeneOntologyTest {
     @Test
     public void testPropagateAnnotationsOverview() {
         // Default propagate through part_of
-        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
+        Map<GeneOntologyTerm, Set<FullAnnotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
         Assert.assertThat( res.size(), Matchers.is( allTerms.size() ) );
         Assert.assertThat( res.keySet(),
                 Matchers.containsInAnyOrder( allTerms.toArray( new GeneOntologyTerm[allTerms.size()] ) ) );
@@ -318,32 +319,32 @@ public class GeneOntologyTest {
 
     @Test
     public void testPropagateAnnotationsBasic() {
-        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
-        Assert.assertThat( res.get( go9 ), Matchers.equalTo( go9Annotations ) );
-        Assert.assertThat( res.get( go7 ), Matchers.equalTo( go7Annotations ) );
+        Map<GeneOntologyTerm, Set<FullAnnotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
+        Assert.assertThat( res.get( go9 ).stream().map( FullAnnotation::getAnnotation ).collect( Collectors.toSet() ), Matchers.equalTo( go9Annotations ) );
+        Assert.assertThat( res.get( go7 ).stream().map( FullAnnotation::getAnnotation ).collect( Collectors.toSet() ), Matchers.equalTo( go7Annotations ) );
     }
 
     @Test
     public void testPropagateAnnotationsParentsNoOverlap() {
-        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
-        Assert.assertThat( res.get( go3 ), Matchers.equalTo( go7Annotations ) );
-        Assert.assertThat( res.get( go8 ), Matchers.equalTo( go9Annotations ) );
+        Map<GeneOntologyTerm, Set<FullAnnotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
+        Assert.assertThat( res.get( go3 ).stream().map( FullAnnotation::getAnnotation ).collect( Collectors.toSet() ), Matchers.equalTo( go7Annotations ) );
+        Assert.assertThat( res.get( go8 ).stream().map( FullAnnotation::getAnnotation ).collect( Collectors.toSet() ), Matchers.equalTo( go9Annotations ) );
     }
 
     @Test
     public void testPropagateAnnotationsParentsNoOverlapNoPartOf() {
-        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream(), false );
+        Map<GeneOntologyTerm, Set<FullAnnotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream(), false );
         Assert.assertThat( res.get( go8 ), Matchers.nullValue() );
     }
 
     @Test
     public void testPropagateAnnotationsParentsOverlap() {
-        Map<GeneOntologyTerm, Set<Annotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
+        Map<GeneOntologyTerm, Set<FullAnnotation>> res = GeneOntologyTerm.propagateAnnotations( annotationMap.entrySet().stream() );
         Assert.assertThat( res.get( go2 ).size(), Matchers.is( Sets.union( go7Annotations, go9Annotations ).size() ) );
-        Assert.assertThat( res.get( go2 ),
+        Assert.assertThat( res.get( go2 ).stream().map( FullAnnotation::getAnnotation ).collect( Collectors.toSet() ),
                 Matchers.hasItems( go7Annotations.toArray( new Annotation[go7Annotations.size()] ) ) );
 
-        Assert.assertThat( res.get( go2 ),
+        Assert.assertThat( res.get( go2 ).stream().map( FullAnnotation::getAnnotation ).collect( Collectors.toSet() ),
                 Matchers.hasItems( go9Annotations.toArray( new Annotation[go9Annotations.size()] ) ) );
     }
 
