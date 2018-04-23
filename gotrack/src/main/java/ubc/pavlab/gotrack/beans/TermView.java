@@ -32,6 +32,7 @@ import ubc.pavlab.gotrack.exception.TermNotFoundException;
 import ubc.pavlab.gotrack.model.*;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
+import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 import ubc.pavlab.gotrack.model.go.Relation;
 import ubc.pavlab.gotrack.model.go.RelationshipType;
@@ -56,7 +57,6 @@ import java.util.stream.Collectors;
  * Backing bean for the term tracking functionality.
  *
  * @author mjacobson
- * @version $Id$
  */
 @Log4j
 @Named
@@ -287,7 +287,8 @@ public class TermView implements Serializable {
 
             if ( eds != null ) {
 
-                Series s = new Series( allSpecies ? sp.getScientificName() : "All" );
+                SeriesExtra s = new SeriesExtra( allSpecies ? sp.getScientificName() : "All" );
+                s.putExtra( "visible", false );
                 Series s2 = new Series( allSpecies ? sp.getScientificName() + " Direct" : "Direct Only" );
                 series.put( sp, s );
                 directSeries.put( sp, s2 );
