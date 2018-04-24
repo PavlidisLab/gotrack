@@ -28,6 +28,7 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.chart.ChartValues;
 import ubc.pavlab.gotrack.model.chart.Series;
+import ubc.pavlab.gotrack.model.chart.SeriesExtra;
 import ubc.pavlab.gotrack.model.go.GeneOntology;
 
 import javax.annotation.PostConstruct;
@@ -81,21 +82,18 @@ public class Trends {
             multifunctionalityChart.setSubtitle( sp.getScientificName() );
             geneJaccardChart.setSubtitle( sp.getScientificName() );
 
-            geneCountChart.setMin( 0 );
-            termsForGeneChart.setMin( 0 );
             geneJaccardChart.setMin( 0 );
-            inferredGenesForTermChart.setMin( 0 );
-            multifunctionalityChart.setMin( 0 );
-
             geneJaccardChart.setMax( 1 );
 
             Series geneCountSeries = new Series( "Distinct Genes" );
             Series directTermsForGeneSeries = new Series( "Direct" );
-            Series inferredTermsForGeneSeries = new Series( "Inferred" );
+            SeriesExtra inferredTermsForGeneSeries = new SeriesExtra( "Inferred" );
+            inferredTermsForGeneSeries.putExtra( "visible", false );
             Series inferredGenesForTermSeries = new Series( "Group Size" );
             Series multifunctionalitySeries = new Series( "Multifunctionality" );
             Series geneDirectJaccardSeries = new Series( "Direct" );
-            Series geneInferredJaccardSeries = new Series( "Inferred" );
+            SeriesExtra geneInferredJaccardSeries = new SeriesExtra( "Inferred" );
+            geneInferredJaccardSeries.putExtra( "visible", false );
 
             for ( Edition ed : cache.getAllEditions( sp ) ) {
 
