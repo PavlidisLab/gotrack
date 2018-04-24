@@ -896,6 +896,8 @@ public class EnrichmentView implements Serializable {
         if ( selectGenes != null ) {
             selectGenes.clear();
         }
+        bulkQuery = "";
+        queryGene = null;
     }
 
     /**
