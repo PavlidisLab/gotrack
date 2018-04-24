@@ -19,7 +19,10 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.Setter;
@@ -276,6 +279,20 @@ public class GeneView implements Serializable {
 
         // retrieve data
         annotationData = fetchAnnotationData();
+
+        // Prune inferred root terms
+        Set<GeneOntologyTerm> rootGOTerms = Sets.newHashSet( "GO:0003674", "GO:0008150", "GO:0005575" ).stream()
+                .map( s -> cache.getCurrentTerm( s ) )
+                .collect( Collectors.toSet() );
+
+        annotationData.values().forEach( editionData -> {
+            for ( GeneOntologyTerm term : rootGOTerms ) {
+                Set<FullAnnotation> annotations = editionData.get( term );
+                if ( annotations != null && annotations.stream().noneMatch( FullAnnotation::isDirect ) ) {
+                    editionData.remove( term );
+                }
+            }
+        } );
 
         // A map that will be needed in the front end for drilling down
         Map<Long, Integer> dateToEdition = new HashMap<>();
