@@ -21,7 +21,6 @@ package ubc.pavlab.gotrack.beans;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.Setter;
@@ -161,29 +160,6 @@ public class TermView implements Serializable {
                 .sorted( Comparator.comparing( (Function<Relation<GeneOntologyTerm>, RelationshipType>) Relation::getType )
                         .thenComparing( Relation::getRelation ) )
                 .collect( Collectors.toList() );
-    }
-
-    /**
-     * entry point to fetch data to create the most current ancestry DAG
-     */
-    public void fetchDAGData() {
-
-//        Collection<String> goids = Sets.newHashSet("GO:0005783","GO:0005886","GO:0005887","GO:0008021","GO:0009986","GO:0014069","GO:0017146","GO:0030054","GO:0030425","GO:0043005","GO:0043083","GO:0043195","GO:0043197","GO:0045202","GO:0045211","GO:0060076");
-
-
-        Set<GeneOntologyTerm> terms = Sets.newHashSet();
-        terms.add( currentTerm );
-
-//        for ( String goid : goids ) {
-//            GeneOntologyTerm t = cache.getCurrentTerm( goid );
-//            if (t != null) {
-//                terms.add( t );
-//            }
-//        }
-
-        Graph eles = Graph.fromGO( terms );
-
-        RequestContext.getCurrentInstance().addCallbackParam( "graph_data", eles.getJsonString() );
     }
 
     private Map<String, Object> createHCCallbackParamMap( ChartValues chart ) {

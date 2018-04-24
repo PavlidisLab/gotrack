@@ -535,6 +535,11 @@
                   style="max-width:80%;max-height:80%;"
                   closeOnEscape="true"
         >
+            <f:facet name="footer">
+                <p:commandButton  value="Toggle Child Nodes"
+                                  type="button"
+                                  style="right:0" onclick="gograph.toggleChildNodes('#dagDialog')"/>
+            </f:facet>
             <svg id="dagDialog" height="500" width="700"/>
         </p:dialog>
 

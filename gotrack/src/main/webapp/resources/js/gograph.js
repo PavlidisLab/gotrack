@@ -3,17 +3,33 @@
  */
 (function (gograph, $, undefined) {
 
+    gograph.graphs = {};
+
     gograph.createNewGraph = function (id, graph_data, callback) {
         // console.log("Creating graph: " + id);
-        return new GOGraph(id, graph_data, callback, false);
+        var graph = new GOGraph(id, graph_data, callback, false, false);
+        gograph.graphs[id] = graph;
+        return graph;
     };
 
     gograph.createNewGraphLogo = function (id, graph_data, callback) {
-        // console.log("Creating graph logo: " + id);
-        return new GOGraph(id, graph_data, callback, true);
+        console.log("Creating graph logo: " + id, graph_data);
+        var graph = new GOGraph(id, graph_data, callback, false, true);
+        gograph.graphs[id] = graph;
+        return graph;
     };
 
-    function GOGraph(id, graph_data, callback, is_logo) {
+    gograph.toggleChildNodes = function(id, callback) {
+        try {
+            var graph = gograph.graphs[id];
+            graph = new GOGraph(id, graph.data, callback, !graph.show_children, graph.is_logo);
+            gograph.graphs[id] = graph;
+        } catch (e) {
+            console.log(e);
+        }
+    };
+
+    function GOGraph(id, graph_data, callback, show_children, is_logo) {
         /*
          * id -> html ID of container. Ex. #dag-graph
          * graph_data -> {"nodes":[
@@ -42,7 +58,7 @@
             return {};
         });
 
-        loadGraphData(g, graph_data, is_logo);
+        loadGraphData(g, graph_data, show_children, is_logo);
 
         g.nodes().forEach(function (v) {
             var node = g.node(v);
@@ -289,6 +305,9 @@
         this.graph = g;
 
         this.renderer = render;
+        this.data = graph_data;
+        this.show_children = show_children;
+        this.is_logo = is_logo;
         this.nodes = function () {
             return svgGroup.selectAll("g.node");
         };
@@ -303,7 +322,7 @@
         return ( typeof variable === 'undefined' );
     };
 
-    function loadGraphData(g, graph_data, is_logo) {
+    function loadGraphData(g, graph_data, show_children, is_logo) {
         var rawnodes = graph_data.nodes;
         var rawedges = graph_data.edges;
 
@@ -320,7 +339,9 @@
 
         for (var i = 0; i < rawnodes.length; i++) {
             var n = rawnodes[i];
-            g.setNode(n.id, createNodeOpts(n));
+            if ( show_children || !n.classes.includes("child") ) {
+                g.setNode(n.id, createNodeOpts(n));
+            }
         }
 
         var createEdgeOpts = function (e) {
@@ -329,7 +350,9 @@
 
         for (var i = 0; i < rawedges.length; i++) {
             var e = rawedges[i];
-            g.setEdge(e.from, e.to, createEdgeOpts(e));
+            if ( show_children || !e.classes.includes("child") ) {
+                g.setEdge(e.from, e.to, createEdgeOpts(e));
+            }
         }
     }
 
