@@ -542,17 +542,23 @@ public class GeneView implements Serializable {
 
         for ( Edition ed : allEditions ) {
 
+            Map<String, Long> categoryCounts = Maps.newHashMap();
+
             Map<GeneOntologyTerm, Set<FullAnnotation>> editionData = annotationData.get( ed );
 
-            Stream<Entry<GeneOntologyTerm, Set<FullAnnotation>>> dataStream = editionData.entrySet().stream();
+            if (editionData != null) {
+                Stream<Entry<GeneOntologyTerm, Set<FullAnnotation>>> dataStream = editionData.entrySet().stream();
 
-            if ( !filterTerms.isEmpty() ) {
-                dataStream = dataStream.filter( e -> filterTerms.contains( e.getKey() ) );
+                if ( !filterTerms.isEmpty() ) {
+                    dataStream = dataStream.filter( e -> filterTerms.contains( e.getKey() ) );
+                }
+
+                // Group by annotation.evidence.category
+                categoryCounts = dataStream.flatMap( e -> e.getValue().stream() )
+                        .collect( Collectors.groupingBy( o -> o.getAnnotation().getEvidence().getCategory(), Collectors.counting() ) );
+
             }
 
-            // Group by annotation.evidence.category
-            Map<String, Long> categoryCounts = dataStream.flatMap( e -> e.getValue().stream() )
-                    .collect( Collectors.groupingBy( o -> o.getAnnotation().getEvidence().getCategory(), Collectors.counting() ) );
             for (String category : cache.getEvidenceCategories().keySet() ) {
                 seriesMap.computeIfAbsent( category, Series::new ).addDataPoint( ed.getDate(), categoryCounts.getOrDefault( category, 0L ) );
             }
