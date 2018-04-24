@@ -17,7 +17,13 @@
 
 <composite:implementation>
 
-    <p:dataTable var="gene" value="#{cc.attrs.value}" emptyMessage="No genes found." style="width:100%;max-height: 200px;" scrollable="true" scrollRows="25">
+    <p:dataTable var="gene"
+                 value="#{cc.attrs.value}"
+                 emptyMessage="No genes found."
+                 style="width:100%;"
+                 scrollHeight="150"
+                 scrollable="true"
+                 scrollRows="25">
         <p:column headerText="Symbol" style="width:120px;">
             <a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
                target="_blank" style="margin-right: 5px; text-decoration: none;">

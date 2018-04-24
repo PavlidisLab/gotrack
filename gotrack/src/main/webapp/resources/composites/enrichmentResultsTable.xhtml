@@ -22,7 +22,7 @@
 <composite:implementation>
     <p:dataTable id="enrichmentTable" widgetVar="tableEnrichmentWdg"
                  var="entry" value="#{cc.attrs.value}"
-                 sortMode="multiple" style="margin-bottom:0;max-height: 225px;"
+                 sortMode="multiple" style="margin-bottom:0;"
                  emptyMessage="No enrichment data found for selected edition"
                  filteredValue="#{cc.attrs.filteredValue}"
                  rowStyleClass="#{entry.result.significant == true ? 'significant' : 'not-significant'}"
@@ -33,6 +33,7 @@
                  rowKey="#{entry.term.goId}"
                  liveScroll="true"
                  scrollRows="25"
+                 scrollHeight="225"
                  resizableColumns="true">
         <p:ajax event="filter"
                 oncomplete="postAjaxSortTable(PF('tableEnrichmentWdg'))"/>

@@ -19,7 +19,10 @@
 
 package ubc.pavlab.gotrack.beans;
 
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.Setter;
@@ -276,6 +279,20 @@ public class GeneView implements Serializable {
 
         // retrieve data
         annotationData = fetchAnnotationData();
+
+        // Prune inferred root terms
+        Set<GeneOntologyTerm> rootGOTerms = Sets.newHashSet( "GO:0003674", "GO:0008150", "GO:0005575" ).stream()
+                .map( s -> cache.getCurrentTerm( s ) )
+                .collect( Collectors.toSet() );
+
+        annotationData.values().forEach( editionData -> {
+            for ( GeneOntologyTerm term : rootGOTerms ) {
+                Set<FullAnnotation> annotations = editionData.get( term );
+                if ( annotations != null && annotations.stream().noneMatch( FullAnnotation::isDirect ) ) {
+                    editionData.remove( term );
+                }
+            }
+        } );
 
         // A map that will be needed in the front end for drilling down
         Map<Long, Integer> dateToEdition = new HashMap<>();
@@ -542,17 +559,23 @@ public class GeneView implements Serializable {
 
         for ( Edition ed : allEditions ) {
 
+            Map<String, Long> categoryCounts = Maps.newHashMap();
+
             Map<GeneOntologyTerm, Set<FullAnnotation>> editionData = annotationData.get( ed );
 
-            Stream<Entry<GeneOntologyTerm, Set<FullAnnotation>>> dataStream = editionData.entrySet().stream();
+            if (editionData != null) {
+                Stream<Entry<GeneOntologyTerm, Set<FullAnnotation>>> dataStream = editionData.entrySet().stream();
 
-            if ( !filterTerms.isEmpty() ) {
-                dataStream = dataStream.filter( e -> filterTerms.contains( e.getKey() ) );
+                if ( !filterTerms.isEmpty() ) {
+                    dataStream = dataStream.filter( e -> filterTerms.contains( e.getKey() ) );
+                }
+
+                // Group by annotation.evidence.category
+                categoryCounts = dataStream.flatMap( e -> e.getValue().stream() )
+                        .collect( Collectors.groupingBy( o -> o.getAnnotation().getEvidence().getCategory(), Collectors.counting() ) );
+
             }
 
-            // Group by annotation.evidence.category
-            Map<String, Long> categoryCounts = dataStream.flatMap( e -> e.getValue().stream() )
-                    .collect( Collectors.groupingBy( o -> o.getAnnotation().getEvidence().getCategory(), Collectors.counting() ) );
             for (String category : cache.getEvidenceCategories().keySet() ) {
                 seriesMap.computeIfAbsent( category, Series::new ).addDataPoint( ed.getDate(), categoryCounts.getOrDefault( category, 0L ) );
             }
