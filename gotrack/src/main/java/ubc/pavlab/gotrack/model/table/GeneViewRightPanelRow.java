@@ -19,8 +19,12 @@
 
 package ubc.pavlab.gotrack.model.table;
 
-import ubc.pavlab.gotrack.model.Annotation;
-import ubc.pavlab.gotrack.model.AnnotationType;
+import com.google.common.collect.ComparisonChain;
+import com.google.common.collect.Ordering;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import ubc.pavlab.gotrack.model.FullAnnotation;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
 import java.util.BitSet;
@@ -30,84 +34,30 @@ import java.util.Collection;
  * 
  * @author mjacobson
  */
+@Getter
+@EqualsAndHashCode(exclude = {"annotations", "inSet"})
+@RequiredArgsConstructor
 public class GeneViewRightPanelRow implements Comparable<GeneViewRightPanelRow> {
 
     private final GeneOntologyTerm term;
-    private final AnnotationType type;
-    private final Collection<Annotation> annotations;
+    private final Boolean direct;
+    private final Boolean curated;
+    private final Collection<FullAnnotation> annotations;
 
     /* Used for set comparison */
     private final BitSet inSet;
 
-    public GeneViewRightPanelRow( GeneOntologyTerm term, AnnotationType type, Collection<Annotation> annotations ) {
-        this( term, type, annotations, BitSet.valueOf( new long[] {1} ));
-    }
-
-    public GeneViewRightPanelRow( GeneOntologyTerm term, AnnotationType type, Collection<Annotation> annotations, BitSet inSet ) {
-        this.term = term;
-        this.type = type;
-        this.annotations = annotations;
-        this.inSet = inSet;
-    }
-
-    public GeneOntologyTerm getTerm() {
-        return term;
-    }
-
-    public AnnotationType getType() {
-        return type;
-    }
-
-    public Collection<Annotation> getAnnotations() {
-        return annotations;
-    }
-
-    public BitSet getInSet() {
-        return inSet;
-    }
-
-    @Override
-    public String toString() {
-        return "GeneViewRightPanelRow{" +
-                "term=" + term +
-                ", type=" + type +
-                '}';
-    }
-
-    @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ( ( term == null ) ? 0 : term.hashCode() );
-        return result;
-    }
-
-    @Override
-    public boolean equals( Object obj ) {
-        if ( this == obj ) return true;
-        if ( obj == null ) return false;
-        if ( getClass() != obj.getClass() ) return false;
-        GeneViewRightPanelRow other = (GeneViewRightPanelRow) obj;
-        if ( term == null ) {
-            if ( other.term != null ) return false;
-        } else if ( !term.equals( other.term ) ) return false;
-        return true;
+    public GeneViewRightPanelRow( GeneOntologyTerm term, Boolean direct, Boolean curated, Collection<FullAnnotation> annotations ) {
+        this( term, direct, curated, annotations, BitSet.valueOf( new long[] {1} ));
     }
 
 
     @Override
     public int compareTo( GeneViewRightPanelRow that ) {
-        if ( this.type.compareTo( that.type ) < 0 ) {
-            return -1;
-        } else if ( this.type.compareTo( that.type ) > 0 ) {
-            return 1;
-        }
-
-        if ( this.term.compareTo( that.term ) < 0 ) {
-            return -1;
-        } else if ( this.term.compareTo( that.term ) > 0 ) {
-            return 1;
-        }
-        return 0;
+        return ComparisonChain.start()
+                .compare( this.direct, that.direct, Ordering.natural().reverse().nullsLast() )
+                .compare( this.curated, that.curated, Ordering.natural().reverse().nullsLast() )
+                .compare( this.term, that.term )
+                .result();
     }
 }

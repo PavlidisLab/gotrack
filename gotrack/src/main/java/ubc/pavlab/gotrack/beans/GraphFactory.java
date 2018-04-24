@@ -31,7 +31,11 @@ public class GraphFactory implements Serializable {
      * Entry point for fetching data necessary to create an ancestry DAG for a term
      */
     public void fetchGraph( GeneOntologyTerm term ) {
-        Graph graph = Graph.fromGO( term );
+        fetchGraph( term, true );
+    }
+
+    public void fetchGraph( GeneOntologyTerm term, boolean showChildren ) {
+        Graph graph = Graph.fromGO( term, showChildren );
         RequestContext.getCurrentInstance().addCallbackParam( "graph_data", graph.getJsonString() );
     }
 

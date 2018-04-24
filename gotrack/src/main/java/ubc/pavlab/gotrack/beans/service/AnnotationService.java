@@ -528,6 +528,12 @@ public class AnnotationService implements Serializable {
         } ).filter( Objects::nonNull );
     }
 
+    public Stream<Tuples.Tuple2<Gene, GeneOntologyTerm>> streamEditionSimple(Species species, Edition edition) {
+        return annotationDAO.simpleAnnotationSingleEditionCompleteSpecies( species, edition).stream()
+                .map( tup -> new Tuples.Tuple2<>( cache.getCurrentGene( tup.getT1() ), cache.getTerm( edition, tup.getT2()) ) )
+                .filter( t -> t.getT1() != null && t.getT2() != null && t.getT1().getSpecies().equals( species ) );
+    }
+
     public Map<Gene, Set<GeneOntologyTerm>> fetchEditionSimple(Species species, Edition edition) {
 
         List<Tuples.Tuple2<String, String>> resultset = annotationDAO.simpleAnnotationSingleEditionCompleteSpecies( species, edition);

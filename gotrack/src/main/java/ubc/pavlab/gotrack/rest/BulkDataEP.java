@@ -31,14 +31,12 @@ import ubc.pavlab.gotrack.model.Edition;
 import ubc.pavlab.gotrack.model.Gene;
 import ubc.pavlab.gotrack.model.Species;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
+import ubc.pavlab.gotrack.utilities.Tuples;
 import ubc.pavlab.gotrack.utilities.Zipper;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 import java.io.BufferedOutputStream;
 import java.io.BufferedWriter;
@@ -47,6 +45,7 @@ import java.io.Writer;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 /**
@@ -377,7 +376,8 @@ public class BulkDataEP {
 
     @GET
     @Path("/species/{speciesId}/annotations")
-    public Response fetchEditionLevelAnnotations( @PathParam("speciesId") Integer speciesId, @QueryParam("edition") Integer editionId ) {
+    public Response fetchEditionLevelAnnotations( @PathParam("speciesId") Integer speciesId, @QueryParam("edition") Integer editionId,
+                                                  @QueryParam("erminej") @DefaultValue("false") Boolean erminej ) {
 
         try {
 
@@ -403,7 +403,17 @@ public class BulkDataEP {
                 filename += "." + ed.getEdition() + "-" + ed.getDate();
             }
 
-            if (editions.size() > 1) {
+            boolean isMultipleEditions = editions.size() > 1;
+
+            if ( isMultipleEditions && erminej ) {
+                JSONObject response = new JSONObject();
+                response.put( "error", "Multiple editions not allowed for ermineJ compatible file." );
+                return Response.status( 405 ).entity( response.toString() ).type( MediaType.APPLICATION_JSON ).build();
+            } else if ( erminej ) {
+                filename += ".erminej";
+            }
+
+            if ( isMultipleEditions ) {
                 // Temporarily disallowed
                 JSONObject response = new JSONObject();
                 response.put( "error", "Multiple editions temporarily disallowed. Please use '?edition=<id>'." );
@@ -412,15 +422,33 @@ public class BulkDataEP {
 
             Collections.sort( editions );
 
-            String[] headers = new String[]{
-                    "edition",
-                    "date",
-                    "go_date",
-                    "accession",
-                    "symbol",
-                    "name",
-                    "go_ids",
-            };
+            String[] headers;
+
+            if ( isMultipleEditions ) {
+                headers = new String[]{
+                        "edition",
+                        "date",
+                        "go_date",
+                        "accession",
+                        "symbol",
+                        "name",
+                        "go_ids",
+                };
+            } else if ( erminej ) {
+                headers = new String[]{
+                        "symbol",
+                        "symbol",
+                        "name",
+                        "go_ids",
+                };
+            } else {
+                headers = new String[]{
+                        "accession",
+                        "symbol",
+                        "name",
+                        "go_ids",
+                };
+            }
 
             StreamingOutput stream = os -> {
                 GZIPOutputStream zip = new GZIPOutputStream( os );
@@ -431,26 +459,43 @@ public class BulkDataEP {
 
                 for ( Edition edition : editions ) {
 
-                    Map<Gene, Set<GeneOntologyTerm>> data = annotationService.fetchEditionSimple( species, edition );
+                    Stream<Tuples.Tuple2<Gene, GeneOntologyTerm>> dataStream = annotationService.streamEditionSimple( species, edition );
+                    Map<Gene, Set<GeneOntologyTerm>> data;
+                    if ( erminej ) {
+                        // Make sure symbols are unique and merge sets on conflict
+                        // Collect to Map<String, ...> revert to Map<Gene, ...> with merged term sets.
+                        data = dataStream.filter( t -> !t.getT1().getSymbol().equals( "" ) ).collect( Collectors.groupingBy( t -> t.getT1().getSymbol() ) ).entrySet().stream()
+                                .collect( Collectors.toMap(
+                                        e -> e.getValue().iterator().next().getT1(),
+                                        e -> e.getValue().stream().map( Tuples.Tuple2::getT2 )
+                                                .collect( Collectors.toSet() ) ) );
+                    } else {
+                        data = dataStream.collect( Collectors.groupingBy( Tuples.Tuple2::getT1, Collectors.mapping( Tuples.Tuple2::getT2, Collectors.toSet() ) ) );
+                    }
+
 
                     if ( data != null ) {
 
-                        for ( Map.Entry<Gene, Set<GeneOntologyTerm>> geneEntry: data.entrySet()) {
+                        for ( Map.Entry<Gene, Set<GeneOntologyTerm>> geneEntry : data.entrySet() ) {
                             Gene gene = geneEntry.getKey();
 
-                            writer.write( edition.getEdition().toString() );
+                            if ( isMultipleEditions ) {
+                                writer.write( edition.getEdition().toString() );
+                                writer.write( SEPARATOR );
+                                writer.write( edition.getDate().toString() );
+                                writer.write( SEPARATOR );
+                                writer.write( edition.getGoEdition().getDate().toString() );
+                                writer.write( SEPARATOR );
+                            }
+
+                            writer.write( erminej ? gene.getSymbol() : gene.getAccession().getAccession() );
                             writer.write( SEPARATOR );
-                            writer.write( edition.getDate().toString() );
-                            writer.write( SEPARATOR );
-                            writer.write( edition.getGoEdition().getDate().toString() );
-                            writer.write( SEPARATOR );
-                            writer.write( gene.getAccession().getAccession() );
-                            writer.write( SEPARATOR );
+
                             writer.write( gene.getSymbol() );
                             writer.write( SEPARATOR );
                             writer.write( gene.getName() );
                             writer.write( SEPARATOR );
-                            writer.write( geneEntry.getValue().stream().map( GeneOntologyTerm::getGoId ).collect( Collectors.joining( "|" ) )  );
+                            writer.write( geneEntry.getValue().stream().map( GeneOntologyTerm::getGoId ).collect( Collectors.joining( "|" ) ) );
                             writer.write( LINE_SEPARATOR );
                         }
                     }

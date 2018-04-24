@@ -99,7 +99,7 @@
             <h:form id="centerTabViewForm" style="margin:0 25px 0 25px;">
                 <p:remoteCommand name="fetchDAGData" async="true"
                                  oncomplete="handleFetchDAGData(xhr, status, args);"
-                                 action="#{termView.fetchDAGData()}"/>
+                                 action="#{graphFactory.fetchGraph(termView.currentTerm)}"/>
                 <p:remoteCommand name="fetchOverviewChart" async="true"
                                  oncomplete="handleFetchOverviewChart(xhr, status, args);"
                                  action="#{termView.fetchOverviewChart()}"/>
@@ -377,6 +377,13 @@
                                   style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
                 <h:outputText value="Ancestor Chart"/>
             </f:facet>
+
+            <f:facet name="footer">
+                <p:commandButton  value="Toggle Child Nodes"
+                                  type="button"
+                                  style="right:0" onclick="gograph.toggleChildNodes('#dagDialog')"/>
+            </f:facet>
+
             <svg id="dagDialog" height="500" width="700"/>
         </p:dialog>
 

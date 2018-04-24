@@ -304,10 +304,7 @@
                                 <f:facet name="header">
                                     <p:overlayPanel for="directannotationsHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
                                         <div class="overlay-help">
-                                            <h4>One row per distinct edition and gene. Includes directly annotation terms.</h4>
-                                            <p><b>edition</b>: GOA release edition.</p>
-                                            <p><b>date</b>: GOA release date.</p>
-                                            <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
+                                            <h4>One row per distinct gene. Includes directly annotated terms.</h4>
                                             <p><b>accession</b>: Mapped current Uniprot primary accession.</p>
                                             <p><b>symbol</b>: Mapped current gene symbol.</p>
                                             <p><b>name</b>: Mapped current gene name/description.</p>
@@ -321,6 +318,27 @@
                                     <h:outputText value="Annotations Per Gene"/>
                                 </f:facet>
                                 <a href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/annotations?edition=#{edition.edition}" style="color: -webkit-link;">download</a>
+                            </p:column>
+
+                            <p:column headerText="ErmineJ Annotations">
+                                <f:facet name="header">
+                                    <p:overlayPanel for="erminejHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
+                                        <div class="overlay-help">
+                                            <h4><a href="http://erminej.msl.ubc.ca">ErmineJ</a> compatible file; one row per gene symbol. Includes directly annotated terms.</h4>
+                                            <h4>NOTE: There may be separate genes with the same symbol, instead of removing them altogether we instead merge there annotations and list them with a randomly chosen name from among the conflicting genes.</h4>
+                                            <p><b>symbol</b>: Mapped current gene symbol.</p>
+                                            <p><b>symbol</b>: Mapped current gene symbol.</p>
+                                            <p><b>name</b>: Mapped current gene name/description (if multiple genes with same symbol, picked at random from them).</p>
+                                            <p><b>go_ids</b>: Pipe delimited list of directly annotation Gene Ontology Ids (if multiple genes with same symbol, annotations are merged).</p>
+                                        </div>
+                                    </p:overlayPanel>
+                                    <p:commandButton  id="erminejHelpBtn" value=""
+                                                      styleClass="no-value no-background fa-fix noupdate"
+                                                      icon="fa fa-question-circle" type="button"
+                                                      style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                                    <h:outputText value="ErmineJ Annotations"/>
+                                </f:facet>
+                                <a href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/annotations?edition=#{edition.edition}&amp;erminej=true" style="color: -webkit-link;">download</a>
                             </p:column>
 
                         </p:dataTable>
