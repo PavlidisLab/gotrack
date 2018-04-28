@@ -19,18 +19,26 @@
 
 package ubc.pavlab.gotrack.model.rest.marshal;
 
-import java.util.List;
+import com.google.common.collect.Sets;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import ubc.pavlab.gotrack.analysis.MultipleTestCorrection;
+import ubc.pavlab.gotrack.analysis.SimilarityMethod;
+import ubc.pavlab.gotrack.model.Aspect;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.List;
+import java.util.Set;
 
 /**
- * TODO Document Me
- * 
  * @author mjacobson
- * @version $Id$
  */
 @XmlRootElement
+@AllArgsConstructor
+@NoArgsConstructor
+@ToString
 public class EnrichmentHistoricalRequest {
     @XmlElement
     public int speciesId;
@@ -40,22 +48,20 @@ public class EnrichmentHistoricalRequest {
     public int year;
     @XmlElement
     public List<String> genes;
+    @XmlElement
+    public Set<Aspect> aspects = Sets.newHashSet( Aspect.BP );
+    @XmlElement
+    public double threshold = 0.05;
+    @XmlElement
+    public int min = 20;
+    @XmlElement
+    public int max = 200;
+    @XmlElement
+    public int topN = 5;
+    @XmlElement
+    public SimilarityMethod similarityMethod = SimilarityMethod.JACCARD;
+    @XmlElement
+    public MultipleTestCorrection multipleTestCorrection = MultipleTestCorrection.BH;
 
-    public EnrichmentHistoricalRequest() {
-    }
-
-    public EnrichmentHistoricalRequest( int speciesId, int month, int year, List<String> genes ) {
-        super();
-        this.speciesId = speciesId;
-        this.month = month;
-        this.year = year;
-        this.genes = genes;
-    }
-
-    @Override
-    public String toString() {
-        return "EnrichmentHistoricalRequest [speciesId=" + speciesId + ", month=" + month + ", year=" + year
-                + ", genes=" + genes + "]";
-    }
 
 }

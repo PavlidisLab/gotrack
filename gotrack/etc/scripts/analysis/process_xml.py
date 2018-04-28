@@ -113,6 +113,7 @@ if __name__ == '__main__':
         errors = []
         success = []
         with open(output, 'w+') as out_file:
+            out_file.write("\t".join(["STANDARD_NAME", "SYSTEMATIC_NAME", "PMID", "ORGANISM", "pubdate", "epubdate", "MEMBERS_SYMBOLIZED"]) + "\n")
             for dat in data_gen:
                 try:
                     req_data = pmid_map[dat[2]]

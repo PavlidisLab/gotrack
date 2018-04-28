@@ -44,14 +44,22 @@ public class Graph {
      * @return ancestry graph
      */
     public static Graph fromGO( GeneOntologyTerm term ) {
+        return Graph.fromGO( term, true );
+    }
+
+    public static Graph fromGO( GeneOntologyTerm term, boolean showChildren ) {
         if ( term == null ) {
             return new Graph();
         }
 
-        return Graph.fromGO( Collections.singleton( term ) );
+        return Graph.fromGO( Collections.singleton( term ), showChildren );
     }
 
     public static Graph fromGO( Collection<GeneOntologyTerm> terms ) {
+        return Graph.fromGO( terms, false );
+    }
+
+    public static Graph fromGO( Collection<GeneOntologyTerm> terms, boolean showChildren ) {
 
         if ( terms == null || terms.isEmpty() ) {
             return new Graph();
@@ -68,7 +76,7 @@ public class Graph {
             while (!termQ.isEmpty()) {
                 GeneOntologyTerm term = termQ.remove();
                 Node node = new Node( term.getId(), term.getName() );
-                nodes.put(node.getId(), node );
+                nodes.put( node.getId(), node );
 
                 // Sort for consistent graph layouts in the front-end
                 term.streamParents().sorted( Comparator.comparing( Relation::getRelation ) ).forEach( p -> {
@@ -84,13 +92,27 @@ public class Graph {
         // Apply class for base terms
         for ( GeneOntologyTerm term : terms ) {
             nodes.get( term.getId() ).addClass( "base" );
+            if (showChildren) {
+                // Add children
+                for ( Relation<GeneOntologyTerm> relation : term.getChildren() ) {
+                    GeneOntologyTerm child = relation.getRelation();
+                    Node node = new Node( child.getId(), child.getName() );
+                    node.addClass( "child" );
+                    nodes.put( node.getId(), node );
+                    Edge edge = new Edge( child.getId(), term.getId(), relation.getType() );
+                    edge.addClass( "child" );
+                    edges.add( edge );
+                }
+            }
         }
+
+
 
         return new Graph( nodes, edges );
     }
 
     public static Graph fromGODiff( GeneOntologyTerm term1, GeneOntologyTerm term2 ) {
-        if (term1 == null || term2 == null) {
+        if ( term1 == null || term2 == null ) {
             return null;
         }
         return Graph.fromGODiff( Collections.singleton( term1 ), Collections.singleton( term2 ) );
@@ -172,7 +194,7 @@ public class Graph {
     }
 
     public Graph() {
-        this( Maps.<Integer, Node>newLinkedHashMap(), new LinkedHashSet<Edge>() );
+        this( Maps.newLinkedHashMap(), new LinkedHashSet<>() );
     }
 
     public Collection<Node> getNodes() {
@@ -189,6 +211,6 @@ public class Graph {
         JsonObject obj = new JsonObject();
         obj.add( "nodes", gson.toJsonTree( this.nodes.values() ) );
         obj.add( "edges", gson.toJsonTree( this.edges ) );
-        return gson.toJson(obj);
+        return gson.toJson( obj );
     }
 }

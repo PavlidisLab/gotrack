@@ -330,3 +330,7 @@ button.ui-button.no-background:hover {
     -webkit-box-shadow: 0 0 8px #85b2cb;
     box-shadow: 0 0 8px #85b2cb;
 }
+
+div.ui-overlaypanel-content {
+    max-width: 600px;
+}

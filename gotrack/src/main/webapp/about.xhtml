@@ -98,8 +98,13 @@
 
         .section {
             margin-bottom: 40px;
-            width: 80%;
-            max-width: 1000px;
+            /*width: 80%;*/
+            /*max-width: 1000px;*/
+        }
+
+        .section-separator {
+            height: 1px;
+            max-width: 150px;
         }
     </h:outputStylesheet>
 
@@ -134,21 +139,21 @@
             </div>
         </div>
 
-        <div id="content-wrapper" class="center" style="width:100%; max-width:1600px; min-width:900px;">
+        <div id="content-wrapper" class="center" style="width:100%; max-width:1000px; min-width:900px;">
 
-            <p:outputPanel styleClass="text-left">
+            <p:outputPanel>
 
                 <h:form id="titleForm">
                     <div class="page-title">
                         <h1>About GOTrack</h1>
                     </div>
                 </h:form>
-                <p:separator style="max-width:400px; margin-bottom:25px;"/>
+                <p:separator style="max-width:400px; margin-bottom:45px;"/>
 
 
-                <div class="text-left section-title">
+                <div class="section-title">
                     <h2 style="margin-bottom: 5px;">Citing</h2>
-                    <p:separator style="max-width:150px; margin:0;"/>
+                    <p:separator class="section-separator"/>
                 </div>
 
                 <div class="section">
@@ -160,9 +165,9 @@
                     </p>
                 </div>
 
-                <div class="text-left section-title">
+                <div class="section-title">
                     <h2 style="margin-bottom: 5px;">Contact</h2>
-                    <p:separator style="max-width:150px; margin:0;"/>
+                    <p:separator class="section-separator"/>
                 </div>
 
                 <div class="section">
@@ -172,9 +177,9 @@
                     </p>
                 </div>
 
-                <div class="text-left section-title">
+                <div class="section-title">
                     <h2 style="margin-bottom: 5px;">License</h2>
-                    <p:separator style="max-width:150px; margin:0;"/>
+                    <p:separator class="section-separator"/>
                 </div>
 
                 <div class="section">
@@ -189,16 +194,16 @@
                     <p>Fork it on <a href="https://github.com/PavlidisLab/gotrack">Github</a></p>
                 </div>
 
-                <div class="text-left section-title">
+                <div class="section-title">
                     <h2 style="margin-bottom: 5px;">Disclaimer</h2>
-                    <p:separator style="max-width:150px; margin:0;"/>
+                    <p:separator class="section-separator"/>
                 </div>
                 <div class="section">
                     <p>Use at your own risk. GOTrack is provided "AS-IS" without any warranty, expressed or implied.</p>
                 </div>
-                <div class="text-left section-title">
+                <div class="section-title">
                     <h2 style="margin-bottom: 5px;">Credits and acknowledgments</h2>
-                    <p:separator style="max-width:250px; margin:0;"/>
+                    <p:separator class="section-separator" style="max-width:250px;"/>
                 </div>
                 <div class="section">
                     <p>
@@ -215,9 +220,9 @@
                     </p>
                 </div>
 
-                <div class="text-left section-title">
+                <div class="section-title">
                     <h2 style="margin-bottom: 5px;">Financial support</h2>
-                    <p:separator style="max-width:150px; margin:0;"/>
+                    <p:separator class="section-separator"/>
                 </div>
                 <div class="section">
                     <div style="display: inline-block;position: relative;height:120px;width:150px;">

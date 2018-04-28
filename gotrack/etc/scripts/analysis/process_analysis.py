@@ -44,6 +44,7 @@ if __name__ == '__main__':
         input_data = sys.argv[1]
         out_folder = sys.argv[2]
         try:
+            # If there were previous errors attempt only them again
             errors = []
             with open(sys.argv[3],'rb') as f_error:
                 errortsv = csv.reader(f_error, delimiter='\t')
@@ -58,6 +59,7 @@ if __name__ == '__main__':
             f.seek(0)
             tsvin = csv.reader(f, delimiter='\t')
 
+            # Clear previous error file
             open(out_folder + "/errors", 'w').close()
 
             print "0 / {0}".format(total)
@@ -66,7 +68,7 @@ if __name__ == '__main__':
             with open(out_folder + "/results", 'w+') as out_file:
                 writer = csv.DictWriter(out_file, fieldnames = header)
                 writer.writeheader()
-                for name, sys_name, pmid, species, pubdate, epubdate, genes in tsvin:
+                for name, sys_name, pmid, organism, species, pubdate, epubdate, genes in tsvin:
                     if errors == None or len(errors) == 0 or sys_name in errors:
                         try:
                             if i % 100 == 0:
@@ -114,7 +116,7 @@ if __name__ == '__main__':
                             
                             writer.writerow(out_line)
                                 
-                        except Exception, e:
+                        except Exception as e:
                             print e
                             with open(out_folder + "/errors", "a") as myfile:
                                 myfile.write(sys_name + "\t" + repr(e) + "\n")
@@ -130,7 +132,6 @@ if __name__ == '__main__':
                 out_file.write("min_go_geneset:\t{0}".format(res['min_go_geneset']) + "\n")
                 out_file.write("max_go_geneset:\t{0}".format(res['max_go_geneset']) + "\n")
                 out_file.write("threshold:\t{0}".format(res['threshold']) + "\n")
-                out_file.write("similarity_compare_method:\t{0}".format(json.dumps(res['similarity_compare_method'])) + "\n")
                 out_file.write("aspect_filter:\t{0}".format(res['aspect_filter']) + "\n")
 
             print "Complete"

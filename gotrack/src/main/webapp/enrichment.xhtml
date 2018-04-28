@@ -109,7 +109,7 @@
                                          oncomplete="PF('addMultipleGenesDlg').show()"/>
                         <p:commandButton icon="fa fa-trash" value="Clear"
                                          action="#{enrichmentView.removeAllGenes()}"
-                                         update=":formSelect:geneList :formSelect:runEnrichmentBtn"/>
+                                         update=":formSelect:geneList :formSelect:runEnrichmentBtn :formAddGenes"/>
                     </f:facet>
                 </p:dataList>
 
@@ -567,6 +567,11 @@
                   style="max-width:80%;max-height:80%;"
                   closeOnEscape="true"
         >
+            <f:facet name="footer">
+                <p:commandButton  value="Toggle Child Nodes"
+                                  type="button"
+                                  style="right:0" onclick="gograph.toggleChildNodes('#dagDialog')"/>
+            </f:facet>
             <svg id="dagDialog" height="500" width="700"/>
         </p:dialog>
 

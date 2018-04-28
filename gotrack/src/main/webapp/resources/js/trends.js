@@ -23,12 +23,14 @@ function handleFetchCharts(xhr, status, args) {
 function createGeneCountChart(chart) {
     var options = plotting.defaultHCOptions('hc-geneCount', chart);
     commonOptions(options);
+    options.legend = {enabled: false};
     createChart(options, 'geneCount');
 }
 
 function createOntSizeChart(chart) {
     var options = plotting.defaultHCOptions('hc-ontSize', chart);
     commonOptions(options);
+    options.legend = {enabled: false};
     createChart(options, 'ontSize');
 }
 
@@ -72,7 +74,12 @@ function createChart(options, ckey) {
 }
 
 function commonOptions(options) {
-    options.legend = {enabled: false};
+    plotting.addLegend(options);
+    options.legend = {
+        margin: 0,
+        verticalAlign: 'bottom',
+        y: 17
+    };
     options.xAxis.crosshair = true;
 
     options.tooltip.pointFormatter = function () {

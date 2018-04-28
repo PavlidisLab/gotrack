@@ -24,10 +24,15 @@ import gnu.trove.set.hash.THashSet;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.ToString;
+import ubc.pavlab.gotrack.model.Annotation;
 import ubc.pavlab.gotrack.model.Aspect;
+import ubc.pavlab.gotrack.model.FullAnnotation;
 import ubc.pavlab.gotrack.model.dto.GOTermDTO;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -179,8 +184,9 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         return terms.flatMap( t -> t.propagate( includePartOf ) );
     }
 
-    public static <A> Map<GeneOntologyTerm, Set<A>> propagateAnnotations( Stream<Map.Entry<GeneOntologyTerm, Set<A>>> termEntries ) {
-        return propagateAnnotations( termEntries, true );
+
+    public static Map<GeneOntologyTerm, Set<FullAnnotation>> propagateAnnotations( Stream<Map.Entry<GeneOntologyTerm, Set<Annotation>>> annotations ) {
+        return propagateAnnotations( annotations, true );
     }
 
     /**
@@ -188,10 +194,14 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
      *
      * @return Map of all propagated terms to their propagated annotations
      */
-    static <A> Map<GeneOntologyTerm, Set<A>> propagateAnnotations( Stream<Map.Entry<GeneOntologyTerm, Set<A>>> termEntries, boolean includePartOf ) {
-        Map<GeneOntologyTerm, Set<A>> propagatedAnnotations = new HashMap<>();
-        termEntries.forEach( entry -> entry.getKey().propagate(includePartOf)
-                .forEach( p -> propagatedAnnotations.computeIfAbsent( p, k -> new HashSet<>() ).addAll( entry.getValue() ) ) );
+    static Map<GeneOntologyTerm, Set<FullAnnotation>> propagateAnnotations( Stream<Map.Entry<GeneOntologyTerm, Set<Annotation>>> annotations, boolean includePartOf ) {
+        Map<GeneOntologyTerm, Set<FullAnnotation>> propagatedAnnotations = new HashMap<>();
+
+        annotations.forEach( entry -> entry.getKey().propagate(includePartOf)
+                .forEach( p -> propagatedAnnotations.computeIfAbsent( p, k -> new HashSet<>() )
+                        .addAll( entry.getValue().stream()
+                                .map( a -> new FullAnnotation( entry.getKey(), a, p.equals( entry.getKey() ) ) )
+                                .collect( Collectors.toList()) ) ) );
 
         return propagatedAnnotations;
     }

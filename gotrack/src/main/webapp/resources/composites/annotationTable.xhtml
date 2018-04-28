@@ -18,6 +18,39 @@
 <composite:implementation>
 
     <p:dataTable var="annot" value="#{cc.attrs.value}" emptyMessage="No annotations found with given criteria">
+        <p:column headerText="From">
+            <f:facet name="header">
+                <p:overlayPanel for="fromHelpBtn" hideEffect="fade" appendToBody="true">
+                    <div class="overlay-help">
+                        <p>
+                            The term this annotation is from (can be a descendant term if this annotation is inferred).
+                        </p>
+                        <p>
+                            <b>&lt;Click&gt;</b> on <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;"/> to view the term's QuickGO entry.
+                        </p>
+                        <p>
+                            <b>&lt;Click&gt;</b> on <span class="ui-icon fa fa-sitemap"></span> to view the term's ancestry chart, <b>NOTE</b>: we do not propagate across aspects whereas QuickGo does.
+                        </p>
+                    </div>
+                </p:overlayPanel>
+                <p:commandButton  id="fromHelpBtn" value=""
+                                  styleClass="no-value no-background fa-fix noupdate"
+                                  icon="fa fa-question-circle" type="button"
+                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                <h:outputText value="From"/>
+            </f:facet>
+            <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{annot.annotatedTerm.goId}"
+               target="_blank" style="text-decoration: none;">
+                <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
+            </a>
+            <p:commandLink action="#{graphFactory.fetchGraph(annot.annotatedTerm)}"
+                           oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);">
+                <i class="fa fa-sitemap emphasize-hover" style="margin-right: 5px;"/>
+            </p:commandLink>
+            <p:link value="#{annot.annotatedTerm.goId}" outcome="terms" target="_blank" title="#{annot.annotatedTerm.name}">
+                <f:param name="query" value="#{annot.annotatedTerm.goId}"/>
+            </p:link>
+        </p:column>
         <p:column headerText="Qualifier">
             <f:facet name="header">
                 <p:overlayPanel for="qualifierHelpBtn" hideEffect="fade" appendToBody="true" dynamic="true">
@@ -33,7 +66,7 @@
                                   style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
                 <h:outputText value="Qualifier"/>
             </f:facet>
-            <h:outputText value="#{annot.qualifier}"/>
+            <h:outputText value="#{annot.annotation.qualifier}"/>
         </p:column>
         <p:column headerText="Evidence">
             <f:facet name="header">
@@ -49,7 +82,7 @@
                                   style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
                 <h:outputText value="Evidence"/>
             </f:facet>
-            <h:outputText value="#{annot.evidence.evidence}"/>
+            <h:outputText value="#{annot.annotation.evidence.evidence}" title="#{annot.annotation.evidence.description}"/>
         </p:column>
         <p:column>
             <f:facet name="header">
@@ -75,23 +108,7 @@
                 <h:outputText value="Category"/>
             </f:facet>
 
-            <h:outputText value="#{annot.evidence.category}"/>
-        </p:column>
-        <p:column headerText="Description">
-            <f:facet name="header">
-                <p:overlayPanel for="descriptionHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Short description of the Evidence code.</p>
-                        <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="descriptionHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Description"/>
-            </f:facet>
-            <h:outputText value="#{annot.evidence.description}"/>
+            <h:outputText value="#{annot.annotation.evidence.category}"/>
         </p:column>
         <p:column headerText="Reference">
             <f:facet name="header">
@@ -106,7 +123,7 @@
                                   style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
                 <h:outputText value="Reference"/>
             </f:facet>
-            <h:outputText value="#{annot.reference}"/>
+            <h:outputText value="#{annot.annotation.reference}"/>
         </p:column>
         <f:facet name="footer">
             <!-- &#8203 is a zero-width space so that the div container leaves space for the status text -->

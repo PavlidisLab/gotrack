@@ -19,8 +19,6 @@
 
 package ubc.pavlab.gotrack.rest;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableTable;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.apache.log4j.Logger;
@@ -135,11 +133,8 @@ public class GeneEP {
                 JSONObject geneJSON = new JSONObject();
                 geneJSON.put( "gene_match", minimal ? geneMatchToMinimalJSON( gm ) : new JSONObject( gm ) );
                 if ( gm.getType().equals( GeneMatch.Type.SINGLE ) ) {
-                    Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> data = retrieveData(
-                            gm.getSelectedGene() );
 
-                    ImmutableMap<Edition, Map<GeneOntologyTerm, Set<Annotation>>> directSets = data
-                            .get( AnnotationType.D ).rowMap();
+                    Map<Edition, Map<GeneOntologyTerm, Set<FullAnnotation>>> annotationData = fetchAnnotationData( gm.getSelectedGene() );
 
                     JSONArray editionArray = new JSONArray();
 
@@ -149,25 +144,31 @@ public class GeneEP {
                         // Retain only this edition
                         editionsToIterate = Sets.newHashSet( closestEdition );
                     } else {
-                        editionsToIterate = data.get( AnnotationType.I ).rowMap().keySet();
+                        editionsToIterate = annotationData.keySet();
                     }
 
                     for ( Edition ed : editionsToIterate ) {
-                        Map<GeneOntologyTerm, Set<Annotation>> termsMap = data.get( directOnly ? AnnotationType.D : AnnotationType.I ).rowMap()
-                                .get( ed );
-                        Set<GeneOntologyTerm> directTerms = directSets.get( ed ).keySet();
+
+                        Map<GeneOntologyTerm, Set<FullAnnotation>> editionData = annotationData.get( ed );
+
+                        if (directOnly) {
+                            editionData = editionData.entrySet().stream().filter( e -> e.getValue().stream().anyMatch( FullAnnotation::isDirect ) )
+                                    .collect( Collectors.toMap(Entry::getKey, Entry::getValue) );
+                        }
+
                         JSONObject editionResults = new JSONObject();
                         editionResults.put( "edition", new JSONObject( ed ) );
 
                         JSONArray termData = new JSONArray();
-                        for ( Entry<GeneOntologyTerm, Set<Annotation>> entry2 : termsMap.entrySet() ) {
+                        for ( Entry<GeneOntologyTerm, Set<FullAnnotation>> entry2 : editionData.entrySet() ) {
                             GeneOntologyTerm t = entry2.getKey();
-                            termData.put( annotationsToJSON( entry2.getKey(), directTerms.contains( t ), minimal ) );
+                            termData.put( annotationsToJSON( entry2.getKey(), directOnly || entry2.getValue().stream().anyMatch( FullAnnotation::isDirect ), minimal ) );
                         }
                         editionResults.put( "terms", termData );
-                        editionResults.put( "mf", multifunctionalityService.multifunctionality( termsMap.keySet(), ed ) );
+                        editionResults.put( "mf", multifunctionalityService.multifunctionality( editionData.keySet(), ed ) );
 
                         editionArray.put( editionResults );
+
                     }
 
                     geneJSON.put( "data", editionArray );
@@ -304,69 +305,12 @@ public class GeneEP {
         return response;
     }
 
-    /**
-     * Attempt to get data from cache, if not in cache get from DB. Afterwards apply filter.
-     */
-    private Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> retrieveData( Gene gene ) {
-
-        Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> rawData = Maps.newHashMap();
-
-        Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> cachedData = cache
-                .getGeneData( gene );
-
-        // Speedy return if no filters are required and data was cached
-        if ( cachedData != null ) {
-            return cachedData;
+    private Map<Edition, Map<GeneOntologyTerm, Set<FullAnnotation>>> fetchAnnotationData( Gene gene ) {
+        Map<Edition, Map<GeneOntologyTerm, Set<FullAnnotation>>> data = Maps.newLinkedHashMap();
+        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : annotationService.fetchTrackData( gene ).entrySet() ) {
+            data.put( entry.getKey(), GeneOntologyTerm.propagateAnnotations( entry.getValue().entrySet().stream() ) );
         }
-
-        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> directRawData = annotationService.fetchTrackData( gene );
-        Map<Edition, Map<GeneOntologyTerm, Set<Annotation>>> inferredRawData = directRawData.entrySet().stream()
-                .collect( Collectors.toMap(
-                        Entry::getKey,
-                        e -> GeneOntologyTerm.propagateAnnotations( e.getValue().entrySet().stream() )
-                ) );
-
-        // Convert to ImmutableTable
-
-        // Direct
-        ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>> rawdataBuilder = new ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>>();
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : directRawData.entrySet() ) {
-            Edition ed = entry.getKey();
-            for ( Entry<GeneOntologyTerm, Set<Annotation>> entry2 : entry.getValue().entrySet() ) {
-                rawdataBuilder.put( ed, entry2.getKey(), entry2.getValue() );
-            }
-
-        }
-        rawdataBuilder.orderRowsBy( new Comparator<Edition>() {
-            @Override
-            public int compare( Edition o1, Edition o2 ) {
-                return o1.compareTo( o2 );
-            }
-        } );
-
-        rawData.put( AnnotationType.D, rawdataBuilder.build() );
-
-        // Indirect
-        rawdataBuilder = new ImmutableTable.Builder<Edition, GeneOntologyTerm, Set<Annotation>>();
-        for ( Entry<Edition, Map<GeneOntologyTerm, Set<Annotation>>> entry : inferredRawData.entrySet() ) {
-            Edition ed = entry.getKey();
-            for ( Entry<GeneOntologyTerm, Set<Annotation>> entry2 : entry.getValue().entrySet() ) {
-                rawdataBuilder.put( ed, entry2.getKey(), entry2.getValue() );
-            }
-
-        }
-        rawdataBuilder.orderRowsBy( new Comparator<Edition>() {
-            @Override
-            public int compare( Edition o1, Edition o2 ) {
-                return o1.compareTo( o2 );
-            }
-        } );
-        rawData.put( AnnotationType.I, rawdataBuilder.build() );
-
-        cache.addGeneData( gene, rawData );
-
-        return rawData;
-
+        return data;
     }
 
     /**

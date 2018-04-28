@@ -24,18 +24,12 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import ubc.pavlab.gotrack.model.go.GeneOntologyTerm;
 
-/**
- * Represents an annotation, only makes sense when used to connect a {@link GeneOntologyTerm} and {@link Gene}
- * 
- * @author mjacobson
- */
 @Getter
-@RequiredArgsConstructor
+//@EqualsAndHashCode( exclude = ("direct") ) // Exclude direct as we only want a single term-annotation pair in a set at once
 @EqualsAndHashCode
-public final class Annotation {
-
-    private final String qualifier;
-    private final Evidence evidence;
-    private final String reference;
-
+@RequiredArgsConstructor
+public class FullAnnotation {
+    private final GeneOntologyTerm annotatedTerm;
+    private final Annotation annotation;
+    private final boolean direct;
 }
