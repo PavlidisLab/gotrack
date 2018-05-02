@@ -61,9 +61,9 @@ def enrichment_complete(genes, species_id):
     location = BASE_URL + 'analysis/enrichment/complete/'
     return __send_request(location, content)
 
-def similarity(month, year, genes, species_id):
+def similarity(month, year, genes, species_id, tversky=False):
     content = {'month': month, 'year': year, 'genes': genes, 'speciesId': species_id, 'threshold': 0.05, 'min': 20,
-               'max': 200, 'topN': 5, 'aspects': ['BP'], 'similarityMethod': 'JACCARD', 'multipleTestCorrection': 'BH'}
+               'max': 200, 'topN': 5, 'aspects': ['BP'], 'similarityMethod': 'JACCARD' if not tversky else "TVERSKY", 'multipleTestCorrection': 'BH'}
     location = BASE_URL + 'analysis/similarity/'
     return __send_request(location, content)
 

@@ -390,7 +390,7 @@ public class AnalysisEP {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/similarity")
     public Response postSimilarity( final EnrichmentHistoricalRequest req ) {
-        log.info( req );
+//        log.info( req );
         JSONObject response = new JSONObject();
         try {
             // Get Species
@@ -413,8 +413,6 @@ public class AnalysisEP {
             Date inputDate = c.getTime();
 
             Edition closestEdition = closestEdition( inputDate, species );
-
-            response.put( "edition", new JSONObject( closestEdition ) );
 
             Set<Gene> hitList = Sets.newHashSet();
             Set<GeneMatch> exact = Sets.newHashSet();
@@ -463,52 +461,37 @@ public class AnalysisEP {
                 return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
-            Edition currentEdition = cache.getCurrentEditions( species );
+            Edition referenceEdition = cache.getCurrentEditions( species );
 
-            response.put( "current_edition", new JSONObject( currentEdition ) );
+            EnrichmentAnalysis analysis = enrichmentService.enrichment( Sets.newHashSet( closestEdition, referenceEdition )
+                    , hitList, species, req.multipleTestCorrection, req.threshold, req.min, req.max, req.aspects );
 
-            EnrichmentAnalysis analysis = enrichmentService.enrichment(
-                    Sets.newHashSet( closestEdition, currentEdition ), hitList,
-                    species, req.multipleTestCorrection, req.threshold, req.min, req.max, req.aspects );
-
-            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, req.topN, currentEdition, req.similarityMethod, cache );
+            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, req.topN, referenceEdition, req.similarityMethod, cache );
             response.put( "similarity_compare_edition", new JSONObject( similarityAnalysis.getReferenceEdition() ) );
             response.put( "similarity_method", new JSONObject( similarityAnalysis.getSimilarityMethod() ).put( "key", similarityAnalysis.getSimilarityMethod() ) );
-            response.put( "topN", similarityAnalysis.getTopN() );
+            response.put( "top_n", similarityAnalysis.getTopN() );
 
-            JSONArray dataJSON = new JSONArray();
+            // Data
 
-            for ( Entry<Edition, SimilarityScore> editionEntry : similarityAnalysis.getSimilarityScores().entrySet() ) {
+            SimilarityScore score = similarityAnalysis.getSimilarityScore( closestEdition );
+            JSONObject simJSON = similarityToJSON( score, referenceEdition );
+            simJSON.put( "edition", new JSONObject( closestEdition ) );
+            simJSON.put( "similarity_age", getDateDiff( closestEdition.getDate(), referenceEdition.getDate(), TimeUnit.DAYS ) );
+            simJSON.put( "significant_terms", analysis.getTermsSignificant( closestEdition ).size() );
+            // TODO: We don't convert here as the caches which help calculate MF don't yet account for alternate ids
+            simJSON.put( "top_parents_mf",
+                    multifunctionalityService.multifunctionality( score.getTopParents(), closestEdition ) );
+            response.put( "data", simJSON );
 
-                Edition ed = editionEntry.getKey();
-                SimilarityScore score = editionEntry.getValue();
-                JSONObject editionJSON = new JSONObject( ed );
-
-                JSONObject valuesJSON = new JSONObject();
-                valuesJSON.put( "CompleteTermSim", score.getCompleteTermSim() );
-                valuesJSON.put( "TopTermSim", score.getTopTermSim() );
-                valuesJSON.put( "TopGeneSim", score.getTopGeneSim() );
-                valuesJSON.put( "TopParentsSim", score.getTopParentsSim() );
-
-                JSONObject entryJSON = new JSONObject();
-
-                entryJSON.put( "edition", editionJSON );
-                entryJSON.put( "age_days", getDateDiff( ed.getDate(), currentEdition.getDate(), TimeUnit.DAYS ) );
-                entryJSON.put( "significant_terms", analysis.getTermsSignificant( ed ).size() );
-
-                entryJSON.put( "top_terms", goSetToJSON( score.getTopTerms() ) );
-                entryJSON.put( "top_parents", goSetToJSON( score.getTopParents() ) );
-                entryJSON.put( "top_genes", score.getTopGenes() );
-
-                entryJSON.put( "top_parents_mf",
-                        multifunctionalityService.multifunctionality( score.getTopParents(), ed ) );
-
-                entryJSON.put( "values", valuesJSON );
-
-                dataJSON.put( entryJSON );
-            }
-
-            response.put( "similarity_data", dataJSON );
+            SimilarityScore referenceScore = similarityAnalysis.getSimilarityScore( referenceEdition );
+            JSONObject referenceSimJSON = similarityToJSON( referenceScore, referenceEdition );
+            referenceSimJSON.put( "edition", new JSONObject( referenceEdition ) );
+            referenceSimJSON.put( "similarity_age", 0 );
+            referenceSimJSON.put( "significant_terms", analysis.getTermsSignificant( referenceEdition ).size() );
+            // TODO: We don't convert here as the caches which help calculate MF don't yet account for alternate ids
+            referenceSimJSON.put( "top_parents_mf",
+                    multifunctionalityService.multifunctionality( referenceScore.getTopParents(), referenceEdition ) );
+            response.put( "reference_data", referenceSimJSON );
 
             response.put( "httpstatus", 200 );
             response.put( "success", true );
@@ -618,6 +601,25 @@ public class AnalysisEP {
         }
 
         return results;
+    }
+
+    private JSONObject similarityToJSON( SimilarityScore score, Edition referenceEdition ) {
+
+        JSONObject valuesJSON = new JSONObject();
+        valuesJSON.put( "complete_term_sim", score.getCompleteTermSim() );
+        valuesJSON.put( "top_term_sim", score.getTopTermSim() );
+        valuesJSON.put( "top_gene_sim", score.getTopGeneSim() );
+        valuesJSON.put( "top_parents_sim", score.getTopParentsSim() );
+
+        JSONObject entryJSON = new JSONObject();
+
+        // Conversion accounts for obsoletion and alternate ids
+        entryJSON.put( "top_terms", goSetToJSON( cache.convertTerms( referenceEdition, score.getTopTerms() ) ) );
+        entryJSON.put( "top_parents", goSetToJSON( cache.convertTerms( referenceEdition, score.getTopParents() ) ) );
+        entryJSON.put( "top_genes", score.getTopGenes() );
+
+        entryJSON.put( "values", valuesJSON );
+        return entryJSON;
     }
 
 }
