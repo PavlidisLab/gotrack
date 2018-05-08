@@ -65,6 +65,7 @@ public class Enrichment<T, G> {
     private Set<T> rejectedTerms;
 
     private int calculations;
+    private int countTestedTerms;
 
     public Enrichment() {
 
@@ -245,6 +246,7 @@ public class Enrichment<T, G> {
         this.cutoff = cutoff;
         this.significantTerms = Collections.unmodifiableSet( sig );
         this.rejectedTerms = Collections.unmodifiableSet( rejected );
+        this.countTestedTerms = testSetSize;
 
         complete = true;
         return true;

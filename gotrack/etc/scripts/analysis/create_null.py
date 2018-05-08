@@ -21,17 +21,17 @@
 """Analysis"""
 
 from __future__ import division
-from operator import methodcaller
-import sys
-import datetime
-import csv
-import numpy as np
-import itertools
-import math
-from collections import namedtuple
 
+import itertools
 import logging
 import logging.config
+import math
+import sys
+
+import numpy as np
+
+import parser
+from util import mean, sstdev, tversky_proto_weighted, jaccard_similarity, Memoized
 
 # Example logging
 logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
@@ -39,148 +39,6 @@ logging.addLevelName(logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevel
 logging.addLevelName(logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 log = logging.getLogger()
 
-
-class memoized:
-
-    def __init__(self, f):
-        self.f = f
-        self.cache = {}
-
-    def __call__(self, *args):
-        if args in self.cache:
-            return self.cache[args]
-        else:
-            value = self.f(*args)
-            self.cache[args] = value
-            return value
-
-def date_(x):
-    return datetime.datetime.strptime(x, "%Y-%m-%d").date()
-def list_(x):
-    return set(x.split(",")) if x else set()
-def list2_(x):
-    return map(methodcaller("split", "|"), x.split(",")) if x else []
-
-DATA_HEADER = [("sys_name", str),
-               ("name", str),
-               ("pmid", str),
-               ("species", str),
-               ("age", int),
-               ("date", str),
-               ("date_requested", date_),
-               ("edition", int),
-               ("edition_date", date_),
-               ("edition_go_date", date_),
-               ("significant_terms", int),
-               ("significant_terms_current", int),
-               ("complete_term_jaccard", float),
-               ("top_term_jaccard", float),
-               ("top_gene_jaccard", float),
-               ("top_parents_jaccard", float),
-               ("top_term_tversky", float),
-               ("top_gene_tversky", float),
-               ("top_parents_tversky", float),
-               ("top_parents_mf", float),
-               ("top_parents_mf_current", float),
-               ("top_terms", list_),
-               ("top_terms_current", list_),
-               ("top_parents", list_),
-               ("top_parents_current", list_),
-               ("top_genes", list_),
-               ("top_genes_current", list_),
-               ("genes_found", list2_),
-               ("genes_missed", list_)]
-
-GeneSetAnalysis = namedtuple('GeneSetAnalysis', [h[0] for h in DATA_HEADER])
-
-# [0] "sys_name"
-# [1] "name"                      "pmid"                      "species"                   "age"
-# [5] "date"                      "date_requested"            "edition"                   "edition_date"              "edition_go"
-# [10] "edition_go_date"          "significant_terms"         "significant_terms_current" "complete_term_jaccard"
-#[14] "top_term_jaccard"          "top_gene_jaccard"          "top_parents_jaccard"       "top_parents_mf"
-#[18] "top_parents_mf_current"    "top_terms"                 "top_terms_current"         "top_parents"
-#[22] "top_parents_current"       "top_genes"                 "top_genes_current"         "genes_found"
-#[26] "genes_missed"
-
-def parse_results(file):
-    settings = {}
-    # read tab-delimited file
-    with open(file,'rb') as infile:
-        reader = csv.reader(infile, delimiter='\t')
-
-        for r in reader:
-            if not r[0].startswith("# "):
-                # Check header
-                assert r == [h[0] for h in DATA_HEADER]
-                break
-            # parse settings
-            settings[r[0][2:-1]] = r[1]
-        type_parser = [h[1] for h in DATA_HEADER]
-        filecontents = [GeneSetAnalysis(*map(lambda x,y:x(y), type_parser, line)) for line in reader]
-
-    settings['reference_edition_date'] = parse_date( settings['reference_edition_date'], '%Y-%m-%d')
-    settings['reference_edition_go_date'] = parse_date( settings['reference_edition_go_date'], '%Y-%m-%d')
-    return filecontents, settings
-
-def parse_date(d, format):
-    return datetime.datetime.strptime(d, format).date()
-
-def tversky_proto_weighted(prototype, variant):
-    if len(prototype) == 0 and len(variant) == 0: return 1.0
-    if len(prototype) == 0 or len(variant) == 0: return 0.0
-    intersect_size = len(prototype.intersection(variant))
-    return intersect_size / (intersect_size + len(prototype.difference(variant)))
-
-def jaccard_similarity(a, b):
-    if len(a) == 0 and len(b) == 0: return 1.0
-    if len(a) == 0 or len(b) == 0: return 0.0
-    return len(a.intersection(b)) / len(a.union(b))
-
-def mean(data):
-    """Return the sample arithmetic mean of data."""
-    n = len(data)
-    if n < 1:
-        raise ValueError('mean requires at least one data point')
-    return sum(data)/n # in Python 2 use sum(data)/float(n)
-
-def _ss(data):
-    """Return sum of square deviations of sequence data."""
-    c = mean(data)
-    ss = sum((x-c)**2 for x in data)
-    return ss
-
-def sstdev(data):
-    """Calculates the sample standard deviation."""
-    n = len(data)
-    if n < 2:
-        raise ValueError('variance requires at least two data points')
-    ss = _ss(data)
-    pvar = ss/(n-1) # the sample variance
-    return pvar**0.5
-
-def median(data):
-    """Return the median (middle value) of numeric data.
-
-    When the number of data points is odd, return the middle data point.
-    When the number of data points is even, the median is interpolated by
-    taking the average of the two middle values:
-
-    median([1, 3, 5]) -> 3
-    median([1, 3, 5, 7]) -> 4.0
-
-    """
-    data = sorted(data)
-    n = len(data)
-    if n == 0:
-        raise ValueError("no median for empty data")
-    if n%2 == 1:
-        return data[n//2]
-    else:
-        i = n//2
-        return (data[i - 1] + data[i])/2
-
-def flatten(l):
-    return (item for sublist in l for item in sublist)
 
 def create_random_null_similarity(data, settings, flat=False):
     '''Creates a random null distribution. That is creating a distribution of similarities by
@@ -198,7 +56,7 @@ def create_random_null_similarity(data, settings, flat=False):
         study_row = []
         for j, m2 in enumerate(data):
             if cnt % 1000000 == 0:
-                logging.info("%s / %s : %s", cnt, total, cnt/total)
+                log.info("%s / %s : %s", cnt, total, cnt/total)
 
             # Compare m1.old -> m2.new
 
@@ -249,7 +107,7 @@ def permutation_test(data):
     total = math.factorial(n)
     for pairings in matched_pairs_permutations:
         if cnt % 1000000 == 0:
-            logging.info("%s%%", cnt/total)
+            log.info("%s%%", cnt/total)
         s = 0
         for m1, m2 in pairings:
             s += sims[m1,m2]
@@ -262,20 +120,28 @@ def mc_permutation_test(data, samples=1000):
     sample_permutations = []
     n = len(data)
 
-
-    @memoized
+    @Memoized
     def sims(i, j):
-        return jaccard_similarity(data[i].top_parents, data[j].top_parents_current), tversky_proto_weighted(data[i].top_parents, data[j].top_parents_current)
+        now = data[j]
+        then = data[i]
+        return jaccard_similarity(then.complete_terms, now.complete_terms_current), \
+               tversky_proto_weighted(then.complete_terms, now.complete_terms_current), \
+               jaccard_similarity(then.top_terms, now.top_terms_current), \
+               tversky_proto_weighted(then.top_terms, now.top_terms_current), \
+               jaccard_similarity(then.top_parents, now.top_parents_current), \
+               tversky_proto_weighted(then.top_parents, now.top_parents_current), \
+               jaccard_similarity(then.top_genes, now.top_genes_current), \
+               tversky_proto_weighted(then.top_genes, now.top_genes_current)
 
     cnt = 0
-    for _ in xrange(samples):
+    for run in xrange(samples):
         if cnt % 100 == 0:
-            logging.info("%s%%", 100*cnt/samples)
+            log.info("%s%%", 100*cnt/samples)
         sample_permutations.append([(sims(m1,m2), m1, m2) for m1, m2 in enumerate(np.random.permutation(n))])
 
 
         cnt += 1
-    logging.info("%s%%", 100*cnt/samples)
+    log.info("%s%%", 100*cnt/samples)
     return sample_permutations
 
 def is_up_down_pair(data, i, j):
@@ -297,44 +163,29 @@ if __name__ == '__main__':
         else:
             samples = 1000
 
-        if len(sys.argv[1:]) > 3:
-            term_filter_or = sys.argv[4].lower() == 'true'
-        else:
-            term_filter_or = False
-
         if len(sys.argv[1:]) > 4:
             control_file = sys.argv[5]
         else:
             control_file = False
 
-        raw_data, settings = parse_results(data_file)
+        raw_data, settings = parser.parse_analysis_results(data_file)
 
-        # Filter out studies that have only ever had few or no significant terms
-        if term_filter_or:
-            def term_filter(r):
-                return r.significant_terms > 5 or r.significant_terms_current > 5
-        else:
-            def term_filter(r):
-                return r.significant_terms > 5 and r.significant_terms_current > 5
+        data = raw_data
 
-        data = [row for row in raw_data if term_filter(row)]
-
-        sim = lambda r: r.top_parents_jaccard
-
-        log.info('Actual Mean: %s', mean([sim(r) for r in data]))
-        log.info('Actual Standard Deviation: %s', sstdev([sim(r) for r in data]))
-        log.info('Actual Mean Age: %s', mean([r.age for r in data]))
-        log.info('Actual Standard Deviation Age: %s', sstdev([r.age for r in data]))
+        log.info('Actual Top Parents Jaccard Mean (+- SD): %s (+- %s)', mean([r.top_parents_jaccard for r in data]), sstdev([r.top_parents_jaccard for r in data]))
+        log.info('Actual Top Parents Tversky Mean (+- SD): %s (+- %s)', mean([r.top_parents_tversky for r in data]), sstdev([r.top_parents_tversky for r in data]))
+        log.info('Actual Age Mean (+- SD): %s (+- %s)', mean([r.age for r in data]), sstdev([r.age for r in data]))
+        log.info('')
 
         if control_file:
-            raw_control_data, control_settings = parse_results(control_file)
+            raw_control_data, control_settings = parser.parse_analysis_results(control_file)
             assert settings == control_settings
-            control_data = [row for row in raw_control_data if term_filter(row)]
+            control_data = raw_control_data
 
-            log.info('Control Mean: %s', mean([sim(r) for r in control_data]))
-            log.info('Control Standard Deviation: %s', sstdev([sim(r) for r in control_data]))
-            log.info('Control Mean Age: %s', mean([r.age for r in control_data]))
-            log.info('Control Standard Deviation Age: %s', sstdev([r.age for r in control_data]))
+            log.info('Control Top Parents Jaccard Mean (+- SD): %s (+- %s)', mean([r.top_parents_jaccard for r in control_data]), sstdev([r.top_parents_jaccard for r in control_data]))
+            log.info('Control Top Parents Tversky Mean (+- SD): %s (+- %s)', mean([r.top_parents_tversky for r in control_data]), sstdev([r.top_parents_tversky for r in control_data]))
+            log.info('Control Age Mean (+- SD): %s (+- %s)', mean([r.age for r in control_data]), sstdev([r.age for r in control_data]))
+            log.info('')
 
             all_data = data + control_data
         else:
@@ -354,22 +205,24 @@ if __name__ == '__main__':
 
         log.info("Null Size after pruning: %s", sum(len(x) for x in null_perms))
 
-        log.info('Null Mean: %s', mean([mean([s[0][0] for s in p]) for p in null_perms]))
-        log.info('Null Standard Deviation: %s', sstdev([sstdev([s[0][0] for s in p]) for p in null_perms]))
+        log.info('Null Top Parents Jaccard Mean (+- SD): %s (+- %s)', mean([mean([s[0][4] for s in p]) for p in null_perms]), sstdev([sstdev([s[0][4] for s in p]) for p in null_perms]))
+        log.info('Null Top Parents Tversky Mean (+- SD): %s (+- %s)', mean([mean([s[0][5] for s in p]) for p in null_perms]), sstdev([sstdev([s[0][5] for s in p]) for p in null_perms]))
 
         log.info("Writing null distribution to %s.tsv", null_out )
         with open(null_out + ".tsv", 'w+') as f_out:
-            # Write null ditribution
-            f_out.write("\t".join(["PERMUTATION_RUN", "SYSTEMATIC_NAME_THEN", "SYSTEMATIC_NAME_NOW", "THEN_DATE", "JACCARD", "TVERSKY"]) + "\n")
+            # Write null distribution
+            f_out.write("\t".join([ch[0] for ch in parser.NULL_HEADER]) + "\n")
             cnt = 0
             total = len(null_perms)
             for i, p in enumerate(null_perms):
                 if cnt % 100 == 0:
                     log.info("%s%%", 100*cnt/total)
                 cnt += 1
-                for sims, m1, m2 in p:
+                for sims, m_then, m_now in p:
                     try:
-                        f_out.write("\t".join(map(str, [i, all_data[m1].sys_name, all_data[m2].sys_name, all_data[m2].edition_date.strftime("%Y-%m-%d"), sims[0], sims[1]])) + "\n")
+                        now = all_data[m_now]
+                        then = all_data[m_then]
+                        f_out.write("\t".join(map(str, [i, then.sys_name, now.sys_name, then.significant_terms, now.significant_terms_current, then.edition_date.strftime("%Y-%m-%d")] + list(sims))) + "\n")
                     except Exception as e:
-                        log.error("%s,%s: %s", m1, m2, repr(e) )
+                        log.error("%s,%s: %s", m_then, m_now, repr(e) )
             log.info("%s%%", 100*cnt/samples)

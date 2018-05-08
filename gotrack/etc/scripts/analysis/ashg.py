@@ -18,7 +18,7 @@
 #
 #
 
-"""Creates post-analysis graphics."""
+"""(DEPRECATED) Creates post-analysis graphics."""
 
 from __future__ import division
 from operator import methodcaller

@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * TODO Document Me
- * 
+ *
  * @author mjacobson
  * @version $Id$
  */
@@ -161,10 +161,10 @@ public class AnalysisEP {
 
             response.put( "httpstatus", 200 );
             response.put( "success", true );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
             return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
-        } catch ( Exception e1 ) {
+        } catch (Exception e1) {
             log.error( "Something went wrong!", e1 );
             return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
@@ -268,10 +268,10 @@ public class AnalysisEP {
 
             response.put( "httpstatus", 200 );
             response.put( "success", true );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
             return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
-        } catch ( Exception e1 ) {
+        } catch (Exception e1) {
             log.error( "Something went wrong!", e1 );
             return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
@@ -371,10 +371,10 @@ public class AnalysisEP {
 
             response.put( "httpstatus", 200 );
             response.put( "success", true );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
             return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
-        } catch ( Exception e1 ) {
+        } catch (Exception e1) {
             log.error( "Something went wrong!", e1 );
             return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
@@ -472,33 +472,15 @@ public class AnalysisEP {
             response.put( "top_n", similarityAnalysis.getTopN() );
 
             // Data
-
-            SimilarityScore score = similarityAnalysis.getSimilarityScore( closestEdition );
-            JSONObject simJSON = similarityToJSON( score, referenceEdition );
-            simJSON.put( "edition", new JSONObject( closestEdition ) );
-            simJSON.put( "similarity_age", getDateDiff( closestEdition.getDate(), referenceEdition.getDate(), TimeUnit.DAYS ) );
-            simJSON.put( "significant_terms", analysis.getTermsSignificant( closestEdition ).size() );
-            // TODO: We don't convert here as the caches which help calculate MF don't yet account for alternate ids
-            simJSON.put( "top_parents_mf",
-                    multifunctionalityService.multifunctionality( score.getTopParents(), closestEdition ) );
-            response.put( "data", simJSON );
-
-            SimilarityScore referenceScore = similarityAnalysis.getSimilarityScore( referenceEdition );
-            JSONObject referenceSimJSON = similarityToJSON( referenceScore, referenceEdition );
-            referenceSimJSON.put( "edition", new JSONObject( referenceEdition ) );
-            referenceSimJSON.put( "similarity_age", 0 );
-            referenceSimJSON.put( "significant_terms", analysis.getTermsSignificant( referenceEdition ).size() );
-            // TODO: We don't convert here as the caches which help calculate MF don't yet account for alternate ids
-            referenceSimJSON.put( "top_parents_mf",
-                    multifunctionalityService.multifunctionality( referenceScore.getTopParents(), referenceEdition ) );
-            response.put( "reference_data", referenceSimJSON );
+            response.put( "data", similarityToJSON( similarityAnalysis, analysis, closestEdition, referenceEdition, req.includeSets) );
+            response.put( "reference_data", similarityToJSON( similarityAnalysis, analysis, referenceEdition, referenceEdition, req.includeSets) );
 
             response.put( "httpstatus", 200 );
             response.put( "success", true );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
             return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
-        } catch ( Exception e1 ) {
+        } catch (Exception e1) {
             log.error( "Something went wrong!", e1 );
             return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
@@ -512,7 +494,7 @@ public class AnalysisEP {
             response.put( "httpstatus", httpStatus );
             response.put( "success", false );
             response.put( "message", message );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
         }
         return response;
@@ -520,9 +502,9 @@ public class AnalysisEP {
 
     /**
      * Get a diff between two dates
-     * 
-     * @param date1 the oldest date
-     * @param date2 the newest date
+     *
+     * @param date1    the oldest date
+     * @param date2    the newest date
      * @param timeUnit the unit in which you want the diff
      * @return the diff value, in the provided unit
      */
@@ -552,7 +534,7 @@ public class AnalysisEP {
 
     /**
      * Convert list of strings to best possible matches in genes
-     * 
+     *
      * @param geneInputs
      * @return
      */
@@ -603,22 +585,33 @@ public class AnalysisEP {
         return results;
     }
 
-    private JSONObject similarityToJSON( SimilarityScore score, Edition referenceEdition ) {
+    private JSONObject similarityToJSON(SimilarityAnalysis similarityAnalysis, EnrichmentAnalysis analysis, Edition edition, Edition referenceEdition, boolean includeSets) {
+        JSONObject entryJSON = new JSONObject();
+
+        SimilarityScore score = similarityAnalysis.getSimilarityScore( edition );
 
         JSONObject valuesJSON = new JSONObject();
         valuesJSON.put( "complete_term_sim", score.getCompleteTermSim() );
         valuesJSON.put( "top_term_sim", score.getTopTermSim() );
         valuesJSON.put( "top_gene_sim", score.getTopGeneSim() );
         valuesJSON.put( "top_parents_sim", score.getTopParentsSim() );
-
-        JSONObject entryJSON = new JSONObject();
+        entryJSON.put( "values", valuesJSON );
 
         // Conversion accounts for obsoletion and alternate ids
-        entryJSON.put( "top_terms", goSetToJSON( cache.convertTerms( referenceEdition, score.getTopTerms() ) ) );
-        entryJSON.put( "top_parents", goSetToJSON( cache.convertTerms( referenceEdition, score.getTopParents() ) ) );
-        entryJSON.put( "top_genes", score.getTopGenes() );
+        if ( includeSets ) {
+            entryJSON.put( "complete_terms", goSetToJSON( cache.convertTerms( referenceEdition, analysis.getTermsSignificant( edition ) ) ) );
+            entryJSON.put( "top_terms", goSetToJSON( cache.convertTerms( referenceEdition, score.getTopTerms() ) ) );
+            entryJSON.put( "top_parents", goSetToJSON( cache.convertTerms( referenceEdition, score.getTopParents() ) ) );
+            entryJSON.put( "top_genes", score.getTopGenes() );
+        }
 
-        entryJSON.put( "values", valuesJSON );
+        entryJSON.put( "edition", new JSONObject( edition ) );
+        entryJSON.put( "similarity_age", getDateDiff( edition.getDate(), referenceEdition.getDate(), TimeUnit.DAYS ) );
+        entryJSON.put( "significant_terms", analysis.getTermsSignificant( edition ).size() );
+        // TODO: We don't convert here as the caches which help calculate MF don't yet account for alternate ids
+        entryJSON.put( "top_parents_mf",
+                multifunctionalityService.multifunctionality( score.getTopParents(), edition ) );
+        entryJSON.put( "distinct_tested_terms", analysis.getRawResults( edition ).getCountTestedTerms() );
         return entryJSON;
     }
 

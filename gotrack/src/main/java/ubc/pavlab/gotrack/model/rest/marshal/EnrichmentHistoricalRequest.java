@@ -62,6 +62,8 @@ public class EnrichmentHistoricalRequest {
     public SimilarityMethod similarityMethod = SimilarityMethod.JACCARD;
     @XmlElement
     public MultipleTestCorrection multipleTestCorrection = MultipleTestCorrection.BH;
+    @XmlElement
+    public boolean includeSets = true;
 
 
 }

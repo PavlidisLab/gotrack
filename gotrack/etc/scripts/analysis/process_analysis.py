@@ -21,14 +21,16 @@
 """Reads tsv from process_xml.py and runs analysis using GOTrack RESTful services. 
    Creates one file per line as well as a settings and error file."""
 from __future__ import division
-import datetime
-import logging
-import logging.config
-import analysis
-import sys
+
 import csv
-import dateutil.parser
+import datetime
 import json
+import logging.config
+import sys
+
+import dateutil.parser
+
+import analysis
 
 __author__ = 'mjacobson'
 
@@ -46,7 +48,7 @@ def tversky_proto_weighted(prototype, variant):
 
 if __name__ == '__main__':
     # import argparse
-    
+
     if len(sys.argv[1:]) > 1:
         input_data = sys.argv[1]
         out_file = sys.argv[2]
@@ -80,12 +82,13 @@ if __name__ == '__main__':
 
             log.info("0 / %s", total)
             i = 1
-            header = ["sys_name","name","pmid","species","age","date","date_requested","edition","edition_date",
-                      "edition_go_date","significant_terms","significant_terms_current",
-                      "complete_term_jaccard","top_term_jaccard","top_gene_jaccard","top_parents_jaccard",
-                      "top_term_tversky","top_gene_tversky","top_parents_tversky",
-                      "top_parents_mf","top_parents_mf_current","top_terms","top_terms_current","top_parents",
-                      "top_parents_current","top_genes","top_genes_current","genes_found","genes_missed"]
+            header = ["sys_name", "name", "pmid", "species", "age", "date", "date_requested", "edition", "edition_date",
+                      "edition_go_date", "significant_terms", "significant_terms_current", "tested_terms",
+                      "tested_terms_current", "complete_term_jaccard", "top_term_jaccard", "top_gene_jaccard",
+                      "top_parents_jaccard", "top_term_tversky", "top_gene_tversky", "top_parents_tversky",
+                      "top_parents_mf", "top_parents_mf_current", "complete_terms", "complete_terms_current",
+                      "top_terms", "top_terms_current", "top_parents",
+                      "top_parents_current", "top_genes", "top_genes_current", "genes_found", "genes_missed"]
             with open(out_file + ".tsv", 'w+') as f_out:
                 writer = csv.DictWriter(f_out, fieldnames = header, delimiter='\t')
                 firstrow = True
@@ -126,6 +129,9 @@ if __name__ == '__main__':
                             out_line["significant_terms"] = data['significant_terms']
                             out_line["significant_terms_current"] = reference_data['significant_terms']
 
+                            out_line["tested_terms"] = data['distinct_tested_terms']
+                            out_line["tested_terms_current"] = reference_data['distinct_tested_terms']
+
                             out_line["complete_term_jaccard"] = data['values']['complete_term_sim']
                             out_line["top_term_jaccard"] = data['values']['top_term_sim']
                             out_line["top_gene_jaccard"] = data['values']['top_gene_sim']
@@ -138,6 +144,8 @@ if __name__ == '__main__':
                             out_line["top_parents_mf"] = data['top_parents_mf']
                             out_line["top_parents_mf_current"] = reference_data['top_parents_mf']
 
+                            out_line["complete_terms"] = ",".join(data['complete_terms'])
+                            out_line["complete_terms_current"] = ",".join(reference_data['complete_terms'])
                             out_line["top_terms"] = ",".join(data['top_terms'])
                             out_line["top_terms_current"] = ",".join(reference_data['top_terms'])
                             out_line["top_parents"] = ",".join(data['top_parents'])

@@ -18,7 +18,7 @@
 #
 #
 
-"""Creates post-analysis tables."""
+"""(DEPRECATED) Creates post-analysis tables."""
 
 from __future__ import division
 import glob

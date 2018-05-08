@@ -21,15 +21,13 @@
 """Analysis"""
 
 from __future__ import division
-from operator import methodcaller
 import sys
-import datetime
-import csv
 import matplotlib.pyplot as plt
 import numpy as np
 import random
-from collections import namedtuple
 from itertools import groupby
+import parser
+from util import mean, median, sstdev, r_square
 
 import logging
 import logging.config
@@ -39,153 +37,6 @@ logging.addLevelName(logging.WARNING, "\033[1;31m%s\033[1;0m" % logging.getLevel
 logging.addLevelName(logging.ERROR, "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 log = logging.getLogger()
 
-def date_(x):
-    return datetime.datetime.strptime(x, "%Y-%m-%d").date()
-def list_(x):
-    return set(x.split(",")) if x else set()
-def list2_(x):
-    return map(methodcaller("split", "|"), x.split(",")) if x else []
-
-DATA_HEADER = [("sys_name", str),
-               ("name", str),
-               ("pmid", str),
-               ("species", str),
-               ("age", int),
-               ("date", str),
-               ("date_requested", date_),
-               ("edition", int),
-               ("edition_date", date_),
-               ("edition_go_date", date_),
-               ("significant_terms", int),
-               ("significant_terms_current", int),
-               ("complete_term_jaccard", float),
-               ("top_term_jaccard", float),
-               ("top_gene_jaccard", float),
-               ("top_parents_jaccard", float),
-               ("top_term_tversky", float),
-               ("top_gene_tversky", float),
-               ("top_parents_tversky", float),
-               ("top_parents_mf", float),
-               ("top_parents_mf_current", float),
-               ("top_terms", list_),
-               ("top_terms_current", list_),
-               ("top_parents", list_),
-               ("top_parents_current", list_),
-               ("top_genes", list_),
-               ("top_genes_current", list_),
-               ("genes_found", list2_),
-               ("genes_missed", list_)]
-
-NULL_HEADER = [("PERMUTATION_RUN", int),
-               ("SYSTEMATIC_NAME_THEN", str),
-               ("SYSTEMATIC_NAME_NOW", str),
-               ("THEN_DATE", date_),
-               ("JACCARD", float),
-               ("TVERSKY", float)]
-
-GeneSetAnalysis = namedtuple('GeneSetAnalysis', [h[0] for h in DATA_HEADER])
-NullSet = namedtuple('NullDistribution', [h[0] for h in NULL_HEADER])
-
-# [0] "sys_name"
-# [1] "name"                      "pmid"                      "species"                   "age"
-# [5] "date"                      "date_requested"            "edition"                   "edition_date"              "edition_go"
-# [10] "edition_go_date"          "significant_terms"         "significant_terms_current" "complete_term_jaccard"
-#[14] "top_term_jaccard"          "top_gene_jaccard"          "top_parents_jaccard"       "top_parents_mf"
-#[18] "top_parents_mf_current"    "top_terms"                 "top_terms_current"         "top_parents"
-#[22] "top_parents_current"       "top_genes"                 "top_genes_current"         "genes_found"
-#[26] "genes_missed"
-
-
-def parse_results(file):
-    settings = {}
-    # read tab-delimited file
-    with open(file,'rb') as infile:
-        reader = csv.reader(infile, delimiter='\t')
-
-        for r in reader:
-            if not r[0].startswith("# "):
-                # Check header
-                assert r == [h[0] for h in DATA_HEADER]
-                break
-            # parse settings
-            settings[r[0][2:-1]] = r[1]
-        type_parser = [h[1] for h in DATA_HEADER]
-        filecontents = [GeneSetAnalysis(*map(lambda x, y:x(y), type_parser, line)) for line in reader]
-
-    settings['reference_edition_date'] = parse_date( settings['reference_edition_date'], '%Y-%m-%d')
-    settings['reference_edition_go_date'] = parse_date( settings['reference_edition_go_date'], '%Y-%m-%d')
-    return filecontents, settings
-
-
-def parse_null(f):
-    # read tab-delimited file
-    with open(f, 'rb') as infile:
-        reader = csv.reader(infile, delimiter='\t')
-        header = next(reader)
-        assert header == [h[0] for h in NULL_HEADER]
-
-        type_parser = [header[1] for header in NULL_HEADER]
-        contents = [NullSet(*map(lambda t, c:t(c), type_parser, line)) for line in reader]
-
-    return contents
-
-
-def parse_date(d, format):
-    return datetime.datetime.strptime(d, format).date()
-
-def mean(data):
-    """Return the sample arithmetic mean of data."""
-    n = len(data)
-    if n < 1:
-        raise ValueError('mean requires at least one data point')
-    return sum(data)/n # in Python 2 use sum(data)/float(n)
-
-def _ss(data):
-    """Return sum of square deviations of sequence data."""
-    c = mean(data)
-    ss = sum((x-c)**2 for x in data)
-    return ss
-
-def sstdev(data):
-    """Calculates the sample standard deviation."""
-    n = len(data)
-    if n < 2:
-        raise ValueError('variance requires at least two data points')
-    ss = _ss(data)
-    pvar = ss/(n-1) # the sample variance
-    return pvar**0.5
-
-def median(data):
-    """Return the median (middle value) of numeric data.
-
-    When the number of data points is odd, return the middle data point.
-    When the number of data points is even, the median is interpolated by
-    taking the average of the two middle values:
-
-    median([1, 3, 5]) -> 3
-    median([1, 3, 5, 7]) -> 4.0
-
-    """
-    data = sorted(data)
-    n = len(data)
-    if n == 0:
-        raise ValueError("no median for empty data")
-    if n%2 == 1:
-        return data[n//2]
-    else:
-        i = n//2
-        return (data[i - 1] + data[i])/2
-
-def r_square(p1d, x, y):
-    # fit values, and mean
-    yhat = p1d(x)                         # or [p(z) for z in x]
-    ybar = np.sum(y)/len(y)          # or sum(y)/len(y)
-    ssreg = np.sum((yhat-ybar)**2)   # or sum([ (yihat - ybar)**2 for yihat in yhat])
-    sstot = np.sum((y - ybar)**2)    # or sum([ (yi - ybar)**2 for yi in y])
-    return ssreg / sstot
-
-def flatten(l):
-    return (item for sublist in l for item in sublist)
 
 def density_plot(x, y, nb=32, xsize=500, ysize=500):
     import sphviewer as sph  
@@ -329,18 +180,19 @@ if __name__ == '__main__':
         control_file = sys.argv[2]
         null_file = sys.argv[3]
 
-        raw_data, settings = parse_results(data_file)
-        raw_control_data, control_settings = parse_results(control_file)
+        raw_data, settings = parser.parse_analysis_results(data_file)
+        raw_control_data, control_settings = parser.parse_analysis_results(control_file)
 
         assert settings == control_settings
 
         # Null Hypothesis: Correct pairings are no more similar than random
         # Therefore, pairings are exchangeable under the null
-        null_data = parse_null(null_file)
+        null_data = parser.parse_null(null_file)
 
         # Filter out studies that have only ever had few or no significant terms
         data = [row for row in raw_data if row.significant_terms > 5 or row.significant_terms_current > 5]
         control_data = [row for row in raw_control_data if row.significant_terms > 5 or row.significant_terms_current > 5]
+        null_data = [row for row in null_data if row.SIGNIFICANT_TERMS_THEN > 5 or row.SIGNIFICANT_TERMS_NOW > 5]
         all_data = data + control_data
 
         # Filter out studies that are duplicatesdata[10]
@@ -383,10 +235,10 @@ if __name__ == '__main__':
         # all_sims += [r.top_parents_jaccard for r in data]
         # size_sims += [len(r.top_parents_current) for r in data]
 
-        random_m = mean([r.JACCARD for r in null_data])
-        random_sd = sstdev([r.JACCARD for r in null_data])
-        random_m_tversky = mean([r.TVERSKY for r in null_data])
-        random_sd_tversky = sstdev([r.TVERSKY for r in null_data])
+        random_m = mean([r.TOP_PARENTS_JACCARD for r in null_data])
+        random_sd = sstdev([r.TOP_PARENTS_JACCARD for r in null_data])
+        random_m_tversky = mean([r.TOP_PARENTS_TVERSKY for r in null_data])
+        random_sd_tversky = sstdev([r.TOP_PARENTS_TVERSKY for r in null_data])
 
         log.info('Actual Jaccard Mean (+- SD): %s (+- %s)', actual_m, actual_sd)
         log.info('Actual Tversky Mean (+- SD): %s (+- %s)', actual_m_tversky, actual_sd_tversky)
@@ -412,7 +264,7 @@ if __name__ == '__main__':
         f = plt.figure()
         plt.axvline(x=actual_m, color='r', label="Actual")
         plt.axvline(x=control_m, color='b', label="Control")
-        histogram([mean([r.JACCARD for r in list(g)]) for k, g in groupby(null_data, lambda r: r[0])], bins=1000, x_label='Mean Jaccard Similarity', title='Null Sample Means Jaccard', alpha=0.5, label='Null Sample Means')
+        histogram([mean([r.TOP_PARENTS_JACCARD for r in list(g)]) for k, g in groupby(null_data, lambda r: r[0])], bins=1000, x_label='Mean Jaccard Similarity', title='Null Sample Means Jaccard', alpha=0.5, label='Null Sample Means')
         plt.legend(loc='upper right')
         #plt.xlim(0, actual_m*1.05)
         f.show()
@@ -421,7 +273,7 @@ if __name__ == '__main__':
         f = plt.figure()
         plt.axvline(x=actual_m_tversky, color='r', label="Actual")
         plt.axvline(x=control_m_tversky, color='b', label="Control")
-        histogram([mean([r.TVERSKY for r in list(g)]) for k, g in groupby(null_data, lambda r: r[0])], bins=1000, x_label='Mean Tversky Similarity', title='Null Sample Means Tversky', alpha=0.5, label='Null Sample Means')
+        histogram([mean([r.TOP_PARENTS_TVERSKY for r in list(g)]) for k, g in groupby(null_data, lambda r: r[0])], bins=1000, x_label='Mean Tversky Similarity', title='Null Sample Means Tversky', alpha=0.5, label='Null Sample Means')
         plt.legend(loc='upper right')
         #plt.xlim(0, actual_m*1.05)
         f.show()
@@ -429,7 +281,7 @@ if __name__ == '__main__':
         # Compares Actual histogram of similaries vs "average" randomized histogram
         log.info('Similarity Distribution Jaccard')
         f = plt.figure()
-        histogram([r.JACCARD for r in null_data], x_label='Jaccard Similarity', title='Similarity Distribution Jaccard', alpha=0.5, label='Null')
+        histogram([r.TOP_PARENTS_JACCARD for r in null_data], x_label='Jaccard Similarity', title='Similarity Distribution Jaccard', alpha=0.5, label='Null')
         histogram([r.top_parents_jaccard for r in data], x_label='Jaccard Similarity', title='Similarity Distribution Jaccard', alpha=0.5, label='Actual')
         histogram([r.top_parents_jaccard for r in control_data], x_label='Jaccard Similarity', title='Similarity Distribution Jaccard', alpha=0.5, label='Control')
         plt.legend(loc='upper right')
@@ -437,7 +289,7 @@ if __name__ == '__main__':
 
         log.info('Similarity Distribution Tversky')
         f = plt.figure()
-        histogram([r.TVERSKY for r in null_data], x_label='Tversky Similarity', title='Similarity Distribution Tversky', alpha=0.5, label='Null')
+        histogram([r.TOP_PARENTS_TVERSKY for r in null_data], x_label='Tversky Similarity', title='Similarity Distribution Tversky', alpha=0.5, label='Null')
         histogram([r.top_parents_tversky for r in data], x_label='Tversky Similarity', title='Similarity Distribution Tversky', alpha=0.5, label='Actual')
         histogram([r.top_parents_tversky for r in control_data], x_label='Tversky Similarity', title='Similarity Distribution Tversky', alpha=0.5, label='Control')
         plt.legend(loc='upper right')
