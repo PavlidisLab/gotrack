@@ -601,7 +601,7 @@
                     <h:outputText value="#{enrichmentView.selectedTerm.name}"
                                   styleClass="sqlDialogText"/>
 
-                    <h:outputText value="P-Value" title="P-value (after correction if Bonferroni)."/>
+                    <h:outputText value="P-Value" title="Raw P-value."/>
                     <h:outputText value="#{enrichmentView.selectedEnrichmentResult.pvalue}"
                                   rendered="#{enrichmentView.selectedEnrichmentResult.pvalue lt 0.0001}">
                         <f:convertNumber type="number" pattern="#.##E0"/>

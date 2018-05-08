@@ -291,6 +291,9 @@ public class EnrichmentTest extends BaseTest {
                 Matchers.is( HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
                         populationAnnotated, sampleSize, populationSize ) ) );
 
+        Assert.assertThat( er.getPvalue() <= 0.05,
+                Matchers.is( er.isSignificant() ) );
+
     }
 
     @Test
@@ -416,8 +419,10 @@ public class EnrichmentTest extends BaseTest {
             EnrichmentResult er = e.getResult( test );
             Assert.assertThat( er, Matchers.notNullValue() );
             Assert.assertThat( er.getPvalue(), Matchers
-                    .is( testSet.size() * HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
+                    .is( HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
                             populationAnnotated, sampleSize, populationSize ) ) );
+            Assert.assertThat( testSet.size() * er.getPvalue() <= 0.05,
+                    Matchers.is( er.isSignificant() ) );
         }
 
     }
@@ -496,9 +501,10 @@ public class EnrichmentTest extends BaseTest {
             EnrichmentResult er = e.getResult( test );
             Assert.assertThat( er, Matchers.notNullValue() );
             Assert.assertThat( er.getPvalue(), Matchers
-                    .is( Math.min( 1.0,
-                            terms.size() * HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
-                                    populationAnnotated, sampleSize, populationSize ) ) ) );
+                    .is( HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
+                                    populationAnnotated, sampleSize, populationSize ) ) );
+            Assert.assertThat( terms.size() * er.getPvalue() <= 0.05,
+                    Matchers.is( er.isSignificant() ) );
         }
 
     }
@@ -589,8 +595,11 @@ public class EnrichmentTest extends BaseTest {
             EnrichmentResult er = e.getResult( test );
             Assert.assertThat( er, Matchers.notNullValue() );
             Assert.assertThat( er.getPvalue(), Matchers
-                    .is( accepted.size() * HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
+                    .is( HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
                             populationAnnotated, sampleSize, populationSize ) ) );
+
+            Assert.assertThat( accepted.size() * er.getPvalue() <= 0.05,
+                    Matchers.is( er.isSignificant() ) );
         }
 
         for ( GeneOntologyTerm test : rejected ) {
@@ -680,8 +689,10 @@ public class EnrichmentTest extends BaseTest {
             EnrichmentResult er = e.getResult( test );
             Assert.assertThat( er, Matchers.notNullValue() );
             Assert.assertThat( er.getPvalue(), Matchers
-                    .is( accepted.size() * HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
+                    .is( HyperGeometricUtilities.upperCumulativeProbabilityLogMethod( sampleAnnotated,
                             populationAnnotated, sampleSize, populationSize ) ) );
+            Assert.assertThat( accepted.size() * er.getPvalue() <= 0.05,
+                    Matchers.is( er.isSignificant() ) );
         }
 
         for ( GeneOntologyTerm test : rejected ) {
