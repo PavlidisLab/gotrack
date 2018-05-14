@@ -26,7 +26,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.java.Log;
+import lombok.extern.log4j.Log4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 import org.primefaces.context.RequestContext;
@@ -63,9 +63,9 @@ import java.util.stream.Collectors;
  * @author mjacobson
  * @version $Id$
  */
+@Log4j
 @Named
 @SessionScoped
-@Log
 public class EnrichmentView implements Serializable {
 
     /**
