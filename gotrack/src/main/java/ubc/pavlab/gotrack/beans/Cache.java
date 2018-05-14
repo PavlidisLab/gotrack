@@ -45,7 +45,6 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
 
 /**
  * NOTE: Most maps here do not require synchronicity locks as they are both read-only and accessing threads are
@@ -169,23 +168,6 @@ public class Cache implements Serializable {
         @Override
         public boolean removeEldestEntry( Map.Entry<Gene, Map<Edition, Set<GeneOntologyTerm>>> eldest ) {
             return size() > MAX_ENRICHMENT_ENTRIES;
-        }
-    };
-
-    // Holds data for GeneView
-    // TODO Does this have the potential for being merged with applicationLevelEnrichmentCache while retrieving annotation sets on the fly?
-    private Map<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>> applicationLevelGeneCache = new LinkedHashMap<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>>(
-            MAX_DATA_ENTRIES + 1, 0.75F, true ) {
-        /**
-         *
-         */
-        private static final long serialVersionUID = -6677016445725453615L;
-
-        // This method is called just after a new entry has been added
-        @Override
-        public boolean removeEldestEntry(
-                Map.Entry<Gene, Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>>> eldest ) {
-            return size() > MAX_DATA_ENTRIES;
         }
     };
 
@@ -677,7 +659,6 @@ public class Cache implements Serializable {
         log.info( "Cache init" );
 
         applicationLevelEnrichmentCache = Collections.synchronizedMap( applicationLevelEnrichmentCache );
-        applicationLevelGeneCache = Collections.synchronizedMap( applicationLevelGeneCache );
 
         log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
                 + " MB" );
@@ -1267,30 +1248,6 @@ public class Cache implements Serializable {
     }
 
     // Application Level Caching get/set
-
-    /**
-     * @param g gene
-     * @return cached data for GeneView under given gene
-     */
-    public Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> getGeneData( Gene g ) {
-        // TODO not sure if necessary, not a big deal either way
-        synchronized (applicationLevelGeneCache) {
-            return applicationLevelGeneCache.get( g );
-        }
-    }
-
-    /**
-     * Add data to GeneView cache under given gene
-     *
-     * @param g    gene to cache data under
-     * @param data data to be cached
-     */
-    public void addGeneData( Gene g,
-                             Map<AnnotationType, ImmutableTable<Edition, GeneOntologyTerm, Set<Annotation>>> data ) {
-        synchronized (applicationLevelGeneCache) {
-            applicationLevelGeneCache.put( g, data );
-        }
-    }
 
     /**
      * @param gene
