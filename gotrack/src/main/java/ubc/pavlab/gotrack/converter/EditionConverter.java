@@ -20,7 +20,7 @@
 package ubc.pavlab.gotrack.converter;
 
 import ubc.pavlab.gotrack.beans.Cache;
-import ubc.pavlab.gotrack.beans.SessionManager;
+import ubc.pavlab.gotrack.beans.EnrichmentView;
 import ubc.pavlab.gotrack.model.Edition;
 
 import javax.faces.application.FacesMessage;
@@ -32,7 +32,7 @@ import javax.faces.convert.FacesConverter;
 import javax.inject.Inject;
 
 /**
- * Converter for {@link Edition}.
+ * Converter for {@link Edition} in {@link EnrichmentView}.
  * 
  * @author mjacobson
  */
@@ -43,7 +43,7 @@ public class EditionConverter implements Converter {
     private Cache cache;
 
     @Inject
-    private SessionManager session;
+    private EnrichmentView enrichmentView;
 
     public EditionConverter() {
     }
@@ -54,7 +54,7 @@ public class EditionConverter implements Converter {
             try {
                 Integer edition = Integer.valueOf( value );
 
-                return cache.getEdition( session.getSpecies(), edition );
+                return cache.getEdition( enrichmentView.getSelectedSpecies(), edition );
             } catch ( NumberFormatException e ) {
                 throw new ConverterException( new FacesMessage( FacesMessage.SEVERITY_ERROR, "Conversion Error",
                         "Not a valid Edition." ) );
