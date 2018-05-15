@@ -236,7 +236,7 @@ public class AnnotationDAOTest extends BaseTest {
     @Test
     public void testEnrichDeep() {
         List<EnrichmentDTO> res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1, gh2 ), 0, 200 );
-        Assert.assertThat( res.size(), Matchers.is( 212 ) );
+        Assert.assertThat( res.size(), Matchers.is( 204 ) );
 
         Multiset<String> goIds = HashMultiset.create();
         Multiset<Integer> editions = HashMultiset.create();
@@ -250,13 +250,13 @@ public class AnnotationDAOTest extends BaseTest {
 
         // distinct editions
         Assert.assertThat( editions.elementSet().size(), Matchers.is( 4 ) );
-        Assert.assertThat( editions.count( 144 ), Matchers.is( 53 ) );
-        Assert.assertThat( editions.count( 145 ), Matchers.is( 53 ) );
-        Assert.assertThat( editions.count( 146 ), Matchers.is( 53 ) );
-        Assert.assertThat( editions.count( 147 ), Matchers.is( 53 ) );
+        Assert.assertThat( editions.count( 144 ), Matchers.is( 51 ) );
+        Assert.assertThat( editions.count( 145 ), Matchers.is( 51 ) );
+        Assert.assertThat( editions.count( 146 ), Matchers.is( 51 ) );
+        Assert.assertThat( editions.count( 147 ), Matchers.is( 51 ) );
 
         // distinct go ids
-        Assert.assertThat( goIds.elementSet().size(), Matchers.is( 51 ) );
+        Assert.assertThat( goIds.elementSet().size(), Matchers.is( 49 ) );
         Assert.assertThat( goIds.count( "GO:0000002" ), Matchers.is( 8 ) );
         Assert.assertThat( goIds.count( "GO:0001666" ), Matchers.is( 4 ) );
         Assert.assertThat( goIds.count( "GO:0002082" ), Matchers.is( 4 ) );
@@ -300,8 +300,8 @@ public class AnnotationDAOTest extends BaseTest {
         Assert.assertThat( goIds.count( "GO:0070182" ), Matchers.is( 4 ) );
         Assert.assertThat( goIds.count( "GO:0070361" ), Matchers.is( 4 ) );
         Assert.assertThat( goIds.count( "GO:0070362" ), Matchers.is( 4 ) );
-        Assert.assertThat( goIds.count( "GO:0070363" ), Matchers.is( 4 ) );
-        Assert.assertThat( goIds.count( "GO:0070364" ), Matchers.is( 4 ) );
+        Assert.assertThat( goIds.count( "GO:0070363" ), Matchers.is( 0 ) );
+        Assert.assertThat( goIds.count( "GO:0070364" ), Matchers.is( 0 ) );
         Assert.assertThat( goIds.count( "GO:0070407" ), Matchers.is( 4 ) );
         Assert.assertThat( goIds.count( "GO:0071156" ), Matchers.is( 4 ) );
         Assert.assertThat( goIds.count( "GO:0090296" ), Matchers.is( 4 ) );
@@ -311,22 +311,22 @@ public class AnnotationDAOTest extends BaseTest {
 
         // distinct gene ids
         Assert.assertThat( accessions.elementSet().size(), Matchers.is( 2 ) );
-        Assert.assertThat( accessions.count( gh1.getAccession().getAccession() ), Matchers.is( 132 ) );
+        Assert.assertThat( accessions.count( gh1.getAccession().getAccession() ), Matchers.is( 124 ) );
         Assert.assertThat( accessions.count( gh2.getAccession().getAccession() ), Matchers.is( 80 ) );
     }
 
     @Test
     public void testEnrichShallow() {
         List<EnrichmentDTO> res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1, gh2 ), 0, 200 );
-        Assert.assertThat( res.size(), Matchers.is( 212 ) );
+        Assert.assertThat( res.size(), Matchers.is( 204 ) );
 
         // Redundancy
         res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1, gh2, gh1, gh1, gh2 ), 0, 200 );
-        Assert.assertThat( res.size(), Matchers.is( 212 ) );
+        Assert.assertThat( res.size(), Matchers.is( 204 ) );
 
         // bad gene
         res = annotationDAO.simpleAnnotationRangeEditions( Sets.newLinkedHashSet( Lists.newArrayList( gh1, gh2, gfake ) ), 0, 200 );
-        Assert.assertThat( res.size(), Matchers.is( 212 ) );
+        Assert.assertThat( res.size(), Matchers.is( 204 ) );
 
         // empty gene
         res = annotationDAO.simpleAnnotationRangeEditions( Collections.<Gene>emptySet(), 0, 200 );
@@ -337,7 +337,7 @@ public class AnnotationDAOTest extends BaseTest {
         Assert.assertThat( res.size(), Matchers.is( 0 ) );
 
         res = annotationDAO.simpleAnnotationRangeEditions( Sets.newHashSet( gh1 ), 0, 200 );
-        Assert.assertThat( res.size(), Matchers.is( 132 ) );
+        Assert.assertThat( res.size(), Matchers.is( 124 ) );
     }
 
     @SuppressWarnings("unchecked")
