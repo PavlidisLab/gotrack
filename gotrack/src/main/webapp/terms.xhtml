@@ -77,7 +77,7 @@
                                      icon="fa fa-question-circle" type="button"/>
                     <div id="loading-spinner-DAG" class="loading"
                          style="display: none;width: 100%; height: 100%;"/>
-                    <svg id="currentAncestryLogo" style="cursor: pointer;" class="emphasize-hover"/>
+                    <div id="currentAncestryLogo" style="cursor: pointer;width:100%;height:100%;" class="emphasize-hover"/>
                 </div>
 
             </div>
@@ -384,7 +384,9 @@
                                   style="right:0" onclick="gograph.toggleChildNodes('#dagDialog')"/>
             </f:facet>
 
-            <svg id="dagDialog" height="500" width="700"/>
+            <div id="dagDialog">
+                <div style="height:500px;width:700px;">buffer</div>
+            </div>
         </p:dialog>
 
         <p:dialog id="evidenceChartClickEventDlg"
