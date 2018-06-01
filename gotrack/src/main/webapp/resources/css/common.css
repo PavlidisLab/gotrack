@@ -59,3 +59,9 @@
     display: inline-block;
     vertical-align: text-bottom;
 }
+
+/* Datatables */
+
+div.ui-table-footer-align-right > div.ui-datatable-footer {
+    text-align: right;
+}

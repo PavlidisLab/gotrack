@@ -488,10 +488,8 @@
                             <h:outputText value="Synonyms"/>
                         </p:column>
                         <p:column>
-                        <span class="sqlDialogText"> <ui:repeat
-                                value="#{enrichmentView.viewGene.synonyms.toArray()}"
-                                var="syn" varStatus="loop"> #{syn}#{!loop.last ? ', ' : ''}
-                            </ui:repeat>
+                        <span class="sqlDialogText">
+                            <h:outputText value="#{enrichmentView.viewGene.synonyms.stream().reduce((p1, p2) -> p1 += ', ' += p2).get()}"/>
                         </span>
 
                         </p:column>
