@@ -7,7 +7,7 @@
       xmlns:f="http://xmlns.jcp.org/jsf/core"
       xmlns:p="http://primefaces.org/ui"
       xmlns:composite="http://xmlns.jcp.org/jsf/composite"
->
+      xmlns:a="http://xmlns.jcp.org/jsf/passthrough">
 <composite:interface>
 
     <composite:attribute name="value"/>
@@ -15,6 +15,35 @@
 </composite:interface>
 
 <composite:implementation>
+
+    <div style="display: none;">
+        <div id="evidence-title">
+            <div class="overlay-help">
+                <p>Evidence code to indicate how the annotation to a particular term is supported. Note: Out of all the evidence codes available, only Inferred from Electronic Annotation (IEA) is not assigned by a curator.</p>
+                <p>See <a href="http://geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+            </div>
+        </div>
+
+        <div id="category-title">
+            <div class="overlay-help">
+                <p><b>Automatic</b>: Assigned by automated methods, not assigned by curators (IEA).</p>
+                <p><b>Author</b>: Annotation was made on the basis of a statement made by the author(s).</p>
+                <p><b>Computational</b>: Annotation is based on an in silico analysis of the gene sequence and/or other data.</p>
+                <p><b>Curatorial</b>: Annotation made on the basis of a curatorial judgement that does not fit into one of the other evidence code classifications.</p>
+                <p><b>Experimental</b>: Results from a physical characterization of a gene or gene product that has supported the association of a GO term.</p>
+                <p><b>High Throughput</b>: Annotations based upon high throughput methodologies.</p>
+                <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+            </div>
+        </div>
+
+        <div id="evidencedescription-title">
+            <div class="overlay-help">
+                <p>Short description of the Evidence code.</p>
+                <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+            </div>
+        </div>
+
+    </div>
 
     <p:dataTable var="tuple"
                  value="#{cc.attrs.value}"
@@ -25,85 +54,32 @@
                 >
         <p:column headerText="Evidence" sortBy="#{tuple.t1.evidence}" style="width:100px">
             <f:facet name="header">
-                <p:overlayPanel for="evidenceHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Evidence code to indicate how the annotation to a particular term is supported. Note: Out of all the evidence codes available, only Inferred from Electronic Annotation (IEA) is not assigned by a curator.</p>
-                        <p>See <a href="http://geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="evidenceHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Evidence"/>
+                <h:outputText value="Evidence" styleClass="help-icon" a:title-id="#evidence-title"/>
             </f:facet>
             <h:outputText value="#{tuple.t1.evidence}"/>
         </p:column>
         <p:column sortBy="#{tuple.t1.category}" style="width:150px">
             <f:facet name="header">
-                <p:overlayPanel for="categoryHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p><b>Automatic</b>: Assigned by automated methods, not assigned by curators (IEA).</p>
-                        <p><b>Author</b>: Annotation was made on the basis of a statement made by the author(s).</p>
-                        <p><b>Computational</b>: Annotation is based on an in silico analysis of the gene sequence and/or other data.</p>
-                        <p><b>Curatorial</b>: Annotation made on the basis of a curatorial judgement that does not fit into one of the other evidence code classifications.</p>
-                        <p><b>Experimental</b>: Results from a physical characterization of a gene or gene product that has supported the association of a GO term.</p>
-                        <p><b>High Throughput</b>: Annotations based upon high throughput methodologies.</p>
-                        <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="categoryHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Category"/>
+                <h:outputText value="Category" styleClass="help-icon" a:title-id="#category-title"/>
             </f:facet>
 
             <h:outputText value="#{tuple.t1.category}"/>
         </p:column>
         <p:column headerText="Description" sortBy="#{tuple.t1.description}">
             <f:facet name="header">
-                <p:overlayPanel for="descriptionHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Short description of the Evidence code.</p>
-                        <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="descriptionHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Description"/>
+                <h:outputText value="Description" styleClass="help-icon" a:title-id="#evidencedescription-title"/>
             </f:facet>
             <h:outputText value="#{tuple.t1.description}"/>
         </p:column>
         <p:column headerText="Curation" sortBy="#{tuple.t1.curated}" style="width:100px">
             <f:facet name="header">
-                <p:overlayPanel for="curatedHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Is the annotation type curated or automatic.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="curatedHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Curation"/>
+                <h:outputText value="Curation" styleClass="help-icon" title="Is the annotation type curated or automatic."/>
             </f:facet>
             <h:outputText value="#{tuple.t1.curated ? 'Curated' : 'Automatic'}"/>
         </p:column>
         <p:column headerText="Count" sortBy="#{tuple.t2}" style="width:100px">
             <f:facet name="header">
-                <p:overlayPanel for="countHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Count of direct annotations under this evidence type.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="countHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Count"/>
+                <h:outputText value="Count" styleClass="help-icon" title="Count of direct annotations under this evidence type."/>
             </f:facet>
             <h:outputText value="#{tuple.t2}"/>
         </p:column>

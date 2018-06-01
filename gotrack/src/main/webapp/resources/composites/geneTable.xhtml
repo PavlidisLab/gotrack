@@ -8,7 +8,7 @@
       xmlns:p="http://primefaces.org/ui"
       xmlns:composite="http://xmlns.jcp.org/jsf/composite"
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
->
+      xmlns:a="http://xmlns.jcp.org/jsf/passthrough">
 <composite:interface>
 
     <composite:attribute name="value"/>
@@ -16,6 +16,19 @@
 </composite:interface>
 
 <composite:implementation>
+
+    <div style="display: none;">
+        <div id="genesymbol-title">
+            <div class="overlay-help">
+                <p>
+                    Official Gene Symbol
+                </p>
+                <p>
+                    <b>&lt;Click&gt;</b> on <h:graphicImage library="img" width="18" height="12" name="uniprot_logo.png" style="vertical-align: text-top;"/> to view the UniProt accession.
+                </p>
+            </div>
+        </div>
+    </div>
 
     <p:dataTable var="gene"
                  value="#{cc.attrs.value}"
@@ -25,6 +38,9 @@
                  scrollable="true"
                  scrollRows="25">
         <p:column headerText="Symbol" style="width:120px;">
+            <f:facet name="header">
+                <h:outputText value="Symbol" styleClass="help-icon" a:title-id="#genesymbol-title"/>
+            </f:facet>
             <a href="http://www.uniprot.org/uniprot/#{gene.accession.accession}"
                target="_blank" style="margin-right: 5px; text-decoration: none;">
                 <h:graphicImage library="img" width="18" height="12" name="uniprot_logo.png" style="vertical-align: text-top;" styleClass="emphasize-hover"/>
@@ -35,14 +51,23 @@
         </p:column>
 
         <p:column headerText="Accession">
+            <f:facet name="header">
+                <h:outputText value="Accession" styleClass="help-icon" title="UniProt Accession"/>
+            </f:facet>
             <h:outputText value="#{gene.accession.accession}"/>
         </p:column>
 
         <p:column headerText="Description">
+            <f:facet name="header">
+                <h:outputText value="Description" styleClass="help-icon" title="Short description of the gene."/>
+            </f:facet>
             <h:outputText value="#{gene.name}"/>
         </p:column>
 
         <p:column headerText="Synonyms">
+            <f:facet name="header">
+                <h:outputText value="Synonyms" styleClass="help-icon" title="Comma-separated list of alternate symbols."/>
+            </f:facet>
             <ui:repeat
                     value="#{gene.synonyms.toArray()}"
                     var="syn" varStatus="loop"> #{syn}#{!loop.last ? ', ' : ''}

@@ -5,10 +5,9 @@
                 xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
                 xmlns:p="http://primefaces.org/ui"
                 xmlns:fn="http://xmlns.jcp.org/jsp/jstl/functions"
-                xmlns:pe="http://primefaces.org/ui/extensions"
                 xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites"
                 xmlns:of="http://omnifaces.org/functions"
->
+                xmlns:a="http://xmlns.jcp.org/jsf/passthrough">
 
 
     <ui:define name="metadata">
@@ -20,7 +19,6 @@
     <ui:define name="css">
         <h:outputStylesheet library="css" name="enrichment.css"/>
         <h:outputStylesheet library="css" name="gograph.css"/>
-        <h:outputStylesheet library="css" name="tipsy.css"/>
     </ui:define>
     <ui:define name="js">
         <script type="text/javascript">
@@ -35,14 +33,13 @@
         <script src="https://code.highcharts.com/6.0.7/modules/histogram-bellcurve.js" type="text/javascript"></script>
         <script src="https://code.highcharts.com/6.0.7/highcharts-more.js" type="text/javascript"></script>
 
-        <h:outputScript library="js" name="tipsy.js"/>
+        <h:outputScript library="js" name="jquery-ui.min.js"/>
         <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
         <h:outputScript library="js" name="dagre-d3.min.js"/>
 
         <h:outputScript library="js" name="plotting.js"/>
         <h:outputScript library="js" name="gograph.js"/>
         <h:outputScript library="js" name="enrichment.js"/>
-        <h:outputScript library="js" name="common.js"/>
 
         <h:outputScript rendered="#{enrichmentView.combinedAnalysis.success}">
             $(document).ready(function () {
@@ -60,12 +57,7 @@
                 <p:panelGrid style="margin:10px 0 10px 0" cellpadding="5" styleClass="no-border">
                     <p:row>
                         <p:column>
-                            <p:overlayPanel for="speciesOptionHelpBtn" appendToBody="true" hideEffect="fade" styleClass="options-overlay">
-                                <p>Select the species you would like to run an enrichment analysis for.</p>
-                            </p:overlayPanel>
-                            <p:commandButton id="speciesOptionHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             type="button"/>
+                            <h:outputText value="" styleClass="help-icon" title="Select the species you would like to run an enrichment analysis for."/>
                             <h:outputText value="Species:"/>
                         </p:column>
 
@@ -119,12 +111,7 @@
 
                     <p:row>
                         <p:column>
-                            <p:overlayPanel for="datasetOptionHelpBtn" appendToBody="true" hideEffect="fade" styleClass="options-overlay">
-                                <p>Which aspects (Cellular Component, Biological Process, Molecular Function) to include in the analysis.</p>
-                            </p:overlayPanel>
-                            <p:commandButton id="datasetOptionHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             type="button"/>
+                            <h:outputText styleClass="help-icon" title="Which aspects (Cellular Component, Biological Process, Molecular Function) to include in the analysis."/>
                             <h:outputText value="Aspect:"/>
                         </p:column>
                         <p:column>
@@ -138,17 +125,19 @@
 
                     <p:row>
                         <p:column>
-                            <p:overlayPanel for="multipleOptionHelpBtn" appendToBody="true" hideEffect="fade" styleClass="options-overlay">
-                                <p>Type of multiple tests correction to apply.</p>
-                                <ul>
-                                    <li><b>Bonferroni:</b> Reject null hypotheses who P-values are less than the given threshold.</li>
-                                    <li><b>BH step-up:</b> Benjamini–Hochberg procedure, controls FDR at given threshold level.</li>
-                                </ul>
-                            </p:overlayPanel>
-                            <p:commandButton id="multipleOptionHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             type="button"/>
+                            <h:outputText styleClass="help-icon" a:title-id="#multipleTest-title"/>
                             <h:outputText value="Multiple Tests:"/>
+                            <div style="display: none;">
+                                <div id="multipleTest-title">
+                                    <div class="overlay-help">
+                                        <p>Type of multiple tests correction to apply.</p>
+                                        <ul style="margin: 0.2em 1em;">
+                                            <li><b>Bonferroni:</b> Reject null hypotheses who P-values are less than the given threshold.</li>
+                                            <li><b>BH step-up:</b> Benjamini–Hochberg procedure, controls FDR at given threshold level.</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
                         </p:column>
                         <p:column>
                             <p:selectOneMenu value="#{enrichmentView.enrichmentOptions.multipleTestCorrection}">
@@ -160,13 +149,7 @@
 
                     <p:row>
                         <p:column>
-                            <p:overlayPanel for="thresholdOptionHelpBtn" appendToBody="true" hideEffect="fade" styleClass="options-overlay">
-                                <p>Threshold to use for the above multiple test correction method. This establishes the definition of "significant" for the results displays.</p>
-
-                            </p:overlayPanel>
-                            <p:commandButton id="thresholdOptionHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             type="button"/>
+                            <h:outputText styleClass="help-icon" title="Threshold to use for the above multiple test correction method. This establishes the definition of &quot;significant&quot; for the results displays."/>
                             <h:outputText value="Threshold:"/>
                         </p:column>
 
@@ -179,12 +162,7 @@
 
                     <p:row>
                         <p:column>
-                            <p:overlayPanel for="minOptionHelpBtn" appendToBody="true" hideEffect="fade" styleClass="options-overlay">
-                                <p>Select only those terms with at least this number of genes associated with them. Used to to remove overly-specific terms from analysis.</p>
-                            </p:overlayPanel>
-                            <p:commandButton id="minOptionHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             type="button"/>
+                            <h:outputText styleClass="help-icon" title="Select only those terms with at least this number of genes associated with them. Used to to remove overly-specific terms from analysis."/>
                             <h:outputText value="Min Geneset:"/>
                         </p:column>
                         <p:column>
@@ -196,14 +174,7 @@
 
                     <p:row>
                         <p:column>
-
-                            <p:overlayPanel for="maxOptionHelpBtn" appendToBody="true" hideEffect="fade" styleClass="options-overlay">
-                                <p>Select only those terms with at most this number of genes associated with them (0 for no maximum). Used to remove overly-general terms from analysis.</p>
-                            </p:overlayPanel>
-
-                            <p:commandButton id="maxOptionHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             type="button"/>
+                            <h:outputText styleClass="help-icon" title="Select only those terms with at most this number of genes associated with them (0 for no maximum). Used to remove overly-general terms from analysis."/>
                             <h:outputText value="Max Geneset:"/>
                         </p:column>
                         <p:column>
@@ -220,15 +191,9 @@
 
                     <p:row>
                         <p:column>
-                            <p:overlayPanel for="similarityOptionHelpBtn" appendToBody="true" hideEffect="fade" styleClass="options-overlay">
-                                <p>The analysis will generate a plot comparing the semantic similarity of the
+                            <h:outputText styleClass="help-icon" title="The analysis will generate a plot comparing the semantic similarity of the
                                     enrichment results between releases of GO/GOA. Select the version of GO/GOA that
-                                    you would like to use as the reference edition.
-                                </p>
-                            </p:overlayPanel>
-                            <p:commandButton id="similarityOptionHelpBtn" value=""
-                                             styleClass="no-value no-background fa-fix" icon="fa fa-question-circle"
-                                             type="button"/>
+                                    you would like to use as the reference edition."/>
                             <h:outputText value="Similarity Reference:"/>
                         </p:column>
                         <p:column>
@@ -278,7 +243,6 @@
                     </p:outputPanel>
                 </div>
 
-                <pe:tooltip global="true"/>
             </h:form>
 
 
@@ -311,69 +275,66 @@
             <div style="white-space: nowrap; min-width: 1000px;">
                 <div style="padding: 20px 20px 10px 20px; ">
                     <div class="well chart-container" style="margin-right:5px;">
-                        <p:overlayPanel for="termsChartHelpBtn" appendToBody="true" hideEffect="fade">
-                            <div class="overlay-help">
-                                <h3 style="margin-top: 0;">Description:</h3>
-                                <p><b>GO Term Counts by Edition</b> shows counts of unique GO Terms associated with this each enrichment analysis over time.</p>
-                                <h3>Legend Descriptions:</h3>
-                                <p><span style="color:#2bce48;">All Tested Terms</span>: Count of unique terms that passed all settings criteria.</p>
-                                <p><span style="color:#0075dc;">Significant Terms</span>: Count of unique terms that passed all settings criteria and were significant.</p>
-                                <p><span style="color:#993f00;">Rejected Terms</span>: Count of unique terms that did not pass all settings criteria.</p>
+                        <h:outputText value="" styleClass="help-icon" a:title-id="#termCountChart-title" style="position:absolute;z-index:99999;"/>
+                        <div style="display: none;">
+                            <div id="termCountChart-title">
+                                <div class="overlay-help">
+                                    <h3 style="margin-top: 0;">Description:</h3>
+                                    <p><b>GO Term Counts by Edition</b> shows counts of unique GO Terms associated with this each enrichment analysis over time.</p>
+                                    <h3>Legend Descriptions:</h3>
+                                    <p><span style="color:#2bce48;">All Tested Terms</span>: Count of unique terms that passed all settings criteria.</p>
+                                    <p><span style="color:#0075dc;">Significant Terms</span>: Count of unique terms that passed all settings criteria and were significant.</p>
+                                    <p><span style="color:#993f00;">Rejected Terms</span>: Count of unique terms that did not pass all settings criteria.</p>
 
-                                <h3>Controls:</h3>
-                                <p><b>&lt;Click&gt;</b> any edition to view the enrichment results at that point in time in bottom table.</p>
-                                <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
-                                <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+                                    <h3>Controls:</h3>
+                                    <p><b>&lt;Click&gt;</b> any edition to view the enrichment results at that point in time in bottom table.</p>
+                                    <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
+                                    <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+                                </div>
                             </div>
-                        </p:overlayPanel>
-                        <p:commandButton id="termsChartHelpBtn" value=""
-                                         styleClass="no-value no-background fa-fix noupdate absoluteBtn"
-                                         icon="fa fa-question-circle" type="button"/>
+                        </div>
                         <div id="hc_terms_container" style="height: 300px;"/>
                     </div>
                     <div class="well chart-container">
-                        <p:overlayPanel for="similarityChartHelpBtn" appendToBody="true" hideEffect="fade">
-                            <div class="overlay-help">
-                                <h3 style="margin-top: 0;">Description:</h3>
-                                <p><b>Enrichment Similarity</b> shows Jaccard similarity of the sets of significantly enriched terms over time.</p>
+                         <h:outputText value="" styleClass="help-icon" a:title-id="#similarityChart-title" style="position:absolute;z-index:99999;"/>
+                        <div style="display: none;">
+                            <div id="similarityChart-title">
+                                <div class="overlay-help">
+                                    <h3 style="margin-top: 0;">Description:</h3>
+                                    <p><b>Enrichment Similarity</b> shows Jaccard similarity of the sets of significantly enriched terms over time.</p>
+                                    <h3>Legend Descriptions:</h3>
+                                    <p>The series differ in which sets of terms we are comparing:</p>
+                                    <p><span style="color:#2bce48;">All Terms</span>: Compare all significant terms.</p>
+                                    <p><span style="color:#0075dc;">Top 5 Terms</span>: Compare the top 5 terms.</p>
+                                    <p><span style="color:#993f00;">Parents of Top Terms</span>: Compare the top 5 terms and all of their ancestors.</p>
+                                    <p><span style="color:#4c005c;">Genes Backing Top Terms</span>: Compare the genes that are responsible for the top 5 terms.</p>
 
-
-                                <h3>Legend Descriptions:</h3>
-                                <p>The series differ in which sets of terms we are comparing:</p>
-                                <p><span style="color:#2bce48;">All Terms</span>: Compare all significant terms.</p>
-                                <p><span style="color:#0075dc;">Top 5 Terms</span>: Compare the top 5 terms.</p>
-                                <p><span style="color:#993f00;">Parents of Top Terms</span>: Compare the top 5 terms and all of their ancestors.</p>
-                                <p><span style="color:#4c005c;">Genes Backing Top Terms</span>: Compare the genes that are responsible for the top 5 terms.</p>
-
-                                <h3>Controls:</h3>
-                                <p><b>&lt;Click&gt;</b> any edition to view the term sets described above.</p>
-                                <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
-                                <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+                                    <h3>Controls:</h3>
+                                    <p><b>&lt;Click&gt;</b> any edition to view the term sets described above.</p>
+                                    <p><b>&lt;Click&gt;</b> a legend item to toggle that series.</p>
+                                    <p><b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> a legend item to show only that series.</p>
+                                </div>
                             </div>
-                        </p:overlayPanel>
-                        <p:commandButton id="similarityChartHelpBtn" value=""
-                                         styleClass="no-value no-background fa-fix noupdate absoluteBtn"
-                                         icon="fa fa-question-circle" type="button"/>
+                        </div>
                         <div id="hc_similarity_container" style="height: 300px;"/>
                     </div>
                 </div>
 
                 <div style="text-align: center;padding: 10px 20px">
-                    <p:overlayPanel for="mainButtonsHelpBtn" appendToBody="true" hideEffect="fade" >
-                        <div class="overlay-help">
-                            <p>These buttons provide a means to visualize the changes in enrichment results over the
-                                history of this hitlist. You may choose from plotting either the top terms in every
-                                edition or your selected terms <b>By Rank</b> or <b>By P-Value</b>.</p>
-                            <p>If <b>By Rank</b> is chosen, you will be shown a Bump Chart of the corresponding terms
-                                and their relative ranks over time. Areas of heavy change will have lots of crossing
-                                lines (and thus appear darker) while areas of stability will have lots of parallel
-                                lines (and thus appear lighter and cleaner)</p>
+                    <h:outputText value="" styleClass="help-icon" a:title-id="#mainButtons-title"/>
+                    <div style="display: none;">
+                        <div id="mainButtons-title">
+                            <div class="overlay-help">
+                                <p>These buttons provide a means to visualize the changes in enrichment results over the
+                                    history of this hitlist. You may choose from plotting either the top terms in every
+                                    edition or your selected terms <b>By Rank</b> or <b>By P-Value</b>.</p>
+                                <p>If <b>By Rank</b> is chosen, you will be shown a Bump Chart of the corresponding terms
+                                    and their relative ranks over time. Areas of heavy change will have lots of crossing
+                                    lines (and thus appear darker) while areas of stability will have lots of parallel
+                                    lines (and thus appear lighter and cleaner)</p>
+                            </div>
                         </div>
-                    </p:overlayPanel>
-                    <p:commandButton id="mainButtonsHelpBtn" value=""
-                                     styleClass="no-value no-background fa-fix noupdate"
-                                     icon="fa fa-question-circle" type="button"
-                                     style="vertical-align: text-top;"/>
+                    </div>
                     <p:outputPanel id="main-buttons" style="display: inline-block;">
                     <span>
                         <span style="font-size: 1.17em;font-weight:bold;">Graph Top Terms Of All Editions:</span>
@@ -423,18 +384,7 @@
                 <p:accordionPanel id="main-area" activeIndex="1">
                     <p:tab>
                         <f:facet name="title">
-                            <p:overlayPanel for="genesbackingHelpBtn" hideEffect="fade" appendToBody="true">
-                                <div class="overlay-help">
-                                    <p>This table shows the genes that are responsible for the top 5 terms in this edition.</p>
-                                </div>
-                            </p:overlayPanel>
-                            <p:commandButton  id="genesbackingHelpBtn"
-                                              value=""
-                                              styleClass="no-value no-background fa-fix noupdate"
-                                              icon="fa fa-question-circle"
-                                              type="button"
-                                              onclick="event.stopPropagation();"
-                                              style="vertical-align: text-top;float: left;"/>
+                            <h:outputText value="" styleClass="help-icon" title="This table shows the genes that are responsible for the top 5 terms in this edition."/>
                             <h:outputText value="Genes Backing Top Terms"/>
                         </f:facet>
                         <p:outputPanel id="genesBackingTable">
@@ -443,21 +393,18 @@
                     </p:tab>
                     <p:tab>
                         <f:facet name="title">
-                            <p:overlayPanel for="tableHelpBtn" hideEffect="fade" appendToBody="true">
-                                <div class="overlay-help">
-                                    <p>This table shows enrichment data for those terms that were significantly enriched in this edition as well as those that were significant at some point in their history.</p>
-                                    <p>
-                                        This means that not every term in the table is significant at the currently chosen edition, but it was necessarily significant as some point.
-                                    </p>
+                            <h:outputText value="" styleClass="help-icon" a:title-id="#resultsTable-title"/>
+                            <div style="display: none;">
+                                <div id="resultsTable-title">
+                                    <div class="overlay-help">
+                                        <p>This table shows enrichment data for those terms that were significantly
+                                            enriched in this edition as well as those that were significant at some
+                                            point in their history.</p>
+                                        <p><b>NOTE:</b> This means that not every term in the table is significant at the
+                                            currently chosen edition, but was necessarily significant as some point.</p>
+                                    </div>
                                 </div>
-                            </p:overlayPanel>
-                            <p:commandButton  id="tableHelpBtn"
-                                              value=""
-                                              styleClass="no-value no-background fa-fix noupdate"
-                                              icon="fa fa-question-circle"
-                                              type="button"
-                                              onclick="event.stopPropagation();"
-                                              style="vertical-align: text-top;float: left;"/>
+                            </div>
                             <h:outputText value="Enrichment Results"/>
                         </f:facet>
                         <comps:enrichmentResultsTable
@@ -681,32 +628,31 @@
                   hideEffect="fade" resizable="false" height="800" width="1200"
                   fitViewport="true" closeOnEscape="true" maximizable="false">
             <f:facet name="header">
-                <p:overlayPanel for="stabilityDlgHelpBtn" hideEffect="fade" appendToBody="true">
-                    <div class="overlay-help">
-                        <p>Plot of the selected term's p-value and 95% confidence interval over its history.</p>
-                        <p>
-                            This is calculated using <i>six month rolling regressions</i> on the historical changes in
-                            'Pop. Hits' and 'Hits'. Given the results of these regressions we use their 95% confidence
-                            intervals to calculate a 95% confidence interval around the p-value. This range is then used
-                            to calculate the negative log of the coefficient of variation with respect to that edition's
-                            significance cutoff to get the stability score.
-                        </p>
-                        <p>
-                            The stability score typically ranges between -10 and 10 with 10 being more
-                            stable than -10.
-                        </p>
-                        <p>
-                            A score of <b>No Change</b> means we saw no significant variation in both
-                            Pop. Hits and Hits over its recent past (keep in mind this does <b>not</b> mean the p-value
-                            is constant).
-                        </p>
-                        <p>A score of <b>No Data</b> means there was not enough available.</p>
+                <h:outputText value="" styleClass="help-icon" a:title-id="#stabilityChart-title"/>
+                <div style="display: none;">
+                    <div id="stabilityChart-title">
+                        <div class="overlay-help">
+                            <p>Plot of the selected term's p-value and 95% confidence interval over its history.</p>
+                            <p>
+                                This is calculated using <i>six month rolling regressions</i> on the historical changes in
+                                'Pop. Hits' and 'Hits'. Given the results of these regressions we use their 95% confidence
+                                intervals to calculate a 95% confidence interval around the p-value. This range is then used
+                                to calculate the negative log of the coefficient of variation with respect to that edition's
+                                significance cutoff to get the stability score.
+                            </p>
+                            <p>
+                                The stability score typically ranges between -10 and 10 with 10 being more
+                                stable than -10.
+                            </p>
+                            <p>
+                                A score of <b>No Change</b> means we saw no significant variation in both
+                                Pop. Hits and Hits over its recent past (keep in mind this does <b>not</b> mean the p-value
+                                is constant).
+                            </p>
+                            <p>A score of <b>No Data</b> means there was not enough available.</p>
+                        </div>
                     </div>
-                </p:overlayPanel>
-                <p:commandButton  id="stabilityDlgHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                </div>
                 <h:outputText value="Stability"/>
             </f:facet>
             <div style="width: 100%; height: 100%;">

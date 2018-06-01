@@ -5,13 +5,14 @@
       xmlns:h="http://xmlns.jcp.org/jsf/html"
       xmlns:f="http://xmlns.jcp.org/jsf/core"
       xmlns:p="http://primefaces.org/ui"
-      xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
+      xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
+      xmlns:a="http://xmlns.jcp.org/jsf/passthrough">
 <h:head>
     <title>GOTrack</title>
     <link rel="shortcut icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <link rel="icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <h:outputStylesheet library="css" name="style.css"/>
-    <h:outputStylesheet library="css" name="tipsy.css"/>
+    <h:outputStylesheet library="css" name="common.css"/>
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <!-- Prevents caching at the Proxy Server -->
@@ -30,8 +31,9 @@
     <script type="text/javascript">
         googleAnalyticsTrackPageviewIfConfigured("/gotrack/downloads");
     </script>
+    <h:outputScript library="js" name="jquery-ui.min.js"/>
+    <h:outputScript library="js" name="common.js"/>
     <h:outputScript library="js" name="utility.js"/>
-    <h:outputScript library="js" name="tipsy.js"/>
 
 </h:head>
 <h:body>
@@ -101,26 +103,25 @@
                     <div style="margin-bottom:15px;">
                         <div style="margin-bottom: 5px;">Summary statistics of each edition. Single row per edition.</div>
                         <div>
-                            <p:overlayPanel for="summaryallHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                <div class="overlay-help">
-                                    <p><b>edition</b>: GOA release edition.</p>
-                                    <p><b>date</b>: GOA release date.</p>
-                                    <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
-                                    <p><b>avg_direct_by_gene</b>: Mean count of terms directly annotation to a gene.</p>
-                                    <p><b>avg_inferred_by_gene</b>:  Mean count of terms directly and/or indirectly annotation to a gene.</p>
-                                    <p><b>avg_direct_similarity</b>: Mean jaccard similarity of a gene's directly annotated terms comparing this edition to the most recent (#{sessionManager.currentEdition.date}).</p>
-                                    <p><b>avg_inferred_similarity</b>: Mean jaccard similarity of a gene's directly and/or indirectly annotated terms comparing this edition to the most recent (#{sessionManager.currentEdition.date}).</p>
-                                    <p><b>avg_inferred_by_term</b>: Mean count of genes directly and/or indirectly annotated with a term.</p>
-                                    <p><b>avg_multifunctionality</b>: Mean multifunctionality over all genes. Multifunctionality is a measure of the number of functions a gene is involved in. For a more precise definition, see <a
-                                            href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
-                                            class="underline" target="_blank">Gillis and Pavlidis, 2011.</a>.</p>
-                                    <p><b>gene_count</b>: Count of genes in this edition.</p>
+                            <h:outputText styleClass="help-icon" a:title-id="#summaryAll-title"/>
+                            <div style="display: none;">
+                                <div id="summaryAll-title">
+                                    <div class="overlay-help">
+                                        <p><b>edition</b>: GOA release edition.</p>
+                                        <p><b>date</b>: GOA release date.</p>
+                                        <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
+                                        <p><b>avg_direct_by_gene</b>: Mean count of terms directly annotation to a gene.</p>
+                                        <p><b>avg_inferred_by_gene</b>:  Mean count of terms directly and/or indirectly annotation to a gene.</p>
+                                        <p><b>avg_direct_similarity</b>: Mean jaccard similarity of a gene's directly annotated terms comparing this edition to the most recent (#{sessionManager.currentEdition.date}).</p>
+                                        <p><b>avg_inferred_similarity</b>: Mean jaccard similarity of a gene's directly and/or indirectly annotated terms comparing this edition to the most recent (#{sessionManager.currentEdition.date}).</p>
+                                        <p><b>avg_inferred_by_term</b>: Mean count of genes directly and/or indirectly annotated with a term.</p>
+                                        <p><b>avg_multifunctionality</b>: Mean multifunctionality over all genes. Multifunctionality is a measure of the number of functions a gene is involved in. For a more precise definition, see <a
+                                                href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
+                                                class="underline" target="_blank">Gillis and Pavlidis, 2011.</a>.</p>
+                                        <p><b>gene_count</b>: Count of genes in this edition.</p>
+                                    </div>
                                 </div>
-                            </p:overlayPanel>
-                            <p:commandButton  id="summaryallHelpBtn" value=""
-                                              styleClass="no-value no-background fa-fix noupdate"
-                                              icon="fa fa-question-circle" type="button"
-                                              style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                            </div>
                             <a
                                 href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/summary"
                                 style="color: -webkit-link;">Download Summary By Edition</a>
@@ -129,20 +130,19 @@
                     <div style="margin-bottom:15px;">
                         <div style="margin-bottom: 5px;">One row per distinct edition and term. Includes counts of genes annotated with a given term both directly and indirectly.</div>
                         <div>
-                            <p:overlayPanel for="countspertermallHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                <div class="overlay-help">
-                                    <p><b>edition</b>: GOA release edition.</p>
-                                    <p><b>date</b>: GOA release date.</p>
-                                    <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
-                                    <p><b>go_id</b>: Gene Ontology ID.</p>
-                                    <p><b>direct_count</b>: Count of genes that are directly annotated with this term.</p>
-                                    <p><b>inferred_count</b>: Count of genes that are directly and/or indirectly annotated with this term.</p>
+                            <h:outputText styleClass="help-icon" a:title-id="#countsPerTermAll-title"/>
+                            <div style="display: none;">
+                                <div id="countsPerTermAll-title">
+                                    <div class="overlay-help">
+                                        <p><b>edition</b>: GOA release edition.</p>
+                                        <p><b>date</b>: GOA release date.</p>
+                                        <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
+                                        <p><b>go_id</b>: Gene Ontology ID.</p>
+                                        <p><b>direct_count</b>: Count of genes that are directly annotated with this term.</p>
+                                        <p><b>inferred_count</b>: Count of genes that are directly and/or indirectly annotated with this term.</p>
+                                    </div>
                                 </div>
-                            </p:overlayPanel>
-                            <p:commandButton  id="countspertermallHelpBtn" value=""
-                                              styleClass="no-value no-background fa-fix noupdate"
-                                              icon="fa fa-question-circle" type="button"
-                                              style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                            </div>
                             <a
                                 href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/summary/by-term"
                                 style="color: -webkit-link;">Download Annotation Counts By Term</a>
@@ -151,24 +151,23 @@
                     <div style="margin-bottom:15px;">
                         <div style="margin-bottom: 5px;">One row per distinct edition and gene. Includes counts of terms annotated to a given gene both directly and indirectly.</div>
                         <div>
-                            <p:overlayPanel for="countspergeneallHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                <div class="overlay-help">
-                                    <p><b>edition</b>: GOA release edition.</p>
-                                    <p><b>date</b>: GOA release date.</p>
-                                    <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
-                                    <p><b>accession</b>: Mapped current Uniprot primary accession.</p>
-                                    <p><b>symbol</b>: Mapped current gene symbol.</p>
-                                    <p><b>direct_count</b>: Count of terms that are directly annotated to this gene.</p>
-                                    <p><b>inferred_count</b>: Count of terms that are directly and/or indirectly annotated to this gene.</p>
-                                    <p><b>multifunctionality</b>: A measure of the number of functions a gene is involved in. For a more precise definition, see <a
-                                            href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
-                                            class="underline" target="_blank">Gillis and Pavlidis, 2011.</a></p>
+                            <h:outputText styleClass="help-icon" a:title-id="#countsPerGeneAll-title"/>
+                            <div style="display: none;">
+                                <div id="countsPerGeneAll-title">
+                                    <div class="overlay-help">
+                                        <p><b>edition</b>: GOA release edition.</p>
+                                        <p><b>date</b>: GOA release date.</p>
+                                        <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
+                                        <p><b>accession</b>: Mapped current Uniprot primary accession.</p>
+                                        <p><b>symbol</b>: Mapped current gene symbol.</p>
+                                        <p><b>direct_count</b>: Count of terms that are directly annotated to this gene.</p>
+                                        <p><b>inferred_count</b>: Count of terms that are directly and/or indirectly annotated to this gene.</p>
+                                        <p><b>multifunctionality</b>: A measure of the number of functions a gene is involved in. For a more precise definition, see <a
+                                                href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
+                                                class="underline" target="_blank">Gillis and Pavlidis, 2011.</a></p>
+                                    </div>
                                 </div>
-                            </p:overlayPanel>
-                            <p:commandButton  id="countspergeneallHelpBtn" value=""
-                                              styleClass="no-value no-background fa-fix noupdate"
-                                              icon="fa fa-question-circle" type="button"
-                                              style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
+                            </div>
                             <a
                                 href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/summary/by-gene"
                                 style="color: -webkit-link;">Download Annotation Counts By Gene</a>
@@ -194,149 +193,121 @@
                                     scrollable="true">
                             <p:column headerText="Edition" style="width:100px">
                                 <f:facet name="header">
-                                    <p:overlayPanel for="editionHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                        <div class="overlay-help">
-                                            <p>GOA release edition.</p>
-                                        </div>
-                                    </p:overlayPanel>
-                                    <p:commandButton  id="editionHelpBtn" value=""
-                                                      styleClass="no-value no-background fa-fix noupdate"
-                                                      icon="fa fa-question-circle" type="button"
-                                                      style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                                    <h:outputText value="Edition"/>
+                                    <h:outputText value="Edition" styleClass="help-icon" title="GOA release edition."/>
                                 </f:facet>
                                 <h:outputText value="#{edition.edition}"/>
                             </p:column>
 
                             <p:column headerText="Date" style="width:100px">
                                 <f:facet name="header">
-                                    <p:overlayPanel for="dateHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                        <div class="overlay-help">
-                                            <p>GOA release date.</p>
-                                        </div>
-                                    </p:overlayPanel>
-                                    <p:commandButton  id="dateHelpBtn" value=""
-                                                      styleClass="no-value no-background fa-fix noupdate"
-                                                      icon="fa fa-question-circle" type="button"
-                                                      style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                                    <h:outputText value="Date"/>
+                                    <h:outputText value="Date" styleClass="help-icon" title="GOA release date."/>
                                 </f:facet>
                                 <h:outputText value="#{edition.date}"/>
                             </p:column>
 
                             <p:column headerText="Summary">
                                 <f:facet name="header">
-                                    <p:overlayPanel for="summaryHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                        <div class="overlay-help">
-                                            <h4>Summary statistics of each edition. Single row per edition.</h4>
-                                            <p><b>edition</b>: GOA release edition.</p>
-                                            <p><b>date</b>: GOA release date.</p>
-                                            <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
-                                            <p><b>avg_direct_by_gene</b>: Mean count of terms directly annotation to a gene.</p>
-                                            <p><b>avg_inferred_by_gene</b>:  Mean count of terms directly and/or indirectly annotation to a gene.</p>
-                                            <p><b>avg_direct_similarity</b>: Mean jaccard similarity of a gene's directly annotated terms comparing this edition to the most recent (#{sessionManager.currentEdition.date}).</p>
-                                            <p><b>avg_inferred_similarity</b>: Mean jaccard similarity of a gene's directly and/or indirectly annotated terms comparing this edition to the most recent (#{sessionManager.currentEdition.date}).</p>
-                                            <p><b>avg_inferred_by_term</b>: Mean count of genes directly and/or indirectly annotated with a term.</p>
-                                            <p><b>avg_multifunctionality</b>: Mean multifunctionality over all genes. Multifunctionality is a measure of the number of functions a gene is involved in. For a more precise definition, see <a
-                                                    href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
-                                                    class="underline" target="_blank">Gillis and Pavlidis, 2011.</a>.</p>
-                                            <p><b>gene_count</b>: Count of genes in this edition.</p>
+                                    <div style="display: none;">
+                                        <div id="summary-title">
+                                            <div class="overlay-help">
+                                                <h4>Summary statistics of each edition. Single row per edition.</h4>
+                                                <p><b>edition</b>: GOA release edition.</p>
+                                                <p><b>date</b>: GOA release date.</p>
+                                                <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
+                                                <p><b>avg_direct_by_gene</b>: Mean count of terms directly annotation to a gene.</p>
+                                                <p><b>avg_inferred_by_gene</b>:  Mean count of terms directly and/or indirectly annotation to a gene.</p>
+                                                <p><b>avg_direct_similarity</b>: Mean jaccard similarity of a gene's directly annotated terms comparing this edition to the most recent (#{sessionManager.currentEdition.date}).</p>
+                                                <p><b>avg_inferred_similarity</b>: Mean jaccard similarity of a gene's directly and/or indirectly annotated terms comparing this edition to the most recent (#{sessionManager.currentEdition.date}).</p>
+                                                <p><b>avg_inferred_by_term</b>: Mean count of genes directly and/or indirectly annotated with a term.</p>
+                                                <p><b>avg_multifunctionality</b>: Mean multifunctionality over all genes. Multifunctionality is a measure of the number of functions a gene is involved in. For a more precise definition, see <a
+                                                        href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
+                                                        class="underline" target="_blank">Gillis and Pavlidis, 2011.</a>.</p>
+                                                <p><b>gene_count</b>: Count of genes in this edition.</p>
+                                            </div>
                                         </div>
-                                    </p:overlayPanel>
-                                    <p:commandButton  id="summaryHelpBtn" value=""
-                                                      styleClass="no-value no-background fa-fix noupdate"
-                                                      icon="fa fa-question-circle" type="button"
-                                                      style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                                    <h:outputText value="Summary"/>
+                                    </div>
+                                    <h:outputText value="Summary" styleClass="help-icon" a:title-id="#summary-title"/>
                                 </f:facet>
                                 <a href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/summary?edition=#{edition.edition}" style="color: -webkit-link;">download</a>
                             </p:column>
 
                             <p:column headerText="Counts Per Term">
                                 <f:facet name="header">
-                                    <p:overlayPanel for="countspertermHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                        <div class="overlay-help">
-                                            <h4>One row per distinct edition and term. Includes counts of genes annotated with a given term both directly and indirectly.</h4>
-                                            <p><b>edition</b>: GOA release edition.</p>
-                                            <p><b>date</b>: GOA release date.</p>
-                                            <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
-                                            <p><b>go_id</b>: Gene Ontology ID.</p>
-                                            <p><b>direct_count</b>: Count of genes that are directly annotated with this term.</p>
-                                            <p><b>inferred_count</b>: Count of genes that are directly and/or indirectly annotated with this term.</p>
+                                    <div style="display: none;">
+                                        <div id="countsPerTerm-title">
+                                            <div class="overlay-help">
+                                                <h4>One row per distinct edition and term. Includes counts of genes annotated with a given term both directly and indirectly.</h4>
+                                                <p><b>edition</b>: GOA release edition.</p>
+                                                <p><b>date</b>: GOA release date.</p>
+                                                <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
+                                                <p><b>go_id</b>: Gene Ontology ID.</p>
+                                                <p><b>direct_count</b>: Count of genes that are directly annotated with this term.</p>
+                                                <p><b>inferred_count</b>: Count of genes that are directly and/or indirectly annotated with this term.</p>
+                                            </div>
                                         </div>
-                                    </p:overlayPanel>
-                                    <p:commandButton  id="countspertermHelpBtn" value=""
-                                                      styleClass="no-value no-background fa-fix noupdate"
-                                                      icon="fa fa-question-circle" type="button"
-                                                      style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                                    <h:outputText value="Counts Per Term"/>
+                                    </div>
+                                    <h:outputText value="Counts Per Term" styleClass="help-icon" a:title-id="#countsPerTerm-title"/>
                                 </f:facet>
                                 <a href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/summary/by-term?edition=#{edition.edition}" style="color: -webkit-link;">download</a>
                             </p:column>
 
                             <p:column headerText="Counts Per Gene">
                                 <f:facet name="header">
-                                    <p:overlayPanel for="countspergeneHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                        <div class="overlay-help">
-                                            <h4>One row per distinct edition and gene. Includes counts of terms annotated to a given gene both directly and indirectly.</h4>
-                                            <p><b>edition</b>: GOA release edition.</p>
-                                            <p><b>date</b>: GOA release date.</p>
-                                            <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
-                                            <p><b>accession</b>: Mapped current Uniprot primary accession.</p>
-                                            <p><b>symbol</b>: Mapped current gene symbol.</p>
-                                            <p><b>direct_count</b>: Count of terms that are directly annotated to this gene.</p>
-                                            <p><b>inferred_count</b>: Count of terms that are directly and/or indirectly annotated to this gene.</p>
-                                            <p><b>multifunctionality</b>: A measure of the number of functions a gene is involved in. For a more precise definition, see <a
-                                                    href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
-                                                    class="underline" target="_blank">Gillis and Pavlidis, 2011.</a></p>
+                                    <div style="display: none;">
+                                        <div id="countsPerGene-title">
+                                            <div class="overlay-help">
+                                                <h4>One row per distinct edition and gene. Includes counts of terms annotated to a given gene both directly and indirectly.</h4>
+                                                <p><b>edition</b>: GOA release edition.</p>
+                                                <p><b>date</b>: GOA release date.</p>
+                                                <p><b>go_date</b>: Mapped GO ontology date for this edition.</p>
+                                                <p><b>accession</b>: Mapped current Uniprot primary accession.</p>
+                                                <p><b>symbol</b>: Mapped current gene symbol.</p>
+                                                <p><b>direct_count</b>: Count of terms that are directly annotated to this gene.</p>
+                                                <p><b>inferred_count</b>: Count of terms that are directly and/or indirectly annotated to this gene.</p>
+                                                <p><b>multifunctionality</b>: A measure of the number of functions a gene is involved in. For a more precise definition, see <a
+                                                        href="http://www.plosone.org/article/info%3Adoi%2F10.1371%2Fjournal.pone.0017258"
+                                                        class="underline" target="_blank">Gillis and Pavlidis, 2011.</a></p>
+                                            </div>
                                         </div>
-                                    </p:overlayPanel>
-                                    <p:commandButton  id="countspergeneHelpBtn" value=""
-                                                      styleClass="no-value no-background fa-fix noupdate"
-                                                      icon="fa fa-question-circle" type="button"
-                                                      style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                                    <h:outputText value="Counts Per Gene"/>
+                                    </div>
+                                    <h:outputText value="Counts Per Gene" styleClass="help-icon" a:title-id="#countsPerGene-title"/>
                                 </f:facet>
                                 <a href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/summary/by-gene?edition=#{edition.edition}" style="color: -webkit-link;">download</a>
                             </p:column>
 
                             <p:column headerText="Annotations Per Gene">
                                 <f:facet name="header">
-                                    <p:overlayPanel for="directannotationsHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                        <div class="overlay-help">
-                                            <h4>One row per distinct gene. Includes directly annotated terms.</h4>
-                                            <p><b>accession</b>: Mapped current Uniprot primary accession.</p>
-                                            <p><b>symbol</b>: Mapped current gene symbol.</p>
-                                            <p><b>name</b>: Mapped current gene name/description.</p>
-                                            <p><b>go_ids</b>: Pipe delimited list of directly annotation Gene Ontology IDs.</p>
+                                    <div style="display: none;">
+                                        <div id="directAnnotations-title">
+                                            <div class="overlay-help">
+                                                <h4>One row per distinct gene. Includes directly annotated terms.</h4>
+                                                <p><b>accession</b>: Mapped current Uniprot primary accession.</p>
+                                                <p><b>symbol</b>: Mapped current gene symbol.</p>
+                                                <p><b>name</b>: Mapped current gene name/description.</p>
+                                                <p><b>go_ids</b>: Pipe delimited list of directly annotation Gene Ontology IDs.</p>
+                                            </div>
                                         </div>
-                                    </p:overlayPanel>
-                                    <p:commandButton  id="directannotationsHelpBtn" value=""
-                                                      styleClass="no-value no-background fa-fix noupdate"
-                                                      icon="fa fa-question-circle" type="button"
-                                                      style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                                    <h:outputText value="Annotations Per Gene"/>
+                                    </div>
+                                    <h:outputText value="Annotations Per Gene" styleClass="help-icon" a:title-id="#directAnnotations-title"/>
                                 </f:facet>
                                 <a href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/annotations?edition=#{edition.edition}" style="color: -webkit-link;">download</a>
                             </p:column>
 
                             <p:column headerText="ErmineJ Annotations">
                                 <f:facet name="header">
-                                    <p:overlayPanel for="erminejHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                                        <div class="overlay-help">
-                                            <h4><a href="http://erminej.msl.ubc.ca">ErmineJ</a> compatible file; one row per gene symbol. Includes directly annotated terms.</h4>
-                                            <h4>NOTE: There may be separate genes with the same symbol, instead of removing them altogether we instead merge there annotations and list them with a randomly chosen name from among the conflicting genes.</h4>
-                                            <p><b>symbol</b>: Mapped current gene symbol.</p>
-                                            <p><b>symbol</b>: Mapped current gene symbol.</p>
-                                            <p><b>name</b>: Mapped current gene name/description (if multiple genes with same symbol, picked at random from them).</p>
-                                            <p><b>go_ids</b>: Pipe delimited list of directly annotation Gene Ontology IDs (if multiple genes with same symbol, annotations are merged).</p>
+                                    <div style="display: none;">
+                                        <div id="ermineJ-title">
+                                            <div class="overlay-help">
+                                                <h4><a href="http://erminej.msl.ubc.ca">ErmineJ</a> compatible file; one row per gene symbol. Includes directly annotated terms.</h4>
+                                                <h4>NOTE: There may be separate genes with the same symbol, instead of removing them altogether we instead merge there annotations and list them with a randomly chosen name from among the conflicting genes.</h4>
+                                                <p><b>symbol</b>: Mapped current gene symbol.</p>
+                                                <p><b>symbol</b>: Mapped current gene symbol.</p>
+                                                <p><b>name</b>: Mapped current gene name/description (if multiple genes with same symbol, picked at random from them).</p>
+                                                <p><b>go_ids</b>: Pipe delimited list of directly annotation Gene Ontology IDs (if multiple genes with same symbol, annotations are merged).</p>
+                                            </div>
                                         </div>
-                                    </p:overlayPanel>
-                                    <p:commandButton  id="erminejHelpBtn" value=""
-                                                      styleClass="no-value no-background fa-fix noupdate"
-                                                      icon="fa fa-question-circle" type="button"
-                                                      style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                                    <h:outputText value="ErmineJ Annotations"/>
+                                    </div>
+                                    <h:outputText value="ErmineJ Annotations" styleClass="help-icon" a:title-id="#ermineJ-title"/>
                                 </f:facet>
                                 <a href="#{request.contextPath}/rest/data/species/#{sessionManager.species.id}/annotations?edition=#{edition.edition}&amp;erminej=true" style="color: -webkit-link;">download</a>
                             </p:column>
