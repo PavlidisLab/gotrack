@@ -2,6 +2,8 @@ function showTerminal() {
     PF('terminalDialogWdg').show();
     PF('terminalWdg').focus();
 }
+function onLoad() {
+}
 $(document).ready(function () {
     $( document ).tooltip({
         items: ".help-icon[title-id],.help-icon[title]",
