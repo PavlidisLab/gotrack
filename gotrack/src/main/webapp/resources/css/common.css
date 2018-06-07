@@ -32,6 +32,10 @@ body {
     content: '\f059';
 }
 
+.help-icon.no-help-icon-margin:before {
+    margin:0;
+}
+
 .help-icon:hover:before {
     -moz-box-shadow: 0 0 5px #85b2cb;
     -webkit-box-shadow: 0 0 8px #85b2cb;
@@ -68,4 +72,10 @@ body {
 
 div.ui-table-footer-align-right > div.ui-datatable-footer {
     text-align: right;
+}
+
+.ellipsis-overflow {
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
 }

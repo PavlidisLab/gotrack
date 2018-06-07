@@ -344,14 +344,17 @@ function commonOptions(options, config) {
         var compareBehaviour = event.metaKey || event.ctrlKey;
         if (!compareBehaviour) {
             hideTags();
+            PF('tagFilterWdg').inputs.each(function(){
+                this.checked = false;
+            });
             fetchAnnotationPointData([{name: 'edition', value: GLOBALS.dateToEdition[p.x]}]);
             plotting.mainCharts.forEach(function (c) {
                 redrawSelectedEditionPlotLine(c, p);
             });
             destroyCompareEdition();
         } else {
-            showTags();
-            if (event.shiftKey) {
+            // showTags();
+            if (event.shiftKey && comparisons.length > 0) {
                 var added = addCompareEdition(p);
                 if (added) {
                     addAnnotationComparisonData([{name: 'compareEdition', value: GLOBALS.dateToEdition[p.x]}]);

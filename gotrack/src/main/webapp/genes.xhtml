@@ -63,6 +63,7 @@
                              var="termRow"
                              value="#{geneView.rightPanelTerms}"
                              scrollable="true"
+                             liveScroll="true"
                              style="margin-bottom:0"
                              emptyMessage="No annotations found with given criteria"
                              filteredValue="#{geneView.rightPanelFilteredTerms}"
@@ -70,13 +71,14 @@
                              selectionMode="multiple"
                              rowKey="#{termRow.term.goId}"
                              scrollHeight="100%"
+                             scrollRows="50"
                              rowStyleClass="rightPanelRow-#{termRow.direct}"
                              resizableColumns="true">
                     <p:ajax event="rowDblselect" oncomplete="afterRowSelection();fetchTimeline();"/>
                     <p:ajax event="rowSelect" onstart="afterRowSelection();return false;"/>
                     <p:ajax event="rowUnselect" onstart="afterRowSelection();return false;"/>
                     <f:facet name="header">
-                        <p:outputPanel id="headerPanel">
+                        <p:outputPanel id="headerPanel" styleClass="tag-update">
                             <h:outputText value="Edition "/>
                             <h:outputText value="#{geneView.rightPanelEdition.edition} "
                                           styleClass="#{not empty geneView.comparisons ? 'tag-0' : ''}"/>
@@ -87,13 +89,13 @@
                             </p:repeat>
                         </p:outputPanel>
                         <p:commandButton id="toggler" type="button" value="Columns" icon="ui-icon-calculator"
-                                         style="display:none;"/>
+                                         style="display:none;" />
                         <p:columnToggler widgetVar="colToggler" datasource="funcTable" trigger="toggler"/>
                     </f:facet>
 
-                    <p:column style="width:25px" exportable="false">
+                    <p:column style="width:16px;" exportable="false">
                         <f:facet name="header">
-                            <h:outputText value="" styleClass="help-icon" a:title-id="#toggle-title"/>
+                            <h:outputText value="" styleClass="help-icon no-help-icon-margin" a:title-id="#toggle-title"/>
                         </f:facet>
                         <p:rowToggler/>
                     </p:column>
@@ -103,23 +105,24 @@
                             <h:outputText value="Tags" styleClass="help-icon" title="A tag of the appropriate colour will display for each compared edition this term was present in."/>
                         </f:facet>
                         <f:facet name="filter">
-                            <p:selectManyButton id="tagFilter" onchange="PF('funcTable').filter()"
+                            <p:selectManyButton id="tagFilter" widgetVar="tagFilterWdg" onchange="PF('funcTable').filter()"
                                                 style="font-size: #{geneView.comparisons.size() > 1 ? 60 : 75}%"
-                                                styleClass="selectButtonFA">
+                                                styleClass="selectButtonFA tag-update">
                                 <!-- FA icon added through CSS -->
                                 <c:forEach begin="0" end="#{geneView.comparisons.size()}" var="i">
                                     <f:selectItem itemLabel="" itemValue="#{i}"/>
                                 </c:forEach>
                             </p:selectManyButton>
                         </f:facet>
-                        <c:forEach begin="0" end="#{geneView.comparisons.size()}" var="i">
-                            <p:outputPanel rendered="#{termRow.inSet.get(i)}" styleClass="inline">
-                                <i class="fa fa-tag tag-#{i}" style="margin-right: 5px;"/>
-                            </p:outputPanel>
-                        </c:forEach>
+                        <p:outputPanel styleClass="tag-update">
+                            <c:forEach begin="0" end="#{geneView.comparisons.size()}" var="i">
+                                <h:outputText styleClass="fa fa-tag tag-#{i}" style="margin-right: 5px;" rendered="#{termRow.inSet.get(i)}"/>
+                            </c:forEach>
+                        </p:outputPanel>
                     </p:column>
                     <p:column filterBy="#{termRow.term.goId}" filterMatchMode="contains"
-                              headerText="Id" style="width:120px" exportFunction="#{passthroughColumnExporter.export}">
+                              headerText="Id" style="width:120px" exportFunction="#{passthroughColumnExporter.export}"
+                              filterValue="#{geneView.rightPanelFilters[0]}">
                         <f:facet name="header">
                             <h:outputText value="Id" styleClass="help-icon" a:title-id="#id-title"/>
                         </f:facet>
@@ -151,32 +154,32 @@
                         <h:outputText value="#{termRow.term.aspect.label}"/>
                     </p:column>
                     <p:column filterBy="#{termRow.term.name}" filterMatchMode="contains"
-                              headerText="Name">
+                              headerText="Name" styleClass="ellipsis-overflow" filterValue="#{geneView.rightPanelFilters[1]}">
                         <f:facet name="header">
                             <h:outputText value="Name" styleClass="help-icon" title="Short description of the given term."/>
                         </f:facet>
                         <h:outputText value="#{termRow.term.name}"/>
                     </p:column>
 
-                    <p:column headerText="Curated" style="width:70px;" filterFunction="#{geneView.filterByTrueNull}"
+                    <p:column headerText="Curated" style="width:70px;" filterFunction="#{geneView.filterTriStateCheckbox}"
                               filterBy="#{termRow.curated}" exportFunction="#{passthroughColumnExporter.export}">
                         <f:facet name="header">
 
                             <h:outputText value="Curated" class="help-icon" a:title-id="#curated-title"/>
                         </f:facet>
                         <f:facet name="filter">
-                            <p:selectBooleanCheckbox onchange="PF('funcTable').filter()" />
+                            <p:triStateCheckbox onchange="PF('funcTable').filter()" />
                         </f:facet>
                         <h:outputText class="#{termRow.curated ? 'fa fa-check green' : ( termRow.curated != null ? 'fa fa-times red' : '')}"
                                       data-export="#{termRow.curated}"/>
                     </p:column>
-                    <p:column headerText="Direct" style="width:60px;" filterFunction="#{geneView.filterByTrueNull}"
+                    <p:column headerText="Direct" style="width:60px;" filterFunction="#{geneView.filterTriStateCheckbox}"
                               filterBy="#{termRow.direct}" exportFunction="#{passthroughColumnExporter.export}">
                         <f:facet name="header">
                             <h:outputText value="Direct" styleClass="help-icon" a:title-id="#direct-title"/>
                         </f:facet>
                         <f:facet name="filter">
-                            <p:selectBooleanCheckbox onchange="PF('funcTable').filter()" />
+                            <p:triStateCheckbox onchange="PF('funcTable').filter()" />
                         </f:facet>
                         <h:outputText class="#{termRow.direct ? 'fa fa-check green' : ( termRow.direct != null ? 'fa fa-times red' : '')}"
                                       data-export="#{termRow.direct}"/>
@@ -194,28 +197,29 @@
                             <p:commandButton icon="fa fa-sitemap" widgetVar="viewGOGraphWdg" value="View GO Graph"
                                              action="#{graphFactory.fetchGraph(geneView.rightPanelSelectedGeneOntologyTerms)}"
                                              oncomplete="PF('graphDlgWdg').show();handleFetchGraphDialog(xhr, status, args);"/>
-                            <div style="position:absolute; right:0; top:0;">
-                                <h:commandLink>
-                                    <h:graphicImage library="img" name="excel.png" width="24"/>
-                                    <p:dataExporter type="xls" target="funcTable"
-                                                    fileName="#{geneView.gene.symbol}"/>
-                                </h:commandLink>
-
-                                <h:commandLink>
-                                    <h:graphicImage library="img" name="csv.png" width="24"/>
-                                    <p:dataExporter type="csv" target="funcTable"
-                                                    fileName="#{geneView.gene.symbol}"/>
-                                </h:commandLink>
-
-                                <h:commandLink>
-                                    <h:graphicImage library="img" name="xml.png" width="24"/>
-                                    <p:dataExporter type="xml" target="funcTable"
-                                                    fileName="#{geneView.gene.symbol}"/>
-                                </h:commandLink>
-                            </div>
                         </div>
                     </f:facet>
                 </p:dataTable>
+                <div style="position:absolute; right:11px; bottom:1px;">
+                    <!-- Outside datatable so update calls don't redownload jsf javascript resources -->
+                    <h:commandLink>
+                        <h:graphicImage library="img" name="excel.png" width="24"/>
+                        <p:dataExporter type="xls" target="funcTable"
+                                        fileName="#{geneView.gene.symbol}"/>
+                    </h:commandLink>
+
+                    <h:commandLink>
+                        <h:graphicImage library="img" name="csv.png" width="24"/>
+                        <p:dataExporter type="csv" target="funcTable"
+                                        fileName="#{geneView.gene.symbol}"/>
+                    </h:commandLink>
+
+                    <h:commandLink>
+                        <h:graphicImage library="img" name="xml.png" width="24"/>
+                        <p:dataExporter type="xml" target="funcTable"
+                                        fileName="#{geneView.gene.symbol}"/>
+                    </h:commandLink>
+                </div>
             </h:form>
         </p:layoutUnit>
     </ui:define>
@@ -339,13 +343,12 @@
                              action="#{geneView.fetchAnnotationPointData}"/>
             <p:remoteCommand name="fetchAnnotationComparisonData"
                              process="@this"
-                             update=":rightForm:funcTable:tagFilter, :rightForm:funcTable:headerPanel"
+                             update=":rightForm:funcTable"
                              oncomplete="PF('funcTable').filter()"
                              action="#{geneView.fetchAnnotationComparisonData()}"/>
             <p:remoteCommand name="addAnnotationComparisonData"
                              process="@this"
-                             update=":rightForm:funcTable:tagFilter, :rightForm:funcTable:headerPanel"
-                             oncomplete="PF('funcTable').filter()"
+                             update="@(.tag-update)"
                              action="#{geneView.addAnnotationComparisonData()}"/>
 
             <p:remoteCommand name="fetchTimelinePointData"

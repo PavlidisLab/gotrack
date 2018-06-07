@@ -109,6 +109,10 @@ public class GeneView implements Serializable {
     @Getter
     private Edition rightPanelEdition;
 
+    // Necessary to keep default filters from clearing on table update
+    @Getter
+    private Object[] rightPanelFilters = new Object[] {"",""};
+
     // Comparisons
     @Getter
     private List<Edition> comparisons = Lists.newArrayList();
@@ -745,6 +749,17 @@ public class GeneView implements Serializable {
      */
     public boolean filterByTrueNull( Boolean value, Boolean filter, Locale locale ) {
         return !filter || value != null && value;
+    }
+
+    /**
+     * custom filter function for primefaces data table column with tristatecheckbox:
+     * check(1): true only
+     * cross(2): false only
+     * empty(0): no filter
+     */
+    public boolean filterTriStateCheckbox( Boolean value, Integer filter, Locale locale ) {
+        return filter == 0 || value != null && ((filter == 1 && value) || (filter == 2 && !value));
+
     }
 
     // Getters & Setters
