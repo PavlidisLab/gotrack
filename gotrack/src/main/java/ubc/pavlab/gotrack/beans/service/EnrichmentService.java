@@ -367,7 +367,7 @@ public class EnrichmentService implements Serializable {
         Map<Edition, Map<GeneOntologyTerm, Set<Gene>>> geneGOMap = new HashMap<>();
 
         for ( Edition ed : eds ) {
-            geneGOMap.put( ed, retrieveData( ed, genes, species, aspects ) );
+            geneGOMap.put( ed, retrieveData( ed, genes, aspects ) );
         }
 
         if ( geneGOMap.isEmpty() ) {
@@ -393,7 +393,7 @@ public class EnrichmentService implements Serializable {
     public Enrichment<GeneOntologyTerm, Gene> singleEnrichment( Edition ed, Set<Gene> genes, Species species,
                                                                 MultipleTestCorrection mtc, double thresh, int min, int max, Set<Aspect> aspects ) {
 
-        Map<GeneOntologyTerm, Set<Gene>> data = retrieveData( ed, genes, species, aspects );
+        Map<GeneOntologyTerm, Set<Gene>> data = retrieveData( ed, genes, aspects );
 
         if ( data == null || data.isEmpty() ) {
             return null;
@@ -415,15 +415,13 @@ public class EnrichmentService implements Serializable {
      *
      * @param ed             Edition to retrieve data from
      * @param genes          set of genes to either retrieve
-     * @param currentSpecies species id of genes
      * @param filterAspect   keep only terms of these aspects, if null or empty the filter is not applied
      * @return data necessary for enrichment of given hitlist
      */
-    private Map<GeneOntologyTerm, Set<Gene>> retrieveData( Edition ed, Set<Gene> genes, Species currentSpecies,
-                                                           Set<Aspect> filterAspect ) {
+    private Map<GeneOntologyTerm, Set<Gene>> retrieveData( Edition ed, Set<Gene> genes, Set<Aspect> filterAspect ) {
 
         if ( genes != null && !genes.isEmpty() ) {
-            log.info( "Current species: " + currentSpecies );
+            log.info( "Current species: " + ed.getSpecies() );
             log.info( "Geneset Size: " + genes.size() );
 
             if ( genes.size() > MAX_GENESET_SIZE ) {
@@ -449,7 +447,7 @@ public class EnrichmentService implements Serializable {
                 }
             }
 
-            // If not all genes have been loaded from cache we must hit the database for the rest and cache the results
+            // If not all genes have been loaded from cache we must hit the database for the rest
             if ( !genesToLoad.isEmpty() ) {
 
                 Map<Gene, Set<GeneOntologyTerm>> geneGOMapFromDB;

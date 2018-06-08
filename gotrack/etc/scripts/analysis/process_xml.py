@@ -23,7 +23,7 @@
 __author__ = 'mjacobson'
 
 
-import logging
+from collections import namedtuple
 import logging.config
 import analysis
 import sys
@@ -53,6 +53,8 @@ ORGANISM_MAP = {
     "Escherichia coli" : 14,
 }
 
+GeneSet = namedtuple('GeneSet', ['name', 'sys_name', 'pmid', 'organism', 'genes'])
+
 def parse_XML(c_xml):
     doc = minidom.parse(c_xml)
     gsets = doc.getElementsByTagName("GENESET")
@@ -62,13 +64,9 @@ def parse_XML(c_xml):
         sys_name = gset.getAttribute("SYSTEMATIC_NAME")
         pmid = gset.getAttribute("PMID")
         organism = gset.getAttribute("ORGANISM")
-        try:
-            species = ORGANISM_MAP[organism]
-        except KeyError:
-            log.info("Unknown species: %s", organism)
-            continue
         genes = gset.getAttribute("MEMBERS_SYMBOLIZED").split(",")
-        results.append([name, sys_name, pmid, str(species), genes])
+        results.append(GeneSet(name, sys_name, pmid, organism, genes))
+
     return results
 
 def chunker(seq, size):
@@ -81,16 +79,16 @@ if __name__ == '__main__':
         input_xml = sys.argv[1]
         output = sys.argv[2]
         data_gen = parse_XML(input_xml)
-        print "Genesets: {0}".format(len(data_gen))
+        log.info("Genesets: %s", len(data_gen))
         pmids = set()
         for dat in data_gen:
-            pmids.add(dat[2])
+            pmids.add(dat.pmid)
         pmids = list(pmids)
-        print "PMIDS: {0}".format(len(pmids))
+        log.info("PMIDS: %s", len(pmids))
         pmid_map = {}
         for pmids_chunk in chunker(pmids, 50):
             location = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id=' + ",".join(pmids_chunk) + '&retmode=json'
-            print location
+            log.info(location)
             req = analysis.__send_request(location)
             for pmid in pmids_chunk:
                 try:
@@ -100,28 +98,26 @@ if __name__ == '__main__':
                     continue
                 try:
                     pubdate = req_info['pubdate']
+                    pmid_map[pmid] = pubdate
                 except KeyError:
-                    pass
-                try:
-                    epubdate = req_info['epubdate']
-                except KeyError:
-                    pass
-                pmid_map[pmid] = (pubdate, epubdate)
+                    log.info("pmid has no date: %s", pmid)
             time.sleep(1)
 
-        print "pmids mapped {0} / {1}".format(len(pmid_map), len(pmids))
+        log.info("pmids mapped %s / %s", len(pmid_map), len(pmids))
+
         errors = []
         success = []
         with open(output, 'w+') as out_file:
+            out_file.write("\t".join(["STANDARD_NAME", "SYSTEMATIC_NAME", "PMID", "ORGANISM", "pubdate", "MEMBERS_SYMBOLIZED"]) + "\n")
             for dat in data_gen:
                 try:
-                    req_data = pmid_map[dat[2]]
-                    success.append(dat[2])
+                    pubdate = pmid_map[dat.pmid]
+                    success.append(dat.pmid)
                 except KeyError:
-                    errors.append(dat[2])
-                    print dat[2]
-                    continue
-            
-                dat = dat[0:-1] + [req_data[0]] + [req_data[1]] + [",".join(dat[-1])]
-                out_file.write("\t".join(dat) + "\n")
-        print "Success: {0}, Errors:{1}".format(len(success), len(errors))
+                    errors.append(dat.pmid)
+                    log.info("geneset has no pmid date: %s - %s", dat.sys_name, dat.pmid)
+                    pubdate = "unknown"
+
+                out_file.write("\t".join([dat.name, dat.sys_name, dat.pmid, dat.organism, pubdate,
+                                          ",".join(dat.genes)]) + "\n")
+        log.info("Success: %s, Errors: %s", len(success), len(errors))

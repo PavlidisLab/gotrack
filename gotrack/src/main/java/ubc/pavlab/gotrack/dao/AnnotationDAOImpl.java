@@ -60,17 +60,17 @@ public class AnnotationDAOImpl implements AnnotationDAO {
             "order by edition";
 
     // Get information from multiple genes for running enrichment, should be quite fast and scale sublinearly
-    private static final String SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES = "select distinct edition, go_id, ac from " + SQL_ACCESSION + " acc " +
+    private static final String SQL_ENRICHMENT_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES = "select distinct edition, go_id, ac from " + SQL_ACCESSION + " acc " +
             "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
             "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
-            "where ppah.ac in (%s) AND species_id= ? AND edition between ? and ? " +
+            "where ppah.ac in (%s) AND species_id= ? AND edition between ? and ? and qualifier not like 'NOT%%'" +
             "order by NULL";
 
     // Get information from multiple genes for running enrichment in a single edition, should be extremely fast
-    private static final String SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES = "select distinct go_id, ac from " + SQL_ACCESSION + " acc " +
+    private static final String SQL_ENRICHMENT_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES = "select distinct go_id, ac from " + SQL_ACCESSION + " acc " +
             "inner join " + SQL_ACCESSION_HISTORY + " ppah on acc.db_object_id = ppah.sec " +
             "inner join " + SQL_ANNOTATION + " ann on acc.id=ann.accession_id " +
-            "where ppah.ac in (%s) AND species_id= ? AND edition = ? " +
+            "where ppah.ac in (%s) AND species_id= ? AND edition = ? and qualifier not like 'NOT%%'" +
             "order by NULL";
 
     // Collect evidence breakdown for a specific term, should be not horribly slow, try and keep under 5s for slowest queries (ones for root level terms)
@@ -195,7 +195,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
         List<Object> params = Lists.newArrayList();
 
-        String sql = String.format( SQL_SIMPLE_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
+        String sql = String.format( SQL_ENRICHMENT_ANNOTATION_RANGE_EDITIONS_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
 
         for ( Gene g : genes ) {
             params.add( g.getAccession().getAccession() );
@@ -258,7 +258,7 @@ public class AnnotationDAOImpl implements AnnotationDAO {
 
         List<Object> params = new ArrayList<Object>();
 
-        String sql = String.format( SQL_SIMPLE_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
+        String sql = String.format( SQL_ENRICHMENT_ANNOTATION_SINGLE_EDITION_MULTIPLE_GENES, DAOUtil.preparePlaceHolders( genes.size() ) );
 
         for ( Gene g : genes ) {
             params.add( g.getAccession().getAccession() );

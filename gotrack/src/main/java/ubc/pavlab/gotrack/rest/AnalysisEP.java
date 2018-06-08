@@ -50,7 +50,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * TODO Document Me
- * 
+ *
  * @author mjacobson
  * @version $Id$
  */
@@ -91,7 +91,7 @@ public class AnalysisEP {
             Species species = cache.getSpecies( req.speciesId );
 
             if ( species == null ) {
-                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             Edition ed = cache.getCurrentEditions( species );
@@ -149,7 +149,7 @@ public class AnalysisEP {
             response.put( "aspect_filter", aspectsFilter );
 
             if ( hitList.isEmpty() ) {
-                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             Enrichment<GeneOntologyTerm, Gene> enrichment = enrichmentService.singleEnrichment( ed, hitList,
@@ -159,16 +159,16 @@ public class AnalysisEP {
 
             response.put( "enrichment_results", enrichmentJSON );
 
-            response.put( "httpstatus", 202 );
+            response.put( "httpstatus", 200 );
             response.put( "success", true );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
-            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).build();
-        } catch ( Exception e1 ) {
+            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
+        } catch (Exception e1) {
             log.error( "Something went wrong!", e1 );
-            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).build();
+            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
-        return Response.status( 202 ).entity( response.toString() ).build();
+        return Response.ok( response.toString(), MediaType.APPLICATION_JSON ).build();
 
     }
 
@@ -187,16 +187,16 @@ public class AnalysisEP {
             Species species = cache.getSpecies( req.speciesId );
 
             if ( species == null ) {
-                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
             Calendar c = Calendar.getInstance();
 
             // Get date
             if ( req.month < 1 || req.month > 12 ) {
-                return Response.status( 400 ).entity( fail( 400, "Invalid month." ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "Invalid month." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
             if ( req.year < 1990 || req.year > c.get( Calendar.YEAR ) ) {
-                return Response.status( 400 ).entity( fail( 400, "Invalid year." ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "Invalid year." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             c.set( req.year, req.month - 1, 1, 0, 0 );
@@ -256,7 +256,7 @@ public class AnalysisEP {
             response.put( "aspect_filter", aspectsFilter );
 
             if ( hitList.isEmpty() ) {
-                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             Enrichment<GeneOntologyTerm, Gene> enrichment = enrichmentService.singleEnrichment( closestEdition, hitList,
@@ -266,16 +266,16 @@ public class AnalysisEP {
 
             response.put( "enrichment_results", enrichmentJSON );
 
-            response.put( "httpstatus", 202 );
+            response.put( "httpstatus", 200 );
             response.put( "success", true );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
-            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).build();
-        } catch ( Exception e1 ) {
+            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
+        } catch (Exception e1) {
             log.error( "Something went wrong!", e1 );
-            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).build();
+            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
-        return Response.status( 202 ).entity( response.toString() ).build();
+        return Response.ok( response.toString(), MediaType.APPLICATION_JSON ).build();
 
     }
 
@@ -294,7 +294,7 @@ public class AnalysisEP {
             Species species = cache.getSpecies( req.speciesId );
 
             if ( species == null ) {
-                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             MultipleTestCorrection mulTestCor = MultipleTestCorrection.BH;
@@ -347,7 +347,7 @@ public class AnalysisEP {
             response.put( "aspect_filter", aspectsFilter );
 
             if ( hitList.isEmpty() ) {
-                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             EnrichmentAnalysis analysis = enrichmentService.enrichment( hitList, species, mulTestCor,
@@ -369,16 +369,16 @@ public class AnalysisEP {
 
             response.put( "enrichment_data", dataJSON );
 
-            response.put( "httpstatus", 202 );
+            response.put( "httpstatus", 200 );
             response.put( "success", true );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
-            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).build();
-        } catch ( Exception e1 ) {
+            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
+        } catch (Exception e1) {
             log.error( "Something went wrong!", e1 );
-            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).build();
+            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
-        return Response.status( 202 ).entity( response.toString() ).build();
+        return Response.ok( response.toString(), MediaType.APPLICATION_JSON ).build();
 
     }
 
@@ -390,39 +390,29 @@ public class AnalysisEP {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/similarity")
     public Response postSimilarity( final EnrichmentHistoricalRequest req ) {
-        log.info( req );
+//        log.info( req );
         JSONObject response = new JSONObject();
         try {
             // Get Species
             Species species = cache.getSpecies( req.speciesId );
 
             if ( species == null ) {
-                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "Unknown Species ID" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
             Calendar c = Calendar.getInstance();
 
             // Get date
             if ( req.month < 1 || req.month > 12 ) {
-                return Response.status( 400 ).entity( fail( 400, "Invalid month." ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "Invalid month." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
             if ( req.year < 1990 || req.year > c.get( Calendar.YEAR ) ) {
-                return Response.status( 400 ).entity( fail( 400, "Invalid year." ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "Invalid year." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
             c.set( req.year, req.month - 1, 1, 0, 0 );
             Date inputDate = c.getTime();
 
             Edition closestEdition = closestEdition( inputDate, species );
-
-            response.put( "edition", new JSONObject( closestEdition ) );
-
-            MultipleTestCorrection mulTestCor = MultipleTestCorrection.BH;
-            double threshold = 0.05;
-            int min = 5;
-            int max = 200;
-            Set<Aspect> aspectsFilter = null;
-            int topN = 5;
-            SimilarityMethod sm = SimilarityMethod.TVERSKY;
 
             Set<Gene> hitList = Sets.newHashSet();
             Set<GeneMatch> exact = Sets.newHashSet();
@@ -461,73 +451,40 @@ public class AnalysisEP {
 
             // Settings
 
-            response.put( "mt_corr_method", new JSONObject( mulTestCor ).put( "key", mulTestCor ) );
-            response.put( "threshold", threshold );
-            response.put( "min_go_geneset", min );
-            response.put( "max_go_geneset", max );
-            response.put( "aspect_filter", aspectsFilter );
+            response.put( "mt_corr_method", new JSONObject( req.multipleTestCorrection ).put( "key", req.multipleTestCorrection ) );
+            response.put( "threshold", req.threshold );
+            response.put( "min_go_geneset", req.min );
+            response.put( "max_go_geneset", req.max );
+            response.put( "aspect_filter", req.aspects );
 
             if ( hitList.isEmpty() ) {
-                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).build();
+                return Response.status( 400 ).entity( fail( 400, "0 matching genes." ).toString() ).type( MediaType.APPLICATION_JSON ).build();
             }
 
-            Edition currentEdition = cache.getCurrentEditions( species );
+            Edition referenceEdition = cache.getCurrentEditions( species );
 
-            response.put( "current_edition", new JSONObject( currentEdition ) );
+            EnrichmentAnalysis analysis = enrichmentService.enrichment( Sets.newHashSet( closestEdition, referenceEdition )
+                    , hitList, species, req.multipleTestCorrection, req.threshold, req.min, req.max, req.aspects );
 
-            EnrichmentAnalysis analysis = enrichmentService.enrichment(
-                    Sets.newHashSet( closestEdition, currentEdition ), hitList,
-                    species, mulTestCor, threshold, min, max, aspectsFilter );
-
-            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, topN, sm, cache );
+            SimilarityAnalysis similarityAnalysis = new SimilarityAnalysis( analysis, req.topN, referenceEdition, req.similarityMethod, cache );
             response.put( "similarity_compare_edition", new JSONObject( similarityAnalysis.getReferenceEdition() ) );
             response.put( "similarity_method", new JSONObject( similarityAnalysis.getSimilarityMethod() ).put( "key", similarityAnalysis.getSimilarityMethod() ) );
-            response.put( "topN", similarityAnalysis.getTopN() );
+            response.put( "top_n", similarityAnalysis.getTopN() );
 
-            JSONArray dataJSON = new JSONArray();
+            // Data
+            response.put( "data", similarityToJSON( similarityAnalysis, analysis, closestEdition, referenceEdition, req.includeSets) );
+            response.put( "reference_data", similarityToJSON( similarityAnalysis, analysis, referenceEdition, referenceEdition, req.includeSets) );
 
-            for ( Entry<Edition, SimilarityScore> editionEntry : similarityAnalysis.getSimilarityScores().entrySet() ) {
-
-                Edition ed = editionEntry.getKey();
-                SimilarityScore score = editionEntry.getValue();
-                JSONObject editionJSON = new JSONObject( ed );
-
-                JSONObject valuesJSON = new JSONObject();
-                valuesJSON.put( "CompleteTermSim", score.getCompleteTermSim() );
-                valuesJSON.put( "TopTermSim", score.getTopTermSim() );
-                valuesJSON.put( "TopGeneSim", score.getTopGeneSim() );
-                valuesJSON.put( "TopParentsSim", score.getTopParentsSim() );
-
-                JSONObject entryJSON = new JSONObject();
-
-                entryJSON.put( "edition", editionJSON );
-                entryJSON.put( "age_days", getDateDiff( ed.getDate(), currentEdition.getDate(), TimeUnit.DAYS ) );
-                entryJSON.put( "significant_terms", analysis.getTermsSignificant( ed ).size() );
-
-                entryJSON.put( "top_terms", goSetToJSON( score.getTopTerms() ) );
-                entryJSON.put( "top_parents", goSetToJSON( score.getTopParents() ) );
-                entryJSON.put( "top_genes", score.getTopGenes() );
-
-                entryJSON.put( "top_parents_mf",
-                        multifunctionalityService.multifunctionality( score.getTopParents(), ed ) );
-
-                entryJSON.put( "values", valuesJSON );
-
-                dataJSON.put( entryJSON );
-            }
-
-            response.put( "similarity_data", dataJSON );
-
-            response.put( "httpstatus", 202 );
+            response.put( "httpstatus", 200 );
             response.put( "success", true );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
-            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).build();
-        } catch ( Exception e1 ) {
+            return Response.status( 400 ).entity( fail( 400, "Malformed JSON" ).toString() ).type( MediaType.APPLICATION_JSON ).build();
+        } catch (Exception e1) {
             log.error( "Something went wrong!", e1 );
-            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).build();
+            return Response.status( 500 ).entity( fail( 500, e1.getMessage() ).toString() ).type( MediaType.APPLICATION_JSON ).build();
         }
-        return Response.status( 202 ).entity( response.toString() ).build();
+        return Response.ok( response.toString(), MediaType.APPLICATION_JSON ).build();
 
     }
 
@@ -537,7 +494,7 @@ public class AnalysisEP {
             response.put( "httpstatus", httpStatus );
             response.put( "success", false );
             response.put( "message", message );
-        } catch ( JSONException e1 ) {
+        } catch (JSONException e1) {
             log.error( "Malformed JSON", e1 );
         }
         return response;
@@ -545,9 +502,9 @@ public class AnalysisEP {
 
     /**
      * Get a diff between two dates
-     * 
-     * @param date1 the oldest date
-     * @param date2 the newest date
+     *
+     * @param date1    the oldest date
+     * @param date2    the newest date
      * @param timeUnit the unit in which you want the diff
      * @return the diff value, in the provided unit
      */
@@ -577,7 +534,7 @@ public class AnalysisEP {
 
     /**
      * Convert list of strings to best possible matches in genes
-     * 
+     *
      * @param geneInputs
      * @return
      */
@@ -626,6 +583,36 @@ public class AnalysisEP {
         }
 
         return results;
+    }
+
+    private JSONObject similarityToJSON(SimilarityAnalysis similarityAnalysis, EnrichmentAnalysis analysis, Edition edition, Edition referenceEdition, boolean includeSets) {
+        JSONObject entryJSON = new JSONObject();
+
+        SimilarityScore score = similarityAnalysis.getSimilarityScore( edition );
+
+        JSONObject valuesJSON = new JSONObject();
+        valuesJSON.put( "complete_term_sim", score.getCompleteTermSim() );
+        valuesJSON.put( "top_term_sim", score.getTopTermSim() );
+        valuesJSON.put( "top_gene_sim", score.getTopGeneSim() );
+        valuesJSON.put( "top_parents_sim", score.getTopParentsSim() );
+        entryJSON.put( "values", valuesJSON );
+
+        // Conversion accounts for obsoletion and alternate ids
+        if ( includeSets ) {
+            entryJSON.put( "complete_terms", goSetToJSON( cache.convertTerms( referenceEdition, analysis.getTermsSignificant( edition ) ) ) );
+            entryJSON.put( "top_terms", goSetToJSON( cache.convertTerms( referenceEdition, score.getTopTerms() ) ) );
+            entryJSON.put( "top_parents", goSetToJSON( cache.convertTerms( referenceEdition, score.getTopParents() ) ) );
+            entryJSON.put( "top_genes", score.getTopGenes() );
+        }
+
+        entryJSON.put( "edition", new JSONObject( edition ) );
+        entryJSON.put( "similarity_age", getDateDiff( edition.getDate(), referenceEdition.getDate(), TimeUnit.DAYS ) );
+        entryJSON.put( "significant_terms", analysis.getTermsSignificant( edition ).size() );
+        // TODO: We don't convert here as the caches which help calculate MF don't yet account for alternate ids
+        entryJSON.put( "top_parents_mf",
+                multifunctionalityService.multifunctionality( score.getTopParents(), edition ) );
+        entryJSON.put( "distinct_tested_terms", analysis.getRawResults( edition ).getCountTestedTerms() );
+        return entryJSON;
     }
 
 }

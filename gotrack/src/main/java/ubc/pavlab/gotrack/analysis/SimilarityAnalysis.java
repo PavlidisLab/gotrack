@@ -83,13 +83,13 @@ public class SimilarityAnalysis {
 
         SimilarityEnrichmentWrapper reference = new SimilarityEnrichmentWrapper( analysis.getRawResults( referenceEdition ), referenceEdition, topN );
 
-        for ( Edition testingEdition : analysis.getEditions() ) {
+        analysis.getEditions().stream().sorted().forEach( testingEdition -> {
 
             SimilarityEnrichmentWrapper test = new SimilarityEnrichmentWrapper( analysis.getRawResults( testingEdition ), testingEdition, topN );
 
             similarityScores.put( testingEdition, compareEnrichments( reference, test, sm, cache ) );
 
-        }
+        } );
 
         this.similarityScores = Collections.unmodifiableMap( similarityScores );
     }

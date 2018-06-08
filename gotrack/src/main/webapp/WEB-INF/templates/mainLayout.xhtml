@@ -6,6 +6,7 @@
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
       xmlns:p="http://primefaces.org/ui"
       xmlns:o="http://omnifaces.org/ui"
+      xmlns:pe="http://primefaces.org/ui/extensions"
 >
 
 <f:view contentType="text/html">
@@ -30,6 +31,8 @@
               content="genomics,bioinformatics,genetics,gene,function,ontology,biotechnology,medicine,biomedical,meta-analysis,statistics,search,open source,database,software"/>
 
         <ui:include src="/WEB-INF/templates/analytics.xhtml"/>
+
+        <h:outputScript library="js" name="jquery-ui.min.js"/>
         <h:outputScript library="js" name="common.js"/>
         <ui:insert name="js"/>
 
@@ -39,6 +42,7 @@
         <p:layout fullPage="true" onResize="centerResize()">
             <p:growl id="globalGrowl" globalOnly="true" autoUpdate="true" life="5000" escape="false"/>
             <p:growl widgetVar="stickyGrowl" escape="false" sticky="true" showDetail="true" for="betaMessage"/>
+            <pe:tooltip global="true" for="@(:not(.help-icon))"/>
             <p:layoutUnit id="top" position="north" size="50">
                 <h:form id="topForm">
                     <p:menubar toggleEvent="click" style="border: 1px solid transparent">

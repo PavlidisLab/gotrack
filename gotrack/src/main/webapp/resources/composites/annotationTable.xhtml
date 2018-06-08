@@ -6,9 +6,9 @@
       xmlns:h="http://xmlns.jcp.org/jsf/html"
       xmlns:f="http://xmlns.jcp.org/jsf/core"
       xmlns:p="http://primefaces.org/ui"
-      xmlns:of="http://omnifaces.org/functions"
       xmlns:composite="http://xmlns.jcp.org/jsf/composite"
->
+      xmlns:a="http://xmlns.jcp.org/jsf/passthrough">
+
 <composite:interface>
 
     <composite:attribute name="value"/>
@@ -16,28 +16,54 @@
 </composite:interface>
 
 <composite:implementation>
+    <div style="display: none;">
+        <div id="from-title">
+            <div class="overlay-help">
+                <p>
+                    The term this annotation is from (can be a descendant term if this annotation is inferred).
+                </p>
+                <p>
+                    <b>&lt;Click&gt;</b> on <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;"/> to view the term's QuickGO entry.
+                </p>
+                <p>
+                    <b>&lt;Click&gt;</b> on <span class="ui-icon fa fa-sitemap"></span> to view the term's ancestry chart, <b>NOTE</b>: we do not propagate across aspects whereas QuickGo does.
+                </p>
+            </div>
+        </div>
+
+        <div id="qualifier-title">
+            <div class="overlay-help">
+                <p>Flags that modify the interpretation of an annotation.</p>
+                <p>See <a href="http://geneontology.org/page/go-qualifiers" style="color: -webkit-link;">http://geneontology.org/page/go-qualifiers</a></p>
+
+            </div>
+        </div>
+
+        <div id="evidence-title">
+            <div class="overlay-help">
+                <p>Evidence code to indicate how the annotation to a particular term is supported. Note: Out of all the evidence codes available, only Inferred from Electronic Annotation (IEA) is not assigned by a curator.</p>
+                <p>See <a href="http://geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+            </div>
+        </div>
+
+        <div id="category-title">
+            <div class="overlay-help">
+                <p><b>Automatic</b>: Assigned by automated methods, not assigned by curators (IEA).</p>
+                <p><b>Author</b>: Annotation was made on the basis of a statement made by the author(s).</p>
+                <p><b>Computational</b>: Annotation is based on an in silico analysis of the gene sequence and/or other data.</p>
+                <p><b>Curatorial</b>: Annotation made on the basis of a curatorial judgement that does not fit into one of the other evidence code classifications.</p>
+                <p><b>Experimental</b>: Results from a physical characterization of a gene or gene product that has supported the association of a GO term.</p>
+                <p><b>High Throughput</b>: Annotations based upon high throughput methodologies.</p>
+                <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
+            </div>
+        </div>
+
+    </div>
 
     <p:dataTable var="annot" value="#{cc.attrs.value}" emptyMessage="No annotations found with given criteria">
         <p:column headerText="From">
             <f:facet name="header">
-                <p:overlayPanel for="fromHelpBtn" hideEffect="fade" appendToBody="true">
-                    <div class="overlay-help">
-                        <p>
-                            The term this annotation is from (can be a descendant term if this annotation is inferred).
-                        </p>
-                        <p>
-                            <b>&lt;Click&gt;</b> on <h:graphicImage library="img" width="12" height="12" name="EMBL_EBI_Logo.png" style="vertical-align: text-top;"/> to view the term's QuickGO entry.
-                        </p>
-                        <p>
-                            <b>&lt;Click&gt;</b> on <span class="ui-icon fa fa-sitemap"></span> to view the term's ancestry chart, <b>NOTE</b>: we do not propagate across aspects whereas QuickGo does.
-                        </p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="fromHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="From"/>
+                <h:outputText value="From" styleClass="help-icon" a:title-id="#from-title"/>
             </f:facet>
             <a href="http://www.ebi.ac.uk/QuickGO/GTerm?id=#{annot.annotatedTerm.goId}"
                target="_blank" style="text-decoration: none;">
@@ -53,71 +79,26 @@
         </p:column>
         <p:column headerText="Qualifier">
             <f:facet name="header">
-                <p:overlayPanel for="qualifierHelpBtn" hideEffect="fade" appendToBody="true" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Flags that modify the interpretation of an annotation.</p>
-                        <p>See <a href="http://geneontology.org/page/go-qualifiers" style="color: -webkit-link;">http://geneontology.org/page/go-qualifiers</a></p>
-
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="qualifierHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Qualifier"/>
+                <h:outputText value="Qualifier" styleClass="help-icon" a:title-id="#qualifier-title"/>
             </f:facet>
             <h:outputText value="#{annot.annotation.qualifier}"/>
         </p:column>
         <p:column headerText="Evidence">
             <f:facet name="header">
-                <p:overlayPanel for="evidenceHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Evidence code to indicate how the annotation to a particular term is supported. Note: Out of all the evidence codes available, only Inferred from Electronic Annotation (IEA) is not assigned by a curator.</p>
-                        <p>See <a href="http://geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="evidenceHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Evidence"/>
+                <h:outputText value="Evidence" styleClass="help-icon" a:title-id="#evidence-title"/>
             </f:facet>
             <h:outputText value="#{annot.annotation.evidence.evidence}" title="#{annot.annotation.evidence.description}"/>
         </p:column>
         <p:column>
             <f:facet name="header">
-                <p:overlayPanel for="categoryHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p><b>Automatic</b>: Assigned by automated methods, not assigned by curators (IEA).</p>
-                        <p><b>Author</b>: Annotation was made on the basis of a statement made by the author(s).</p>
-                        <p><b>Computational</b>: Annotation is based on an in silico analysis of the gene sequence and/or other data.</p>
-                        <p><b>Curatorial</b>: Annotation made on the basis of a curatorial judgement that does not fit into one of the other evidence code classifications.</p>
-                        <p><b>Experimental</b>: Results from a physical characterization of a gene or gene product that has supported the association of a GO term.</p>
-                        <p><b>High Throughput</b>: Annotations based upon high throughput methodologies.</p>
-                        <p>See <a href="http://www.geneontology.org/page/guide-go-evidence-codes" style="color: -webkit-link;">http://www.geneontology.org/page/guide-go-evidence-codes</a> for more details.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="categoryHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Category"/>
+                <h:outputText value="Category" styleClass="help-icon" a:title-id="#category-title"/>
             </f:facet>
 
             <h:outputText value="#{annot.annotation.evidence.category}"/>
         </p:column>
         <p:column headerText="Reference">
             <f:facet name="header">
-                <p:overlayPanel for="referenceHelpBtn" appendToBody="true" hideEffect="fade" dynamic="true">
-                    <div class="overlay-help">
-                        <p>Cited reference which supports the GO term to gene product association.</p>
-                    </div>
-                </p:overlayPanel>
-                <p:commandButton  id="referenceHelpBtn" value=""
-                                  styleClass="no-value no-background fa-fix noupdate"
-                                  icon="fa fa-question-circle" type="button"
-                                  style="vertical-align: text-top;" onclick="event.stopPropagation();"/>
-                <h:outputText value="Reference"/>
+                <h:outputText value="Reference" styleClass="help-icon" title="Cited reference which supports the GO term to gene product association."/>
             </f:facet>
             <h:outputText value="#{annot.annotation.reference}"/>
         </p:column>

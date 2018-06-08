@@ -30,14 +30,14 @@ import time
 log = logging.getLogger(__name__)
 # log.addHandler(logging.NullHandler())
 
-BASE_URL = "http://apu:8080/gotrack/rest/"
+BASE_URL = "https://dev.gotrack.msl.ubc.ca/rest/"
 
 class Edition:
-	"""Represents an edition of GeneOntology Annotations"""
-	def __init__(self, edition, date, go_edition):
-		self.edition = edition
-		self.date = date
-		self.go_edition = go_edition
+    """Represents an edition of GeneOntology Annotations"""
+    def __init__(self, edition, date, go_edition):
+        self.edition = edition
+        self.date = date
+        self.go_edition = go_edition
 
 class Enrichment:
     """Represents the results of an Enrichment Analysis sent to GOTrack's RESTful web services"""
@@ -47,24 +47,25 @@ class Enrichment:
         self.results = results
 
 def enrichment_historical(month, year, genes, species_id):
-	content = {'month':month, 'year':year, 'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'analysis/enrichment/historical/'
-	return __send_request(location, content)
+    content = {'month':month, 'year':year, 'genes':genes, 'speciesId':species_id}
+    location = BASE_URL + 'analysis/enrichment/historical/'
+    return __send_request(location, content)
 
 def enrichment_current(genes, species_id):
-	content = {'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'analysis/enrichment/'
-	return __send_request(location, content)
+    content = {'genes':genes, 'speciesId':species_id}
+    location = BASE_URL + 'analysis/enrichment/'
+    return __send_request(location, content)
 
 def enrichment_complete(genes, species_id):
-	content = {'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'analysis/enrichment/complete/'
-	return __send_request(location, content)
+    content = {'genes':genes, 'speciesId':species_id}
+    location = BASE_URL + 'analysis/enrichment/complete/'
+    return __send_request(location, content)
 
-def similarity(month, year, genes, species_id):
-	content = {'month':month, 'year':year, 'genes':genes, 'speciesId':species_id}
-	location = BASE_URL + 'analysis/similarity/'
-	return __send_request(location, content)
+def similarity(month, year, genes, species_id, tversky=False):
+    content = {'month': month, 'year': year, 'genes': genes, 'speciesId': species_id, 'threshold': 0.05, 'min': 20,
+               'max': 200, 'topN': 5, 'aspects': ['BP'], 'similarityMethod': 'JACCARD' if not tversky else "TVERSKY", 'multipleTestCorrection': 'BH'}
+    location = BASE_URL + 'analysis/similarity/'
+    return __send_request(location, content)
 
 def gene_complete(month, year, genes, species_id):
     content = {'month':month, 'year':year, 'symbols':",".join(genes), 'speciesId':species_id}

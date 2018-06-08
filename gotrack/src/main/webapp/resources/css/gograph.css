@@ -128,3 +128,47 @@ svg .edgePaths.hover .edgePath.family {
 .legend text.title {
     font: 14px sans-serif;
 }
+
+.gograph-tooltip {
+    font-size: 10px;
+    position: absolute;
+    padding: 5px;
+    z-index: 100000;
+    border: none;
+    background: none;
+    opacity: 0.8;
+}
+
+.gograph-tooltip > .ui-tooltip-content {
+    background-color: #000;
+    color: #FFF;
+    max-width: 200px;
+    padding: 5px 8px 4px 8px;
+    text-align: center;
+    font-family: 'exoregular', "Trebuchet MS", Arial, Helvetica, sans-serif;
+}
+
+/* Rounded corners */
+.gograph-tooltip > .ui-tooltip-content {
+    border-radius: 3px;
+    -moz-border-radius: 3px;
+    -webkit-border-radius: 3px;
+}
+
+.gograph-tooltip > .ui-tooltip-content > p {
+    padding: 0;
+    margin: 0;
+}
+
+/* This styles the title of the tooltip */
+.gograph-tooltip > .ui-tooltip-content > .name {
+    font-size: 1.5em;
+    font-weight: bold;
+    color: #60b1fc;
+    margin: 0;
+}
+
+/* This styles the body of the tooltip */
+.gograph-tooltip > .ui-tooltip-content > .description {
+    font-size: 1.2em;
+}

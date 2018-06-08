@@ -65,6 +65,7 @@ public class Enrichment<T, G> {
     private Set<T> rejectedTerms;
 
     private int calculations;
+    private int countTestedTerms;
 
     public Enrichment() {
 
@@ -159,7 +160,10 @@ public class Enrichment<T, G> {
         }
 
         // Holds terms sorted by p-value
-        LinkedHashSet<T> termsSortedByRank = Enrichment.getSortedKeySetByValue( results );
+        LinkedHashSet<T> termsSortedByRank = results.entrySet().stream()
+                .sorted( Comparator.comparingDouble( c -> c.getValue().getPvalue() ) )
+                .map( Entry::getKey )
+                .collect( Collectors.toCollection( LinkedHashSet::new ) );
 
         // We keep track of the cutoff p-value, set to some useful initial value
         double cutoff;
@@ -184,8 +188,7 @@ public class Enrichment<T, G> {
             k++;
             EnrichmentResult er = results.get( term );
             if ( multipleTestCorrectionMethod.equals( MultipleTestCorrection.BONFERRONI ) ) {
-                er.setPvalue( Math.min( er.getPvalue() * testSetSize, 1 ) ); // Apply bonferroni correction
-                if ( er.getPvalue() <= threshold ) { // Check against threshold
+                if ( er.getPvalue() * testSetSize <= threshold ) { // Check bonferroni correction against threshold
                     sig.add( term );
                 }
 
@@ -245,6 +248,7 @@ public class Enrichment<T, G> {
         this.cutoff = cutoff;
         this.significantTerms = Collections.unmodifiableSet( sig );
         this.rejectedTerms = Collections.unmodifiableSet( rejected );
+        this.countTestedTerms = testSetSize;
 
         complete = true;
         return true;
@@ -282,28 +286,6 @@ public class Enrichment<T, G> {
      */
     public Set<T> getTopNTerms( int n ) {
         return significantTerms.stream().filter( t -> getResult( t ).getRank() < n ).collect( Collectors.toSet() );
-    }
-
-    public static <T> LinkedHashSet<T> getSortedKeySetByValue(
-            Map<T, EnrichmentResult> data ) {
-        LinkedHashSet<T> results = new LinkedHashSet<>();
-
-        List<Entry<T, EnrichmentResult>> entryList = new ArrayList<>( data.entrySet() );
-
-        Collections.sort( entryList, new Comparator<Entry<T, EnrichmentResult>>() {
-            @Override
-            public int compare( Entry<T, EnrichmentResult> e1,
-                    Entry<T, EnrichmentResult> e2 ) {
-                return Double.compare( e1.getValue().getPvalue(), e2.getValue().getPvalue() );
-            }
-        } );
-
-        for ( Entry<T, EnrichmentResult> entry : entryList ) {
-            results.add( entry.getKey() );
-        }
-
-        return results;
-
     }
 
 }

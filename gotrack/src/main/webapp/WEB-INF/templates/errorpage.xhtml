@@ -10,16 +10,16 @@
     <ui:define name="pageTitle">Error 500</ui:define>
 
     <ui:define name="center_layout">
-        <div class="main" id="main-two-columns">
+        <div style="margin:10px auto; display:table; text-align: center;">
 
 
             <!-- MAIN -->
-            <div class="left" id="logo">
+            <div>
                 <h:graphicImage library="img" width="250"
                                 name="error.png"/>
             </div>
             <p:panel id="content" styleClass="no-border">
-                <h2 id="contentTitle"><ui:insert name="contentTitle">Error 500: Internal Server Error</ui:insert></h2>
+                <h1 id="contentTitle"><ui:insert name="contentTitle">Error 500: Internal Server Error</ui:insert></h1>
                 <ui:insert name="errorContent">
                     <ul>
                         <li>Date/time: #{of:formatDate(now, 'yyyy-MM-dd HH:mm:ss')}</li>

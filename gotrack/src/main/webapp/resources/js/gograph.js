@@ -70,8 +70,9 @@
         });
 
         // Set up an SVG group so that we can translate the final graph.
-        var svg = d3.select(id);
-        svg.selectAll("*").remove();
+        var container = d3.select(id);
+        container.selectAll("*").remove();
+        var svg = container.append("svg");
         var svgGroup = svg.append("g");
 
         // Graph options
@@ -167,19 +168,13 @@
 
         if (!is_logo) {
             var nodes = svgGroup.selectAll("g.node");
-            // Simple function to style the tooltip for the given node.
-            var styleTooltip = function (name, description) {
-                return "<p class='name'>" + name + "</p><p class='description'>" + description + "</p>";
-            };
 
-
-            nodes.attr("title", function (v) {
-                return styleTooltip(g.node(v).go_id, g.node(v).description)
-            });
-            nodes.each(function (v) {
-                $(this).tipsy({gravity: "w", opacity: 0.8, html: true});
-            });
-
+            var div = container.append("div")
+                .attr("class", "gograph-tooltip")
+                .style("opacity", 0.8)
+                .style("display", "none");
+            var divcontent = div.append("div").attr("class", "ui-tooltip-content");
+            
             // events
             nodes.on("click", function (id) {
                 if (d3.event.defaultPrevented) return;
@@ -219,6 +214,16 @@
                     d3.select(g.node(e.v).elem).classed("family", true);
                     d3.select(g.edge(e).elem).classed("family", true);
                 });
+
+                // Tooltip
+                var n = g.node(id);
+                divcontent.html("<p class='name'>" + n.go_id + "</p><p class='description'>" + n.description + "</p>");
+                var bbox = this.getBoundingClientRect();
+                var containerBBox = container[0][0].getBoundingClientRect();
+                div.style("display", "block")
+                    .style("left", (bbox.left + bbox.width - containerBBox.left + 10) + "px")
+                    .style("top", (bbox.top - bbox.height/2 - containerBBox.top) + "px");
+
             })
                 .on("mouseout", function (id) {
                     svgGroup.select("g.nodes").classed("hover", false);
@@ -241,6 +246,9 @@
                         d3.select(g.node(e.v).elem).classed("family", false);
                         d3.select(g.edge(e).elem).classed("family", false);
                     });
+
+                    // Tooltip hide
+                    div.style("display", "none");
                 });
 
             // Add Legend

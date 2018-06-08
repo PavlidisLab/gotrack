@@ -11,7 +11,7 @@
     <link rel="shortcut icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <link rel="icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <h:outputStylesheet library="css" name="style.css"/>
-    <h:outputStylesheet library="css" name="tipsy.css"/>
+    <h:outputStylesheet library="css" name="common.css"/>
     <h:outputStylesheet library="css" name="trends.css"/>
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
@@ -38,8 +38,6 @@
     <script src="https://code.highcharts.com/6.0.7/highcharts.js" type="text/javascript"></script>
     <script src="https://code.highcharts.com/6.0.7/modules/exporting.js" type="text/javascript"></script>
 
-    <h:outputScript library="js" name="tipsy.js"/>
-
     <h:outputScript library="js" name="plotting.js"/>
     <h:outputScript library="js" name="trends.js"/>
 
@@ -49,6 +47,12 @@
         fetchCharts();
         });
     </h:outputScript>
+
+    <style type="text/css">
+        .ui-widget-content {
+            background: inherit;
+        }
+    </style>
 
 
 </h:head>
@@ -64,10 +68,10 @@
                 <nav class="navigation">
                     <div>
                         <h:link value="Home" outcome="/index.xhtml" styleClass="nav-item eased"/>
-                        <h:link value="Global Trends" outcome="/trends.xhtml" styleClass="nav-item eased active"/>
                         <h:link value="Track Gene" outcome="/genes.xhtml" styleClass="nav-item eased"/>
                         <h:link value="Track Term" outcome="/terms.xhtml" styleClass="nav-item eased"/>
                         <h:link value="Track Enrichment" outcome="/enrichment.xhtml" styleClass="nav-item eased"/>
+                        <h:link value="Global Trends" outcome="/trends.xhtml" styleClass="nav-item eased active"/>
                         <h:link value="Downloads" outcome="/downloads.xhtml" styleClass="nav-item eased"/>
                         <h:link value="About" outcome="/about.xhtml" styleClass="nav-item eased"/>
 
@@ -93,7 +97,7 @@
                     </div>
                     <p:separator style="max-width:400px; margin-bottom:25px;"/>
 
-                    <div style="width: fit-content; margin: 5px auto;">
+                    <div style="display: inline-block;">
                         <h:form prependId="false" >
                             <h:panelGrid columns="2" style="border:none;">
 

@@ -199,7 +199,7 @@ public class TermView implements Serializable {
             dateToGOEditionId.put( time, goEdition.getId() );
             if ( t != null ) {
 
-                Graph eles = Graph.fromGO( t );
+                Graph eles = Graph.fromGO( t, false );
 
                 if ( prevEles != null ) {
                     Graph diff = Graph.fromGraphDiff( prevEles, eles );

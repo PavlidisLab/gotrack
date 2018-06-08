@@ -12,6 +12,7 @@
     <link rel="shortcut icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <link rel="icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <h:outputStylesheet library="css" name="style.css"/>
+    <h:outputStylesheet library="css" name="common.css"/>
 
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
     <!-- Prevents caching at the Proxy Server -->
@@ -46,10 +47,10 @@
             <nav class="navigation">
                 <div>
                     <h:link value="Home" outcome="/index.xhtml" styleClass="nav-item eased active"/>
-                    <h:link value="Global Trends" outcome="/trends.xhtml" styleClass="nav-item eased"/>
                     <h:link value="Track Gene" outcome="/genes.xhtml" styleClass="nav-item eased"/>
                     <h:link value="Track Term" outcome="/terms.xhtml" styleClass="nav-item eased"/>
                     <h:link value="Track Enrichment" outcome="/enrichment.xhtml" styleClass="nav-item eased"/>
+                    <h:link value="Global Trends" outcome="/trends.xhtml" styleClass="nav-item eased"/>
                     <h:link value="Downloads" outcome="/downloads.xhtml" styleClass="nav-item eased"/>
                     <h:link value="About" outcome="/about.xhtml" styleClass="nav-item eased"/>
 
@@ -67,13 +68,13 @@
         </div>
 
         <div id="content-wrapper" class="center" style="width:100%; max-width:1600px; min-width:900px;">
-            <div id="content" style="position: relative;padding: 25px 0px; width: 100%; max-width:1600px; min-width:900px;">
+            <div id="content" style="position: relative;padding: 25px 0 0 0; width: 100%; max-width:1600px; min-width:900px;">
 
 
                 <p:separator style="width:800px;"/>
 
                 <p:outputPanel styleClass="center fitted" style="white-space: nowrap;padding: 10px 0 7px 0;">
-                    <div style="width: fit-content; margin: 5px auto 15px auto;">
+                    <div style="display: inline-block; margin: 5px auto;">
                         <h:form prependId="false" >
                             <h:panelGrid columns="2" style="border:none;">
 
@@ -111,7 +112,7 @@
                                 </p:autoComplete>
                                 <p:commandButton value="Track" process="@form" action="#{geneSearchView.go}" style="margin-left:5px;"/>
                             </h:form>
-                            <div style="margin: 4px 0 0 80px; width: fit-content;">
+                            <div style="margin: 4px 0 0 80px; float:left;display: inline-block;">
                                 <h:outputText value="Ex. "/>
                                 <p:link value="GRIN1" outcome="genes">
                                     <f:param name="accession" value="Q05586"/>
@@ -136,7 +137,7 @@
                                 </p:autoComplete>
                                 <p:commandButton value="Track" process="@form" action="#{termSearchView.go}" style="margin-left:5px;"/>
                             </h:form>
-                            <div style="margin: 4px 0 0 120px; width: fit-content;">
+                            <div style="margin: 4px 0 0 120px; float:left;display: inline-block;">
                                 <h:outputText value="Ex. "/>
                                 <p:link value="GO:2000463" outcome="terms">
                                     <f:param name="query" value="GO:2000463"/>
@@ -237,7 +238,7 @@
                     <div class="inline-middle">
                         <h3>Database Statistics</h3>
                         <h:panelGrid columns="2" style="margin: 10px auto;" cellspacing="10" >
-                            <h:outputText value="Date last updated:"/>
+                            <h:outputText value="Most recent data:"/>
                             <h:outputText value="#{statsService.latestUpdate}"/>
 
                             <h:outputText value="GO Versions:"/>
