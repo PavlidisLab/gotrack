@@ -735,8 +735,7 @@ public class Cache implements Serializable {
 
         // split into words
         String[] words = queryUpper.split( "\\s" );
-
-        for ( String w : words ) {
+        Arrays.stream( words ).filter( s -> s.length() > 2 ).forEach( w -> {
             Set<GeneOntologyTerm> currentWordResults = new HashSet<>();
             // Find prefix matches
             boolean findSimilarMatches = true;
@@ -746,22 +745,15 @@ public class Cache implements Serializable {
                     // If prefix matches were found, do not return similar matches
                     findSimilarMatches = false;
                 }
-                for ( Iterator<ImmutableSet<GeneOntologyTerm>> iterator = gs.iterator(); iterator.hasNext(); ) {
-                    ImmutableSet<GeneOntologyTerm> terms = iterator.next();
-                    for ( GeneOntologyTerm term : terms ) {
-                        currentWordResults.add( term );
-                    }
-
+                for ( ImmutableSet<GeneOntologyTerm> terms : gs ) {
+                    currentWordResults.addAll( terms );
                 }
 
                 // Find similar matches
                 if ( retain || findSimilarMatches ) {
                     gs = radixTerms.getValuesForClosestKeys( w );
-                    for ( Iterator<ImmutableSet<GeneOntologyTerm>> iterator = gs.iterator(); iterator.hasNext(); ) {
-                        ImmutableSet<GeneOntologyTerm> terms = iterator.next();
-                        for ( GeneOntologyTerm term : terms ) {
-                            currentWordResults.add( term );
-                        }
+                    for ( ImmutableSet<GeneOntologyTerm> terms : gs ) {
+                        currentWordResults.addAll( terms );
                     }
                 }
 
@@ -772,10 +764,10 @@ public class Cache implements Serializable {
                 }
 
             }
-        }
+        } );
 
         List<GeneOntologyTerm> p = new ArrayList<>( results );
-        Collections.sort( p, new LevenshteinComparator( query ) );
+        p.sort( new LevenshteinComparator( query ) );
 
         if ( p.size() > maxResults ) {
             // If there are more than maxResults, remove the excess range
