@@ -301,7 +301,9 @@
                             <p:autoComplete value="#{termSearchView.query}"
                                             completeMethod="#{termSearchView.complete}" queryDelay="600"
                                             minQueryLength="2" forceSelection="true" maxResults="10"
-                                            label="ID" panelStyleClass="autocomplete-largepanel"
+                                            label="ID"
+                                            panelStyleClass="force-fit-content"
+                                            panelStyle="max-width: 500px;min-width:250px;"
                                             emptyMessage="No term suggestions available, please try again."
                                             var="term" itemLabel="#{term.goId}" itemValue="#{term.goId}">
                                 <p:column>

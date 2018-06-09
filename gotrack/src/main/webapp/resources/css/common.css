@@ -10,6 +10,11 @@ body {
     color: red;
 }
 
+.force-fit-content {
+    width: -moz-fit-content !important;
+    width: fit-content !important;
+}
+
 /* JQuery UI based tooltips */
 
 .help-icon {

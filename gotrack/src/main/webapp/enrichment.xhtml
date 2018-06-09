@@ -675,7 +675,9 @@
                                             emptyMessage="No gene suggestions available,  please try again."
                                             var="genematch" itemLabel="#{genematch.symbol}" itemValue="#{genematch}"
                                             groupBy="#{genematch.level.label}"
-                                            placeholder="BRCA1" converter="geneMatchConverter">
+                                            placeholder="BRCA1" converter="geneMatchConverter"
+                                            panelStyleClass="force-fit-content"
+                                            panelStyle="max-width: 500px;min-width:250px;">
                                 <p:ajax event="itemSelect" process="@this"/>
                                 <p:column>
                                     <h:outputText
@@ -747,7 +749,9 @@
                                                 emptyMessage="No gene suggestions available, please try again."
                                                 var="gm2" itemLabel="#{gm2.symbol}" itemValue="#{gm2}"
                                                 groupBy="#{gm2.level.label}"
-                                                placeholder="BRCA1" converter="geneMatchConverter">
+                                                placeholder="BRCA1" converter="geneMatchConverter"
+                                                panelStyleClass="force-fit-content"
+                                                panelStyle="max-width: 500px;min-width:250px;">
                                     <p:column>
                                         <h:outputText value="#{gm2.selectedGene.symbol} - #{gm2.selectedGene.name}"/>
                                     </p:column>
