@@ -824,10 +824,10 @@ public class Cache implements Serializable {
         RadixTree<ImmutableSet<Gene>> primaryRadix = speciesToPrimaryRadixGenes.get( species );
         RadixTree<ImmutableSet<Gene>> secondaryRadix = speciesToSecondaryRadixGenes.get( species );
 
-        results.addAll( searchGeneByExactMatch( query, primaryRadix ) );
+        results.addAll( searchGeneByExactMatch( query, primaryRadix, GeneMatch.Level.PRIMARY ) );
         if ( worstMatchLevel.equals( GeneMatch.Level.PRIMARY ) || results.size() >= fuzzyLimit ) return results;
 
-        results.addAll( searchGeneByExactMatch( query, secondaryRadix ) );
+        results.addAll( searchGeneByExactMatch( query, secondaryRadix, GeneMatch.Level.SYNONYM ) );
         if ( worstMatchLevel.equals( GeneMatch.Level.SYNONYM ) || results.size() >= fuzzyLimit ) return results;
 
         Set<GeneMatch> prefix = searchGeneByPrefixMatch( query, primaryRadix );
@@ -879,10 +879,10 @@ public class Cache implements Serializable {
         RadixTree<ImmutableSet<Gene>> secondaryRadix = speciesToSecondaryRadixGenes.get( species );
         RadixTree<ImmutableSet<Gene>> nameRadix = speciesToNameRadixGenes.get( species );
 
-        results.addAll( searchGeneByExactMatch( query, primaryRadix ) );
+        results.addAll( searchGeneByExactMatch( query, primaryRadix, GeneMatch.Level.PRIMARY ) );
         if ( worstMatchLevel.equals( GeneMatch.Level.PRIMARY ) || results.size() >= fuzzyLimit ) return results;
 
-        results.addAll( searchGeneByExactMatch( query, secondaryRadix ) );
+        results.addAll( searchGeneByExactMatch( query, secondaryRadix, GeneMatch.Level.SYNONYM ) );
         if ( worstMatchLevel.equals( GeneMatch.Level.SYNONYM ) || results.size() >= fuzzyLimit ) return results;
 
         Set<GeneMatch> prefix = searchGeneByPrefixMatch( query, primaryRadix );
@@ -945,7 +945,7 @@ public class Cache implements Serializable {
         return results;
     }
 
-    private Set<GeneMatch> searchGeneByExactMatch( String query, RadixTree<ImmutableSet<Gene>> radix ) {
+    private Set<GeneMatch> searchGeneByExactMatch( String query, RadixTree<ImmutableSet<Gene>> radix, GeneMatch.Level level ) {
         Set<GeneMatch> results = Sets.newHashSet();
         if ( StringUtils.isEmpty( query ) || radix == null ) {
             return results;
@@ -956,7 +956,7 @@ public class Cache implements Serializable {
             GeneMatch.Type type = genes.size() > 1 ? GeneMatch.Type.MULTIPLE : GeneMatch.Type.SINGLE;
 
             for ( Gene gene : genes ) {
-                results.add( new GeneMatch( query, gene, GeneMatch.Level.PRIMARY, type ) );
+                results.add( new GeneMatch( query, gene, level, type ) );
             }
         }
         return results;
