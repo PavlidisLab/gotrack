@@ -65,7 +65,8 @@ public class Trends {
 
 
         for ( GeneOntology ont : cache.getAllOntologies() ) {
-            termCountSeries.addDataPoint( ont.getEdition().getDate(), ont.size() );
+            // changed to use sizeWithoutObsolete instead of size
+            termCountSeries.addDataPoint( ont.getEdition().getDate(), ont.sizeWithoutObsolete() );
         }
         ontSize.addSeries( termCountSeries );
 

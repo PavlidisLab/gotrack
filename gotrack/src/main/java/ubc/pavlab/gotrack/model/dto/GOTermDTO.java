@@ -32,13 +32,15 @@ public class GOTermDTO {
     private final String goId;
     private final String name;
     private final String aspect;
+    private final Boolean obsolete;
 
-    public GOTermDTO( Integer goEdition, String goId, String name, String aspect ) {
+    public GOTermDTO( Integer goEdition, String goId, String name, String aspect, Boolean obsolete ) {
         super();
         this.goEdition = goEdition;
         this.goId = goId;
         this.name = name;
         this.aspect = aspect;
+        this.obsolete = obsolete;
     }
 
     public Integer getGoEdition() {
@@ -56,4 +58,6 @@ public class GOTermDTO {
     public String getAspect() {
         return aspect;
     }
+
+    public boolean isObsolete() {    return obsolete;   }
 }

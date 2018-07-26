@@ -19,6 +19,7 @@
 
 package ubc.pavlab.gotrack.model.go;
 
+import gnu.trove.iterator.TIntObjectIterator;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
@@ -30,7 +31,7 @@ import java.util.Collection;
 /**
  * Memory efficient Directed Acyclic Graph representing a Gene Ontology Structure
  * 
- * @author mjacobson
+ * @author  mjacobson
  * @version $Id$
  */
 public class GeneOntology {
@@ -41,6 +42,8 @@ public class GeneOntology {
 
     private TIntObjectHashMap<GeneOntologyTerm> termMap = new TIntObjectHashMap<>();
     private TIntIntMap altMap = new TIntIntHashMap();
+
+    private Integer nonObsoleteSize = null;
 
     // private LoadingCache<GeneOntologyTerm, ImmutableSet<GeneOntologyTerm>> ancestorsCache = CacheBuilder.newBuilder()
     // .maximumWeight( 10000 ).weigher( new Weigher<GeneOntologyTerm, ImmutableSet<GeneOntologyTerm>>() {
@@ -88,9 +91,9 @@ public class GeneOntology {
     /**
      * Add a relationship between two terms that are already a part of this ontology
      * 
-     * @param child child
+     * @param child  child
      * @param parent parent of child
-     * @param type type of relationship
+     * @param type   type of relationship
      */
     public void addRelationship( String child, String parent, RelationshipType type ) {
         GeneOntologyTerm term = termMap.get( GeneOntologyTerm.convertGOId( child ) );
@@ -137,8 +140,8 @@ public class GeneOntology {
     /**
      * Retrieve term by GO Id
      * 
-     * @param goid GO Id
-     * @return Term or null if non-existent / malformed id
+     * @param  goid GO Id
+     * @return      Term or null if non-existent / malformed id
      */
     public GeneOntologyTerm getTerm( String goid ) {
         if ( goid == null ) return null;
@@ -158,8 +161,8 @@ public class GeneOntology {
     /**
      * Retrieve term by Id
      * 
-     * @param id Id
-     * @return Term or null if non-existent
+     * @param  id Id
+     * @return    Term or null if non-existent
      */
     public GeneOntologyTerm getTerm( int id ) {
         return termMap.get( id );
@@ -172,6 +175,26 @@ public class GeneOntology {
     public int size() {
         // return termMapLarge.size();
         return termMap.size();
+    }
+
+    /**
+     * 
+     * @return Number of non-obsolete terms in this ontology
+     */
+    public int sizeWithoutObsolete() {
+        if (this.nonObsoleteSize != null) {
+            return this.nonObsoleteSize;
+        }
+        int i = 0;
+        TIntObjectIterator<GeneOntologyTerm> it = this.termMap.iterator();
+        while ( it.hasNext() ) {
+            it.advance();
+            if ( !it.value().isObsolete() ) {
+                i++;
+            }
+        }
+        this.nonObsoleteSize = i;
+        return this.nonObsoleteSize;
     }
 
     /**
