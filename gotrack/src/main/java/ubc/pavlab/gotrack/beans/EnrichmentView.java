@@ -1007,7 +1007,7 @@ public class EnrichmentView implements Serializable {
      */
     public List<GeneMatch> complete( String query ) {
         if ( StringUtils.isEmpty( query.trim() ) || selectedSpecies == null ) return Lists.newArrayList();
-        return Lists.newArrayList( this.cache.searchGeneBySymbol( query.trim(), selectedSpecies, MAX_RESULTS ) );
+        return Lists.newArrayList( this.cache.searchGene( query.trim(), selectedSpecies, MAX_RESULTS ) );
     }
 
     public void filterSimilarityReferenceEditions() {

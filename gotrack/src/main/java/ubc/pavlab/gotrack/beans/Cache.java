@@ -119,6 +119,7 @@ public class Cache implements Serializable {
 
     private Map<Species, RadixTree<ImmutableSet<Gene>>> speciesToPrimaryRadixGenes = new ConcurrentHashMap<>();
     private Map<Species, RadixTree<ImmutableSet<Gene>>> speciesToSecondaryRadixGenes = new ConcurrentHashMap<>();
+    private Map<Species, RadixTree<ImmutableSet<Gene>>> speciesToNameRadixGenes = new ConcurrentHashMap<>();
     private RadixTree<ImmutableSet<GeneOntologyTerm>> radixTerms = new ConcurrentRadixTree<>( new DefaultCharArrayNodeFactory() );
 
     // *********************************
@@ -364,7 +365,7 @@ public class Cache implements Serializable {
 
         // Evidence Category cache creation
         // ****************************
-        evidenceCache.values().stream().sorted(Comparator.comparing( Evidence::getCategory ) ).forEach( e -> {
+        evidenceCache.values().stream().sorted( Comparator.comparing( Evidence::getCategory ) ).forEach( e -> {
             evidenceCategoryCache.computeIfAbsent( e.getCategory(), c -> new LinkedHashSet<>() ).add( e );
         } );
     }
@@ -569,10 +570,13 @@ public class Cache implements Serializable {
         // Creating Gene caches for auto-completion
         Map<Species, Multimap<String, Gene>> speciesToPrimarySymbolGenes = Maps.newHashMap();
         Map<Species, Multimap<String, Gene>> speciesToSecondarySymbolGenes = Maps.newHashMap();
+        Map<Species, Multimap<String, Gene>> speciesToGeneNameWordsMultimap = Maps.newHashMap();
+
 
         for ( Species species : speciesCache.values() ) {
-            speciesToPrimarySymbolGenes.put( species, HashMultimap.<String, Gene>create() );
-            speciesToSecondarySymbolGenes.put( species, HashMultimap.<String, Gene>create() );
+            speciesToPrimarySymbolGenes.put( species, HashMultimap.create() );
+            speciesToSecondarySymbolGenes.put( species, HashMultimap.create() );
+            speciesToGeneNameWordsMultimap.put( species, HashMultimap.create() );
         }
 
         // Group genes by species and symbol
@@ -587,6 +591,15 @@ public class Cache implements Serializable {
             Multimap<String, Gene> msec = speciesToSecondarySymbolGenes.get( g.getSpecies() );
             for ( String syn : g.getSynonyms() ) {
                 msec.put( syn.toUpperCase(), g );
+            }
+
+            Multimap<String, Gene> mname = speciesToGeneNameWordsMultimap.get( g.getSpecies() );
+            String[] words = g.getName().split( "\\s" );
+            for ( String w : words ) {
+                if ( w.length() > 2 ) {
+                    mname.put( w.toUpperCase(), g );
+                }
+
             }
 
         }
@@ -617,6 +630,20 @@ public class Cache implements Serializable {
                     rt.put( symEntry.getKey(), ImmutableSet.copyOf( symEntry.getValue() ) );
                 }
                 speciesToSecondaryRadixGenes.put( species, rt );
+            }
+        }
+
+        // radix trie for gene names
+        for ( Species species : speciesCache.values() ) {
+            Multimap<String, Gene> mm = speciesToGeneNameWordsMultimap.get( species );
+            if ( mm != null ) {
+
+                RadixTree<ImmutableSet<Gene>> rt = new ConcurrentRadixTree<>( new DefaultCharArrayNodeFactory() );
+
+                for ( Entry<String, Collection<Gene>> nameEntry : mm.asMap().entrySet() ) {
+                    rt.put( nameEntry.getKey(), ImmutableSet.copyOf( nameEntry.getValue() ) );
+                }
+                speciesToNameRadixGenes.put( species, rt );
             }
         }
 
@@ -735,8 +762,7 @@ public class Cache implements Serializable {
 
         // split into words
         String[] words = queryUpper.split( "\\s" );
-
-        for ( String w : words ) {
+        Arrays.stream( words ).filter( s -> s.length() > 2 ).forEach( w -> {
             Set<GeneOntologyTerm> currentWordResults = new HashSet<>();
             // Find prefix matches
             boolean findSimilarMatches = true;
@@ -746,22 +772,15 @@ public class Cache implements Serializable {
                     // If prefix matches were found, do not return similar matches
                     findSimilarMatches = false;
                 }
-                for ( Iterator<ImmutableSet<GeneOntologyTerm>> iterator = gs.iterator(); iterator.hasNext(); ) {
-                    ImmutableSet<GeneOntologyTerm> terms = iterator.next();
-                    for ( GeneOntologyTerm term : terms ) {
-                        currentWordResults.add( term );
-                    }
-
+                for ( ImmutableSet<GeneOntologyTerm> terms : gs ) {
+                    currentWordResults.addAll( terms );
                 }
 
                 // Find similar matches
                 if ( retain || findSimilarMatches ) {
                     gs = radixTerms.getValuesForClosestKeys( w );
-                    for ( Iterator<ImmutableSet<GeneOntologyTerm>> iterator = gs.iterator(); iterator.hasNext(); ) {
-                        ImmutableSet<GeneOntologyTerm> terms = iterator.next();
-                        for ( GeneOntologyTerm term : terms ) {
-                            currentWordResults.add( term );
-                        }
+                    for ( ImmutableSet<GeneOntologyTerm> terms : gs ) {
+                        currentWordResults.addAll( terms );
                     }
                 }
 
@@ -772,10 +791,10 @@ public class Cache implements Serializable {
                 }
 
             }
-        }
+        } );
 
         List<GeneOntologyTerm> p = new ArrayList<>( results );
-        Collections.sort( p, new LevenshteinComparator( query ) );
+        p.sort( new LevenshteinComparator( query ) );
 
         if ( p.size() > maxResults ) {
             // If there are more than maxResults, remove the excess range
@@ -805,11 +824,10 @@ public class Cache implements Serializable {
         RadixTree<ImmutableSet<Gene>> primaryRadix = speciesToPrimaryRadixGenes.get( species );
         RadixTree<ImmutableSet<Gene>> secondaryRadix = speciesToSecondaryRadixGenes.get( species );
 
-
-        results.addAll( searchGeneByExactMatch( query, primaryRadix ) );
+        results.addAll( searchGeneByExactMatch( query, primaryRadix, GeneMatch.Level.PRIMARY ) );
         if ( worstMatchLevel.equals( GeneMatch.Level.PRIMARY ) || results.size() >= fuzzyLimit ) return results;
 
-        results.addAll( searchGeneByExactMatch( query, secondaryRadix ) );
+        results.addAll( searchGeneByExactMatch( query, secondaryRadix, GeneMatch.Level.SYNONYM ) );
         if ( worstMatchLevel.equals( GeneMatch.Level.SYNONYM ) || results.size() >= fuzzyLimit ) return results;
 
         Set<GeneMatch> prefix = searchGeneByPrefixMatch( query, primaryRadix );
@@ -840,7 +858,94 @@ public class Cache implements Serializable {
         return matches.iterator().next();
     }
 
-    private Set<GeneMatch> searchGeneByExactMatch( String query, RadixTree<ImmutableSet<Gene>> radix ) {
+    public Set<GeneMatch> searchGene( String query, Species species, Integer fuzzyLimit ) {
+        return searchGene( query, species, fuzzyLimit, null );
+    }
+
+    /**
+     * Searches for a gene by a combination of symbol, synonym, and name.
+     *
+     * @param query      query
+     * @param species    species
+     * @param fuzzyLimit Stop looking for more general matches after this threshold has been reached
+     * @return list of matches in order of goodness
+     */
+    private Set<GeneMatch> searchGene( String query, Species species, Integer fuzzyLimit, GeneMatch.Level worstMatchLevel ) {
+        Set<GeneMatch> results = Sets.newLinkedHashSet();
+        if ( query == null || species == null || fuzzyLimit < 1 ) return results;
+        worstMatchLevel = worstMatchLevel == null ? GeneMatch.Level.NO_MATCH : worstMatchLevel;
+
+        RadixTree<ImmutableSet<Gene>> primaryRadix = speciesToPrimaryRadixGenes.get( species );
+        RadixTree<ImmutableSet<Gene>> secondaryRadix = speciesToSecondaryRadixGenes.get( species );
+        RadixTree<ImmutableSet<Gene>> nameRadix = speciesToNameRadixGenes.get( species );
+
+        results.addAll( searchGeneByExactMatch( query, primaryRadix, GeneMatch.Level.PRIMARY ) );
+        if ( worstMatchLevel.equals( GeneMatch.Level.PRIMARY ) || results.size() >= fuzzyLimit ) return results;
+
+        results.addAll( searchGeneByExactMatch( query, secondaryRadix, GeneMatch.Level.SYNONYM ) );
+        if ( worstMatchLevel.equals( GeneMatch.Level.SYNONYM ) || results.size() >= fuzzyLimit ) return results;
+
+        Set<GeneMatch> prefix = searchGeneByPrefixMatch( query, primaryRadix );
+        results.addAll( prefix );
+        if ( worstMatchLevel.equals( GeneMatch.Level.PREFIX ) || results.size() >= fuzzyLimit ) return results;
+
+        boolean similarSymbolMatch = false;
+        if ( prefix.isEmpty() ) {
+            for ( GeneMatch similarSymbol : searchGeneBySimilarMatch( query, primaryRadix ) ) {
+                if ( StringUtils.getLevenshteinDistance( similarSymbol.getQuerySymbol().toUpperCase(), similarSymbol.getSymbol().toUpperCase() ) < 3 ) {
+                    similarSymbolMatch = true;
+                    results.add( similarSymbol );
+                }
+            }
+
+            if ( !similarSymbolMatch ) {
+                // Search by name
+                Set<Gene> nameResults = Sets.newLinkedHashSet();
+                String[] words = query.toUpperCase().split( "\\s" );
+
+                Arrays.stream( words ).filter( s -> s.length() > 2 ).forEach( w -> {
+                    Set<Gene> currentWordResults = new HashSet<>();
+
+                    ImmutableSet<Gene> exactWord = nameRadix.getValueForExactKey( w );
+                    if ( exactWord != null ) {
+                        currentWordResults.addAll( exactWord );
+                    }
+
+                    if ( currentWordResults.isEmpty() ) {
+                        for ( ImmutableSet<Gene> genes : nameRadix.getValuesForKeysStartingWith( w ) ) {
+                            currentWordResults.addAll( genes );
+                        }
+
+                        if ( currentWordResults.isEmpty() ) {
+                            for ( ImmutableSet<Gene> genes : nameRadix.getValuesForClosestKeys( w ) ) {
+                                currentWordResults.addAll( genes );
+                            }
+                        }
+
+                    }
+
+                    if ( nameResults.isEmpty() ) {
+                        nameResults.addAll( currentWordResults );
+                    } else if ( !currentWordResults.isEmpty() ) {
+                        nameResults.retainAll( currentWordResults );
+                    }
+
+                    log.info( nameResults.size() );
+
+                } );
+
+                for ( Gene gene : nameResults ) {
+                    results.add( new GeneMatch( query, gene, GeneMatch.Level.SIMILAR, GeneMatch.Type.MULTIPLE ) );
+                }
+            }
+
+        }
+
+
+        return results;
+    }
+
+    private Set<GeneMatch> searchGeneByExactMatch( String query, RadixTree<ImmutableSet<Gene>> radix, GeneMatch.Level level ) {
         Set<GeneMatch> results = Sets.newHashSet();
         if ( StringUtils.isEmpty( query ) || radix == null ) {
             return results;
@@ -851,7 +956,7 @@ public class Cache implements Serializable {
             GeneMatch.Type type = genes.size() > 1 ? GeneMatch.Type.MULTIPLE : GeneMatch.Type.SINGLE;
 
             for ( Gene gene : genes ) {
-                results.add( new GeneMatch( query, gene, GeneMatch.Level.PRIMARY, type ) );
+                results.add( new GeneMatch( query, gene, level, type ) );
             }
         }
         return results;
