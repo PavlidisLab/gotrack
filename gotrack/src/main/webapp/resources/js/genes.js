@@ -130,7 +130,7 @@ function handleFetchAnnotationChart(xhr, status, args) {
     commonOptions(options, args.HC);
 
     options.subtitle = {
-        text: "<b>&lt;Click&gt;</b> to view annotations at a specific date. <b>&lt;Ctrl/Command&gt; + &lt;Click&gt;</b> will compare that edition to the currently selected edition.",
+        text: "<b>&lt;Click&gt;</b> to view annotations for a date. <b>&lt;Ctrl/Command&gt; + &lt;Click&gt; + &lt;Shift&gt;</b> to compare editions (up to four)",
         style: {"font-size": "10px"}
     };
 

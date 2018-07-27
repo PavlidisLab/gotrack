@@ -298,7 +298,9 @@
                                             var="gene"
                                             itemLabel="#{gene.selectedGene.symbol}"
                                             itemValue="#{gene.selectedGene}"
-                                            groupBy="#{gene.level.label}">
+                                            groupBy="#{gene.level.label}"
+                                            panelStyleClass="force-fit-content"
+                                            panelStyle="max-width: 500px;min-width:250px;">
                                 <p:column>
                                     <h:outputText value="#{gene.selectedGene.symbol} - #{gene.selectedGene.name}"/>
                                 </p:column>

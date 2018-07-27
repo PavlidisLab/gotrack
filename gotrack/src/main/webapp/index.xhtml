@@ -8,7 +8,7 @@
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets"
       xmlns:comps="http://xmlns.jcp.org/jsf/composite/composites">
 <h:head>
-    <title>GOTrack</title>
+    <title>GOtrack</title>
     <link rel="shortcut icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <link rel="icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <h:outputStylesheet library="css" name="style.css"/>
@@ -104,7 +104,9 @@
                                                 var="gene"
                                                 itemLabel="#{gene.selectedGene.symbol}"
                                                 itemValue="#{gene.selectedGene}"
-                                                groupBy="#{gene.level.label}">
+                                                groupBy="#{gene.level.label}"
+                                                panelStyleClass="force-fit-content"
+                                                panelStyle="max-width: 500px;min-width:250px;">
                                     <p:column>
                                         <h:outputText
                                                 value="#{gene.selectedGene.symbol} - #{gene.selectedGene.name}"/>
@@ -127,7 +129,9 @@
                                                 completeMethod="#{termSearchView.complete}"
                                                 queryDelay="600"
                                                 minQueryLength="2" forceSelection="true" maxResults="10"
-                                                label="ID" panelStyleClass="autocomplete-largepanel"
+                                                label="ID"
+                                                panelStyleClass="force-fit-content"
+                                                panelStyle="max-width: 500px;min-width:250px;"
                                                 emptyMessage="No term suggestions available, please try again."
                                                 var="term" itemLabel="#{term.goId}"
                                                 itemValue="#{term.goId}">

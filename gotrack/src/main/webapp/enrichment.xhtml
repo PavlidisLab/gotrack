@@ -90,9 +90,11 @@
                     <p:link value="#{gene.symbol}" outcome="genes" target="_blank" style="margin-right:10px;width:80px;">
                         <f:param name="accession" value="#{gene.accession.accession}"/>
                     </p:link>
-                    <h:outputText style="width:160px;"
-                                  value="${gene.name.length() > 25 ? ''.concat(fn:substring(gene.name, 0, 25)).concat('...') : gene.name}"
-                                  title="#{gene.name.length() > 25 ? gene.name : ''}"/>
+                    <h:outputText style="width:160px;" rendered="${gene.name.length() le 25}"
+                                  value="#{gene.name}"/>
+                    <h:outputText style="width:160px;" rendered="${gene.name.length() > 25}"
+                                  value="${''.concat(fn:substring(gene.name, 0, 25)).concat('...')}"
+                                  title="#{gene.name}"/>
                     <f:facet name="footer">
                         <p:commandButton icon="fa fa-plus" value="Add"
                                          oncomplete="PF('addGenesDlg').show()"/>
@@ -675,7 +677,9 @@
                                             emptyMessage="No gene suggestions available,  please try again."
                                             var="genematch" itemLabel="#{genematch.symbol}" itemValue="#{genematch}"
                                             groupBy="#{genematch.level.label}"
-                                            placeholder="BRCA1" converter="geneMatchConverter">
+                                            placeholder="BRCA1" converter="geneMatchConverter"
+                                            panelStyleClass="force-fit-content"
+                                            panelStyle="max-width: 500px;min-width:250px;">
                                 <p:ajax event="itemSelect" process="@this"/>
                                 <p:column>
                                     <h:outputText
@@ -747,7 +751,9 @@
                                                 emptyMessage="No gene suggestions available, please try again."
                                                 var="gm2" itemLabel="#{gm2.symbol}" itemValue="#{gm2}"
                                                 groupBy="#{gm2.level.label}"
-                                                placeholder="BRCA1" converter="geneMatchConverter">
+                                                placeholder="BRCA1" converter="geneMatchConverter"
+                                                panelStyleClass="force-fit-content"
+                                                panelStyle="max-width: 500px;min-width:250px;">
                                     <p:column>
                                         <h:outputText value="#{gm2.selectedGene.symbol} - #{gm2.selectedGene.name}"/>
                                     </p:column>
@@ -757,9 +763,11 @@
                     </p:column>
 
                     <p:column headerText="Description">
-                        <h:outputText id="geneNameId"
-                                      value="${gm.selectedGene.name.length() > 45 ? ''.concat(fn:substring(gm.selectedGene.name, 0, 45)).concat('...') : gm.selectedGene.name}"
-                                      title="#{gm.selectedGene.name.length() > 45 ? gm.selectedGene.name : ''}"/>
+                        <h:outputText style="width:160px;" rendered="${gm.selectedGene.name.length() le 45}"
+                                      value="#{gm.selectedGene.name}"/>
+                        <h:outputText style="width:160px;" rendered="${gm.selectedGene.name.length() > 45}"
+                                      value="${''.concat(fn:substring(gm.selectedGene.name, 0, 45)).concat('...')}"
+                                      title="#{gm.selectedGene.name}"/>
                     </p:column>
 
                     <p:column headerText="Match Type" style="width:150px;">

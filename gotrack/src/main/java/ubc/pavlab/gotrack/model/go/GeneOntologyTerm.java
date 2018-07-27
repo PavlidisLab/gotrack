@@ -55,7 +55,7 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
     private final String goId;
     private final String name;
     private final Aspect aspect;
-    private final boolean obsolete = false;
+    private final boolean obsolete;
     private Set<Relation<GeneOntologyTerm>> parents = new THashSet<>();
     private Set<GeneOntologyTerm> ancestors = null;
     private Set<Relation<GeneOntologyTerm>> children = new THashSet<>();
@@ -76,6 +76,7 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         this.id = convertGOId( dto.getGoId() );
         this.goId = dto.getGoId();
         this.name = dto.getName();
+        this.obsolete = dto.isObsolete();
         this.aspect = Aspect.valueOf( dto.getAspect() );
     }
 
@@ -92,6 +93,7 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         this.goId = t.getGoId();
         this.name = t.getName();
         this.aspect = t.getAspect();
+        this.obsolete = t.isObsolete();
         freeze();
     }
 
@@ -104,6 +106,7 @@ public class GeneOntologyTerm implements Comparable<GeneOntologyTerm> {
         this.goId = goId;
         this.name = "";
         this.aspect = null;
+        this.obsolete = false;
     }
 
     public Stream<Relation<GeneOntologyTerm>> streamParents() {

@@ -100,7 +100,7 @@ public class CacheDAOImpl implements CacheDAO {
 
 
     // GeneOntology and GeneOntologyTerm
-    private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect from " + SQL_TERM + " WHERE go_edition_id_fk = ?";
+    private static final String SQL_GO_TERMS = "SELECT go_edition_id_fk, go_id, name, aspect, is_obsolete from " + SQL_TERM + " WHERE go_edition_id_fk = ?";
     private static final String SQL_GO_ADJACENCY = "select go_edition_id_fk, child, parent, relationship from " + SQL_ADJACENCY + " WHERE go_edition_id_fk = ?";
     private static final String SQL_GO_ALTERNATE = "select go_edition_id_fk, alt, principle from " + SQL_ALTERNATE + " WHERE go_edition_id_fk = ?";
     private static final String SQL_GO_DEFINITION = "select go_id, definition from " + SQL_DEFINITION;
@@ -449,9 +449,9 @@ public class CacheDAOImpl implements CacheDAO {
             log.debug( preparedStatement );
             resultSet = preparedStatement.executeQuery();
             while ( resultSet.next() ) {
-                // go_edition_id_fk, go_id, name, aspect
+                // go_edition_id_fk, go_id, name, aspect, is_obsolete
                 results.add( new GOTermDTO( resultSet.getInt( "go_edition_id_fk" ), resultSet.getString( "go_id" ),
-                        resultSet.getString( "name" ), resultSet.getString( "aspect" ) ) );
+                        resultSet.getString( "name" ), resultSet.getString( "aspect" ) , resultSet.getBoolean("is_obsolete")) );
             }
 
         } catch ( SQLException e ) {

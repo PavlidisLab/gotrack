@@ -7,7 +7,7 @@
       xmlns:p="http://primefaces.org/ui"
       xmlns:ui="http://xmlns.jcp.org/jsf/facelets">
 <h:head>
-    <title>GOTrack</title>
+    <title>GOtrack</title>
     <link rel="shortcut icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <link rel="icon" type="image/x-icon" href="#{resource['img/favicon.ico']}"/>
     <h:outputStylesheet library="css" name="style.css"/>
@@ -49,7 +49,7 @@
     </h:outputScript>
 
     <style type="text/css">
-        .ui-widget-content {
+        #centerTabViewForm .ui-widget-content {
             background: inherit;
         }
     </style>
@@ -137,7 +137,7 @@
                                     Count of distinct genes with GO annotations over all GOA editions.
                                 </p:panel>
                                 <p:panel styleClass="no-border chart-panel center" style="height:50px;">
-                                    Monthly counts of distinct terms existing in GO.
+                                    Monthly counts of distinct terms existing in GO (excludes obsolete terms).
                                 </p:panel>
                             </p:panelGrid>
                         </p:outputPanel>

@@ -68,7 +68,7 @@ public class GeneSearchView implements Serializable {
     }
 
     public List<GeneMatch> complete( String query ) {
-        return Lists.newArrayList( this.cache.searchGeneBySymbol( query, session.getSpecies(), MAX_RESULTS ) );
+        return Lists.newArrayList( this.cache.searchGene( query, session.getSpecies(), MAX_RESULTS ) );
     }
 
     public void setQueryGene( Gene queryGene ) {
