@@ -54,7 +54,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * This is the application cache for most static data in GOTrack as well as cached database queries for the various
  * Views. Takes ~15 minutes for a initialization using all species on production system.
  *
- * @author mjacobson
+ * @author  mjacobson
  * @version $Id$
  */
 @Named
@@ -82,7 +82,7 @@ public class Cache implements Serializable {
     private SpeciesService speciesService;
 
     // Globally restrict displayed and computed species
-    private int[] speciesRestrictions = new int[]{};
+    private int[] speciesRestrictions = new int[] {};
 
     // Globally limit the oldest displayed and computed editions.
     private int minRelease = 0;
@@ -204,7 +204,6 @@ public class Cache implements Serializable {
     public ImmutableList<Integer> getSpeciesYears( Species species ) {
         return speciesYears.get( species );
     }
-
 
     private void createSpecies() {
         Set<Integer> sr = Sets.newHashSet();
@@ -349,7 +348,8 @@ public class Cache implements Serializable {
         currentGOEdition = Collections.max( allGOEditions.values() );
 
         for ( Entry<Species, Edition> entry : currentEditions.entrySet() ) {
-            log.info( "Editions (" + entry.getKey().getCommonName() + "): Current=" + entry.getValue() + ", Total=" + allEditions.get( entry.getKey() ).size() );
+            log.info( "Editions (" + entry.getKey().getCommonName() + "): Current=" + entry.getValue() + ", Total="
+                    + allEditions.get( entry.getKey() ).size() );
         }
     }
 
@@ -411,7 +411,7 @@ public class Cache implements Serializable {
         System.gc();
         log.info( "GO Ontologies Loaded: " + ontologies.keySet().size() );
         log.info( "Used Memory: "
-                + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000 + " MB" );
+                + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000 + " MB" );
     }
 
     private void createAggregates( CacheDAO cacheDAO ) {
@@ -453,7 +453,6 @@ public class Cache implements Serializable {
         for ( EditionDTO dto : cacheDAO.getReleaseEditions( minRelease ) ) {
             minEditions.put( dto.getSpecies(), dto.getEdition() );
         }
-
 
         log.info( "Attempting to create Annotation Counts from database cache" );
         for ( Species species : speciesCache.values() ) {
@@ -510,7 +509,7 @@ public class Cache implements Serializable {
 
             // Check against aggregates and counts
             Integer aggRecentEdition = mostRecentAggregateEditions.get( species );
-            boolean ood = (!aggRecentEdition.equals( mostRecentEdition.getEdition() ));
+            boolean ood = ( !aggRecentEdition.equals( mostRecentEdition.getEdition() ) );
             if ( ood ) {
                 log.warn(
                         "Most recent edition in Aggregate Data (" + aggRecentEdition
@@ -520,7 +519,7 @@ public class Cache implements Serializable {
             outOfDate |= ood;
 
             Integer cntRecentEdition = mostRecentCountEditions.get( species );
-            ood = (!cntRecentEdition.equals( mostRecentEdition.getEdition() ));
+            ood = ( !cntRecentEdition.equals( mostRecentEdition.getEdition() ) );
             if ( ood ) {
                 log.warn(
                         "Most recent edition in Aggregate Count Data (" + cntRecentEdition
@@ -548,7 +547,8 @@ public class Cache implements Serializable {
             Accession accession = new Accession( dto );
 
             // Need synonyms to complete the genes
-            geneBuilders.put( dto.getId(), new Gene.GeneBuilder( dto.getId(), dto.getSymbol(), dto.getName(), speciesCache.get( dto.getSpeciesId() ), accession ) );
+            geneBuilders.put( dto.getId(),
+                    new Gene.GeneBuilder( dto.getId(), dto.getSymbol(), dto.getName(), speciesCache.get( dto.getSpeciesId() ), accession ) );
         }
 
         // Fill in synonyms
@@ -571,7 +571,6 @@ public class Cache implements Serializable {
         Map<Species, Multimap<String, Gene>> speciesToPrimarySymbolGenes = Maps.newHashMap();
         Map<Species, Multimap<String, Gene>> speciesToSecondarySymbolGenes = Maps.newHashMap();
         Map<Species, Multimap<String, Gene>> speciesToGeneNameWordsMultimap = Maps.newHashMap();
-
 
         for ( Species species : speciesCache.values() ) {
             speciesToPrimarySymbolGenes.put( species, HashMultimap.create() );
@@ -605,6 +604,7 @@ public class Cache implements Serializable {
         }
 
         // radix trie for primary symbols
+        boolean warned = false;
         for ( Species species : speciesCache.values() ) {
             Multimap<String, Gene> mm = speciesToPrimarySymbolGenes.get( species );
             if ( mm != null ) {
@@ -613,6 +613,14 @@ public class Cache implements Serializable {
                 RadixTree<ImmutableSet<Gene>> rt = new ConcurrentRadixTree<>( new DefaultCharArrayNodeFactory() );
 
                 for ( Entry<String, Collection<Gene>> symEntry : mm.asMap().entrySet() ) {
+                    if ( symEntry.getKey().isEmpty() ) {
+                        if ( !warned ) {
+                            log.warn( "Encountered an empty key for " + symEntry + " while caching genes for " + species
+                                    + " ; further warnings suppressed." );
+                            warned = true;
+                        }
+                        continue;
+                    }
                     rt.put( symEntry.getKey(), ImmutableSet.copyOf( symEntry.getValue() ) );
                 }
                 speciesToPrimaryRadixGenes.put( species, rt );
@@ -687,7 +695,7 @@ public class Cache implements Serializable {
 
         applicationLevelEnrichmentCache = Collections.synchronizedMap( applicationLevelEnrichmentCache );
 
-        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
                 + " MB" );
 
         // Globally limit the displayed and computed species.
@@ -707,7 +715,7 @@ public class Cache implements Serializable {
         createEvidence( cacheDAO );
 
         // System.gc();
-        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
                 + " MB" );
 
         if ( !settingsCache.isDryRun() ) {
@@ -720,7 +728,7 @@ public class Cache implements Serializable {
 
         createGenes( cacheDAO );
 
-        log.info( "Used Memory: " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) / 1000000
+        log.info( "Used Memory: " + ( Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory() ) / 1000000
                 + " MB" );
 
         createAutocompleteTries();
@@ -731,10 +739,10 @@ public class Cache implements Serializable {
     /**
      * Autocompletes Gene Ontology Terms by id or name
      *
-     * @param query      query
-     * @param maxResults max results
-     * @param retain     Whether to take intersection of results (true) or union of results (false)
-     * @return list of terms in order goodness
+     * @param  query      query
+     * @param  maxResults max results
+     * @param  retain     Whether to take intersection of results (true) or union of results (false)
+     * @return            list of terms in order goodness
      */
     public List<GeneOntologyTerm> completeTerm( String query, int maxResults, boolean retain ) {
         // TODO: Clean this up
@@ -749,7 +757,7 @@ public class Cache implements Serializable {
             try {
                 int id = Integer.parseInt( queryUpper );
                 t = currentOntology.getTerm( id );
-            } catch (NumberFormatException e) {
+            } catch ( NumberFormatException e ) {
                 // pass
             }
 
@@ -811,10 +819,10 @@ public class Cache implements Serializable {
     /**
      * Searches for a gene by its symbols
      *
-     * @param query      query
-     * @param species    species
-     * @param fuzzyLimit Stop looking for more general matches after this threshold has been reached
-     * @return list of matches in order of goodness
+     * @param  query      query
+     * @param  species    species
+     * @param  fuzzyLimit Stop looking for more general matches after this threshold has been reached
+     * @return            list of matches in order of goodness
      */
     public Set<GeneMatch> searchGeneBySymbol( String query, Species species, Integer fuzzyLimit, GeneMatch.Level worstMatchLevel ) {
         Set<GeneMatch> results = Sets.newLinkedHashSet();
@@ -844,9 +852,9 @@ public class Cache implements Serializable {
     /**
      * Guess a gene by its symbol
      *
-     * @param query   query
-     * @param species species
-     * @return A single GeneMatch with a best guess at the desired Gene
+     * @param  query   query
+     * @param  species species
+     * @return         A single GeneMatch with a best guess at the desired Gene
      */
     public GeneMatch guessGeneBySymbol( String query, Species species ) {
         if ( query == null || species == null ) return null;
@@ -865,10 +873,10 @@ public class Cache implements Serializable {
     /**
      * Searches for a gene by a combination of symbol, synonym, and name.
      *
-     * @param query      query
-     * @param species    species
-     * @param fuzzyLimit Stop looking for more general matches after this threshold has been reached
-     * @return list of matches in order of goodness
+     * @param  query      query
+     * @param  species    species
+     * @param  fuzzyLimit Stop looking for more general matches after this threshold has been reached
+     * @return            list of matches in order of goodness
      */
     private Set<GeneMatch> searchGene( String query, Species species, Integer fuzzyLimit, GeneMatch.Level worstMatchLevel ) {
         Set<GeneMatch> results = Sets.newLinkedHashSet();
@@ -892,7 +900,8 @@ public class Cache implements Serializable {
         boolean similarSymbolMatch = false;
         if ( prefix.isEmpty() ) {
             for ( GeneMatch similarSymbol : searchGeneBySimilarMatch( query, primaryRadix ) ) {
-                if ( StringUtils.getLevenshteinDistance( similarSymbol.getQuerySymbol().toUpperCase(), similarSymbol.getSymbol().toUpperCase() ) < 3 ) {
+                if ( StringUtils.getLevenshteinDistance( similarSymbol.getQuerySymbol().toUpperCase(),
+                        similarSymbol.getSymbol().toUpperCase() ) < 3 ) {
                     similarSymbolMatch = true;
                     results.add( similarSymbol );
                 }
@@ -940,7 +949,6 @@ public class Cache implements Serializable {
             }
 
         }
-
 
         return results;
     }
@@ -1010,8 +1018,8 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param species species
-     * @return most current edition for this species
+     * @param  species species
+     * @return         most current edition for this species
      */
     public Edition getCurrentEditions( Species species ) {
         return currentEditions.get( species );
@@ -1022,8 +1030,8 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param species
-     * @return UNORDERED collection of all editions for this species
+     * @param  species
+     * @return         UNORDERED collection of all editions for this species
      */
     public Collection<Edition> getAllEditions( Species species ) {
         Map<Integer, Edition> tmp = allEditions.get( species );
@@ -1035,9 +1043,9 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param species species
-     * @param edition edition
-     * @return fetch edition from cache or null if not there
+     * @param  species species
+     * @param  edition edition
+     * @return         fetch edition from cache or null if not there
      */
     public Edition getEdition( Species species, Integer edition ) {
         if ( species == null || edition == null ) {
@@ -1052,9 +1060,9 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param speciesId species id
-     * @param edition   edition
-     * @return fetch edition from cache or null if not there
+     * @param  speciesId species id
+     * @param  edition   edition
+     * @return           fetch edition from cache or null if not there
      */
     public Edition getEdition( Integer speciesId, Integer edition ) {
         if ( speciesId == null || edition == null ) {
@@ -1084,9 +1092,9 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param ed edition
-     * @param t  term
-     * @return count of genes annotated with this term or any of its children
+     * @param  ed edition
+     * @param  t  term
+     * @return    count of genes annotated with this term or any of its children
      */
     public Integer getInferredAnnotationCount( Edition ed, GeneOntologyTerm t ) {
         if ( ed == null || t == null ) return null;
@@ -1098,9 +1106,9 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param ed edition
-     * @param t  term
-     * @return count of genes annotated with this term
+     * @param  ed edition
+     * @param  t  term
+     * @return    count of genes annotated with this term
      */
     public Integer getDirectAnnotationCount( Edition ed, GeneOntologyTerm t ) {
         if ( ed == null || t == null ) return null;
@@ -1112,8 +1120,8 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param ed edition
-     * @return count of genes annotated with this term or any of its children
+     * @param  ed edition
+     * @return    count of genes annotated with this term or any of its children
      */
     public Map<GeneOntologyTerm, Integer> getInferredAnnotationCount( Edition ed ) {
         if ( ed == null ) return null;
@@ -1122,8 +1130,8 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param ed edition
-     * @return count of genes annotated with this term
+     * @param  ed edition
+     * @return    count of genes annotated with this term
      */
     public Map<GeneOntologyTerm, Integer> getDirectAnnotationCount( Edition ed ) {
         if ( ed == null ) return null;
@@ -1131,8 +1139,8 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param ed edition
-     * @return aggregate
+     * @param  ed edition
+     * @return    aggregate
      */
     public Aggregate getAggregate( Edition ed ) {
         if ( ed == null ) return null;
@@ -1140,8 +1148,8 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param accession primary accession
-     * @return gene with this primary accession or null
+     * @param  accession primary accession
+     * @return           gene with this primary accession or null
      */
     public Gene getCurrentGene( String accession ) {
         if ( accession == null ) {
@@ -1167,8 +1175,8 @@ public class Cache implements Serializable {
     //    }
 
     /**
-     * @param edition edition
-     * @return Count of unique genes in this edition under this species
+     * @param  edition edition
+     * @return         Count of unique genes in this edition under this species
      */
     public Integer getGeneCount( Edition edition ) {
         if ( edition == null ) {
@@ -1248,8 +1256,8 @@ public class Cache implements Serializable {
     /**
      * Will always contain ever GO Edition in keyset as editions where the term did not exist will have null values
      *
-     * @param goId
-     * @return map of GO edition -> term or null if this GO edition did not contains said term.
+     * @param  goId
+     * @return      map of GO edition -> term or null if this GO edition did not contains said term.
      */
     public Map<GOEdition, GeneOntologyTerm> getTerm( String goId ) {
         if ( goId == null ) {
@@ -1264,7 +1272,7 @@ public class Cache implements Serializable {
             GeneOntologyTerm term = entry.getValue().getTerm( goId );
             // yes we want null values
             termsMap.put( entry.getKey(), term );
-            found |= (term != null);
+            found |= ( term != null );
         }
 
         return found ? termsMap : null;
@@ -1275,8 +1283,8 @@ public class Cache implements Serializable {
      * Searching the term in the more current edition will account for obsoletion in the form
      * of alternate ids.
      *
-     * @param ed
-     * @param terms
+     * @param  ed
+     * @param  terms
      * @return
      */
     public Set<GeneOntologyTerm> convertTerms( Edition ed, Set<GeneOntologyTerm> terms ) {
@@ -1297,8 +1305,8 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param goId
-     * @return most current term with this goId
+     * @param  goId
+     * @return      most current term with this goId
      */
     public GeneOntologyTerm getCurrentTerm( String goId ) {
         if ( goId == null ) {
@@ -1320,8 +1328,8 @@ public class Cache implements Serializable {
     }
 
     /**
-     * @param goId
-     * @return true if any edition contains a term under this goId else false
+     * @param  goId
+     * @return      true if any edition contains a term under this goId else false
      */
     public boolean termExists( String goId ) {
         if ( goId == null ) {
@@ -1355,12 +1363,12 @@ public class Cache implements Serializable {
     // Application Level Caching get/set
 
     /**
-     * @param gene
-     * @return cache data for EnrichmentView under given gene
+     * @param  gene
+     * @return      cache data for EnrichmentView under given gene
      */
     public Map<Edition, Set<GeneOntologyTerm>> getEnrichmentData( Gene gene ) {
         // TODO not sure if necessary, not a big deal either way
-        synchronized (applicationLevelEnrichmentCache) {
+        synchronized ( applicationLevelEnrichmentCache ) {
             return applicationLevelEnrichmentCache.get( gene );
         }
     }
@@ -1372,7 +1380,7 @@ public class Cache implements Serializable {
      * @param data data to be cached
      */
     public void addEnrichmentData( Gene gene, Map<Edition, Set<GeneOntologyTerm>> data ) {
-        synchronized (applicationLevelEnrichmentCache) {
+        synchronized ( applicationLevelEnrichmentCache ) {
             applicationLevelEnrichmentCache.put( gene, data );
         }
     }
@@ -1382,7 +1390,7 @@ public class Cache implements Serializable {
 /**
  * Comparator to order autocompleted terms based on similarity to query
  *
- * @author mjacobson
+ * @author  mjacobson
  * @version $Id$
  */
 class LevenshteinComparator implements Comparator<GeneOntologyTerm> {
