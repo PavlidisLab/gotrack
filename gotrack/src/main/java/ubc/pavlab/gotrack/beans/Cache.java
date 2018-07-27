@@ -628,6 +628,7 @@ public class Cache implements Serializable {
         }
 
         // radix trie for secondary symbols
+        warned = false;
         for ( Species species : speciesCache.values() ) {
             Multimap<String, Gene> mm = speciesToSecondarySymbolGenes.get( species );
             if ( mm != null ) {
@@ -635,6 +636,14 @@ public class Cache implements Serializable {
                 RadixTree<ImmutableSet<Gene>> rt = new ConcurrentRadixTree<>( new DefaultCharArrayNodeFactory() );
 
                 for ( Entry<String, Collection<Gene>> symEntry : mm.asMap().entrySet() ) {
+                    if ( symEntry.getKey().isEmpty() ) {
+                        if ( !warned ) {
+                            log.warn( "Encountered an empty key for " + symEntry + " while caching secondary symbols for " + species
+                                    + " ; further warnings suppressed." );
+                            warned = true;
+                        }
+                        continue;
+                    }
                     rt.put( symEntry.getKey(), ImmutableSet.copyOf( symEntry.getValue() ) );
                 }
                 speciesToSecondaryRadixGenes.put( species, rt );
@@ -642,6 +651,7 @@ public class Cache implements Serializable {
         }
 
         // radix trie for gene names
+        warned = false;
         for ( Species species : speciesCache.values() ) {
             Multimap<String, Gene> mm = speciesToGeneNameWordsMultimap.get( species );
             if ( mm != null ) {
@@ -649,6 +659,14 @@ public class Cache implements Serializable {
                 RadixTree<ImmutableSet<Gene>> rt = new ConcurrentRadixTree<>( new DefaultCharArrayNodeFactory() );
 
                 for ( Entry<String, Collection<Gene>> nameEntry : mm.asMap().entrySet() ) {
+                    if ( nameEntry.getKey().isEmpty() ) {
+                        if ( !warned ) {
+                            log.warn( "Encountered an empty key for " + nameEntry + " while caching gene names for " + species
+                                    + " ; further warnings suppressed." );
+                            warned = true;
+                        }
+                        continue;
+                    }
                     rt.put( nameEntry.getKey(), ImmutableSet.copyOf( nameEntry.getValue() ) );
                 }
                 speciesToNameRadixGenes.put( species, rt );
