@@ -163,6 +163,9 @@ class Resources:
         except error_perm, reason:
             log.warn("Cannot find directory in FTP site: %s: %s", directory, reason)
             return [];
+        except:
+            log.warn("Unknown FTP error occurred")
+            return [];
         finally:
             if ftp is not None:
                 ftp.close()
