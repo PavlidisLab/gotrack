@@ -162,6 +162,7 @@ class Resources:
             return ftp.nlst()
         except error_perm, reason:
             log.warn("Cannot find directory in FTP site: %s: %s", directory, reason)
+            return [];
         finally:
             if ftp is not None:
                 ftp.close()
