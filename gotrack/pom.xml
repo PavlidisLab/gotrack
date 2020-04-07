@@ -276,7 +276,7 @@
             <id>pavlab</id>
             <name>PavLab</name>
             <url>
-                http://www.chibi.ubc.ca/maven2
+                https://maven2.pavlab.msl.ubc.ca/
             </url>
             <layout>default</layout>
             <snapshots>

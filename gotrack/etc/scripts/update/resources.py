@@ -158,7 +158,7 @@ class Resources:
             ftp.login()
 
             ftp.cwd(directory)
-
+            log.info("Attempting to access %s/%s", host, directory)
             return ftp.nlst()
         except error_perm:
             log.warn("Cannot find directory in FTP site: %s", directory)
@@ -171,10 +171,10 @@ class Resources:
         fname_list = []
         if files:
             try:
+                log.info("Attempting download of files from %s/%s", host, directory)    
                 ftp = FTP(host)
                 ftp.login()
                 ftp.cwd(directory)
-
                 for fname in files:
                     log.info('Downloading: {0} ...'.format(fname))
                     try:
