@@ -90,7 +90,7 @@
         <dependency>
             <groupId>org.glassfish.jersey.media</groupId>
             <artifactId>jersey-media-json-jackson</artifactId>
-            <version>2.21.1</version>
+            <version>3.0.2</version>
         </dependency>
 
         <!-- End Rest dependencies-->
