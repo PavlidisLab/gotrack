@@ -48,11 +48,6 @@
             <version>${servlet.version}</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>jstl</artifactId>
-            <version>1.2</version>
-        </dependency>
         <dependency> <!-- Optional, only when <f:websocket> is used. -->
             <groupId>org.glassfish</groupId>
             <artifactId>javax.json</artifactId>
@@ -138,13 +133,6 @@
             <version>4.2.1</version>
         </dependency>
 
-        <!-- XLS Exporting -->
-        <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi</artifactId>
-            <version>3.11</version>
-        </dependency>
-
         <!-- Omnifaces -->
 
         <dependency>
@@ -187,13 +175,6 @@
             <artifactId>junit</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>mysql</groupId>
-            <artifactId>mysql-connector-java</artifactId>
-            <version>5.1.35</version>
-            <scope>provided</scope>
         </dependency>
 
         <dependency>
