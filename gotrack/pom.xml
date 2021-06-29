@@ -49,10 +49,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>javax.servlet</groupId>
-            <artifactId>jstl</artifactId>
-            <version>1.2</version>
-        </dependency>
+	    <groupId>jakarta.servlet.jsp.jstl</groupId>
+	    <artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
+	    <version>1.2.7</version>
+	    <scope>runtime</scope>
+	</dependency>
         <dependency> <!-- Optional, only when <f:websocket> is used. -->
             <groupId>org.glassfish</groupId>
             <artifactId>javax.json</artifactId>
@@ -193,7 +194,7 @@
             <groupId>mysql</groupId>
             <artifactId>mysql-connector-java</artifactId>
             <version>8.0.25</version>
-            <scope>provided</scope>
+            <scope>runtime</scope>
         </dependency>
 
         <dependency>
