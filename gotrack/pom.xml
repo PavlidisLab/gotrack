@@ -19,7 +19,7 @@
         <!-- Web -->
         <servlet.version>3.1.0</servlet.version>
         <jsf.version>2.3.3</jsf.version>
-        <weld.version>3.0.0.Final</weld.version>
+        <weld.version>3.1.7.SP1</weld.version>
 
         <!-- logging -->
         <slf4j.version>1.6.6</slf4j.version>
@@ -117,7 +117,7 @@
         <dependency>
             <groupId>org.primefaces</groupId>
             <artifactId>primefaces</artifactId>
-            <version>6.1</version>
+            <version>6.2</version>
         </dependency>
 
         <dependency>
@@ -129,7 +129,7 @@
         <dependency>
             <groupId>org.primefaces.extensions</groupId>
             <artifactId>primefaces-extensions</artifactId>
-            <version>6.1.1</version>
+            <version>6.2.10</version>
         </dependency>
 
         <!-- PDF Exporting -->
@@ -221,7 +221,7 @@
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>23.0</version>
+            <version>30.1.1-jre</version>
         </dependency>
 
         <!-- Trove -->
@@ -237,7 +237,7 @@
         <dependency>
             <groupId>org.mindrot</groupId>
             <artifactId>jbcrypt</artifactId>
-            <version>0.3m</version>
+            <version>0.4</version>
         </dependency>
 
         <!-- dom4j Dependency -->
