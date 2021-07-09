@@ -34,3 +34,13 @@ created by https://www.gitignore.io
 
 ### Python ###
 *.py[cod]
+.DS_Store
+gotrack/.DS_Store
+gotrack/etc/.DS_Store
+gotrack/etc/scripts/.DS_Store
+gotrack/src/main/java/ubc/pavlab/gotrack/beans/.DS_Store
+gotrack/src/main/java/ubc/pavlab/gotrack/model/.DS_Store
+gotrack/src/main/webapp/.DS_Store
+gotrack/src/main/webapp/resources/.DS_Store
+gotrack/src/main/webapp/WEB-INF/.DS_Store
+gotrack/src/test/java/ubc/pavlab/gotrack/.DS_Store

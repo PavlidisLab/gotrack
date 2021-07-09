@@ -26,7 +26,7 @@ class Resources:
     goa_gpi_template = 'goa_{0}.gpi.{1}.gz'
 
     uniprot_ftp_host = 'ftp.uniprot.org'
-    uniprot_ftp_directory = '/pub/databases/uniprot/knowledgebase/docs/'
+    uniprot_ftp_directory = '/pub/databases/uniprot/current_release/knowledgebase/docs/'
 
     def __init__(self, directory, database_state, check_ftp=True):
         self.directory = directory
