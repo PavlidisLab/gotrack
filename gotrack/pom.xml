@@ -22,6 +22,7 @@
         <weld.version>3.0.0.Final</weld.version>
 
         <!-- logging -->
+        <log4j.version>2.17.0</log4j.version>
         <slf4j.version>1.6.6</slf4j.version>
 
         <!-- Test -->
@@ -156,20 +157,20 @@
         <!-- Logging -->
 
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
-            <version>1.2.14</version>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>${log4j.version}</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-1.2-api</artifactId>
+            <version>${log4j.version}</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
-            <type>jar</type>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
             <version>${slf4j.version}</version>
             <type>jar</type>
         </dependency>
@@ -328,6 +329,14 @@
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>2.22.2</version>
+                <configuration>
+                    <argLine>-Dlog4j.compatibility=true</argLine>
                 </configuration>
             </plugin>
             <plugin>
