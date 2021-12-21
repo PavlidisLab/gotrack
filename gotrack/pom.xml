@@ -277,48 +277,16 @@
     </dependencies>
 
     <repositories>
-
         <repository>
             <id>pavlab</id>
             <name>PavLab</name>
-            <url>
-                https://maven2.pavlab.msl.ubc.ca/
-            </url>
-            <layout>default</layout>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>daily</updatePolicy>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-                <updatePolicy>never</updatePolicy>
-            </releases>
-        </repository>
-
-        <repository>
-            <id>sonatype</id>
-            <url>http://oss.sonatype.org/content/repositories/snapshots</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </repository>
-        <repository>
-            <id>m.g.o</id>
-            <url>http://maven.glassfish.org/content/groups/public/</url>
-        </repository>
-        <repository>
-            <id>SourceForge</id>
-            <url>http://csvjdbc.sourceforge.net/maven2</url>
+            <url>https://maven2.pavlab.msl.ubc.ca/</url>
         </repository>
         <repository>
             <id>prime-repo</id>
             <name>Prime Repo</name>
-            <url>http://repository.primefaces.org</url>
+            <url>https://repository.primefaces.org</url>
         </repository>
-
     </repositories>
 
     <build>
