@@ -23,7 +23,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- Web -->
-        <jsf.version>2.3.3</jsf.version>
+        <jsf.version>2.3.7</jsf.version>
         <weld.version>3.1.7.SP1</weld.version>
     </properties>
 
